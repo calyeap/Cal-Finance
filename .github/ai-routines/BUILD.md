@@ -19,12 +19,14 @@ Execute one already-authorised bounded Calboard implementation outcome from the 
 
 The native `Issue: Opened` trigger is the sole initial dispatch path for this pilot. Do not create a second worker for the same outcome.
 
-Before consequential repo work:
+Before consequential repo work, on an initial `Issue: Opened` run:
 
 1. Search the repository / issue / PR surfaces for an existing branch or pull request linked to the same originating issue or `OUTCOME-ID`.
 2. If another active run or PR for the same outcome already exists, STOP as `DUPLICATE ACTIVE RUN` rather than starting parallel work.
 3. If the state is ambiguous, STOP as `RECONCILIATION REQUIRED`.
-4. Do not invent a new lock, PAT, custom tracking database, or hidden state store.
+4. Otherwise, create the advisory claim branch `claim/<OUTCOME-ID>` from the current default branch through GitHub MCP `create_branch`. A successful new claim permits this bounded run to continue into consequential repo work.
+5. If `claim/<OUTCOME-ID>` already exists, do not proceed into consequential repo work on that basis alone: STOP as `DUPLICATE ACTIVE RUN` unless current evidence unambiguously ties the existing claim to this same originating issue/PR and outcome, and STOP as `RECONCILIATION REQUIRED` if that cannot be established either way.
+6. Do not invent a new lock, PAT, custom tracking database, or hidden state store.
 
 This is a bounded V0 duplicate guard, not an atomic concurrency lock. If real duplicate dispatch appears in live use, harden the mechanism from that evidence rather than adding infrastructure pre-emptively.
 
@@ -62,12 +64,12 @@ Post the smallest genuine product / finance / permission / judgement decision re
 
 This Routine has Claude's **Auto-fix pull requests** behaviour enabled. When the Routine is re-awakened by CI failure or a reviewer comment on a PR it opened:
 
-1. Retrieve the latest PR state, checks and reviewer comments directly.
-2. Confirm the requested change is a bounded in-scope correction against the already-authorised outcome.
-3. Apply only that correction.
-4. Re-run the affected verification plus any acceptance checks required by the task.
-5. Update durable PR evidence.
-6. Do not create a second PR for the same `OUTCOME-ID`.
+1. Reuse the outcome's already-established `claim/<OUTCOME-ID>` and linked PR context; do not create a second claim branch or a second PR for the same `OUTCOME-ID`.
+2. Retrieve the latest PR state, checks and reviewer comments directly.
+3. Confirm the requested change is a bounded in-scope correction against the already-authorised outcome.
+4. Apply only that correction.
+5. Re-run the affected verification plus any acceptance checks required by the task.
+6. Update durable PR evidence.
 7. If the same failure class survives two automatic correction cycles, STOP with `RECONCILIATION REQUIRED` for root-cause diagnosis rather than looping indefinitely.
 
 Do not treat a new product, finance, methodology, permission or scope judgement as an auto-fix.
