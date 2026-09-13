@@ -1,4 +1,4 @@
-name: Fire CALBOARD-CC-AUTO on parked-worker label
+name: Fire Calboard routines on dispatch labels
 
 # OUTCOME-ID: CB-WATCH-FIRE-01
 #
@@ -6,8 +6,16 @@ name: Fire CALBOARD-CC-AUTO on parked-worker label
 # CALBOARD-CC-AUTO after BUILD pushes a correction, since its only GitHub
 # trigger is "Pull request: Opened". Labelling an issue or PR
 # `needs-cc-rereview` fires the CALBOARD-CC-AUTO routine API trigger
-# directly. Bounded to CALBOARD-CC-AUTO only — do not repoint this file at
+# directly. Bounded to CALBOARD-CC-AUTO only — do not repoint this job at
 # any other routine.
+#
+# OUTCOME-ID: CB-OWNER-FIRE-01
+#
+# Closes the DISPATCH gap: CALBOARD-OWNER's only trigger is a merged PR,
+# so it cannot cold-start when no PR is pending. Labelling an issue or PR
+# `dispatch-next` fires the CALBOARD-OWNER routine API trigger directly.
+# Bounded to CALBOARD-OWNER only — do not repoint this job at any other
+# routine.
 
 on:
   issues:
@@ -105,4 +113,91 @@ jobs:
             -f body="$COMMENT_BODY"
 
           echo "::error::CALBOARD-CC-AUTO fire failed with HTTP ${{ steps.fire.outputs.http_code }}"
+          exit 1
+
+  fire-owner:
+    if: github.event.label.name == 'dispatch-next'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve labelled item number
+        id: target
+        run: |
+          NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Fire CALBOARD-OWNER API trigger
+        id: fire
+        env:
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${OWNER_FIRE_URL:-}" ] || [ -z "${OWNER_FIRE_TOKEN:-}" ]; then
+            echo "::error::OWNER_FIRE_URL or OWNER_FIRE_TOKEN repository secret is missing."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} was labelled dispatch-next. This is a dispatch fire: reconcile current Calboard project state, read the Calboard Project Home Runway, and open the next dependency-safe authorised outcome yourself."
+          REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt}')
+
+          HTTP_CODE=$(curl -sS -o /tmp/owner_fire_response.json -w '%{http_code}' \
+            --request POST "$OWNER_FIRE_URL" \
+            --header "Authorization: Bearer $OWNER_FIRE_TOKEN" \
+            --header "anthropic-version: 2023-06-01" \
+            --header "Content-Type: application/json" \
+            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
+
+          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+
+          if [ "$HTTP_CODE" != "curl_error" ] && [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            SESSION_ID=$(jq -r '.claude_code_session_id // "unknown"' /tmp/owner_fire_response.json)
+            SESSION_URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/owner_fire_response.json)
+            echo "session_id=$SESSION_ID" >> "$GITHUB_OUTPUT"
+            echo "session_url=$SESSION_URL" >> "$GITHUB_OUTPUT"
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Remove label (loop guard)
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/dispatch-next"
+
+      - name: Report success on the labelled item
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
+            -f body="CB-OWNER-FIRE-01: fired CALBOARD-OWNER (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+
+      - name: Report failure on the labelled item and fail visibly
+        if: steps.fire.outputs.ok != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+        run: |
+          RAW_BODY=$(cat /tmp/owner_fire_response.json 2>/dev/null || echo "(no response body — request may not have completed)")
+          if [ -n "${OWNER_FIRE_TOKEN:-}" ]; then
+            SAFE_BODY=$(printf '%s' "$RAW_BODY" | sed "s/${OWNER_FIRE_TOKEN}/[REDACTED]/g")
+          else
+            SAFE_BODY="$RAW_BODY"
+          fi
+
+          COMMENT_BODY=$(printf 'CB-OWNER-FIRE-01: CALBOARD-OWNER fire failed (HTTP %s).\n\n```\n%s\n```' "${{ steps.fire.outputs.http_code }}" "$SAFE_BODY")
+
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
+            -f body="$COMMENT_BODY"
+
+          echo "::error::CALBOARD-OWNER fire failed with HTTP ${{ steps.fire.outputs.http_code }}"
           exit 1
