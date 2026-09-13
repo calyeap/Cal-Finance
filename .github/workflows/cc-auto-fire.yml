@@ -1,0 +1,108 @@
+name: Fire CALBOARD-CC-AUTO on parked-worker label
+
+# OUTCOME-ID: CB-WATCH-FIRE-01
+#
+# Closes the FIRE leg of the correction path: nothing currently wakes
+# CALBOARD-CC-AUTO after BUILD pushes a correction, since its only GitHub
+# trigger is "Pull request: Opened". Labelling an issue or PR
+# `needs-cc-rereview` fires the CALBOARD-CC-AUTO routine API trigger
+# directly. Bounded to CALBOARD-CC-AUTO only — do not repoint this file at
+# any other routine.
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+
+permissions:
+  issues: write
+  pull-requests: write
+
+jobs:
+  fire:
+    if: github.event.label.name == 'needs-cc-rereview'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve labelled item number
+        id: target
+        run: |
+          NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+
+      - name: Fire CALBOARD-CC-AUTO API trigger
+        id: fire
+        env:
+          CC_AUTO_FIRE_URL: ${{ secrets.CC_AUTO_FIRE_URL }}
+          CC_AUTO_FIRE_TOKEN: ${{ secrets.CC_AUTO_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${CC_AUTO_FIRE_URL:-}" ] || [ -z "${CC_AUTO_FIRE_TOKEN:-}" ]; then
+            echo "::error::CC_AUTO_FIRE_URL or CC_AUTO_FIRE_TOKEN repository secret is missing."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} was labelled needs-cc-rereview and needs CALBOARD-CC-AUTO to re-review it."
+          REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt}')
+
+          HTTP_CODE=$(curl -sS -o /tmp/cc_auto_fire_response.json -w '%{http_code}' \
+            --request POST "$CC_AUTO_FIRE_URL" \
+            --header "Authorization: Bearer $CC_AUTO_FIRE_TOKEN" \
+            --header "anthropic-version: 2023-06-01" \
+            --header "Content-Type: application/json" \
+            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
+
+          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+
+          if [ "$HTTP_CODE" != "curl_error" ] && [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            SESSION_ID=$(jq -r '.claude_code_session_id // "unknown"' /tmp/cc_auto_fire_response.json)
+            SESSION_URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/cc_auto_fire_response.json)
+            echo "session_id=$SESSION_ID" >> "$GITHUB_OUTPUT"
+            echo "session_url=$SESSION_URL" >> "$GITHUB_OUTPUT"
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Remove label (loop guard)
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-cc-rereview"
+
+      - name: Report success on the labelled item
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
+            -f body="CB-WATCH-FIRE-01: fired CALBOARD-CC-AUTO (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+
+      - name: Report failure on the labelled item and fail visibly
+        if: steps.fire.outputs.ok != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CC_AUTO_FIRE_TOKEN: ${{ secrets.CC_AUTO_FIRE_TOKEN }}
+        run: |
+          RAW_BODY=$(cat /tmp/cc_auto_fire_response.json 2>/dev/null || echo "(no response body — request may not have completed)")
+          if [ -n "${CC_AUTO_FIRE_TOKEN:-}" ]; then
+            SAFE_BODY=$(printf '%s' "$RAW_BODY" | sed "s/${CC_AUTO_FIRE_TOKEN}/[REDACTED]/g")
+          else
+            SAFE_BODY="$RAW_BODY"
+          fi
+
+          COMMENT_BODY=$(printf 'CB-WATCH-FIRE-01: CALBOARD-CC-AUTO fire failed (HTTP %s).\n\n```\n%s\n```' "${{ steps.fire.outputs.http_code }}" "$SAFE_BODY")
+
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
+            -f body="$COMMENT_BODY"
+
+          echo "::error::CALBOARD-CC-AUTO fire failed with HTTP ${{ steps.fire.outputs.http_code }}"
+          exit 1
