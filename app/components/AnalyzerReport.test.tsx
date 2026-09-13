@@ -367,6 +367,21 @@ describe("AnalyzerReport — camelCase humanized in state causes (defect B3)", (
     expect(text).toMatch(/depreciation and amortization/);
     expect(text).toMatch(/delta NWC/);
     expect(text).toMatch(/base year revenue/);
+  });
+
+  // CB-RDCF-EV-01 — since assemble now fills reverseDcf.targetEnterpriseValue
+  // from M1 (the same seam §6.5's leverage precondition already used),
+  // OKLO_FIXTURE's own M1 legitimately computes and the plain fixture no
+  // longer exercises this specific missing-input cause. Suppressing M1 here
+  // (price missing) reproduces it, isolated to this one check.
+  it("OKLO with M1 suppressed: a missing target EV still renders as plain English, never the raw camelCase field name", () => {
+    const result = assembleAnalysisResult({
+      ...OKLO_FIXTURE,
+      enterpriseValue: { ...OKLO_FIXTURE.enterpriseValue, price: null },
+    });
+    const { container } = render(<AnalyzerReport result={result} />);
+    const text = container.textContent ?? "";
+    expect(text).not.toMatch(/targetEnterpriseValue/);
     expect(text).toMatch(/target enterprise value/);
   });
 });

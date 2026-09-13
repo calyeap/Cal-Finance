@@ -347,8 +347,18 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   });
 
   // --- M7 — reverse DCF grid (nine cells) -----------------------------------
+  //
+  // Same seam as §6.5's leverage precondition, above: companyInputs.ts sets
+  // `reverseDcf.targetEnterpriseValue` to null because "filled by assemble
+  // from M1's own output", and until this fix nothing did the filling — so
+  // every acquired run returned all nine cells INCOMPLETE regardless of the
+  // company's actual price/value picture. The fixture's own value still wins
+  // where it supplies one; where it supplies null and M1 is itself
+  // suppressed, `currentEnterpriseValue` is null and the grid fails closed
+  // exactly as before (§5.4 — the cascade must not be softened).
   const reverseDcfGrid = computeReverseDcfGrid({
     ...fixture.reverseDcf,
+    targetEnterpriseValue: fixture.reverseDcf.targetEnterpriseValue ?? currentEnterpriseValue,
     gate1State: gate1.state,
     ronicCells,
     configuredStressMarginLevel: fixture.configuredConstants.stressMarginLevel,
