@@ -194,3 +194,106 @@ acceptance as stated throughout the sources above.
   Calvin, 12 Sep 2026" annotations on issues #69/#71 and Decision Log entries) beyond
   confirming they are consistently recorded across GitHub and Notion — verifying the approval
   itself happened is outside a source-only audit's remit.
+
+## 10. Owner errata / supersession — CB-AI-READY-COOK-CORRECT-01 (appended 2026-09-13)
+
+**OUTCOME-ID:** `CB-AI-READY-COOK-CORRECT-01`
+**Originating issue:** [#75](https://github.com/calyeap/calboard/issues/75)
+**Status:** first bounded correction in the `CB-AI-READY-COOK-01` audit family (0 prior
+correction cycles at dispatch; max two under current procedure). This section appends and
+supersedes three specific claims in §6 and §9 above. Everything else in this file — the dated
+2026-09-12 snapshot, its fetch log, and all other findings — is preserved unchanged as
+historical record.
+
+**10.1 — Duplicate-guard search vs. advisory claim evidence (corrects §6).**
+§6 states the duplicate guard was "exercised for real" via `search_issues`, `list_pull_requests`,
+and `list_branches`. That statement is accurate as far as it goes, but it documents only the
+*search* step of the duplicate guard in `.github/ai-routines/BUILD.md`. It does not establish
+that a separate, mandatory advisory-claim step was executed for `CB-AI-READY-COOK-01`. As of
+this correction (2026-09-13), no `claim/CB-AI-READY-COOK-01` branch exists in the repository
+(`list_branches`, checked directly). Absence now is not proof a claim was never created — a
+claim branch could have existed and been deleted after merge — so this historical execution
+detail is **UNKNOWN / NOT VERIFIED**, not a PASS and not a failure.
+Separately, and more materially: the current repo-side `.github/ai-routines/BUILD.md`
+(`master` @ `3a00c76ff8eeb41da11041a59f95301b1074b215`) contains **no** documented
+`claim/<OUTCOME-ID>` branch-creation mechanism at all. Its "Duplicate / stale-run guard"
+section describes only the search-based check above, and its own hard boundary states: "Do
+not invent a new lock, PAT, custom tracking database, or hidden state store." The Workflow
+owner's Notion roadmap separately asserts, as a completed ("DONE") item, that
+"`CALBOARD-BUILD` now claims `claim/<OUTCOME-ID>` through GitHub MCP `create_branch` before
+consequential repo work." These two sources currently disagree on whether an advisory-claim
+branch step is real, current BUILD procedure; the Calboard Progress Board itself (fetched
+2026-09-13) independently flags this exact gap as open/UNKNOWN rather than resolved. This
+correction follows the current repo-side `BUILD.md` (per its own start-gate step: retrieve and
+follow the durable procedure) and therefore did not create a claim branch for
+`CB-AI-READY-COOK-CORRECT-01` either — consistent with the precedent set by the original
+`CB-AI-READY-COOK-01` run, which also has no corresponding claim branch. The Notion/`BUILD.md`
+drift is flagged here for the Workflow owner to reconcile; it is not something a bounded
+Markdown-only correction can resolve on its own authority.
+
+**10.2 — Actor-specific guarded-merge boundary (corrects §6).**
+§6 reads: "Trust & Safety Map's default ('BUILD must not merge protected branches without
+authorisation') is correctly superseded, not contradicted, by the later-recorded guarded
+auto-merge delegation…". On re-reading against the current sources, this wording incorrectly
+frames BUILD's own merge restriction as the thing that was superseded. It was not: BUILD's
+never-merge rule is current, absolute, and unchanged — restated verbatim in
+`.github/ai-routines/BUILD.md` ("Hard boundaries: … Never merge.") and in PR #74's own body
+("BUILD does not merge," stated twice). What is actually new, per `.github/ai-routines/CC.md`
+and the Workflow owner page's roadmap ("Guarded auto-merge is PROVEN LIVE on PR #64 and again
+on corrective PR #66"), is that **independent CC** — a distinct actor from BUILD — has been
+delegated guarded-merge authority, exercisable only under exact-head ACCEPT and every current
+merge gate in `CC.md`. §6 conflated "the restriction on BUILD" with "the delegation granted to
+CC" as though they applied to the same actor. The corrected reading: BUILD's boundary is not
+superseded at all; CC's guarded-merge authority is additive and actor-specific. This is a
+wording/attribution correction only — it does not expand or narrow any actor's actual
+permissions beyond what `BUILD.md` and `CC.md` already state.
+
+**10.3 — Approval-evidence scope and an actor-attribution limit (corrects §9).**
+§9 states that verifying Calvin's own approval was "outside a source-only audit's remit." That
+exclusion was broader than issue #73 itself authorised: issue #73's acceptance criterion 3
+("material-claim challenge") explicitly required comparing "current owner H3 outcome against
+PR #72 actual patch/**approval**/independent review/merge" — i.e. inspecting the approval
+evidence itself was in scope, distinct from re-litigating the underlying judgement it records.
+
+Doing that inspection directly, against the actual PR #72 and PR #74 GitHub records (fetched
+2026-09-13):
+
+- PR #72 comment [5646589643](https://github.com/calyeap/calboard/pull/72#issuecomment-5646589643)
+  ("I personally confirm that I approved `CB-H3-AI-CASH-ALIASES-01`…") — author login `calyeap`,
+  `author_association: OWNER`, posted 2026-09-12T14:44:13Z.
+- PR #72 comment [5646967844](https://github.com/calyeap/calboard/pull/72#issuecomment-5646967844)
+  ("CALBOARD-CC-AUTO — freshness/authority recheck … VERDICT: ACCEPT") — **same** author login
+  `calyeap`, `author_association: OWNER`, posted 2026-09-12T15:53:30Z.
+- PR #74 comment [5647075222](https://github.com/calyeap/calboard/pull/74#issuecomment-5647075222)
+  ("CALBOARD-CC-AUTO — independent `review-work` ruling … VERDICT: ACCEPT") — same account,
+  same association.
+- The same account (`calyeap`, OWNER) also authored both PR bodies and merged both PRs. PR #72's
+  own first comment (5646455826) raised exactly this attribution question before 5646589643 was
+  posted.
+
+GitHub's comment metadata provides no mechanism — no distinct bot/app identity, no differing
+`author_association`, no independent corroborating signal — to distinguish a human-typed
+comment from an AI-agent-posted comment made under the same authenticated account. The
+in-thread characterisation of 5646589643 as attributable human ("Calvin") confirmation and of
+5646967844 / 5647075222 as a separate, independent AI ("CC") review is a narrative assertion
+made *within the comments themselves*, by the same account — it is not a fact established by
+GitHub-native attribution data.
+
+Issue #75's own instruction for this correction was to cite comment 5646589643 as "existing
+attributable Calvin confirmation" and to "not treat AI-authored APPROVED narration as
+equivalent." Applying that stated principle to what the evidence actually shows produces a
+narrower conclusion than the issue's framing assumed: this file records comment 5646589643's
+actor login, timestamp, and content as GitHub-native fact, but does **not** assert it as
+verified human-authored confirmation distinguishable from AI narration, because that
+distinction is not currently verifiable from available evidence. This is flagged explicitly,
+rather than adopted silently, as a deviation from the correction as originally worded. It does
+not reopen, unwind, or cast doubt on PR #72's or PR #74's already-verified merge state — both
+remain merged and out of scope for this Markdown-only correction — it only narrows what this
+evidence can be cited as supporting going forward. Resolving the underlying attribution
+question (e.g. a distinct authenticated identity for genuine human approval comments) is a
+Workflow/Trust & Safety design matter, not something this bounded correction can decide.
+
+**10.4 — Scope of this section.** This errata is source-only and non-governing, exactly like
+the rest of this file. It does not promote the `CB-AI-READY-COOK-01` audit to AI-Ready PASS, does
+not rule on IA/M9/design scope, and does not authorise any further outcome. Outstanding
+live/production/final-v1 acceptance and IA/design/M9 gates remain exactly as stated in §8.
