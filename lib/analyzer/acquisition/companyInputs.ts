@@ -388,6 +388,9 @@ export function buildCompanyInputs(
 
     reverseDcf: {
       baseYearRevenue: get("current-revenue"),
+      // Filled by assemble from M1's own output; null here means M1 was
+      // INCOMPLETE, which fails the reverse-DCF grid closed (§5.4, §6.5's
+      // seam, reused).
       targetEnterpriseValue: null,
       currentMargin: get("current-operating-margin"),
       medianMargin: track("medianMargin", medianOf(marginDecimals)),
