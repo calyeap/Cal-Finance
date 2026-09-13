@@ -222,14 +222,22 @@ not invent a new lock, PAT, custom tracking database, or hidden state store." Th
 owner's Notion roadmap separately asserts, as a completed ("DONE") item, that
 "`CALBOARD-BUILD` now claims `claim/<OUTCOME-ID>` through GitHub MCP `create_branch` before
 consequential repo work." These two sources currently disagree on whether an advisory-claim
-branch step is real, current BUILD procedure; the Calboard Progress Board itself (fetched
-2026-09-13) independently flags this exact gap as open/UNKNOWN rather than resolved. This
-correction follows the current repo-side `BUILD.md` (per its own start-gate step: retrieve and
-follow the durable procedure) and therefore did not create a claim branch for
-`CB-AI-READY-COOK-CORRECT-01` either — consistent with the precedent set by the original
-`CB-AI-READY-COOK-01` run, which also has no corresponding claim branch. The Notion/`BUILD.md`
-drift is flagged here for the Workflow owner to reconcile; it is not something a bounded
-Markdown-only correction can resolve on its own authority.
+branch step is documented, current BUILD procedure. The Notion/`BUILD.md` drift is flagged
+here for the Workflow owner to reconcile; a bounded Markdown-only correction cannot resolve
+that drift on its own authority.
+
+That documentation gap is distinct from, and does not excuse, this run's own precondition:
+issue #75's Preflight section explicitly instructed creating "the existing advisory claim
+`claim/CB-AI-READY-COOK-CORRECT-01`" before consequential work, with concrete claim evidence
+recorded in the PR (Done-when item 3). That instruction was already-authorised and unambiguous
+for *this* run, independent of whether `BUILD.md`'s prose documents the mechanism, and the
+repository already carries an established `claim/<OUTCOME-ID>` naming precedent
+(`claim/CB-AUDIT-FIX-01`, `-01B`, `-01C`). Current-run claim evidence: branch
+`claim/CB-AI-READY-COOK-CORRECT-01` created via GitHub MCP `create_branch` from
+`claude/dazzling-wright-9esead` at commit `f340d21b969726634ef7158bb30cac48a198a3a1`, base
+`master` @ `3a00c76ff8eeb41da11041a59f95301b1074b215` — this proves this run's precondition
+only, not that the historical `CB-AI-READY-COOK-01` run claimed (that remains the separate,
+still-legitimate **UNKNOWN** above).
 
 **10.2 — Actor-specific guarded-merge boundary (corrects §6).**
 §6 reads: "Trust & Safety Map's default ('BUILD must not merge protected branches without
