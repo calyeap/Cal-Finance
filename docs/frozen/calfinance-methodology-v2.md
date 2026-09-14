@@ -295,6 +295,20 @@ Historical allocation percentages retained elsewhere on this page are **not** go
 - whether appreciation-driven concentration remains acceptable;
 - evidentiary weight and materiality.
 
+## Rule maturity and Calboard actionability
+
+Use these states when deciding whether a finance rule may drive Calboard behaviour. A state applies only where this methodology or a later authorised CalFinance ruling supports it; **absence of an explicit ruling never grants automation authority.**
+
+| State | Meaning | What Calboard may do |
+| --- | --- | --- |
+| **SETTLED HARD** | An objective policy, process requirement or threshold is approved and governing. | Calculate, check, warn or block only within the exact approved rule. Do not widen the rule or invent adjacent thresholds. |
+| **SETTLED SEMANTIC** | The meaning, vocabulary or decision-state boundary is settled, but it is not necessarily a deterministic rule. | Represent, explain, route or surface the state consistently. Do not convert semantics into a new hard rule. |
+| **TEST / PROVISIONAL** | A method, threshold or treatment is under evaluation and is explicitly non-governing. | Use only inside an authorised test / validation path. It may not silently drive live blocking, candidates or investment action. |
+| **UNRESOLVED** | CalFinance has not settled the policy, threshold or treatment. | Gather evidence, surface the narrowed question and stop the dependent consequential action. Do not choose a default merely because implementation needs one. |
+| **JUDGEMENT** | The conclusion is inherently qualitative or remains reserved to Calvin / the designated human authority. | Research, synthesize, challenge and explain. Do not deterministically decide the qualitative conclusion or convert it into an automatic investment action. |
+
+**Promotion boundary:** a settled CalFinance rule establishes finance meaning; it does **not** directly authorise a Calboard code change. Calboard Command Center must first reconcile the product consequence and authorise any required product / spec / implementation change. Conversely, code, tests or implementation convenience cannot create finance policy.
+
 ## AI role and comprehension
 
 Default mode: **structured devil's advocate**.
@@ -360,23 +374,46 @@ Calboard should help defend against:
 - Methodology changes require CalFinance reconciliation and Calvin approval where the remaining choice is genuinely policy / judgement-dependent.
 - Implementation gaps are routed to Calboard after the finance rule is settled; implementation cannot silently define methodology.
 
-## Portfolio construction — historical figures, NOT GOVERNING ALLOCATION POLICY
+## Performance objective — GOVERNING, approved 14 Sep 2026
 
-> **Superseded as policy authority, 5 Sep 2026 and preserved as history in Methodology v2.** Portfolio-policy numbers — target weights, position caps, cluster / sector caps, rebalance rules and allocation-policy figures — require current CalFinance approval before they govern. The figures below are retained only as a record of Calvin's structured interview. They must not be implemented as current portfolio rules unless separately re-approved.
+> **APPROVED BY CALVIN, 14 Sep 2026.** The comparator, horizon, basis and currency below are objective and computable, and are **SETTLED HARD** under the rule-maturity table above. The response to persistent underperformance is a **process** requirement, not an investment action.
 > 
 
-Historical interview figures, **not governing**:
+- **Benchmark: S&P 500 total return.** Total return, never the price index — the price index excludes dividends and so understates the comparator by roughly one to two percent a year, which compounds into a materially flattering comparison.
+- **Horizon: rolling five years,** reviewed annually. A single year is never a verdict on the methodology in either direction.
+- **Hurdle: relative, not absolute.** The objective is to beat the benchmark over the rolling five-year window. **No separate absolute annual return number is approved,** deliberately: a fixed absolute hurdle passes in a bull market and fails in a bear market largely independently of skill, so it measures the market rather than the process.
+- **Basis: after fees and after tax actually paid,** on both sides of the comparison.
+- **Currency: USD is the governing measurement basis.** Portfolio and benchmark are both measured in USD. Rationale: the objective is to evaluate security selection, not an unexpressed view on SGD/USD.
+- **Display currency is not the measurement basis.** An SGD (or other) presentation may be offered, provided portfolio and benchmark are converted at the same rates on the same dates and the USD figures remain the governing record. A display toggle must never silently change what the policy is measured against.
+- **Persistent underperformance:** trailing the benchmark across **two consecutive rolling five-year windows** triggers a **methodology review** under the Governance section. It does not by itself trigger a strategy change, a switch to indexing, or any portfolio action — consistent with the behavioural guardrail against reactive methodology rewriting.
+
+**Investment return hurdle and valuation discount rate are separate concepts.** One must not silently become the other. The hurdle above is a portfolio-evaluation comparator and carries no implication for any discount rate used in valuation.
+
+**Promotion boundary.** This settles the finance rule only. It does not authorise a Calboard code change; performance measurement is a future capability and any implementation runs through a CalFinance → Calboard Command Center handoff.
+
+## Portfolio construction — GOVERNING ALLOCATION POLICY, approved 14 Sep 2026
+
+> **APPROVED BY CALVIN, 14 Sep 2026.** These figures were recorded on 5 Sep 2026 as history from Calvin's structured interview and were explicitly non-governing pending CalFinance approval. That approval is now given, as written and unamended. They are **SETTLED HARD** under the rule-maturity table above: Calboard may calculate, check and warn within these exact limits, and may not widen them or invent adjacent thresholds.
+> 
+
+Governing allocation policy:
 
 - normal portfolio guideline: approximately **12–20 stocks**;
 - maximum normal initial position: **5%**;
 - normal deliberate mature-position cap: **10%**;
-- appreciation above 10%: mandatory concentration review, not automatic trim;
+- appreciation above 10%: mandatory concentration review, **not automatic trim**;
 - maximum deliberate sector / tightly related theme exposure: **25%**;
-- appreciation above 25%: mandatory concentration review, not automatic trim;
-- speculative sleeve: **5–10%** of stock portfolio; historical hard ceiling **10%**;
-- individual speculative position: historical maximum **3%**.
+- appreciation above 25%: mandatory concentration review, **not automatic trim**;
+- speculative sleeve: **5–10%** of stock portfolio; hard ceiling **10%**;
+- individual speculative position: maximum **3%**.
 
-The **no investment leverage / margin** rule remains governing independently of these superseded percentage figures.
+**Breach semantics.** A breach of the 10% or 25% levels raises a REVIEW state. It never produces an automatic TRIM, and it is not by itself a TRIM candidate — consistent with the existing rule that a large gain alone is not a trim reason, and that whether appreciation-driven concentration remains acceptable is judgement-assisted. Deliberate limits (initial position, speculative sleeve, individual speculative position) are different: they constrain a new or increased position at the point of sizing.
+
+**What this approval does NOT settle.** Liquidity / holding-power requirements, how long an appreciation-driven breach may persist before escalating beyond review, and any extreme concentration backstop remain **UNRESOLVED** — see *Unresolved policy choices* below. A breach therefore has no expiry and no automatic escalation path.
+
+**Promotion boundary.** This settles the finance rule only. It does not authorise a Calboard code change. Per the product boundary below, CalFinance produces a bounded implementation-consequences handoff and Calboard Command Center reconciles it against live product state and decides sequencing. Portfolio Review is the consuming capability and remains THEN on the roadmap.
+
+The **no investment leverage / margin** rule remains governing independently of these percentage figures.
 
 ## TEST / provisional — NON-GOVERNING
 
@@ -405,24 +442,15 @@ Do not infer these from code, fixtures, old interview numbers or external practi
 
 ### Portfolio risk envelope
 
-Calvin has not yet approved the current governing numerical policy for:
+**Partly resolved 14 Sep 2026.** Deliberate name / cluster / speculative concentration limits, and the review-not-trim treatment of appreciation-driven breaches, are now approved and governing — see *Portfolio construction* above. Still unresolved:
 
-- deliberate name / cluster / speculative concentration;
 - liquidity / holding-power requirements;
-- treatment and timing of appreciation-driven breaches;
+- **how long** an appreciation-driven breach may persist before it escalates beyond review;
 - any extreme concentration backstop.
 
 ### Performance objective
 
-Calvin has not yet approved the exact long-term performance-evaluation policy, including:
-
-- absolute return hurdle;
-- benchmark / opportunity-cost comparator;
-- evaluation horizon;
-- fee / tax basis;
-- treatment of persistent underperformance.
-
-**Investment return hurdle and valuation discount rate are separate concepts.** One must not silently become the other.
+**RESOLVED 14 Sep 2026** — benchmark, horizon, hurdle, basis, currency and the treatment of persistent underperformance are approved and governing. See *Performance objective — GOVERNING* above.
 
 ### Operational judgement thresholds
 
