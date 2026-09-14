@@ -1,0 +1,62 @@
+name: CI
+
+# OUTCOME-ID: CB-CI-CHECKS-01
+#
+# The first automated correctness gate on this repository. Until this
+# landed, `.github/workflows/` contained only `cc-auto-fire.yml`, whose
+# jobs fire routines rather than run tests — so every Calboard PR showed
+# zero check runs, and "zero checks, state pending" carried no signal
+# about the change either way.
+#
+# This job answers a question a machine can settle — does the change
+# typecheck and do the tests pass — rather than the question the merge
+# gate has been stuck on, which is whether a human approved it. The two
+# are independent: this needs no identity, no secret and no bot account.
+#
+# Deliberately minimal. `npm run evidence` (the frozen-artefact SHA-256
+# gate) is the obvious next addition and is NOT included here, because
+# its runtime requirements are unverified from chat and a check that
+# fails for environmental reasons is worse than no check.
+#
+# Nothing here enforces a merge. Making this check REQUIRED is a
+# repository ruleset change and is Calvin's to make, after one green run
+# establishes the check name.
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out the pull request head
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies from the lockfile
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Install the Playwright browser the suite needs
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the test suite
+        run: npm test
