@@ -6,6 +6,15 @@ import {
   disabledReason,
 } from "./identity";
 import type { InstrumentResolution, MarketDataProvider } from "../marketdata/provider";
+import type { FilingHistoryCheck } from "./filingHistoryCheck";
+
+// Every test that expects RESOLVED must stub the filing-history check: the
+// real one calls EDGAR (via SEC_USER_AGENT, unset in this suite) and would
+// otherwise answer UNAVAILABLE, silently turning every RESOLVED test into a
+// test of the wrong thing.
+const filingsPresent = async (): Promise<FilingHistoryCheck> => "PRESENT";
+const filingsAbsent = async (): Promise<FilingHistoryCheck> => "ABSENT";
+const filingsUnavailable = async (): Promise<FilingHistoryCheck> => "UNAVAILABLE";
 
 function providerReturning(resolution: InstrumentResolution): MarketDataProvider {
   return {
@@ -38,7 +47,11 @@ const RESOLVED_MSFT: InstrumentResolution = {
 
 describe("resolveAnalyzerIdentity — the four Screen 1 states", () => {
   it("RESOLVED for a listed operating company, carrying the company name", async () => {
-    const identity = await resolveAnalyzerIdentity("msft", providerReturning(RESOLVED_MSFT));
+    const identity = await resolveAnalyzerIdentity(
+      "msft",
+      providerReturning(RESOLVED_MSFT),
+      filingsPresent
+    );
     expect(identity).toMatchObject({
       outcome: "RESOLVED",
       ticker: "MSFT",
@@ -50,7 +63,11 @@ describe("resolveAnalyzerIdentity — the four Screen 1 states", () => {
   // timestamp rather than the page read one off the clock at render.
   it("records when resolution happened, as a parseable instant", async () => {
     const before = Date.now();
-    const identity = await resolveAnalyzerIdentity("MSFT", providerReturning(RESOLVED_MSFT));
+    const identity = await resolveAnalyzerIdentity(
+      "MSFT",
+      providerReturning(RESOLVED_MSFT),
+      filingsPresent
+    );
     const after = Date.now();
 
     expect(identity.outcome).toBe("RESOLVED");
@@ -126,7 +143,8 @@ describe("resolveAnalyzerIdentity — the four Screen 1 states", () => {
           symbol: ticker,
           assetClass: "equity",
           name: "A Listed Company",
-        })
+        }),
+        filingsPresent
       );
       expect(identity.outcome).toBe("RESOLVED");
     }
@@ -162,13 +180,81 @@ describe("resolveAnalyzerIdentity — the four Screen 1 states", () => {
   });
 
   it("normalises the ticker before resolving", async () => {
-    const identity = await resolveAnalyzerIdentity("  msft  ", providerReturning(RESOLVED_MSFT));
+    const identity = await resolveAnalyzerIdentity(
+      "  msft  ",
+      providerReturning(RESOLVED_MSFT),
+      filingsPresent
+    );
     expect(identity).toMatchObject({ outcome: "RESOLVED", ticker: "MSFT" });
   });
 
   it("treats an empty entry as UNKNOWN rather than calling the provider", async () => {
     const identity = await resolveAnalyzerIdentity("   ", providerThrowing(new Error("unreached")));
     expect(identity.outcome).toBe("UNKNOWN");
+  });
+});
+
+// §2 rule 1a / acceptance criterion A28, authorised 14 Sep 2026: a registrant
+// with no annual filing history is refused here, and a lookup failure must
+// never be rendered as that refusal.
+describe("resolveAnalyzerIdentity — the Step 1 filing-history check", () => {
+  it("NO_FILING_HISTORY for a resolved company with zero annual filings", async () => {
+    const identity = await resolveAnalyzerIdentity(
+      "VNTC",
+      providerReturning({
+        outcome: "resolved",
+        symbol: "VNTC",
+        assetClass: "equity",
+        name: "Ventac Holdco",
+      }),
+      filingsAbsent
+    );
+    expect(identity).toMatchObject({ outcome: "NO_FILING_HISTORY", ticker: "VNTC" });
+  });
+
+  // The load-bearing distinction: "no filings" and "could not check" must not
+  // collapse into one outcome, or a transient EDGAR failure would be rendered
+  // as a permanent refusal.
+  it("UNAVAILABLE, never NO_FILING_HISTORY, when the filing-history check cannot complete", async () => {
+    const identity = await resolveAnalyzerIdentity(
+      "MSFT",
+      providerReturning(RESOLVED_MSFT),
+      filingsUnavailable
+    );
+    expect(identity.outcome).toBe("UNAVAILABLE");
+  });
+
+  it("does not run the filing-history check for an ETF", async () => {
+    let called = false;
+    const identity = await resolveAnalyzerIdentity(
+      "SPY",
+      providerReturning({
+        outcome: "resolved",
+        symbol: "SPY",
+        assetClass: "etf",
+        name: "SPDR S&P 500 ETF Trust",
+      }),
+      async () => {
+        called = true;
+        return "PRESENT";
+      }
+    );
+    expect(identity.outcome).toBe("UNSUPPORTED");
+    expect(called).toBe(false);
+  });
+
+  it.each<["UNKNOWN" | "UNSUPPORTED" | "UNAVAILABLE", InstrumentResolution]>([
+    ["UNKNOWN", { outcome: "unknown" }],
+    ["UNSUPPORTED", { outcome: "unsupported" }],
+    ["UNAVAILABLE", { outcome: "unavailable" }],
+  ])("does not run the filing-history check when the provider answers %s", async (expected, resolution) => {
+    let called = false;
+    const identity = await resolveAnalyzerIdentity("XYZ", providerReturning(resolution), async () => {
+      called = true;
+      return "PRESENT";
+    });
+    expect(identity.outcome).toBe(expected);
+    expect(called).toBe(false);
   });
 });
 
@@ -186,25 +272,30 @@ describe("what Screen 1 does with each state", () => {
     instrumentDescription: "a fund or index",
   } as const;
   const unavailable = { outcome: "UNAVAILABLE", ticker: "MSFT" } as const;
+  const noFilingHistory = { outcome: "NO_FILING_HISTORY", ticker: "VNTC" } as const;
 
   it("permits Begin analysis only when resolved", () => {
     expect(mayBeginAnalysis(resolved)).toBe(true);
     expect(mayBeginAnalysis(unknown)).toBe(false);
     expect(mayBeginAnalysis(unsupported)).toBe(false);
     expect(mayBeginAnalysis(unavailable)).toBe(false);
+    expect(mayBeginAnalysis(noFilingHistory)).toBe(false);
   });
 
   // UNAVAILABLE keeps the entry and offers Try again; the rejections do not.
+  // NO_FILING_HISTORY is a settled answer like UNSUPPORTED — re-querying the
+  // same registrant cannot change it.
   it("offers Try again only on a provider failure", () => {
     expect(offersTryAgain(unavailable)).toBe(true);
     expect(offersTryAgain(unknown)).toBe(false);
     expect(offersTryAgain(unsupported)).toBe(false);
+    expect(offersTryAgain(noFilingHistory)).toBe(false);
     expect(offersTryAgain(resolved)).toBe(false);
   });
 
   it("states a reason for every disabled state, and none when resolved", () => {
     expect(disabledReason(resolved)).toBeNull();
-    for (const identity of [unknown, unsupported, unavailable]) {
+    for (const identity of [unknown, unsupported, unavailable, noFilingHistory]) {
       const reason = disabledReason(identity);
       expect(reason).toBeTruthy();
       expect(reason!.length).toBeGreaterThan(10);

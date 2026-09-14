@@ -6,7 +6,7 @@ import { EMPTY_RESOLVE_STATE } from "@/lib/analyzer/resolveState";
 import { disabledReason, offersTryAgain } from "@/lib/analyzer/identity";
 
 // Screen 1 — Step 1, ticker entry and identity resolution.
-// Rendered per mock-screen1-entry.html. Four outcomes, one field, no Resolve
+// Rendered per mock-screen1-entry.html. Five outcomes, one field, no Resolve
 // button: resolution fires on blur or Enter.
 
 export function AnalyzerEntry({ fixtureMissing }: { fixtureMissing?: string }) {
@@ -108,8 +108,9 @@ export function AnalyzerEntry({ fixtureMissing }: { fixtureMissing?: string }) {
                 </span>
                 <span className="name">Unavailable — no fact set in this build</span>
                 <span className="cause">
-                  Fact acquisition arrives at milestone M8. Until then the analyzer runs the two
-                  validation fixtures, MSFT and OKLO.
+                  Facts are acquired from SEC filings for any resolved ticker. The scenario inputs
+                  Step 7 supplies — not yet an interface, so still carried from the validation
+                  set — are recorded for MSFT and OKLO only, and a run cannot open without them.
                 </span>
               </div>
               <p className="note">
@@ -176,12 +177,12 @@ export function AnalyzerEntry({ fixtureMissing }: { fixtureMissing?: string }) {
 
           {identity && identity.outcome !== "RESOLVED" && (
             <div className="result">
-              {/* UNAVAILABLE is OPEN — no answer yet. The two rejections are
+              {/* UNAVAILABLE is OPEN — no answer yet. The rejections are
                   SUPPRESSION — a settled answer, and the answer is no run. */}
               <div className={offersTryAgain(identity) ? "open" : "state"}>
                 <span className="plain">{plainFor(identity.outcome, identity.ticker)}</span>
                 <span className="name">{stateNameFor(identity)}</span>
-                <span className="cause">{causeFor(identity.outcome)}</span>
+                <span className="cause">{causeFor(identity.outcome, identity.ticker)}</span>
               </div>
 
               <p className="note">{noteFor(identity.outcome)}</p>
@@ -215,6 +216,8 @@ function stateNameFor(identity: { outcome: string; ticker: string }): string {
       return `Unknown — no provider evidence for ${identity.ticker}`;
     case "UNSUPPORTED":
       return "Unsupported — not an operating company";
+    case "NO_FILING_HISTORY":
+      return "No filing history — zero annual filings on record";
     default:
       return "Unavailable — provider not reached";
   }
@@ -226,17 +229,21 @@ function plainFor(outcome: string, ticker: string): string {
       return "The provider answered, and has no instrument under this symbol.";
     case "UNSUPPORTED":
       return "This is a real instrument. It is not one this analyzer can run.";
+    case "NO_FILING_HISTORY":
+      return "This resolves to a real, listed operating company. It has filed no annual report.";
     default:
       return `We could not reach the provider. This says nothing about whether ${ticker} exists.`;
   }
 }
 
-function causeFor(outcome: string): string {
+function causeFor(outcome: string, ticker: string): string {
   switch (outcome) {
     case "UNKNOWN":
       return "Provider responded normally · zero matches returned";
     case "UNSUPPORTED":
       return "Analyzer accepts listed operating companies only";
+    case "NO_FILING_HISTORY":
+      return `Provider identifies ${ticker} as a listed operating company · SEC filing search returns zero annual reports for this registrant`;
     default:
       return "The request to the identity service did not complete";
   }
@@ -248,6 +255,8 @@ function noteFor(outcome: string): string {
       return "Check the spelling and type it again. A symbol that does not resolve cannot start a run, and there is no way to continue with one that did not.";
     case "UNSUPPORTED":
       return "A fund has no filings of its own, and every step after this one reads filings — so there would be nothing to spot-check and nothing to value. This is about the instrument type, not the business.";
+    case "NO_FILING_HISTORY":
+      return "Every step after this one takes a company apart through its annual filings, and this registrant has none — a run would only fail late, against a fact set that was never going to exist. A company can be listed under one registrant while its filing history sits under another after a reorganisation; Calboard does not follow that link, so identity stays decided here. This is not the same as too little history to analyse, which is a later question reported as its own state.";
     default:
       return "Nothing has been rejected and nothing has been recorded. Your entry is still in the field. Try again now or later — a failure to reach the provider is never treated as evidence about a symbol.";
   }

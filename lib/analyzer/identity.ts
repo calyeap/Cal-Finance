@@ -1,5 +1,6 @@
 import type { MarketDataProvider } from "../marketdata/provider";
 import { lookupCrypto } from "../marketdata/cryptoSymbols";
+import { checkAnnualFilingHistory, type FilingHistoryCheck } from "./filingHistoryCheck";
 
 // ---------------------------------------------------------------------------
 // §2 Step 1 / §1.2 / §9.3.1 — identity resolution for the analyzer.
@@ -15,7 +16,12 @@ import { lookupCrypto } from "../marketdata/cryptoSymbols";
 // in this module is imported by the portfolio code, and it must stay that way.
 // ---------------------------------------------------------------------------
 
-export type AnalyzerIdentityOutcome = "RESOLVED" | "UNKNOWN" | "UNSUPPORTED" | "UNAVAILABLE";
+export type AnalyzerIdentityOutcome =
+  | "RESOLVED"
+  | "UNKNOWN"
+  | "UNSUPPORTED"
+  | "UNAVAILABLE"
+  | "NO_FILING_HISTORY";
 
 export type AnalyzerIdentity =
   | { outcome: "RESOLVED"; ticker: string; companyName: string; resolvedAt: string }
@@ -23,10 +29,16 @@ export type AnalyzerIdentity =
   // `instrumentDescription` is what Screen 1 names as the reason for refusal.
   | { outcome: "UNSUPPORTED"; ticker: string; instrumentDescription: string }
   | { outcome: "UNKNOWN"; ticker: string }
-  | { outcome: "UNAVAILABLE"; ticker: string };
+  | { outcome: "UNAVAILABLE"; ticker: string }
+  // §2 rule 1a / A28 — a real, listed operating company with zero annual
+  // filings on record under its own registrant. Not UNSUPPORTED: that state
+  // is an instrument-class judgment, and this registrant is an operating
+  // company. Distinct from UNAVAILABLE: this is EDGAR answering "none", not
+  // EDGAR failing to answer.
+  | { outcome: "NO_FILING_HISTORY"; ticker: string };
 
 /**
- * Resolves a ticker to one of the four Screen 1 states.
+ * Resolves a ticker to one of the five Screen 1 states.
  *
  * No price is fetched, and none may be added here. §2: "No price renders on
  * Step 1" — showing it at entry would put an unsourced, untimestamped figure
@@ -40,7 +52,11 @@ export type AnalyzerIdentity =
  */
 export async function resolveAnalyzerIdentity(
   rawTicker: string,
-  provider: MarketDataProvider
+  provider: MarketDataProvider,
+  // Injectable so tests can stub EDGAR's answer instead of hitting the
+  // network (or SEC_USER_AGENT's absence) on every RESOLVED case. Production
+  // callers take the default.
+  filingHistoryCheck: (ticker: string) => Promise<FilingHistoryCheck> = checkAnnualFilingHistory
 ): Promise<AnalyzerIdentity> {
   const ticker = rawTicker.trim().toUpperCase();
 
@@ -81,15 +97,32 @@ export async function resolveAnalyzerIdentity(
           instrumentDescription: "a fund or index",
         };
       }
+
+      // When the provider answered. Screen 1 shows it so the resolution
+      // carries a timestamp like every other acquired thing (§3.4); it is
+      // recorded here rather than at render, which would timestamp the
+      // page view instead of the answer. Refers to the market-data provider
+      // above, not the filing-history check below — the two are separate
+      // questions with separate sources.
+      const resolvedAt = new Date().toISOString();
+
+      // §2 rule 1a / A28: a registrant with no annual filing history is
+      // refused here, not left to fail late against a fact set that was
+      // never going to exist. A lookup failure is UNAVAILABLE, never a
+      // refusal — see filingHistoryCheck.ts.
+      const filingHistory = await filingHistoryCheck(resolution.symbol);
+      if (filingHistory === "UNAVAILABLE") {
+        return { outcome: "UNAVAILABLE", ticker };
+      }
+      if (filingHistory === "ABSENT") {
+        return { outcome: "NO_FILING_HISTORY", ticker: resolution.symbol };
+      }
+
       return {
         outcome: "RESOLVED",
         ticker: resolution.symbol,
         companyName: resolution.name,
-        // When the provider answered. Screen 1 shows it so the resolution
-        // carries a timestamp like every other acquired thing (§3.4); it is
-        // recorded here rather than at render, which would timestamp the
-        // page view instead of the answer.
-        resolvedAt: new Date().toISOString(),
+        resolvedAt,
       };
 
     case "unsupported":
@@ -144,7 +177,7 @@ function classifyNonCompanyInstrument(ticker: string): string | null {
 
 /**
  * Whether a run may be committed from this identity. Only RESOLVED proceeds;
- * Begin analysis is disabled in all three other states with its reason stated.
+ * Begin analysis is disabled in every other state with its reason stated.
  */
 export function mayBeginAnalysis(identity: AnalyzerIdentity): boolean {
   return identity.outcome === "RESOLVED";
@@ -155,16 +188,16 @@ export function mayBeginAnalysis(identity: AnalyzerIdentity): boolean {
  *
  * UNAVAILABLE only. §9.3.1 and the Screen 1 contract distinguish a provider
  * failure — which says nothing about the ticker and is worth retrying — from
- * the two rejections, which are answers. Offering Try again on UNKNOWN or
- * UNSUPPORTED invites the analyst to retry something that will refuse them
- * identically every time.
+ * the rejections, which are answers. Offering Try again on UNKNOWN,
+ * UNSUPPORTED or NO_FILING_HISTORY invites the analyst to retry something
+ * that will refuse them identically every time.
  */
 export function offersTryAgain(identity: AnalyzerIdentity): boolean {
   return identity.outcome === "UNAVAILABLE";
 }
 
 /**
- * The reason Begin analysis is disabled, for the three non-resolved states.
+ * The reason Begin analysis is disabled, for every non-resolved state.
  * Returns null when the run may proceed.
  */
 export function disabledReason(identity: AnalyzerIdentity): string | null {
@@ -177,5 +210,7 @@ export function disabledReason(identity: AnalyzerIdentity): string | null {
       return `${identity.ticker} is ${identity.instrumentDescription}. This analyzer covers listed operating companies only.`;
     case "UNAVAILABLE":
       return "The identity service could not be reached, so this ticker has not been checked.";
+    case "NO_FILING_HISTORY":
+      return "Resolved, and refused: no annual filing history.";
   }
 }
