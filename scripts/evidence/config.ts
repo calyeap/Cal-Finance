@@ -21,7 +21,7 @@ export const FROZEN_HASHES: Readonly<Record<string, string>> = {
   "calboard-valuation-methodology.md":
     "a4a39e33717993fe9558f263009cec3814555765ac69c69728d99354d4a5ec7c",
   "calfinance-methodology-v2.md":
-    "0fd8e205fe4cfbee6d934a4f3cfe9ebc017d2f18a5f0e4bb3f19825f7725635c",
+    "0e07ec7454b1c12883603a3bfa816ac3c6102c210509ea558147470cb4388c07",
 };
 
 /** Proves the reachability gate got Screen 1 and not merely a 200. */
