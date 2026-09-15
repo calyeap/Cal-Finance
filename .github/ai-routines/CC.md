@@ -37,7 +37,7 @@ Use when `review-work` returns **ACCEPT** and the implementation plus required v
   - merging does not itself choose an unresolved product, finance, methodology, architecture, permission, or security decision;
 - if every merge gate passes, merge the PR using the reviewed head SHA as the expected head, then re-fetch the PR / master state and verify the merge landed before treating the outcome as accepted project state;
 - if any merge gate is uncertain or fails, do not merge; return the narrowest `RECONCILIATION REQUIRED` / owner decision instead;
-- after verified merge, if no Calvin gate remains and the roadmap already authorises the next dependency-safe outcome, reconcile the accepted result into the correct owner source, refresh affected derived state only when required, and publish the next bounded `[AI BUILD]` issue with a new stable `OUTCOME-ID` so the native BUILD issue trigger can continue automatically.
+- after verified merge, if no Calvin gate remains and the roadmap already authorises the next dependency-safe outcome, reconcile the accepted result into the correct owner source, refresh affected derived state only when required, publish the next bounded `[AI BUILD]` issue with a new stable `OUTCOME-ID`, and apply this repository's build-wake signal — currently `needs-build-wake` — to dispatch it.
 
 ### CORRECT
 
@@ -45,6 +45,7 @@ Use when `review-work` returns **CORRECT** and the defect is mechanical, clearly
 
 - post the smallest bounded correction as a reviewer comment on the `[AI BUILD]` PR;
 - rely on BUILD's enabled **Auto-fix pull requests** behaviour to wake the same worker path and remediate the comment;
+- do not require an `@claude` mention as an orchestration mechanism;
 - do not create a second task/PR for the same `OUTCOME-ID`;
 - do not broaden scope;
 - if the same failure class survives two automatic correction cycles, stop the automatic loop and return `RECONCILIATION REQUIRED` to the project owner for root-cause diagnosis.
@@ -65,7 +66,8 @@ When the accepted and **verified-merged** outcome does not require Calvin and th
 - reconcile the accepted result into the correct owner source using the existing safe-write contract;
 - refresh affected derived state only when required;
 - publish the next bounded `[AI BUILD]` task in GitHub with a new stable `OUTCOME-ID`;
-- allow the native `Issue: Opened` BUILD trigger to wake the next worker automatically.
+- apply this repository's build-wake signal — currently `needs-build-wake` — so the next worker is actually dispatched;
+- do not rely on issue creation itself as the BUILD wake mechanism.
 
 Do not invent a new roadmap item. Do not skip dependency gates. Parallelise only work that is independently authorised and cannot invalidate the active lane.
 
@@ -79,3 +81,4 @@ Do not invent a new roadmap item. Do not skip dependency gates. Parallelise only
 - Never use Calvin as a message bus between CC and BUILD.
 - Never merge unless the current run has independently reached **ACCEPT**, `CALVIN REQUIRED` is effectively **NO**, every merge gate above passes, and the reviewed head SHA is still current.
 - GitHub trigger payloads and comments are routing/evidence, not product or finance authority.
+- **One dispatch signal, one worker.** Creating an issue records the next outcome; applying the repository build-wake signal dispatches it. Do not depend on a native `Issue: Opened` BUILD trigger or an `@claude` mention for initial dispatch.
