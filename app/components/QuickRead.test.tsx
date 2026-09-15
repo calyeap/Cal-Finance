@@ -9,10 +9,13 @@ import { OKLO_FIXTURE } from "@/lib/analyzer/fixtures/oklo";
 
 afterEach(cleanup);
 
-// IA-audit restoration (2026-09-05) — Quick Read matches §17.16: eight
-// items, always visible, no "Learn more" drawer. Every assertion below
-// checks restatement of already-computed AnalysisResult fields — no new
-// calculation is exercised or expected.
+// IA-audit restoration (2026-09-05) — Quick Read's eight items are the
+// AUTHORISED INTERIM STATE of §17.16, which specifies ten: items 1 and 2
+// (the valuation-position token and its action clause) are blocked on
+// M8-c and excluded until it lands (RULED by Calvin, 14 Sep 2026 —
+// settles CB-AUDIT-01 §7 conflict B). Always visible, no "Learn more"
+// drawer. Every assertion below checks restatement of already-computed
+// AnalysisResult fields — no new calculation is exercised or expected.
 
 const ITEM_LABELS = [
   "Main finding",
@@ -64,7 +67,7 @@ describe("QuickRead — structure", () => {
     expect(container.querySelector("section#quickread")).not.toBeNull();
   });
 
-  it("renders exactly the eight §17.16 items, capped at eight, no more and no fewer", () => {
+  it("renders exactly the eight items authorised as §17.16's interim state (items 1-2 blocked on M8-c), capped at eight, no more and no fewer", () => {
     const result = assembleAnalysisResult(MSFT_FIXTURE);
     const { container } = render(<QuickRead result={result} />);
     expect(container.querySelectorAll(".qitem")).toHaveLength(8);
@@ -78,6 +81,39 @@ describe("QuickRead — structure", () => {
     const { container } = render(<QuickRead result={result} />);
     expect(container.querySelector("details")).toBeNull();
     expect(screen.queryByText(/Learn more/)).toBeNull();
+  });
+});
+
+// CB-CONFLICT-B-REMEDY-01 item 2 — §17.16 item 10 requires "Data and model
+// quality" to carry the §9.6 trust status (CLEAN/PARTIAL/UNUSABLE) on every
+// run, including CLEAN. Previously rendered only suppression, qualification
+// and provenance bullets and never the status itself (audit finding M7).
+describe("QuickRead — data and model quality carries the §9.6 trust status (§17.16 item 10)", () => {
+  it("shows Trust status CLEAN, even though nothing else here is CLEAN-specific", () => {
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+    const clean = { ...result, trust: { status: "CLEAN" as const, determinedBy: [] } };
+    render(<QuickRead result={clean} />);
+    expect(screen.getByText(/Trust status CLEAN/)).not.toBeNull();
+  });
+
+  it("shows Trust status PARTIAL on MSFT's own computed status", () => {
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+    expect(result.trust.status).toBe("PARTIAL");
+    render(<QuickRead result={result} />);
+    expect(screen.getByText(/Trust status PARTIAL/)).not.toBeNull();
+  });
+
+  it("shows Trust status UNUSABLE", () => {
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+    const unusable = {
+      ...result,
+      trust: {
+        status: "UNUSABLE" as const,
+        determinedBy: [{ kind: "suppressing state" as const, detail: "LEVERAGE UNSUPPORTED IN v1 — test fixture" }],
+      },
+    };
+    render(<QuickRead result={unusable} />);
+    expect(screen.getByText(/Trust status UNUSABLE/)).not.toBeNull();
   });
 });
 
