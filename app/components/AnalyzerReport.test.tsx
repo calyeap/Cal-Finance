@@ -84,6 +84,20 @@ describe("AnalyzerReport — MSFT", () => {
     const section = container.querySelector("section#J") as HTMLElement;
     expect(section.textContent).not.toMatch(/Construction lead fixed/);
   });
+
+  it("Section J renders each §7.1 constant's own configured value, and 'not configured' where the run leaves one unset (CB-POLICY-VALUES-RENDER-01)", () => {
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#J") as HTMLElement;
+    // MSFT configures nopatTaxRate (0.2) and stressMarginLevel (0.38); the
+    // other two are left null — a null must render as an honest absence,
+    // never as 0/0%/blank (H4's fabricated-zero failure class).
+    expect(section.textContent).toMatch(/NOPAT tax rate 20%/);
+    expect(section.textContent).toMatch(/stress margin level 38%/);
+    expect(section.textContent).toMatch(/pre-revenue unlevered rate not configured/);
+    expect(section.textContent).toMatch(/project-debt cost not configured/);
+    expect(section.textContent).not.toMatch(/pre-revenue unlevered rate 0%/);
+    expect(section.textContent).not.toMatch(/project-debt cost 0%/);
+  });
 });
 
 describe("AnalyzerReport — OKLO", () => {
@@ -178,6 +192,20 @@ describe("AnalyzerReport — OKLO", () => {
     for (const row of Array.from(rows)) {
       expect(row.querySelector("td:nth-child(2) .v")?.textContent).not.toBe("");
     }
+  });
+
+  it("Section J renders each §7.1 constant's own configured value for OKLO's different configuration (CB-POLICY-VALUES-RENDER-01)", () => {
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#J") as HTMLElement;
+    // OKLO configures nopatTaxRate (0.21), preRevenueUnleveredRate (0.10)
+    // and projectDebtCost (0.08); stressMarginLevel is left null — the
+    // opposite configuration from MSFT, so this is not the same assertion
+    // duplicated across fixtures.
+    expect(section.textContent).toMatch(/NOPAT tax rate 21%/);
+    expect(section.textContent).toMatch(/stress margin level not configured/);
+    expect(section.textContent).toMatch(/pre-revenue unlevered rate 10%/);
+    expect(section.textContent).toMatch(/project-debt cost 8%/);
+    expect(section.textContent).not.toMatch(/stress margin level 0%/);
   });
 
   // CB-H3-IMPLEMENT-01. This fixture's dates are aligned (its own
