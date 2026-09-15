@@ -99,7 +99,11 @@ Record the dispatch in `RECENT CHANGES` on Project Home, then stop.
 - Runway items only. A new outcome is Calvin's to authorise.
 - One dispatch per project per run. Never two. An evidence outcome counts as that run's dispatch.
 - Do not dispatch while an `[AI BUILD]` PR is open or a worker is running for that project.
-- **`CB-SWEEP-01` Rule 1 cap:** maximum three **autonomous** dispatches per day across all projects. A dispatch Calvin names and directs is not autonomous selection, does not count against the cap, and never was in scope (ruled by Calvin, 14 Sep 2026). Both kinds still report.
+- **`CB-SWEEP-01` Rule 1 cap:** maximum three **autonomous** dispatches per day across all projects. The cap bounds **unattended selection** — `CHIEF-OF-STAFF-WATCH` Rule 1 choosing work on its own initiative, with no triggering event from Calvin. Two clarifications, both ruled by Calvin on 14 Sep 2026, both narrowing what counts against it:
+  - A dispatch **Calvin names and directs** is not autonomous selection, does not count against the cap, and never was in scope.
+  - A **post-merge continuation dispatch** does not count against the cap either. When `CALBOARD-OWNER` or `CALBOARD-CC-AUTO` merges an authorised outcome and then opens the next Runway item, that is not autonomous selection: it is downstream of a real merge, works the Runway in the priority order Calvin set, and takes the next item Calvin **already authorised**. Reading it as autonomous would make the cap mean *"three merges a day"*, which throttles throughput and bounds nothing real.
+
+  Unchanged by either: Rule 1's own cap stays at **three per day**, a continuation run may dispatch only items **already on the Runway** — a new outcome remains Calvin's to authorise — and both kinds still report.
 - If nothing qualifies, write `WAIT`. Do not manufacture work.
 
 ## Always report
