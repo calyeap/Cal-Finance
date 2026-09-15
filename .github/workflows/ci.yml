@@ -1,0 +1,124 @@
+name: CI
+
+# OUTCOME-ID: CB-CI-CHECKS-01
+#
+# The first automated correctness gate on this repository. Until this
+# landed, `.github/workflows/` contained only `cc-auto-fire.yml`, whose
+# jobs fire routines rather than run tests — so every Calboard PR showed
+# zero check runs, and "zero checks, state pending" carried no signal
+# about the change either way.
+#
+# This job answers a question a machine can settle — does the change
+# typecheck and do the tests pass — rather than the question the merge
+# gate has been stuck on, which is whether a human approved it. The two
+# are independent: this needs no identity, no bot account and no secret.
+#
+# WHY A DATABASE. `vitest.setup.ts` refuses to run without
+# TEST_DATABASE_URL, and further refuses unless the database name ends in
+# `_test` — a deliberate guard so a plain `npm test` can never TRUNCATE
+# the dev database holding real financial ledger data. That guard is
+# correct and is not weakened here. CI instead gets its own disposable
+# Postgres service and its own `calboard_test` database, created fresh on
+# every run and destroyed with the runner.
+#
+# `scripts/migrate.ts` reads DATABASE_URL (not TEST_DATABASE_URL), so the
+# migrate step sets that explicitly. `vitest.setup.ts` derives
+# DATABASE_URL from TEST_DATABASE_URL itself, so the test step sets only
+# the latter.
+#
+# WHY zip AND THE PLAYWRIGHT BROWSER ARE INSTALLED EXPLICITLY. The suite
+# has three long-standing failures that are environmental, not defects:
+# two in `scripts/evidence/delivery.test.ts`, where `deliverArchive`
+# packages a real .zip and returns FAILED instead of LOCAL_READY without
+# the `zip` binary, and one needing a pinned Playwright browser. This was
+# established independently, not inferred: CALBOARD-BUILD confirmed on
+# 15 Sep 2026 while working issue #98 that the three failures reproduce on
+# unmodified master and named both causes, and the first CI run on this
+# branch (34863406035) failed on exactly the two delivery tests — the
+# Playwright browser was already installed by the step below, so `zip` was
+# the only remaining gap.
+#
+# Deliberately minimal. `npm run evidence` (the frozen-artefact SHA-256
+# gate) is NOT included: its runtime requirements are still unverified,
+# and a check that fails for environmental reasons is worse than no
+# check. It is the intended next addition once this one is green.
+#
+# Nothing here enforces a merge. Making this check REQUIRED is a
+# repository ruleset change and is Calvin's to make, after one green run
+# establishes the check name.
+
+on:
+  pull_request:
+    branches: [master]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: typecheck and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: calboard_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      # Ends in _test, as vitest.setup.ts requires. Disposable: this
+      # database exists only for the life of this runner.
+      TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/calboard_test
+
+    steps:
+      - name: Check out the pull request head
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # scripts/evidence/delivery.ts shells out to `zip`. Installed
+      # explicitly rather than relied on: the runner image's contents are
+      # not a contract, and a silently missing binary turns into two test
+      # failures that look like a product defect.
+      - name: Install the zip binary the evidence delivery path needs
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends zip
+          zip --version | head -n 2
+
+      - name: Install dependencies from the lockfile
+        run: npm ci
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Apply migrations to the test database
+        # migrate.ts reads DATABASE_URL, so it is set here rather than
+        # inherited from the job-level TEST_DATABASE_URL.
+        env:
+          DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
+        run: npm run migrate
+
+      - name: Install the Playwright browser the suite needs
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the test suite
+        run: npm test
