@@ -47,6 +47,41 @@ name: Fire Calboard routines on dispatch labels
 # job instead debounces bursts with a job-scoped `concurrency` group
 # (`cancel-in-progress: true`), so several comments in quick succession
 # collapse to roughly one fire rather than one session per comment.
+#
+# OUTCOME-ID: CB-WAKE-RACE-01 — 15 Sep 2026
+#
+# THE LOOP GUARD WAS DELETING THE LABEL BEFORE THE WOKEN SESSION COULD
+# READ IT. Each label job fired the routine, got HTTP 200 back in under a
+# second, and immediately deleted the label. The fired session starts
+# afterwards, looks for the labelled item its Start gate requires, finds
+# no labelled issue, and correctly STOPs.
+#
+# Observed twice on issue #98 (CB-CONFLICT-B-REMEDY-01). Sessions
+# cse_01UgJRAUHC9LKbeaHpmJAtKC (14 Sep 16:19 UTC) and
+# cse_01WP1UQXrWQ4mXbCEEJAeqTx (15 Sep 04:30 UTC) both started, both
+# posted nothing, and neither created a claim/ branch. The second one
+# reported, in its own words: "No open issue currently carries the
+# needs-build-wake label." It knew exactly what to look for. The guard had
+# already removed it.
+#
+# This also explains why some wakes worked and some did not: it is a race,
+# not a consistent failure. Issue #93 was picked up normally on 14 Sep.
+# The difference is how fast the session started, not anything about the
+# issue.
+#
+# THE FIX: wait before removing the label. The guard still runs, so
+# re-labelling still re-fires and no loop is possible — it simply stops
+# winning the race against the session it just started.
+#
+# A LARGER SUSPECTED DEFECT IS NOT ADDRESSED HERE, DELIBERATELY. Each fire
+# posts a prompt naming the repository and item number, but both
+# CALBOARD-BUILD and CALBOARD-CC-AUTO reported on 15 Sep receiving "only
+# the generic procedure text — no issue/PR reference, no event payload",
+# and CALBOARD-BUILD described itself as a "scheduled run" despite having
+# no schedule trigger. If the prompt genuinely is not delivered, the label
+# is the ONLY context a fired session ever has, which makes this fix
+# necessary either way. Establishing that is a separate read-only
+# investigation; two session self-reports are evidence, not proof.
 
 on:
   issues:
@@ -109,14 +144,6 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Remove label (loop guard)
-        if: steps.fire.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-cc-rereview"
-
       - name: Report success on the labelled item
         if: steps.fire.outputs.ok == 'true'
         env:
@@ -125,6 +152,19 @@ jobs:
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="CB-WATCH-FIRE-01: fired CALBOARD-CC-AUTO (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+
+      # CB-WAKE-RACE-01: the woken session needs the label still present to
+      # identify its own target. Removing it immediately is what produced the
+      # silent STOPs on #98. Reporting first, then waiting, gives the session
+      # time to start and read before the guard clears it.
+      - name: Remove label (loop guard, delayed)
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 600
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-cc-rereview"
 
       - name: Report failure on the labelled item and fail visibly
         if: steps.fire.outputs.ok != 'true'
@@ -196,14 +236,6 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Remove label (loop guard)
-        if: steps.fire.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/dispatch-next"
-
       - name: Report success on the labelled item
         if: steps.fire.outputs.ok == 'true'
         env:
@@ -212,6 +244,16 @@ jobs:
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="CB-OWNER-FIRE-01: fired CALBOARD-OWNER (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+
+      # CB-WAKE-RACE-01: see the fire job above.
+      - name: Remove label (loop guard, delayed)
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 600
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/dispatch-next"
 
       - name: Report failure on the labelled item and fail visibly
         if: steps.fire.outputs.ok != 'true'
@@ -283,14 +325,6 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Remove label (loop guard)
-        if: steps.fire.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-build-wake"
-
       - name: Report success on the labelled item
         if: steps.fire.outputs.ok == 'true'
         env:
@@ -299,6 +333,18 @@ jobs:
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="CB-BUILD-WAKE-01: fired CALBOARD-BUILD (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+
+      # CB-WAKE-RACE-01: this is the job the defect was observed on. Issue #98
+      # was fired twice and both sessions STOPped after finding no labelled
+      # issue, because this step had already deleted the label.
+      - name: Remove label (loop guard, delayed)
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 600
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-build-wake"
 
       - name: Report failure on the labelled item and fail visibly
         if: steps.fire.outputs.ok != 'true'
