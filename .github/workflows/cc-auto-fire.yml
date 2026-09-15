@@ -170,12 +170,13 @@ jobs:
           fi
 
           PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} was labelled needs-cc-rereview and needs CALBOARD-CC-AUTO to re-review it."
-          REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt}')
+          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/cc_auto_fire_response.json -w '%{http_code}' \
             --request POST "$CC_AUTO_FIRE_URL" \
             --header "Authorization: Bearer $CC_AUTO_FIRE_TOKEN" \
             --header "anthropic-version: 2023-06-01" \
+            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
             --header "Content-Type: application/json" \
             --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
 
@@ -262,12 +263,13 @@ jobs:
           fi
 
           PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} was labelled dispatch-next. This is a dispatch fire: reconcile current Calboard project state, read the Calboard Project Home Runway, and open the next dependency-safe authorised outcome yourself."
-          REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt}')
+          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/owner_fire_response.json -w '%{http_code}' \
             --request POST "$OWNER_FIRE_URL" \
             --header "Authorization: Bearer $OWNER_FIRE_TOKEN" \
             --header "anthropic-version: 2023-06-01" \
+            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
             --header "Content-Type: application/json" \
             --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
 
@@ -351,12 +353,13 @@ jobs:
           fi
 
           PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} was labelled needs-build-wake. CALBOARD-BUILD was woken to pick up work already dispatched to it on that item."
-          REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt}')
+          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/build_fire_response.json -w '%{http_code}' \
             --request POST "$BUILD_FIRE_URL" \
             --header "Authorization: Bearer $BUILD_FIRE_TOKEN" \
             --header "anthropic-version: 2023-06-01" \
+            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
             --header "Content-Type: application/json" \
             --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
 
@@ -451,12 +454,13 @@ jobs:
           fi
 
           PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} got a new comment (${COMMENT_URL}) from calyeap without the agent-post marker. CHIEF-OF-STAFF-WATCH was woken to refresh the cockpit against current GitHub state rather than waiting for the next hourly sweep."
-          REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt}')
+          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/watch_fire_response.json -w '%{http_code}' \
             --request POST "$WATCH_FIRE_URL" \
             --header "Authorization: Bearer $WATCH_FIRE_TOKEN" \
             --header "anthropic-version: 2023-06-01" \
+            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
             --header "Content-Type: application/json" \
             --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
 
@@ -552,12 +556,13 @@ jobs:
           fi
 
           PROMPT="Repository ${TARGET_REPO}: ${TARGET_KIND} #${TARGET_NUMBER} was ${EVENT_ACTION} by ${ACTOR} (${TARGET_URL}). CHIEF-OF-STAFF-WATCH was woken to refresh the cockpit against current GitHub state rather than waiting for the next hourly sweep. Note that all actors post under the same account, so do not treat the actor name as evidence that Calvin did this himself."
-          REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt}')
+          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/watch_state_response.json -w '%{http_code}' \
             --request POST "$WATCH_FIRE_URL" \
             --header "Authorization: Bearer $WATCH_FIRE_TOKEN" \
             --header "anthropic-version: 2023-06-01" \
+            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
             --header "Content-Type: application/json" \
             --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
 
