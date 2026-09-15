@@ -217,10 +217,10 @@ The runner then:
   `FAIL`, or `UNKNOWN` — naming the first failing or unknown step;
 - writes a `manifest.json` alongside the screenshots and probes, then zips
   the whole capture directory under `.evidence/` (gitignored, regenerated
-  each run, never committed). Packaging shells out to PowerShell's
-  `Compress-Archive`, so it requires Windows PowerShell; a packaging failure
-  is reported on its own and does not affect the preflight verdict or exit
-  code below — the capture is left intact on disk either way.
+  each run, never committed). Packaging shells out to `zip` on Linux/macOS
+  and PowerShell's `Compress-Archive` on Windows; a packaging failure is
+  reported on its own and does not affect the preflight verdict or exit code
+  below — the capture is left intact on disk either way.
 
 **PASS** means every check succeeded. **FAIL** means something measurable is
 wrong — the run exits non-zero. **UNKNOWN** means a check could not be

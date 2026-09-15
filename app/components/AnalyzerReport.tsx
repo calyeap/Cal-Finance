@@ -442,11 +442,23 @@ function buildProvisionalRegister(result: AnalysisResult): ProvisionalRow[] {
     detail: "Direction of error is suppression.",
   });
 
+  // §7.1 — each of the four constants must carry ITS OWN configured value,
+  // never a count and never a static name list (the failure this row used
+  // to have). A constant this run leaves unconfigured renders as an honest
+  // "not configured", never as 0/0%/blank (H4's fabricated-zero class).
+  const uc = policy.undefinedConstants;
+  const renderUndefinedConstant = (label: string, value: Decimal | null): string =>
+    value === null ? `${label} not configured` : `${label} ${pct(value, 0)}`;
   rows.push({
     key: "undefinedConstants",
     label: "Undefined policy constants, configured for this run",
-    impact: String(Object.keys(policy.undefinedConstants).length),
-    detail: "NOPAT tax rate · stress margin level · pre-revenue unlevered rate · project-debt cost",
+    impact: String(Object.keys(uc).length),
+    detail: [
+      renderUndefinedConstant("NOPAT tax rate", uc.nopatTaxRate),
+      renderUndefinedConstant("stress margin level", uc.stressMarginLevel),
+      renderUndefinedConstant("pre-revenue unlevered rate", uc.preRevenueUnleveredRate),
+      renderUndefinedConstant("project-debt cost", uc.projectDebtCost),
+    ].join(" · "),
   });
 
   rows.push({

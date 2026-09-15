@@ -47,12 +47,94 @@ name: Fire Calboard routines on dispatch labels
 # job instead debounces bursts with a job-scoped `concurrency` group
 # (`cancel-in-progress: true`), so several comments in quick succession
 # collapse to roughly one fire rather than one session per comment.
+#
+# OUTCOME-ID: CB-WAKE-RACE-01 — 15 Sep 2026
+#
+# THE LOOP GUARD WAS DELETING THE LABEL BEFORE THE WOKEN SESSION COULD
+# READ IT. Each label job fired the routine, got HTTP 200 back in under a
+# second, and immediately deleted the label. The fired session starts
+# afterwards, looks for the labelled item its Start gate requires, finds
+# no labelled issue, and correctly STOPs.
+#
+# Observed twice on issue #98 (CB-CONFLICT-B-REMEDY-01). Sessions
+# cse_01UgJRAUHC9LKbeaHpmJAtKC (14 Sep 16:19 UTC) and
+# cse_01WP1UQXrWQ4mXbCEEJAeqTx (15 Sep 04:30 UTC) both started, both
+# posted nothing, and neither created a claim/ branch. The second one
+# reported, in its own words: "No open issue currently carries the
+# needs-build-wake label." It knew exactly what to look for. The guard had
+# already removed it.
+#
+# This also explains why some wakes worked and some did not: it is a race,
+# not a consistent failure. Issue #93 was picked up normally on 14 Sep.
+# The difference is how fast the session started, not anything about the
+# issue.
+#
+# THE FIX: wait before removing the label. The guard still runs, so
+# re-labelling still re-fires and no loop is possible — it simply stops
+# winning the race against the session it just started.
+#
+# A LARGER SUSPECTED DEFECT IS NOT ADDRESSED HERE, DELIBERATELY. Each fire
+# posts a prompt naming the repository and item number, but both
+# CALBOARD-BUILD and CALBOARD-CC-AUTO reported on 15 Sep receiving "only
+# the generic procedure text — no issue/PR reference, no event payload",
+# and CALBOARD-BUILD described itself as a "scheduled run" despite having
+# no schedule trigger. If the prompt genuinely is not delivered, the label
+# is the ONLY context a fired session ever has, which makes this fix
+# necessary either way. Establishing that is a separate read-only
+# investigation; two session self-reports are evidence, not proof.
+#
+# OUTCOME-ID: CB-COCKPIT-EVENTS-02 — 15 Sep 2026
+#
+# SUPERSEDES AN EXCLUSION IN CB-COCKPIT-EVENTS-01, FOR A STATED REASON.
+#
+# That ruling deliberately excluded issue-opened, issue-closed and
+# non-[AI BUILD] pull-request events, on this reasoning:
+#
+#   "Issue-opened is excluded because Calvin already knows — he opened it;
+#    merge already covers issue-closed."
+#
+# THAT WAS TRUE IN SEPTEMBER AND IS NOW FALSE. Chat gained GitHub write
+# access on 14 Sep 2026 and is now a third actor alongside Calvin and the
+# routines. It opens issues, merges PRs and closes items that Calvin did
+# not open and does not know about until he reads the board.
+#
+# Measured cost of the gap, 15 Sep 2026: in one session six issues were
+# created and five pull requests merged through chat, and NOT ONE of them
+# woke CHIEF-OF-STAFF-WATCH. The cockpit spent roughly forty minutes
+# asking Calvin to decide two things he had already decided — the second
+# occurrence that day, after the dispatch-cap question the night before.
+# Both times the answer existed and no derived surface carried it, so
+# Calvin was being used as the sync mechanism, which the cockpit's own
+# attention contract forbids.
+#
+# THE CHANGE: one new job fires CHIEF-OF-STAFF-WATCH on issue opened or
+# closed, and on any pull request opened or closed — no title filter. It
+# shares the `cc-auto-fire-watch` concurrency group with the comment job,
+# so a burst of events collapses to roughly one fire rather than one
+# session per event.
+#
+# WHAT IS STILL EXCLUDED, AND WHY. Pushes, label events and every polling
+# interval remain out. Labels already fire their own routines above and a
+# cockpit refresh on top would double every dispatch. Polling is still
+# never the answer here: event-driven costs zero fires on a quiet day,
+# where any interval costs its full rate regardless.
+#
+# NO SUCCESS COMMENT ON THIS JOB, unlike the four above. Those comment on
+# the item because a dispatch needs a durable record naming its session.
+# A cockpit refresh does not: commenting on every issue and PR opened
+# would bury real discussion under bookkeeping. Failures still comment,
+# so a broken fire stays visible.
+#
+# The hourly schedule stays as the fallback net. CB-COCKPIT-EVENTS-01's
+# note about lowering it to roughly four-hourly once events are live is
+# NOT acted on here — that is a separate decision and needs real usage
+# data first.
 
 on:
   issues:
-    types: [labeled]
+    types: [labeled, opened, closed]
   pull_request:
-    types: [labeled]
+    types: [labeled, opened, closed]
   issue_comment:
     types: [created]
 
@@ -109,14 +191,6 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Remove label (loop guard)
-        if: steps.fire.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-cc-rereview"
-
       - name: Report success on the labelled item
         if: steps.fire.outputs.ok == 'true'
         env:
@@ -125,6 +199,19 @@ jobs:
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="CB-WATCH-FIRE-01: fired CALBOARD-CC-AUTO (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+
+      # CB-WAKE-RACE-01: the woken session needs the label still present to
+      # identify its own target. Removing it immediately is what produced the
+      # silent STOPs on #98. Reporting first, then waiting, gives the session
+      # time to start and read before the guard clears it.
+      - name: Remove label (loop guard, delayed)
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 600
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-cc-rereview"
 
       - name: Report failure on the labelled item and fail visibly
         if: steps.fire.outputs.ok != 'true'
@@ -196,14 +283,6 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Remove label (loop guard)
-        if: steps.fire.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/dispatch-next"
-
       - name: Report success on the labelled item
         if: steps.fire.outputs.ok == 'true'
         env:
@@ -212,6 +291,16 @@ jobs:
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="CB-OWNER-FIRE-01: fired CALBOARD-OWNER (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+
+      # CB-WAKE-RACE-01: see the fire job above.
+      - name: Remove label (loop guard, delayed)
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 600
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/dispatch-next"
 
       - name: Report failure on the labelled item and fail visibly
         if: steps.fire.outputs.ok != 'true'
@@ -283,14 +372,6 @@ jobs:
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Remove label (loop guard)
-        if: steps.fire.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-build-wake"
-
       - name: Report success on the labelled item
         if: steps.fire.outputs.ok == 'true'
         env:
@@ -299,6 +380,18 @@ jobs:
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="CB-BUILD-WAKE-01: fired CALBOARD-BUILD (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+
+      # CB-WAKE-RACE-01: this is the job the defect was observed on. Issue #98
+      # was fired twice and both sessions STOPped after finding no labelled
+      # issue, because this step had already deleted the label.
+      - name: Remove label (loop guard, delayed)
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          sleep 600
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-build-wake"
 
       - name: Report failure on the labelled item and fail visibly
         if: steps.fire.outputs.ok != 'true'
@@ -402,6 +495,101 @@ jobs:
           fi
 
           COMMENT_BODY=$(printf 'CB-COCKPIT-EVENTS-01: CHIEF-OF-STAFF-WATCH fire failed (HTTP %s).\n\n```\n%s\n```' "${{ steps.fire.outputs.http_code }}" "$SAFE_BODY")
+
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
+            -f body="$COMMENT_BODY"
+
+          echo "::error::CHIEF-OF-STAFF-WATCH fire failed with HTTP ${{ steps.fire.outputs.http_code }}"
+          exit 1
+
+  # CB-COCKPIT-EVENTS-02: refresh the cockpit when an item opens or closes,
+  # whoever opened or closed it. No title filter — the whole point is the
+  # work Calvin did not do himself. Shares the fire-watch concurrency group
+  # so a burst collapses to roughly one fire.
+  fire-watch-state:
+    if: |
+      (github.event_name == 'issues' &&
+        (github.event.action == 'opened' || github.event.action == 'closed')) ||
+      (github.event_name == 'pull_request' &&
+        (github.event.action == 'opened' || github.event.action == 'closed'))
+    runs-on: ubuntu-latest
+    concurrency:
+      group: cc-auto-fire-watch-${{ github.repository }}
+      cancel-in-progress: true
+    steps:
+      - name: Describe the event
+        id: target
+        run: |
+          NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            echo "kind=issue" >> "$GITHUB_OUTPUT"
+            echo "url=${{ github.event.issue.html_url }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "kind=pull request" >> "$GITHUB_OUTPUT"
+            echo "url=${{ github.event.pull_request.html_url }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Fire CHIEF-OF-STAFF-WATCH API trigger
+        id: fire
+        env:
+          WATCH_FIRE_URL: ${{ secrets.WATCH_FIRE_URL }}
+          WATCH_FIRE_TOKEN: ${{ secrets.WATCH_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          TARGET_KIND: ${{ steps.target.outputs.kind }}
+          TARGET_URL: ${{ steps.target.outputs.url }}
+          EVENT_ACTION: ${{ github.event.action }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${WATCH_FIRE_URL:-}" ] || [ -z "${WATCH_FIRE_TOKEN:-}" ]; then
+            echo "::error::WATCH_FIRE_URL or WATCH_FIRE_TOKEN repository secret is missing."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PROMPT="Repository ${TARGET_REPO}: ${TARGET_KIND} #${TARGET_NUMBER} was ${EVENT_ACTION} by ${ACTOR} (${TARGET_URL}). CHIEF-OF-STAFF-WATCH was woken to refresh the cockpit against current GitHub state rather than waiting for the next hourly sweep. Note that all actors post under the same account, so do not treat the actor name as evidence that Calvin did this himself."
+          REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt}')
+
+          HTTP_CODE=$(curl -sS -o /tmp/watch_state_response.json -w '%{http_code}' \
+            --request POST "$WATCH_FIRE_URL" \
+            --header "Authorization: Bearer $WATCH_FIRE_TOKEN" \
+            --header "anthropic-version: 2023-06-01" \
+            --header "Content-Type: application/json" \
+            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
+
+          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+
+          if [ "$HTTP_CODE" != "curl_error" ] && [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            SESSION_ID=$(jq -r '.claude_code_session_id // "unknown"' /tmp/watch_state_response.json)
+            echo "session_id=$SESSION_ID" >> "$GITHUB_OUTPUT"
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "CHIEF-OF-STAFF-WATCH fired for ${TARGET_KIND} #${TARGET_NUMBER} ${EVENT_ACTION} (session ${SESSION_ID})"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # No success comment: a cockpit refresh is not a dispatch and does not
+      # need a durable per-item record. Commenting on every opened or closed
+      # item would bury real discussion under bookkeeping. Failures still
+      # comment, so a broken fire stays visible.
+      - name: Report failure on the item and fail visibly
+        if: steps.fire.outputs.ok != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WATCH_FIRE_TOKEN: ${{ secrets.WATCH_FIRE_TOKEN }}
+        run: |
+          RAW_BODY=$(cat /tmp/watch_state_response.json 2>/dev/null || echo "(no response body — request may not have completed)")
+          if [ -n "${WATCH_FIRE_TOKEN:-}" ]; then
+            SAFE_BODY=$(printf '%s' "$RAW_BODY" | sed "s/${WATCH_FIRE_TOKEN}/[REDACTED]/g")
+          else
+            SAFE_BODY="$RAW_BODY"
+          fi
+
+          COMMENT_BODY=$(printf 'CB-COCKPIT-EVENTS-02: CHIEF-OF-STAFF-WATCH fire failed (HTTP %s).\n\n```\n%s\n```' "${{ steps.fire.outputs.http_code }}" "$SAFE_BODY")
 
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
