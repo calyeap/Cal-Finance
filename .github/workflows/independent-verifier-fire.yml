@@ -66,12 +66,13 @@ jobs:
           fi
 
           PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} was labelled needs-independent-verification. Independently verify that target under the current WORKFLOW-VERIFIER procedure and post the durable verdict on the target."
-          REQUEST_BODY=$(jq -n --arg prompt "$PROMPT" '{prompt: $prompt}')
+          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/verifier_fire_response.json -w '%{http_code}' \
             --request POST "$VERIFIER_FIRE_URL" \
             --header "Authorization: Bearer $VERIFIER_FIRE_TOKEN" \
             --header "anthropic-version: 2023-06-01" \
+            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
             --header "Content-Type: application/json" \
             --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
 
