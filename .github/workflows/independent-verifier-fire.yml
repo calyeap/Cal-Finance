@@ -14,11 +14,16 @@ name: Fire independent workflow verifier
 # The label stays present for a grace period after the API returns so the
 # asynchronously started verifier can identify the target from repository
 # state even if trigger payload context is incomplete.
+#
+# CB-VERIFIER-FIRE-02: PR label routing uses pull_request_target so this
+# workflow is loaded from the base/default branch. This matters for older
+# open PRs whose head predates the introduction of this workflow. The job
+# does not checkout or execute PR code.
 
 on:
   issues:
     types: [labeled]
-  pull_request:
+  pull_request_target:
     types: [labeled]
 
 permissions:
