@@ -3,9 +3,13 @@ import type { AnalysisResult, ProvenanceTokens } from "@/lib/analyzer/types";
 import { boundState, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
 import { provenanceQualifierParts } from "@/lib/analyzer/provenance";
 
-// E1 — an authorised deviation from §17.16, not something either mock
-// shows (Calvin approved it directly; the frozen artefacts are pending
-// re-freeze). The SAME component "Investment case — at a glance" already
+// E1 — an authorised presentation deviation from §17.16 (Calvin approved it
+// directly, 5 Sep 2026; re-frozen 6 Sep 2026, PR #27 — re-freeze is
+// complete, not pending). It remains a deviation, not one of §17.16's ten
+// items: this bear/base/bull/current-price grid is a different object from
+// §17.16 item 1's CHEAP/FAIR/EXPENSIVE valuation-position token per §10.6 —
+// same words, a name collision only, resolved 14 Sep 2026 (CB-AUDIT-01 §7
+// conflict B). The SAME component "Investment case — at a glance" already
 // renders, reused here as a header above Quick Read's eight items rather
 // than duplicated — one component, two call sites, identical figures.
 // Every value below already exists in the AnalysisResult; nothing here

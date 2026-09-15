@@ -3,9 +3,16 @@ import Decimal from "decimal.js";
 import type { AnalysisResult, Profile, SuppressingState } from "@/lib/analyzer/types";
 import { ValuationStrip } from "./ValuationStrip";
 import { isBoundTo, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
+import { trustStatusLine } from "@/lib/analyzer/trustCopy";
 
-// IA-audit restoration (2026-09-05) — Quick Read matches §17.16 exactly:
-// eight items, always visible, one component (no "Learn more" drawer —
+// IA-audit restoration (2026-09-05) — Quick Read's eight items are the
+// AUTHORISED INTERIM STATE of §17.16, not its full contract. §17.16
+// specifies TEN items: items 1 and 2 (the §10.6 CHEAP/FAIR/EXPENSIVE
+// valuation-position token and the §10.6.4 action clause beneath it) are
+// blocked on M8-c, whose band thresholds remain PROVISIONAL and unruled,
+// and the position renderer is deliberately disabled. Eight is authorised
+// until M8-c lands (RULED by Calvin, 14 Sep 2026 — settles CB-AUDIT-01 §7
+// conflict B). Always visible, one component (no "Learn more" drawer —
 // §17.12: "QUICK READ / the finding block, always visible"). A state or
 // flag that qualifies or suppresses an output travels with the item it
 // belongs to; it is never one click away behind a disclosure.
@@ -87,7 +94,7 @@ interface QuickReadItem {
 // single "Learn more" drawer; it is the same restatement, just always
 // visible under its own named item instead of hidden behind a disclosure.
 function dataAndModelQualityItem(result: AnalysisResult): ReactNode {
-  const { states } = result;
+  const { states, trust } = result;
   const consolidated = consolidateStates(states.suppressing);
   const anyNonDefaultProvenanceFact = result.facts.some(
     (f) =>
@@ -125,10 +132,28 @@ function dataAndModelQualityItem(result: AnalysisResult): ReactNode {
         ]
       : []),
   ];
+  // §17.16 item 10 requires this item to carry the §9.6 trust status on
+  // every run, including CLEAN — read off the Analysis Result, never
+  // worked out here (§10.0.2 rule 3).
+  const statusLine = (
+    <p className="t">
+      <b>{trustStatusLine(trust.status, false)}</b>
+    </p>
+  );
   if (bullets.length === 0) {
-    return <p className="t">No suppressing state or qualifying flag is active for this analysis.</p>;
+    return (
+      <>
+        {statusLine}
+        <p className="t">No suppressing state or qualifying flag is active for this analysis.</p>
+      </>
+    );
   }
-  return <ul>{bullets}</ul>;
+  return (
+    <>
+      {statusLine}
+      <ul>{bullets}</ul>
+    </>
+  );
 }
 
 // --- Item 7, "Strongest challenger point" ---------------------------------
