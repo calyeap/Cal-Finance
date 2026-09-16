@@ -17,6 +17,19 @@ Execute one already-authorised bounded Calboard implementation outcome from the 
 7. Retrieve the Workflow-owned `execute-and-verify` procedure from Notion and follow it. If it cannot be retrieved, stop consequential execution rather than inventing replacement authority.
 8. Confirm the task is already authorised, bounded, non-duplicative, and not superseded.
 
+## Tooling start gate
+
+Before substantial coding on **every fresh BUILD run**, including an auto-fix/resume run, perform a run-start tooling inventory against the current Workflow-owned Execution Tooling / Plugin Layer. Notion configuration is not proof that a Claude skill/plugin is actually loaded in this execution environment.
+
+1. Record whether the accepted coding accelerators relevant to this outcome are actually available at runtime.
+2. **Superpowers:** when the outcome is substantial implementation, debugging or TDD and Superpowers is verified available, use it by default. If it is unavailable or cannot be verified, use the verified native Claude Code `verify` / `code-review` / `debug` / `bugfix` / `security-review` / `simplify` skills when available; otherwise continue with bare `execute-and-verify` only when the outcome remains safely executable. Record the fallback used.
+3. **Frontend Design:** when the task implements an already-accepted UI/design and the skill is verified available, use it for implementation quality. It does not own product/design decisions.
+4. **Rendered UI verification:** when the change affects rendered UI, use the project's existing Playwright/evidence-runner path when available. Do not substitute an unsupported visual-check claim and do not add a new Playwright MCP plugin merely for symmetry.
+5. Use native **GitHub** for repo/PR/CI evidence and **Notion** only for the project/product semantic authority it actually owns.
+6. Do not invoke every tool mechanically. Use every relevant accepted tool whose trigger matches; skip irrelevant tools.
+7. Never claim a tool or Skill ran unless the worker can verify it actually ran. If a matching accepted tool was skipped or unavailable, record the concrete reason.
+8. The final durable return / PR evidence must include `TOOLING USED`: observed run-start availability, tools actually invoked, and any fallback.
+
 ## Duplicate / stale-run guard
 
 There is **one initial dispatch path**: the repository build-wake signal, currently the `needs-build-wake` label, which fires this routine through `.github/workflows/cc-auto-fire.yml`.
@@ -52,7 +65,7 @@ This is a bounded V0 duplicate guard, not an atomic concurrency lock. If real du
 When the authorised outcome is genuinely complete:
 
 - open or update one `[AI BUILD]` PR linked to the originating task issue and `OUTCOME-ID`;
-- post a concise PR summary containing `STATUS`, `CHANGED`, `VERIFICATION`, `EVIDENCE`, and `REMAINING RISKS`;
+- post a concise PR summary containing `STATUS`, `CHANGED`, `VERIFICATION`, `TOOLING USED`, `EVIDENCE`, and `REMAINING RISKS`;
 - leave the PR ready for independent owner / reviewer reconciliation;
 - do not merge.
 
@@ -68,13 +81,14 @@ Post the smallest genuine product / finance / permission / judgement decision re
 
 This Routine has Claude's **Auto-fix pull requests** behaviour enabled. When the Routine is re-awakened by CI failure or a reviewer comment on a PR it opened:
 
-1. Reuse the outcome's already-established `claim/<OUTCOME-ID>` and linked PR context; do not create a second claim branch or a second PR for the same `OUTCOME-ID`.
-2. Retrieve the latest PR state, checks and reviewer comments directly.
-3. Confirm the requested change is a bounded in-scope correction against the already-authorised outcome.
-4. Apply only that correction.
-5. Re-run the affected verification plus any acceptance checks required by the task.
-6. Update durable PR evidence.
-7. If the same failure class survives two automatic correction cycles, STOP with `RECONCILIATION REQUIRED` for root-cause diagnosis rather than looping indefinitely.
+1. Re-run the **Tooling start gate** for this fresh execution environment and preserve the new availability/usage evidence.
+2. Reuse the outcome's already-established `claim/<OUTCOME-ID>` and linked PR context; do not create a second claim branch or a second PR for the same `OUTCOME-ID`.
+3. Retrieve the latest PR state, checks and reviewer comments directly.
+4. Confirm the requested change is a bounded in-scope correction against the already-authorised outcome.
+5. Apply only that correction.
+6. Re-run the affected verification plus any acceptance checks required by the task.
+7. Update durable PR evidence, including `TOOLING USED`.
+8. If the same failure class survives two automatic correction cycles, STOP with `RECONCILIATION REQUIRED` for root-cause diagnosis rather than looping indefinitely.
 
 Do not treat a new product, finance, methodology, permission or scope judgement as an auto-fix.
 
