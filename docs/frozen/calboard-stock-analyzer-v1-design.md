@@ -546,7 +546,7 @@ The provisional register renders fully expanded, always. Every PROVISIONAL thres
 |---|---|
 | Number with a warning glyph | No glyph component exists |
 | Sensitivity range spanning price as fair-value evidence | M14 output is not permitted in section H |
-| Single implied probability not tied to a definition | `SuccessDefinitionTable` renders per row; there is no aggregate cell |
+| Single success weight not tied to a definition | `SuccessDefinitionTable` renders per row; there is no aggregate cell |
 | Weighted mean as headline | Rendered inside the range, at body size, never as the section's largest figure |
 | Multiple without own-history context | `Figure` in the multiples table requires the percentile or its suppressing state |
 | EV/Revenue standalone | Rendered only paired with the implied margin needed to reach a normal profit multiple |
@@ -629,10 +629,10 @@ Rendered in full in `mock-report-oklo.html`.
 
 Six definitions. Two return THIS SUCCESS IS WORTH LESS THAN FAILURE — $0 and $1 against a $3.10 failure value. §7.2 calls these the most informative output the model produced.
 
-The row is **partially suppressed**: V_success, V_fail and both discount rates still render as numbers. Only the probability cell becomes a `StateSlot`.
+The row is **partially suppressed**: V_success, V_fail and both discount rates still render as numbers. Only the success-weight cell becomes a `StateSlot`.
 
 ```
-success definition        V_success   V_fail   r_succ   r_fail   implied probability
+success definition        V_success   V_fail   r_succ   r_fail   success weight
 ─────────────────────────────────────────────────────────────────────────────────────
 [definition]                 $0        $3.10    30.0%    X.X%    ▌THIS SUCCESS IS
                                        ▲ RATE CAPPED —                WORTH LESS
@@ -651,13 +651,13 @@ success definition        V_success   V_fail   r_succ   r_fail   implied probabi
 
 **1 — Rows sort by V_success ascending.** A deterministic, neutral rule that happens to place the two states at the top rather than at the bottom where a reader stops looking. The spec is silent on row order. *Ruling needed — item R5.*
 
-**2 — The state cell is the widest column.** The probability column is sized for the state name, not for `25%`. The table's proportions are set by its degenerate case, which is the general principle of this whole design applied to one table.
+**2 — The state cell is the widest column.** The success-weight column is sized for the state name, not for `25%`. The table's proportions are set by its degenerate case, which is the general principle of this whole design applied to one table.
 
 ### 12.3 The rest of the OKLO report
 
 | Element | Renders as |
 |---|---|
-| Probability | Per success definition, six rows. **There is no aggregate cell.** The component cannot produce one |
+| Success weight | Per success definition, six rows. **There is no aggregate cell.** The component cannot produce one |
 | Leverage | Passes today; fails in every success case. The levered-residual exception is stated as the reason the module is not refused — **not as a remedy** |
 | Rates | D/E at exit 0.20–3.95; levered cost of equity 12.0% up to the 30% cap; capped cells carry `RATE CAPPED — VALUE IS AN UPPER BOUND` (I12) |
 | Basis rule | Same date, same share base, same dilution treatment, **different discount rates**, both displayed. Stated at the table head so the differing rates are not read as an error |
@@ -1219,6 +1219,12 @@ Ruled by Command Center, 10 September 2026: §17.7 gains one disclosure target �
 ### 20.7 Amendment CB-IA-DISCLOSURE-02 — the primary layer of I and I2
 
 Ruled by Command Center: new §17.7.1 (the deterministic challenger-point selection rule), §17.4 constraint 7 (no state may appear only in the I/I2 primary layer), and the §10 ordering block's `I` and `I2` rows, in this document; the two stub sections and the `.sec-i` CSS block in `mock-report-msft.html`. §17.3, §17.6, §17.16, §10.2's order, §15's rules and never-hidden list, the spec, the methodology and the state vocabulary are all untouched, and no section is dropped or reordered.
+
+---
+
+### 20.8 Amendment CB-OKLO-SECTIONS-01 / CB-AUDIT-01 conflict A — OKLO sections I/I2, and the success-weight wording
+
+Ruled by Calvin, 14 Sep 2026 (Runway items 5 and 6), re-freeze authorised via the `GATE ON WHAT THE CHANGE TOUCHES` ruling (Calvin, 15 Sep 2026): the design and amendment package `docs/design/CB-IA-DISCLOSURE-01-CB-OKLO-SECTIONS-01-CONFLICT-A.md`, merged to master at `9b9d40a`, is applied to the frozen artefacts. `mock-report-oklo.html` gains the already-frozen `.sec-i` CSS block (byte-identical to `mock-report-msft.html`) and OKLO-specific I and I2 section bodies, grounded only in figures already rendered elsewhere in that same file — no new figure, no new CSS rule, no new colour token. Both `mock-report-oklo.html` and this document's §12 (the OKLO worked example) replace "implied probability" / "probability" wording with "success weight" per CalFinance Methodology v2's "conditional price-implied break-even success weight" — words only; the computation, the three-state table and the nearest-5% convention are untouched. `spec.md` and `calfinance-methodology-v2.md` needed no change — both already state the rule correctly. `docs/frozen/calboard-valuation-methodology.md`, `design.md` lines 57 and 162 (outside §12), and `AnalyzerReport.tsx`'s hardcoded heading carry the same wording defect but are explicitly out of this amendment's scope, each awaiting its own Calvin outcome ID; likewise sections B, E, F and G, also absent from `mock-report-oklo.html`'s rail, are named but not designed here.
 
 ---
 
