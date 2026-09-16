@@ -295,6 +295,12 @@ places that do and are deliberately **not** touched here.
 | 632 | `Only the probability cell becomes a StateSlot.` | `Only the success-weight cell becomes a StateSlot.` |
 | 635 | `success definition  V_success  V_fail  r_succ  r_fail  implied probability` (ASCII header) | `success definition  V_success  V_fail  r_succ  r_fail  success weight` |
 | 654 | `The probability column is sized for the state name, not for 25%.` | `The success-weight column is sized for the state name, not for 25%.` |
+| 660 | `§12.3`, "The rest of the OKLO report" table, element column: `Probability` | `Success weight` |
+
+Line 660 is the same defect class as line 635's ASCII header: an element label
+naming the weight a probability, inside §12 — the very section this table
+scopes itself to. It is corrected here rather than left for §3.3 because §12 is
+already in scope.
 
 `spec.md` needs **no change**: its existing text ("This is not a probability of
 success," "never described as a probability of success," the caveat-register
@@ -308,13 +314,22 @@ real-world probability of success").
 
 ### 3.3 Found but out of scope — named, not touched
 
-Two more places carry the pre-CalFinance-v2 "probability" framing more
-pervasively than the two named artefacts. Issue #95 scopes conflict A to **"app
-copy, the frozen OKLO mock, and the design, re-frozen together"** — neither of the
-following is one of those three, so this pass names them and stops rather than
-silently widening scope:
+Three more places carry the "probability" framing outside what §3.1/§3.2 correct.
+Issue #95 scopes conflict A to **"app copy, the frozen OKLO mock, and the design,
+re-frozen together"** — the first item below is inside the design doc but outside
+§3.2's declared §12 scope, and the other two are outside all three named
+artefacts, so this pass names all three and stops rather than silently widening
+scope:
 
-1. **`docs/frozen/calboard-valuation-methodology.md`** (also `FROZEN_HASHES`-registered) —
+1. **`calboard-stock-analyzer-v1-design.md`, outside §12** — two further instances of
+   the same "probability" framing, both outside the §12 OKLO worked example
+   §3.2 covers: line 57 ("the OKLO table with two of six **probabilities**
+   gone") and line 162, the component-hierarchy table's `SuccessDefinitionTable`
+   row ("Per-definition **probability** with per-row states"). Whether these
+   change is a design.md-wide consistency question §3.2's narrower scope (§12
+   only) doesn't decide — named here so re-freeze doesn't proceed blind, not
+   fixed.
+2. **`docs/frozen/calboard-valuation-methodology.md`** (also `FROZEN_HASHES`-registered) —
    uses "implied probability of success" as a row/column label (§7 stage table, the
    profile table), and states in prose "the probability, rounded to the nearest 5%"
    and "Probability is reported per success definition, never as one number" —
@@ -323,7 +338,7 @@ silently widening scope:
    older document that CalFinance v2 corrected, left unreconciled. **Flagged for a
    separate ruling — it is a real instance of the same defect, not a false
    positive, but fixing it is outside this outcome's named scope.**
-2. **App code** (`app/components/AnalyzerReport.tsx:800`, its test at
+3. **App code** (`app/components/AnalyzerReport.tsx:800`, its test at
    `AnalyzerReport.test.tsx:64,148`, and the comment at
    `AnalyzerReport.tsx:794`) — hardcodes the heading text `"D — Implied
    probability of success"`. `lib/analyzer/ai/interpretation.ts:75` already
@@ -410,8 +425,9 @@ propose as a deviation.
    LESS THAN FAILURE`, rate-capped qualifier) rather than being absent — §2.2,
    §2.3.
 4. Conflict A wording replaced everywhere it appears within this pass's scope,
-   stated and checked against §7.2 M16 and CalFinance v2 — §3.1, §3.2; two
-   further, out-of-scope instances named rather than silently left — §3.3.
+   stated and checked against §7.2 M16 and CalFinance v2 — §3.1, §3.2 (including
+   §12.3's element-label instance at line 660); three further, out-of-scope
+   instances named rather than silently left — §3.3.
 5. Deviations from named UX principles listed — §5 (none required).
 6. Light/dark and compact/standard/wide addressed, Design consistency gate's
    seven questions answered — §6.
@@ -424,16 +440,18 @@ propose as a deviation.
 
 1. Apply §2.2's CSS and markup to `mock-report-oklo.html`.
 2. Apply §3.1's wording changes to `mock-report-oklo.html`.
-3. Apply §3.2's wording changes to `calboard-stock-analyzer-v1-design.md` §12.
+3. Apply §3.2's wording changes to `calboard-stock-analyzer-v1-design.md` §12,
+   including line 660.
 4. Add an amendment record (parallel to `design.md` §20.6, referenced in §1's
    table) naming `CB-OKLO-SECTIONS-01` and the conflict-A wording change, and
    re-run the hash register in `scripts/evidence/config.ts` for both touched
    files.
-5. Route `CB-AUDIT-01`'s app-code follow-up (§3.3 item 2) and the
-   `calboard-valuation-methodology.md` finding (§3.3 item 1) to Calvin for
-   scoping as their own outcomes — neither is re-frozen by this package.
+5. Route `CB-AUDIT-01`'s app-code follow-up (§3.3 item 3), the
+   `calboard-valuation-methodology.md` finding (§3.3 item 2), and the two
+   outside-§12 `design.md` instances (§3.3 item 1) to Calvin for scoping as
+   their own outcomes — none is re-frozen by this package.
 6. Route the B/E/F/G absence (§4) to Calvin for its own outcome ID before any
    worker designs it.
 
-Only after re-freeze does `CB-AUDIT-01`'s app-heading follow-up (§3.3 item 2)
+Only after re-freeze does `CB-AUDIT-01`'s app-heading follow-up (§3.3 item 3)
 become BUILD-ready work.
