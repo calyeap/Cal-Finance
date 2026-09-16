@@ -9,7 +9,7 @@ export const FROZEN_HASHES: Readonly<Record<string, string>> = {
   "calboard-stock-analyzer-v1-spec.md":
     "6a9cf282ce3808d0ebdedb3af71ebd0b3dfdfea3697cdaf9a17bbbd0298caf61",
   "calboard-stock-analyzer-v1-design.md":
-    "49be40cafc1a07ccb093267acfc1bb86a5e71c34c531b9a911ec821aeed8150b",
+    "7535c6b6551b0ebf27ba10417733e5780a1cdc4634f5a5b7e4b91f121425a774",
   "mock-screen1-entry.html":
     "700db080c61144007a6686b9a98906361db767d1868c348cf71b37c91cfb376e",
   "mock-human-steps.html":
@@ -17,7 +17,7 @@ export const FROZEN_HASHES: Readonly<Record<string, string>> = {
   "mock-report-msft.html":
     "4c7547cb23dfe6a6ef6d9eb53cab11180b81319b2fb681715ff11057118fb629",
   "mock-report-oklo.html":
-    "fc6de075e6c84f4ba2b720d669985b4f43534f4a7ae77e658c725122d4d9476f",
+    "8d02adac2b9e9a83a0af939ca9b89a4c153fbf4ac53e0a5cc35396400b438bf0",
   "calboard-valuation-methodology.md":
     "a4a39e33717993fe9558f263009cec3814555765ac69c69728d99354d4a5ec7c",
   "calfinance-methodology-v2.md":
