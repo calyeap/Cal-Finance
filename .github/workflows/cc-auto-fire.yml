@@ -352,7 +352,19 @@ jobs:
             exit 0
           fi
 
-          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} was labelled needs-build-wake. CALBOARD-BUILD was woken to pick up work already dispatched to it on that item."
+          # CAL-DISPATCH-ACK-01 Phase B harness: a run-unique marker sent only
+          # in the direct API payload. It must never reach a fallback-readable
+          # source (issue/PR body, title, label, OR comment thread) before the
+          # worker ACKs it, or a session that discovers its target via the
+          # needs-build-wake label fallback could read the marker off GitHub
+          # and ACK it without ever having received the payload — making the
+          # proof unfalsifiable. Durable fire-side evidence therefore goes to
+          # the job's own step summary, not to the issue/PR thread.
+          MARKER="CB-DISPATCH-ACK-${GITHUB_RUN_ID}-${GITHUB_RUN_ATTEMPT}"
+          echo "marker=$MARKER" >> "$GITHUB_OUTPUT"
+          echo "CB-BUILD-WAKE-01 delivery marker: $MARKER" >> "$GITHUB_STEP_SUMMARY"
+
+          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} was labelled needs-build-wake. CALBOARD-BUILD was woken to pick up work already dispatched to it on that item. Delivery marker: ${MARKER}"
           REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/build_fire_response.json -w '%{http_code}' \
