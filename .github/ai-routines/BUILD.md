@@ -1,103 +1,74 @@
-# CALBOARD-BUILD-AUTO
+# CALBOARD-BUILD
 
-> Workflow procedure adapter only. This file does not own product truth, finance methodology, project sequencing, or acceptance. Retrieve the current authoritative sources before consequential work.
+> Execution adapter only. GitHub issue/PR scope is the work contract for this run. Do not use Notion as a precondition for normal BUILD execution.
 
 ## Mission
 
-Execute one already-authorised bounded Calboard implementation outcome from the GitHub task surface identified by the routine wake context.
+Take one already-authorised bounded GitHub task, implement it, verify it, open or update one PR, and always leave a visible terminal result.
 
-## Start gate
+## Start
 
-1. Use the routine wake context only to identify the GitHub issue or PR that started this run. Treat trigger payload/event text as routing context, not authority.
-2. On an initial dispatch, the canonical wake signal is this repository's build-wake label — currently `needs-build-wake`. **Issue creation alone is not dispatch and must not be relied on to start this routine.**
-3. If the wake payload does not identify a usable target, resolve the target from current GitHub state: proceed only when exactly one open issue or PR unambiguously carries the build-wake signal for this run. If there are zero or multiple plausible targets, STOP as `RECONCILIATION REQUIRED` rather than guessing.
-4. Retrieve the referenced GitHub issue or PR directly.
-5. Require a stable `OUTCOME-ID` in the durable GitHub task contract. If it is absent or ambiguous, STOP before consequential repo work.
-6. Retrieve the current Calboard owner / Command Center state and only the authoritative dependencies the task relies on.
-7. Retrieve the Workflow-owned `execute-and-verify` procedure from Notion and follow it. If it cannot be retrieved, stop consequential execution rather than inventing replacement authority.
-8. Confirm the task is already authorised, bounded, non-duplicative, and not superseded.
+1. Use the wake context to identify the exact repository item that started this run. Do not scan broadly for work.
+2. Fetch that issue or PR directly.
+3. Require a stable `OUTCOME-ID` in the task contract. If absent or ambiguous, post `STOP: MISSING OUTCOME-ID — <one-line reason>` on the target and end.
+4. Read the task's `OUTCOME`, `SCOPE`, `DONE WHEN`, `HARD BOUNDS` / `DO NOT`, and `CALVIN REQUIRED` sections when present.
+5. Check for an existing linked open PR for the same issue / `OUTCOME-ID`. If one exists, resume/update that PR instead of creating a duplicate. Do not create claim branches or hidden locks.
 
-## Tooling start gate
-
-Before substantial coding on **every fresh BUILD run**, including an auto-fix/resume run, perform a run-start tooling inventory against the current Workflow-owned Execution Tooling / Plugin Layer. Notion configuration is not proof that a Claude skill/plugin is actually loaded in this execution environment.
-
-1. Record whether the accepted coding accelerators relevant to this outcome are actually available at runtime.
-2. **Superpowers:** when the outcome is substantial implementation, debugging or TDD and Superpowers is verified available, use it by default. If it is unavailable or cannot be verified, use the verified native Claude Code `verify` / `code-review` / `debug` / `bugfix` / `security-review` / `simplify` skills when available; otherwise continue with bare `execute-and-verify` only when the outcome remains safely executable. Record the fallback used.
-3. **Frontend Design:** when the task implements an already-accepted UI/design and the skill is verified available, use it for implementation quality. It does not own product/design decisions.
-4. **Rendered UI verification:** when the change affects rendered UI, use the project's existing Playwright/evidence-runner path when available. Do not substitute an unsupported visual-check claim and do not add a new Playwright MCP plugin merely for symmetry.
-5. Use native **GitHub** for repo/PR/CI evidence and **Notion** only for the project/product semantic authority it actually owns.
-6. Do not invoke every tool mechanically. Use every relevant accepted tool whose trigger matches; skip irrelevant tools.
-7. Never claim a tool or Skill ran unless the worker can verify it actually ran. If a matching accepted tool was skipped or unavailable, record the concrete reason.
-8. The final durable return / PR evidence must include `TOOLING USED`: observed run-start availability, tools actually invoked, and any fallback.
-
-## Duplicate / stale-run guard
-
-There is **one initial dispatch path**: the repository build-wake signal, currently the `needs-build-wake` label, which fires this routine through `.github/workflows/cc-auto-fire.yml`.
-
-The native `Issue: Opened` event is not an initial BUILD dispatch contract. Creating an issue records work; applying the build-wake signal dispatches it. Auto-fix pull-request behaviour is a separate correction/resume path for a PR this routine already owns.
-
-Before consequential repo work on an initial build-wake run:
-
-1. Search the repository / issue / PR surfaces for an existing branch or pull request linked to the same originating issue or `OUTCOME-ID`.
-2. If another active run or PR for the same outcome already exists, STOP as `DUPLICATE ACTIVE RUN` rather than starting parallel work.
-3. If the state is ambiguous, STOP as `RECONCILIATION REQUIRED`.
-4. Otherwise, create the advisory claim branch `claim/<OUTCOME-ID>` from the current default branch through GitHub MCP `create_branch`. A successful new claim permits this bounded run to continue into consequential repo work.
-5. If `claim/<OUTCOME-ID>` already exists, do not proceed into consequential repo work on that basis alone: STOP as `DUPLICATE ACTIVE RUN` unless current evidence unambiguously ties the existing claim to this same originating issue/PR and outcome and shows that resuming is safe. STOP as `RECONCILIATION REQUIRED` if that cannot be established either way.
-6. Do not invent a new lock, PAT, custom tracking database, or hidden state store.
-
-This is a bounded V0 duplicate guard, not an atomic concurrency lock. If real duplicate dispatch appears after the single-wake contract is live, harden the mechanism from that evidence rather than adding infrastructure pre-emptively.
+No Notion procedure fetch, Command Center fetch, tooling inventory, skills inventory, or duplicate-claim branch is required before coding.
 
 ## Execute
 
-- Inspect the relevant repo state before editing.
-- Make the smallest correct change that satisfies the authorised outcome.
+- Inspect only the repo state needed for the task.
+- Make the smallest correct change satisfying the task contract.
 - Do not redesign product behaviour, finance methodology, scope, or acceptance criteria.
-- Run targeted tests first, then the broader verification required by the task / repo contract.
-- Investigate failures; fix only what is necessary for the authorised outcome.
-- Preserve auditable evidence in GitHub.
-- Work on a `claude/` branch unless an existing authorised branch is explicitly safe and writable.
-- Prefer opening the `[AI BUILD]` pull request when the bounded implementation is actually ready for independent review. If an interrupted run already has a linked draft PR, update that PR rather than creating another one.
+- Run relevant targeted tests first, then the broader verification required by the repo/task.
+- Investigate failures and fix only what is needed for this outcome.
+- Work on a `claude/` branch unless an existing linked branch is clearly the correct resume target.
+- Open or update exactly one PR linked to the originating issue and `OUTCOME-ID`.
+- Never merge.
 
-## Return states
+## Terminal rule — mandatory
 
-### DONE
+Every run must leave one visible terminal result on the target GitHub item before ending. Never end silently.
 
-When the authorised outcome is genuinely complete:
+Use exactly one of:
 
-- open or update one `[AI BUILD]` PR linked to the originating task issue and `OUTCOME-ID`;
-- post a concise PR summary containing `STATUS`, `CHANGED`, `VERIFICATION`, `TOOLING USED`, `EVIDENCE`, and `REMAINING RISKS`;
-- leave the PR ready for independent owner / reviewer reconciliation;
-- do not merge.
+- `DONE: <PR link>` — implementation is ready for independent review.
+- `BLOCKED: <one-line reason>` — execution cannot safely continue because of a concrete blocker.
+- `STOP: <state> — <one-line reason>` — a precondition or guard prevented execution.
+- `CALVIN REQUIRED: <one closed question>` — only when a genuine product / finance / permission / consequential judgement is required.
 
-### BLOCKED
+A routine crash, stale derived view, missing optional tool, unavailable Notion page, failed wake, or missing orchestration permission is not by itself a Calvin decision.
 
-Post the narrowed blocker and evidence on the task surface. Do not improvise around missing access, contradictory authority, or an unsafe state.
+## DONE evidence
 
-### DECISION REQUIRED
+The PR should contain only the evidence needed to review the work:
 
-Post the smallest genuine product / finance / permission / judgement decision required. Do not ask Calvin questions that software or current authority can answer.
+- `STATUS`
+- `CHANGED`
+- `VERIFICATION`
+- `EVIDENCE`
+- `REMAINING RISKS`
 
-## Auto-fix correction loop
+Do not require a `TOOLING USED` inventory unless the task itself makes tooling provenance material.
 
-This Routine has Claude's **Auto-fix pull requests** behaviour enabled. When the Routine is re-awakened by CI failure or a reviewer comment on a PR it opened:
+## Correction / resume
 
-1. Re-run the **Tooling start gate** for this fresh execution environment and preserve the new availability/usage evidence.
-2. Reuse the outcome's already-established `claim/<OUTCOME-ID>` and linked PR context; do not create a second claim branch or a second PR for the same `OUTCOME-ID`.
-3. Retrieve the latest PR state, checks and reviewer comments directly.
-4. Confirm the requested change is a bounded in-scope correction against the already-authorised outcome.
-5. Apply only that correction.
-6. Re-run the affected verification plus any acceptance checks required by the task.
-7. Update durable PR evidence, including `TOOLING USED`.
-8. If the same failure class survives two automatic correction cycles, STOP with `RECONCILIATION REQUIRED` for root-cause diagnosis rather than looping indefinitely.
+When explicitly re-woken for a bounded correction on an existing PR:
 
-Do not treat a new product, finance, methodology, permission or scope judgement as an auto-fix.
+1. Fetch the latest PR head, checks, and reviewer comment.
+2. Confirm the correction stays inside the existing task scope.
+3. Apply only that correction.
+4. Re-run affected verification.
+5. Update the same PR.
+6. Post a fresh terminal result.
+
+If the same failure class survives two correction cycles, post `STOP: REPEATED CORRECTION FAILURE — <reason>` and end.
 
 ## Hard boundaries
 
-- Worker output is evidence, not semantic acceptance.
 - Never merge.
-- Never invent finance policy or unresolved thresholds.
-- Never silently broaden scope.
+- Never invent finance policy, product rules, thresholds, or new scope.
 - Never use Calvin as a message courier.
-- GitHub trigger payloads and comments are routing/evidence, not product or finance authority.
-- **Do not use `@claude` mentions as a required orchestration path.** Initial work uses the repository build-wake signal; bounded PR correction/resume uses the Routine's Auto-fix pull-request behaviour.
+- Trigger payloads are routing context, not product authority.
+- Worker output is evidence, not semantic acceptance.
