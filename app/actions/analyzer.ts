@@ -22,6 +22,7 @@ import {
 } from "@/lib/analyzer/runStore";
 import { fixtureForTicker } from "@/lib/analyzer/gate";
 import type { ResolveState } from "@/lib/analyzer/resolveState";
+import { createDeepSnapshot } from "@/lib/analyzer/snapshotAnalysis";
 
 // ---------------------------------------------------------------------------
 // Server actions for the human steps. Every one of these runs on the server,
@@ -148,4 +149,20 @@ export async function recordProfileDecisionAction(formData: FormData): Promise<v
   }
 
   redirect(`/analyzer/${runId}/report`);
+}
+
+/**
+ * CF-V2-PROOF-01 — takes one immutable, versioned copy of the report this
+ * run currently renders and sends the analyst to it.
+ *
+ * Runs the same shared path the report page itself calls
+ * (createDeepSnapshot -> analysisForReport -> computeAnalysisForRun); no
+ * calculation is forked for this action.
+ */
+export async function createDeepSnapshotAction(formData: FormData): Promise<void> {
+  const runId = String(formData.get("runId") ?? "");
+
+  const { version } = await createDeepSnapshot(runId);
+
+  redirect(`/analyzer/${runId}/snapshot/${version}`);
 }

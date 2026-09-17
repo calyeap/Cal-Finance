@@ -4,6 +4,8 @@ import { AnalyzerReport } from "@/app/components/AnalyzerReport";
 import { loadGateState, RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
 import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { trustStatusLine, trustConsequenceLine } from "@/lib/analyzer/trustCopy";
+import { deriveVerdict } from "@/lib/analyzer/verdict";
+import { createDeepSnapshotAction } from "@/app/actions/analyzer";
 
 // Screen 4 — Steps 8–10, output. No human input.
 //
@@ -65,8 +67,29 @@ export default async function ReportPage({ params }: { params: Promise<{ runId: 
         ? "PROFILE NOT CONFIRMED"
         : null;
 
+  // CF-V2-PROOF-01 — the verdict boundary, read off this same request's
+  // analysis. Never persisted by this computation alone: saving a version
+  // (below) is a separate, explicit step, so viewing the report does not by
+  // itself create snapshot rows.
+  const verdict = deriveVerdict(report.result);
+
   return (
     <AnalyzerShell>
+      <div className="cb-steps">
+        <div className="wrap" style={{ paddingBottom: 0 }}>
+          <div className="state">
+            <span className="name">Verdict — {verdict.status}</span>
+            <span className="cause">{verdict.reason}</span>
+          </div>
+          <form action={createDeepSnapshotAction} className="continue" style={{ marginTop: 14 }}>
+            <input type="hidden" name="runId" value={runId} />
+            <button className="act" type="submit">
+              Save this version
+            </button>
+          </form>
+        </div>
+      </div>
+
       {(profileNotConfirmed || trust.status !== "CLEAN") && (
         <div className="cb-steps">
           <div className="wrap" style={{ paddingBottom: 0 }}>

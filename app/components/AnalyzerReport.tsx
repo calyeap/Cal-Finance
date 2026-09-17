@@ -1154,7 +1154,13 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
               </tr>
               <tr>
                 <td>
-                  Probability-weighted value
+                  {/* CF-V2-PROOF-01, folding in the CalFinance v2 Product Decision Log
+                      ruling of 14 Sep 2026: "no surface may use the word 'probability'" —
+                      equal scenario weighting is a display convention, not a claim about
+                      real-world probability, so the frozen mock's "Probability-weighted
+                      value" is superseded here. Same underlying figure
+                      (scenarioOutputs.weightedDistribution), unchanged. */}
+                  Scenario-weighted value
                   <div className="sub">display only, never a headline</div>
                 </td>
                 <td>
