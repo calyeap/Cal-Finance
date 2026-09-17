@@ -791,13 +791,13 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
 
           {/* Pre-revenue (M16) presentation stays IN Section D, matching
               the approved OKLO mock's own structure: three repeated
-              "D — ..." sub-blocks (implied probability of success; unit
+              "D — ..." sub-blocks (price-implied success weight; unit
               economics and the scale solve; funding stack), never a new
               top-level section after J. */}
           {preRevenue && (
             <>
               <div className="sechead" style={{ marginTop: "32px" }}>
-                <h2>D — Implied probability of success</h2>
+                <h2>D — Price-implied success weight</h2>
                 <span className="k">Per definition · never one number</span>
               </div>
               <hr />
@@ -807,7 +807,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                     <th>Success definition</th>
                     <th>V_success</th>
                     <th>V_fail</th>
-                    <th>Implied probability</th>
+                    <th>Success weight</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -1241,7 +1241,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                     )
                     .map((d, i) => (
                       <div className="pi" key={i}>
-                        <span className="lbl">Implied probability, {d.definition}</span>
+                        <span className="lbl">Success weight, {d.definition}</span>
                         <b>{pct(d.state.probability, 0)}</b>
                       </div>
                     ))}

@@ -61,7 +61,7 @@ describe("AnalyzerReport — MSFT", () => {
 
   it("does not render any pre-revenue-only D subsection for the mature-profitable profile", () => {
     render(<AnalyzerReport result={result} />);
-    expect(screen.queryByText("D — Implied probability of success")).toBeNull();
+    expect(screen.queryByText("D — Price-implied success weight")).toBeNull();
     expect(screen.queryByText("D — Unit economics and the scale solve")).toBeNull();
     expect(screen.queryByText("D — Funding stack")).toBeNull();
   });
@@ -145,7 +145,7 @@ describe("AnalyzerReport — OKLO", () => {
 
   it("renders the M16 pre-revenue material as Section D subsections, not a new top-level section", () => {
     render(<AnalyzerReport result={result} />);
-    expect(screen.getByText("D — Implied probability of success")).not.toBeNull();
+    expect(screen.getByText("D — Price-implied success weight")).not.toBeNull();
     expect(screen.getByText("D — Unit economics and the scale solve")).not.toBeNull();
     expect(screen.getByText("D — Funding stack")).not.toBeNull();
     expect(screen.getByText(/Unit-economics breakeven/)).not.toBeNull();
