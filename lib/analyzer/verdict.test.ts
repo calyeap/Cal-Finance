@@ -7,10 +7,17 @@ import { OKLO_FIXTURE } from "./fixtures/oklo";
 import type { AnalysisResult } from "./types";
 
 // ---------------------------------------------------------------------------
-// CF-V2-PROOF-01's verdict boundary. deriveVerdict is a pure function of an
-// already-assembled AnalysisResult, so these tests build one real result
-// (assembleAnalysisResult never touches the database) and override only the
-// members each case is actually about — the same style trust.test.ts uses.
+// CF-V2-PROOF-01's verdict boundary, bounded correction (PR #140, Calvin's
+// 18 Sep 2026 ruling): a fair-value range alone is a single diagnostic and
+// must not by itself determine BUY / HOLD / SELL, and insufficient evidence
+// must return INCOMPLETE rather than a manufactured verdict. The required
+// second input (spec §10.6.2's growth comparator) does not exist in
+// AnalysisResult yet (spec §10.6.5, milestone M8), so every case below is
+// INCOMPLETE today — that is the correct, honest behavior, not a gap in
+// coverage. deriveVerdict is a pure function of an already-assembled
+// AnalysisResult, so these tests build one real result (assembleAnalysisResult
+// never touches the database) and override only the members each case is
+// actually about — the same style trust.test.ts uses.
 // ---------------------------------------------------------------------------
 
 function withRange(
@@ -38,48 +45,38 @@ function baseRange(): Extract<AnalysisResult["fairValueRange"], { kind: "range" 
 }
 
 describe("deriveVerdict", () => {
-  it("is BUY when price is at or below the bear-case value", () => {
+  it("is INCOMPLETE, not a manufactured verdict, when only the range is usable — the comparator is not yet acquired", () => {
+    // A usable range is necessary but not sufficient: synthesizing BUY / HOLD
+    // / SELL also needs the §10.6.2 comparator, which no AnalysisResult
+    // carries yet (§10.6.5, M8). Reading the range alone would repeat the
+    // single-diagnostic problem the ruling forbids.
     const result = assembleAnalysisResult(MSFT_FIXTURE);
     const verdict = deriveVerdict(withRange(result, baseRange(), new Decimal(265)));
 
-    expect(verdict.status).toBe("BUY");
-    expect(verdict.reason).toContain("265.00");
+    expect(verdict.status).toBe("INCOMPLETE");
+    expect(verdict.reason).toContain("comparator");
   });
 
-  it("is BUY below the bear-case value too, not only exactly at it", () => {
+  it("stays INCOMPLETE regardless of where price sits inside or outside the range", () => {
     const result = assembleAnalysisResult(MSFT_FIXTURE);
-    const verdict = deriveVerdict(withRange(result, baseRange(), new Decimal(100)));
 
-    expect(verdict.status).toBe("BUY");
+    for (const price of [new Decimal(100), new Decimal(499.7), new Decimal(650)]) {
+      const verdict = deriveVerdict(withRange(result, baseRange(), price));
+      expect(verdict.status).toBe("INCOMPLETE");
+    }
   });
 
-  it("is SELL when price is at or above the bull-case value", () => {
-    const result = assembleAnalysisResult(MSFT_FIXTURE);
-    const verdict = deriveVerdict(withRange(result, baseRange(), new Decimal(650)));
-
-    expect(verdict.status).toBe("SELL");
-    expect(verdict.reason).toContain("650.00");
-  });
-
-  it("is HOLD strictly between bear and bull", () => {
-    const result = assembleAnalysisResult(MSFT_FIXTURE);
-    const verdict = deriveVerdict(withRange(result, baseRange(), new Decimal(499.7)));
-
-    expect(verdict.status).toBe("HOLD");
-    expect(verdict.reason).toContain("265.00");
-    expect(verdict.reason).toContain("650.00");
-  });
-
-  it("does not require TrustStatus CLEAN — PARTIAL with a usable range still gets a verdict", () => {
+  it("does not require TrustStatus CLEAN to reach the comparator-unavailable case — PARTIAL with a usable range still gets a reasoned INCOMPLETE, not a blanket one", () => {
     // §9.6 rule 2's causes (a qualifying flag, an unrelated INCOMPLETE
-    // diagnostic, ...) are not about whether the range itself is usable.
-    // Requiring CLEAN here would make the verdict unreachable on real runs
-    // (M8-c: no acquired run in this codebase reaches CLEAN today).
+    // diagnostic, ...) are not about whether the range itself is usable, so
+    // this case is distinguished from the UNUSABLE-trust case below by its
+    // reason text, not merely by both being INCOMPLETE.
     const result = assembleAnalysisResult(MSFT_FIXTURE);
     const verdict = deriveVerdict(withRange(result, baseRange(), new Decimal(499.7)));
 
     expect(result.trust.status).toBe("PARTIAL");
-    expect(verdict.status).not.toBe("INCOMPLETE");
+    expect(verdict.status).toBe("INCOMPLETE");
+    expect(verdict.reason).toContain("comparator");
   });
 
   it("is INCOMPLETE, with no manufactured verdict, when TrustStatus is UNUSABLE", () => {

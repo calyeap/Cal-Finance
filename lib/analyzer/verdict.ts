@@ -1,36 +1,39 @@
 import type { AnalysisResult } from "./types";
 
 // ---------------------------------------------------------------------------
-// CF-V2-PROOF-01's verdict boundary (Calvin, 17 Sep 2026): "return BUY / HOLD
-// / SELL only when analysis is complete, otherwise an explicit incomplete
-// state with no manufactured verdict."
+// CF-V2-PROOF-01's verdict boundary — bounded correction on PR #140 per
+// Calvin's 18 Sep 2026 CALVIN DECISION RECEIPT:
 //
-// COMPLETE MEANS THE RANGE ITSELF IS USABLE, not that every diagnostic in the
-// report is clean. §9.6 already draws this exact line: TrustStatus UNUSABLE
-// is rule 1 alone — a §9.3 suppressing state removed the fair-value range, or
-// a REQUIRED input of the range is INCOMPLETE (trust.ts). PARTIAL (rule 2)
-// still means "the range renders"; its causes are qualifications on OTHER
-// outputs or the analyst's confidence in inputs, not an absent range. Since
-// this function's only input is the range itself, UNUSABLE is the one trust
-// value that means "decision-critical analysis is incomplete" for THIS
-// decision — treating PARTIAL the same way would make a verdict unreachable
-// for any acquired run in this codebase today (see M8-c: even the two
-// analyst-input companies never reach CLEAN), which is not what "complete
-// analysis" can mean if the outcome is to be provable at all.
+//   "A fair-value range or any other single diagnostic must not by itself
+//   determine BUY / HOLD / SELL. The verdict must synthesize the whole
+//   approved methodology and evidence." ... "If decision-critical evidence
+//   is insufficient to support a reliable conclusion, return analysis
+//   incomplete / failure with cause and recovery path; do not manufacture
+//   HOLD."
 //
-// THE VERDICT ITSELF IS NEVER A NEW CALIBRATED THRESHOLD. It reads the
-// bear/bull bounds the shared finance engine already produced — no single
-// diagnostic becomes the verdict (methodology, "Valuation methodology") and
-// M8-c found no defensible calibrated band exists for anything finer than
-// this. Comparing price against the engine's own blended scenario range is
-// therefore the one verdict rule available without reopening methodology or
-// manufacturing a threshold the evidence does not support.
+// The top-level vocabulary stays BUY / HOLD / SELL (the ruling is explicit
+// that this overrides the frozen spec's CHEAP/FAIR/EXPENSIVE wording for
+// this slot). But comparing price against the range alone — the earlier
+// shape of this function — was exactly the single-diagnostic problem the
+// ruling forbids.
 //
-// Pre-revenue companies (fairValueRange.kind === "pre-revenue-distribution")
-// are a distinct valuation model this outcome does not extend a verdict
-// rule to — that would be a new methodology decision, not a bounded proof of
-// the existing one, so they return INCOMPLETE honestly rather than reusing a
-// rule built for a different shape of output.
+// The only second input named anywhere in this outcome's methodology is
+// §10.6.2's required-versus-achieved growth comparator, and §10.6.5 already
+// rules that this fact "may not exist in the current fact set. Acquiring it
+// is milestone M8 work" — sequencing, not deferral. AnalysisResult carries
+// no such field today, for any run. Inventing a different second signal, or
+// building the M8 comparator here, would both be exactly what this
+// outcome's HARD BOUNDS forbid (manufacturing new finance policy; no M9
+// implementation before this proof passes).
+//
+// So today, for every run, the evidence needed to synthesize a verdict
+// beyond a single diagnostic is incomplete — not because any one run's
+// inputs are bad, but because the second required input has not been
+// acquired yet. This function says so honestly, with a stated cause and
+// recovery path, rather than manufacturing BUY / HOLD / SELL from the range
+// alone or manufacturing HOLD as a safe default. Once M8 lands the
+// comparator fact on AnalysisResult, this function's synthesis branch can
+// be completed without reopening this ruling.
 // ---------------------------------------------------------------------------
 
 export type VerdictStatus = "BUY" | "HOLD" | "SELL" | "INCOMPLETE";
@@ -39,6 +42,12 @@ export interface VerdictResult {
   status: VerdictStatus;
   reason: string;
 }
+
+const COMPARATOR_NOT_YET_AVAILABLE =
+  "Decision-critical analysis is incomplete — a fair-value range alone cannot determine BUY / HOLD / SELL. " +
+  "Synthesizing a verdict also requires the required-versus-achieved growth comparator (spec §10.6.2), and " +
+  "that fact has not been acquired yet (spec §10.6.5, milestone M8). Recovery: this verdict becomes available " +
+  "once M8 delivers the comparator fact.";
 
 export function deriveVerdict(result: AnalysisResult): VerdictResult {
   if (result.trust.status === "UNUSABLE") {
@@ -65,24 +74,8 @@ export function deriveVerdict(result: AnalysisResult): VerdictResult {
     };
   }
 
-  const price = result.price.value;
-
-  if (price.lte(range.bear)) {
-    return {
-      status: "BUY",
-      reason: `Price $${price.toFixed(2)} is at or below the bear-case fair value $${range.bear.toFixed(2)}.`,
-    };
-  }
-
-  if (price.gte(range.bull)) {
-    return {
-      status: "SELL",
-      reason: `Price $${price.toFixed(2)} is at or above the bull-case fair value $${range.bull.toFixed(2)}.`,
-    };
-  }
-
   return {
-    status: "HOLD",
-    reason: `Price $${price.toFixed(2)} sits within the bear-to-bull fair-value range ($${range.bear.toFixed(2)}–$${range.bull.toFixed(2)}).`,
+    status: "INCOMPLETE",
+    reason: COMPARATOR_NOT_YET_AVAILABLE,
   };
 }

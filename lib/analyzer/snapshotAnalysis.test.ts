@@ -25,8 +25,11 @@ async function completeSpotCheck(runId: string): Promise<void> {
  * answered (so the leverage precondition computes and the range renders,
  * per leverageOnRealRun.test.ts), every queued fact confirmed, and the
  * profile confirmed. This is the one bounded proof case CF-V2-PROOF-01
- * asks for — a run whose fair-value range is usable, so the verdict
- * boundary can return BUY, HOLD or SELL rather than INCOMPLETE.
+ * asks for — a run whose fair-value range is usable on its own terms,
+ * independent of the verdict boundary's own INCOMPLETE result (see
+ * verdict.test.ts: the verdict stays INCOMPLETE today regardless, because
+ * its required second input — the §10.6.2 comparator — is not yet acquired,
+ * per Calvin's 18 Sep 2026 ruling on PR #140).
  */
 async function completeMsftRun(): Promise<string> {
   const runId = await createRun("MSFT", "Microsoft Corporation");
@@ -47,7 +50,7 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     await getPool().end();
   });
 
-  it("produces one complete DEEP analysis with a real BUY/HOLD/SELL verdict, not INCOMPLETE", async () => {
+  it("produces one complete DEEP analysis with a usable fair-value range, and an honest INCOMPLETE verdict pending the M8 comparator", async () => {
     const runId = await completeMsftRun();
 
     const snapshot = await createDeepSnapshot(runId, null);
@@ -55,7 +58,10 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     expect(snapshot.version).toBe(1);
     expect(snapshot.result.trust.status).not.toBe("UNUSABLE");
     expect(snapshot.result.fairValueRange.kind).toBe("range");
-    expect(["BUY", "HOLD", "SELL"]).toContain(snapshot.verdict.status);
+    // The range renders; the verdict boundary still does not manufacture
+    // BUY/HOLD/SELL from that single diagnostic (verdict.test.ts).
+    expect(snapshot.verdict.status).toBe("INCOMPLETE");
+    expect(snapshot.verdict.reason).toContain("comparator");
   });
 
   it("reopens the exact stored snapshot without recomputing — it survives the run's own decisions being deleted", async () => {
