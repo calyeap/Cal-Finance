@@ -1,10 +1,10 @@
-name: Fire Cal Finance BUILD and REVIEW
+name: Fire Cal Finance BUILD, REVIEW, and merge refresh
 
 on:
   issues:
     types: [labeled]
   pull_request:
-    types: [labeled]
+    types: [labeled, closed]
 
 permissions:
   issues: write
@@ -158,3 +158,38 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="REVIEW FIRE FAILED: HTTP ${{ steps.fire.outputs.http_code }}"
           exit 1
+
+  refresh-watch-on-merge:
+    if: github.event.action == 'closed' && github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fire CHIEF-OF-STAFF-WATCH once for verified merge
+        env:
+          WATCH_FIRE_URL: ${{ secrets.WATCH_FIRE_URL }}
+          WATCH_FIRE_TOKEN: ${{ secrets.WATCH_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ github.event.pull_request.number }}
+          TARGET_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${WATCH_FIRE_URL:-}" ] || [ -z "${WATCH_FIRE_TOKEN:-}" ]; then
+            echo "WATCH merge refresh skipped: WATCH_FIRE_URL or WATCH_FIRE_TOKEN missing."
+            exit 0
+          fi
+
+          PROMPT="Projection refresh only. Repository ${TARGET_REPO} PR #${TARGET_NUMBER} merged (${TARGET_URL}). Refresh only the affected Chief of Staff row using current owner/native evidence. Do not dispatch, recover, rerank, or set ON=YOU unless the owner source currently records a Calvin-owned NEEDS YOU item."
+          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
+
+          HTTP_CODE=$(curl -sS -o /tmp/watch_response.json -w '%{http_code}' \
+            --request POST "$WATCH_FIRE_URL" \
+            --header "Authorization: Bearer $WATCH_FIRE_TOKEN" \
+            --header "anthropic-version: 2023-06-01" \
+            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
+            --header "Content-Type: application/json" \
+            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
+
+          if [ "$HTTP_CODE" = "curl_error" ] || [ "$HTTP_CODE" -lt 200 ] 2>/dev/null || [ "$HTTP_CODE" -ge 300 ] 2>/dev/null; then
+            echo "WATCH merge refresh failed: HTTP ${HTTP_CODE}."
+            exit 1
+          fi
