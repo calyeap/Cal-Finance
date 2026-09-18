@@ -3,6 +3,8 @@ name: Fire Cal Finance BUILD, REVIEW, and merge refresh
 on:
   issues:
     types: [labeled]
+  issue_comment:
+    types: [created]
   pull_request:
     types: [labeled, closed]
 
@@ -66,12 +68,11 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="BUILD FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
 
-      - name: Remove BUILD wake label after grace period
+      - name: Remove BUILD wake label
         if: steps.fire.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          sleep 600
           gh api --method DELETE \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-build-wake" || true
 
@@ -86,13 +87,30 @@ jobs:
           exit 1
 
   fire-review:
-    if: github.event.label.name == 'needs-cc-rereview'
+    if: >-
+      github.event.label.name == 'needs-cc-rereview' ||
+      (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, 'DONE:'))
     runs-on: ubuntu-latest
     steps:
       - name: Resolve target
         id: target
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            NUMBER=$(printf '%s' "$COMMENT_BODY" | grep -oE '/pull/[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+            if [ -z "$NUMBER" ] && [ -n "${{ github.event.issue.pull_request.url }}" ]; then
+              NUMBER="${{ github.event.issue.number }}"
+            fi
+            if [ -z "$NUMBER" ]; then
+              gh api --method POST "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
+                -f body="REVIEW FIRE SKIPPED: DONE comment carries no PR link"
+              exit 1
+            fi
+          else
+            NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          fi
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Fire CALBOARD-CC-AUTO / REVIEW
@@ -140,12 +158,11 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="REVIEW FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
 
-      - name: Remove REVIEW wake label after grace period
+      - name: Remove REVIEW wake label
         if: steps.fire.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          sleep 600
           gh api --method DELETE \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-cc-rereview" || true
 
