@@ -260,3 +260,82 @@ jobs:
             echo "WATCH merge refresh failed: HTTP ${HTTP_CODE}."
             exit 1
           fi
+
+  # CF-OWNER-RECONCILE-01
+  # Terminal non-merge OWNER wake: BUILD/REVIEW apply needs-owner-wake only
+  # for a true state-changing terminal outcome (STOP or CALVIN REQUIRED),
+  # never for DONE, ACCEPT, MERGED, BLOCKED, CORRECT, or ordinary chatter.
+  # OWNER itself never applies this label, so its own DISPATCHED/WAIT/
+  # CALVIN REQUIRED output cannot re-fire this job.
+  fire-owner-on-terminal:
+    if: github.event.label.name == 'needs-owner-wake'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve target
+        id: target
+        run: |
+          echo "number=${{ github.event.issue.number || github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Fire CALBOARD-OWNER API trigger
+        id: fire
+        env:
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+        run: |
+          set -uo pipefail
+
+          if [ -z "${OWNER_FIRE_URL:-}" ] || [ -z "${OWNER_FIRE_TOKEN:-}" ]; then
+            echo "::error::OWNER_FIRE_URL or OWNER_FIRE_TOKEN repository secret is missing."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} carries needs-owner-wake: a terminal STOP or CALVIN REQUIRED outcome, not a merge. Follow the current .github/ai-routines/OWNER.md adapter's terminal-wake path exactly: first reconcile the full owned current-state block in Cal Finance Project Home from fresh evidence (including this item's own terminal outcome) and read it back, then confirm whether a product BUILD or product PR is already in flight (this item usually still is), then either WAIT, dispatch at most one bounded already-authorised next outcome, or raise exactly one closed CALVIN REQUIRED question. Do not repair Chief of Staff, do not review or merge PRs, and do not take on any broader orchestration role beyond the owned-block reconciliation OWNER.md defines."
+          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
+
+          HTTP_CODE=$(curl -sS -o /tmp/owner_terminal_response.json -w '%{http_code}' \
+            --request POST "$OWNER_FIRE_URL" \
+            --header "Authorization: Bearer $OWNER_FIRE_TOKEN" \
+            --header "anthropic-version: 2023-06-01" \
+            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
+            --header "Content-Type: application/json" \
+            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
+
+          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
+          if [ "$HTTP_CODE" != "curl_error" ] && [ "$HTTP_CODE" -ge 200 ] 2>/dev/null && [ "$HTTP_CODE" -lt 300 ] 2>/dev/null; then
+            echo "session_id=$(jq -r '.claude_code_session_id // "unknown"' /tmp/owner_terminal_response.json)" >> "$GITHUB_OUTPUT"
+            echo "session_url=$(jq -r '.claude_code_session_url // "unknown"' /tmp/owner_terminal_response.json)" >> "$GITHUB_OUTPUT"
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report OWNER terminal-wake fire
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
+            -f body="CF-OWNER-RECONCILE-01: fired CALBOARD-OWNER (terminal wake) for needs-owner-wake (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+
+      - name: Remove OWNER terminal-wake label
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-owner-wake" || true
+
+      - name: Report OWNER terminal-wake fire failure
+        if: steps.fire.outputs.ok != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
+            -f body="CF-OWNER-RECONCILE-01: CALBOARD-OWNER terminal-wake fire failed (HTTP ${{ steps.fire.outputs.http_code }})."
+          exit 1

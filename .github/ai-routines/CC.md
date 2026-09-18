@@ -54,12 +54,14 @@ Use only for a genuine unresolved judgement, permission, consequential trade-off
 
 - Post one closed question with the minimum evidence needed to decide.
 - Do not route routine engineering, QA, stale-state, wake, permission-between-agents, or message-carrying problems to Calvin.
+- Apply the `needs-owner-wake` label to the target so CALBOARD-OWNER can reconcile Project Home for this terminal state.
 
 ### STOP
 
 Use for ambiguous target, missing task contract, changed head during review, conflicting material evidence, or unsafe merge state.
 
 - Always post `STOP: <state> — <one-line reason>` before ending.
+- Apply the `needs-owner-wake` label to the target so CALBOARD-OWNER can reconcile Project Home for this terminal state.
 - Never end silently.
 
 ## Hard boundaries
