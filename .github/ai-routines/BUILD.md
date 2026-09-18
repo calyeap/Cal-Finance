@@ -48,6 +48,8 @@ any explanation, summary, or evidence after the marker line, never before it.
 
 A routine crash, stale derived view, missing optional tool, unavailable Notion page, failed wake, or missing orchestration permission is not by itself a Calvin decision.
 
+If the terminal outcome is `STOP` (including a `STOP: RECONCILIATION REQUIRED — ...` authority-conflict stop) or `CALVIN REQUIRED`, also apply the `needs-owner-wake` label to the target — that is a true state-changing terminal outcome and OWNER needs it to reconcile Project Home. Do not apply it for `DONE` or `BLOCKED`.
+
 ## DONE evidence
 
 The PR should contain only the evidence needed to review the work:

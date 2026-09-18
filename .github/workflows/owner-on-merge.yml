@@ -1,10 +1,13 @@
 name: Fire Cal Finance OWNER on merged PR
 
-# CF-OWNER-DISPATCH-01
+# CF-OWNER-DISPATCH-01 / CF-OWNER-RECONCILE-01
 # Deterministic continuation path: a successfully merged PR wakes CALBOARD-OWNER
-# directly as a tiny post-merge dispatcher only (see .github/ai-routines/OWNER.md).
-# This workflow does not depend on dispatch-next or any label for the normal
-# merge path.
+# directly as a post-merge dispatcher that reconciles Project Home before
+# dispatching (see .github/ai-routines/OWNER.md). This workflow does not
+# depend on dispatch-next or any label for the normal merge path. The
+# terminal-outcome (non-merge) OWNER wake lives in cc-auto-fire.yml, gated on
+# the needs-owner-wake label BUILD/REVIEW apply for a STOP or CALVIN
+# REQUIRED outcome.
 
 on:
   pull_request:
@@ -42,7 +45,7 @@ jobs:
             exit 0
           fi
 
-          PROMPT="Repository ${TARGET_REPO}, PR #${TARGET_NUMBER} merged at ${MERGE_SHA}. This is the native post-merge OWNER continuation wake. Follow the current .github/ai-routines/OWNER.md adapter exactly: read the current authorised Cal Finance runway state, confirm no active product BUILD or product PR is already in flight, then create at most one bounded, dependency-safe, already-authorised GitHub issue with needs-build-wake applied. If no safe dispatch exists, return a justified WAIT. If a genuine product/methodology/architecture decision is required, raise exactly one closed CALVIN REQUIRED question. Do not reconcile or write Notion, do not repair Chief of Staff, do not review or merge PRs, and do not take on any broader orchestration or reconciliation role."
+          PROMPT="Repository ${TARGET_REPO}, PR #${TARGET_NUMBER} merged at ${MERGE_SHA}. This is the native post-merge OWNER continuation wake. Follow the current .github/ai-routines/OWNER.md adapter exactly: first reconcile the full owned current-state block in Cal Finance Project Home from fresh evidence and read it back, then confirm no active product BUILD or product PR is already in flight, then create at most one bounded, dependency-safe, already-authorised GitHub issue with needs-build-wake applied. If no safe dispatch exists, return a justified WAIT. If a genuine product/methodology/architecture decision is required, raise exactly one closed CALVIN REQUIRED question. Do not repair Chief of Staff, do not review or merge PRs, and do not take on any broader orchestration role beyond the owned-block reconciliation OWNER.md defines."
           REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/owner_merge_response.json -w '%{http_code}' \
