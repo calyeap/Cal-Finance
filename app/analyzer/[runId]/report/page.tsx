@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
 import { AnalyzerReport } from "@/app/components/AnalyzerReport";
+import { FullAnalysisNav } from "@/app/components/FullAnalysisNav";
 import { loadGateState, RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
 import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { trustStatusLine, trustConsequenceLine } from "@/lib/analyzer/trustCopy";
@@ -121,7 +122,14 @@ export default async function ReportPage({ params }: { params: Promise<{ runId: 
         </div>
       )}
 
-      <AnalyzerReport result={report.result} aiLayer={report.aiLayer} />
+      {/* M9-DESKTOP-SHELL-01 — the rail│report composition (contract §6
+          priority 1-2, design.md §17.15 Standard/Wide modes), the
+          persistent section rail over Full Analysis's six themed sections
+          (contract §2.2, §3). */}
+      <div className="fa-shell">
+        <FullAnalysisNav overviewHref={`/analyzer/${runId}`} />
+        <AnalyzerReport result={report.result} aiLayer={report.aiLayer} />
+      </div>
     </AnalyzerShell>
   );
 }
