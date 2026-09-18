@@ -27,13 +27,26 @@ No Notion procedure fetch, Command Center fetch, tooling inventory, skills inven
 - Open or update exactly one PR linked to the originating issue and `OUTCOME-ID`.
 - Never merge.
 
+## Review handoff — mandatory on successful completion
+
+Before posting `DONE` for any successful implementation or bounded correction:
+
+1. Identify the single open PR for this `OUTCOME-ID`.
+2. Apply the `needs-cc-rereview` label to that PR.
+3. Re-fetch the PR and verify the label is present.
+4. Only then post the terminal `DONE: <PR link>` result and stop.
+
+This rule applies both to the first completed implementation and to every bounded correction after a `CORRECT` review outcome.
+
+If BUILD cannot apply or verify the review-wake label, do not end silently and do not post `DONE`; post `BLOCKED: REVIEW WAKE FAILED — <one-line reason>` on the target instead.
+
 ## Terminal rule — mandatory
 
 Every run must leave one visible terminal result on the target GitHub item before ending. Never end silently.
 
 Use exactly one of:
 
-- `DONE: <PR link>` — implementation is ready for independent review.
+- `DONE: <PR link>` — implementation is ready for independent review and the review wake has been applied and verified.
 - `BLOCKED: <one-line reason>` — execution cannot safely continue because of a concrete blocker.
 - `STOP: <state> — <one-line reason>` — a precondition or guard prevented execution.
 - `CALVIN REQUIRED: <one closed question>` — only when a genuine product / finance / permission / consequential judgement is required.
@@ -61,7 +74,8 @@ When explicitly re-woken for a bounded correction on an existing PR:
 3. Apply only that correction.
 4. Re-run affected verification.
 5. Update the same PR.
-6. Post a fresh terminal result.
+6. Complete the mandatory review handoff above.
+7. Post a fresh terminal result.
 
 If the same failure class survives two correction cycles, post `STOP: REPEATED CORRECTION FAILURE — <reason>` and end.
 
