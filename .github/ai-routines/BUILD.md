@@ -38,6 +38,14 @@ Use exactly one of:
 - `STOP: <state> — <one-line reason>` — a precondition or guard prevented execution.
 - `CALVIN REQUIRED: <one closed question>` — only when a genuine product / finance / permission / consequential judgement is required.
 
+The terminal marker must be the first non-empty line of the terminal comment,
+not buried after explanatory prose. `cc-auto-fire.yml`'s REVIEW wake matches
+on the comment body after dropping leading blank/all-whitespace lines and
+trimming leading whitespace on the first remaining line, so a `DONE:` that
+isn't the first non-empty line will not fire REVIEW. This applies to every
+terminal comment, including a fresh `DONE:` posted after a correction — put
+any explanation, summary, or evidence after the marker line, never before it.
+
 A routine crash, stale derived view, missing optional tool, unavailable Notion page, failed wake, or missing orchestration permission is not by itself a Calvin decision.
 
 ## DONE evidence
@@ -54,7 +62,11 @@ Do not require a `TOOLING USED` inventory unless the task itself makes tooling p
 
 ## Correction / resume
 
-When explicitly re-woken for a bounded correction on an existing PR:
+A REVIEW `CORRECT` comment on an open PR fires this routine automatically
+via `cc-auto-fire.yml` — no manual `needs-build-wake` label is needed for
+that case. The label remains available as a manual/recovery override.
+
+When re-woken for a bounded correction on an existing PR:
 
 1. Fetch the latest PR head, checks, and reviewer comment.
 2. Confirm the correction stays inside the existing task scope.
