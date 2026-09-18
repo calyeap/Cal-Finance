@@ -50,10 +50,11 @@ CREATE TABLE analyzer_run_snapshots (
   ai_layer_model  TEXT,
   ai_layer_detail TEXT,
 
-  -- CF-V2-PROOF-01's verdict boundary (lib/analyzer/verdict.ts). BUY/HOLD/
-  -- SELL only where the fair-value range itself is usable; INCOMPLETE with
-  -- its reason otherwise. Never a fifth value — a manufactured verdict is
-  -- exactly what this outcome's SCOPE forbids.
+  -- CF-V2-PROOF-01's verdict boundary (lib/analyzer/verdict.ts). The
+  -- verdict is never determined by a single diagnostic; where
+  -- decision-critical evidence is insufficient the column holds INCOMPLETE
+  -- with its cause in verdict_reason. Never a fifth value — a manufactured
+  -- verdict is exactly what this outcome's SCOPE forbids.
   verdict_status  TEXT NOT NULL CHECK (verdict_status IN ('BUY', 'HOLD', 'SELL', 'INCOMPLETE')),
   verdict_reason  TEXT NOT NULL,
 
