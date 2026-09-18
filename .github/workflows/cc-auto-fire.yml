@@ -14,17 +14,46 @@ permissions:
 
 jobs:
   fire-build:
-    if: github.event.label.name == 'needs-build-wake'
+    if: >-
+      github.event.label.name == 'needs-build-wake' ||
+      (github.event_name == 'issue_comment' &&
+        github.event.issue.pull_request != null &&
+        github.event.issue.state == 'open' &&
+        contains(github.event.comment.body, 'CORRECT'))
     runs-on: ubuntu-latest
     steps:
       - name: Resolve target
         id: target
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          set -uo pipefail
+
+          if [ "$EVENT_NAME" = "issue_comment" ]; then
+            # Top-level PR conversation comment whose first terminal outcome is
+            # CORRECT. Trim leading whitespace only so an indented/quoted
+            # "CORRECT:" elsewhere in a comment can't accidentally match, and
+            # resolve to this exact PR only (no cross-PR link parsing).
+            TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e 's/^[[:space:]]*//')
+            case "$TRIMMED" in
+              CORRECT|CORRECT:*) ;;
+              *)
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+            esac
+            NUMBER="${{ github.event.issue.number }}"
+          else
+            NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Fire CALBOARD-BUILD
         id: fire
+        if: steps.target.outputs.skip != 'true'
         env:
           BUILD_FIRE_URL: ${{ secrets.BUILD_FIRE_URL }}
           BUILD_FIRE_TOKEN: ${{ secrets.BUILD_FIRE_TOKEN }}
@@ -60,7 +89,7 @@ jobs:
           fi
 
       - name: Report BUILD fire
-        if: steps.fire.outputs.ok == 'true'
+        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -69,7 +98,7 @@ jobs:
             -f body="BUILD FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
 
       - name: Remove BUILD wake label
-        if: steps.fire.outputs.ok == 'true'
+        if: github.event.label.name == 'needs-build-wake' && steps.fire.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -77,7 +106,7 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-build-wake" || true
 
       - name: Report BUILD fire failure
-        if: steps.fire.outputs.ok != 'true'
+        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -89,7 +118,7 @@ jobs:
   fire-review:
     if: >-
       github.event.label.name == 'needs-cc-rereview' ||
-      (github.event_name == 'issue_comment' && startsWith(github.event.comment.body, 'DONE:'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'DONE:'))
     runs-on: ubuntu-latest
     steps:
       - name: Resolve target
@@ -98,7 +127,21 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -uo pipefail
+
           if [ "${{ github.event_name }}" = "issue_comment" ]; then
+            # Robust to leading whitespace only: trim, then require the
+            # terminal marker at the very start. A quoted/example "DONE:"
+            # elsewhere in the comment must not fire this.
+            TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e 's/^[[:space:]]*//')
+            case "$TRIMMED" in
+              DONE:*) ;;
+              *)
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+            esac
+
             NUMBER=$(printf '%s' "$COMMENT_BODY" | grep -oE '/pull/[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
             if [ -z "$NUMBER" ] && [ -n "${{ github.event.issue.pull_request.url }}" ]; then
               NUMBER="${{ github.event.issue.number }}"
@@ -106,15 +149,19 @@ jobs:
             if [ -z "$NUMBER" ]; then
               gh api --method POST "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
                 -f body="REVIEW FIRE SKIPPED: DONE comment carries no PR link"
-              exit 1
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
             fi
           else
             NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
           fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
 
       - name: Fire CALBOARD-CC-AUTO / REVIEW
         id: fire
+        if: steps.target.outputs.skip != 'true'
         env:
           CC_AUTO_FIRE_URL: ${{ secrets.CC_AUTO_FIRE_URL }}
           CC_AUTO_FIRE_TOKEN: ${{ secrets.CC_AUTO_FIRE_TOKEN }}
@@ -150,7 +197,7 @@ jobs:
           fi
 
       - name: Report REVIEW fire
-        if: steps.fire.outputs.ok == 'true'
+        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -159,7 +206,7 @@ jobs:
             -f body="REVIEW FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
 
       - name: Remove REVIEW wake label
-        if: steps.fire.outputs.ok == 'true'
+        if: github.event.label.name == 'needs-cc-rereview' && steps.fire.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -167,7 +214,7 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-cc-rereview" || true
 
       - name: Report REVIEW fire failure
-        if: steps.fire.outputs.ok != 'true'
+        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
