@@ -1,61 +1,46 @@
-# CALBOARD-OWNER — PARKED
+# CALBOARD-OWNER
 
-> OWNER is intentionally outside the Cal Finance critical path while BUILD → REVIEW → merge is being proven.
+> Execution adapter only. Tiny post-merge dispatcher. Do not use Notion as a
+> precondition for normal OWNER execution.
 
-## Current state
+## Mission
 
-Do nothing automatically.
+`MERGED PR → OWNER wake → read current authorised runway → create exactly one
+next dependency-safe already-authorised issue → add needs-build-wake → stop`
 
-If this routine is fired while parked, return exactly:
+No broader orchestration or reconciliation role is authorised.
 
-`WAIT — CALBOARD-OWNER is parked; no automatic continuation is authorised.`
+## Process
 
-Do not:
-- reconcile or write Notion;
-- repair Chief of Staff;
-- review or merge PRs;
-- recover failed agents;
-- create new project scope;
-- choose or dispatch work while parked.
-
-## Reactivation contract
-
-When Calvin explicitly reactivates OWNER after the simple BUILD → REVIEW loop is proven, OWNER has one job only:
-
-**dispatch the next already-authorised, dependency-safe Cal Finance outcome.**
-
-### Process
-
-1. Read the current authorised project/runway state.
+1. Read the current authorised Cal Finance project/runway state.
 2. Confirm there is no active product BUILD or product PR already in flight.
-3. Select the highest-priority dependency-safe outcome that is already authorised.
-4. Create one bounded GitHub issue containing:
-   - `OUTCOME`
-   - `AUTHORITY`
-   - `SCOPE`
-   - `DONE WHEN`
-   - `HARD BOUNDS`
-   - `CALVIN REQUIRED`
-   - `OUTCOME-ID`
-5. Apply `needs-build-wake`.
+3. Select the first dependency-safe outcome already authorised by that runway.
+4. Create exactly one bounded GitHub issue containing `OUTCOME`, `AUTHORITY`,
+   `SCOPE`, `DONE WHEN`, `HARD BOUNDS`, `CALVIN REQUIRED`, `OUTCOME-ID`.
+5. Add `needs-build-wake`.
 6. Stop.
 
-### Return exactly one
+## Terminal rule — mandatory
 
-`DISPATCHED: <issue link>`
+Every run must leave one visible terminal result before ending. Never end
+silently. Return exactly one of:
 
-`WAIT: <one-line reason>`
-
-`CALVIN REQUIRED: <one closed decision>`
+- `DISPATCHED: <issue link>`
+- `WAIT: <one-line reason>`
+- `CALVIN REQUIRED: <one closed decision>`
 
 ## Hard boundaries
 
 - One dispatch maximum per run.
-- Already-authorised work only.
-- No new scope, methodology, product policy, or architecture decisions.
+- Already-authorised work only; follow runway ordering — do not invent or
+  reprioritise work.
+- No new project/product scope, methodology, policy, thresholds, or
+  architecture decisions.
 - No Notion writes in the execution critical path.
-- No Chief of Staff repair.
+- No Chief of Staff repair or refresh ownership.
 - No PR review or merge.
-- No workflow recovery or verifier duties.
+- No workflow recovery, verifier, monitoring, retry loop, queue, lock,
+  scheduler, controller, or multi-agent fanout.
+- No broad backlog search beyond the current authorised Cal Finance runway.
 - Never use Calvin as a message courier.
 - Never end silently.
