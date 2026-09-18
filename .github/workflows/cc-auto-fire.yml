@@ -32,10 +32,12 @@ jobs:
 
           if [ "$EVENT_NAME" = "issue_comment" ]; then
             # Top-level PR conversation comment whose first terminal outcome is
-            # CORRECT. Trim leading whitespace only so an indented/quoted
-            # "CORRECT:" elsewhere in a comment can't accidentally match, and
-            # resolve to this exact PR only (no cross-PR link parsing).
-            TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e 's/^[[:space:]]*//')
+            # CORRECT. Drop leading blank/all-whitespace lines, then trim
+            # leading whitespace on the first non-empty line, so an
+            # indented/quoted "CORRECT:" elsewhere in a comment can't
+            # accidentally match, and resolve to this exact PR only (no
+            # cross-PR link parsing).
+            TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e '/[^[:space:]]/,$!d' -e 's/^[[:space:]]*//')
             case "$TRIMMED" in
               CORRECT|CORRECT:*) ;;
               *)
@@ -130,10 +132,11 @@ jobs:
           set -uo pipefail
 
           if [ "${{ github.event_name }}" = "issue_comment" ]; then
-            # Robust to leading whitespace only: trim, then require the
-            # terminal marker at the very start. A quoted/example "DONE:"
-            # elsewhere in the comment must not fire this.
-            TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e 's/^[[:space:]]*//')
+            # Robust to leading blank/all-whitespace lines: drop them, then
+            # trim leading whitespace on the first non-empty line and require
+            # the terminal marker there. A quoted/example "DONE:" elsewhere
+            # in the comment must not fire this.
+            TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e '/[^[:space:]]/,$!d' -e 's/^[[:space:]]*//')
             case "$TRIMMED" in
               DONE:*) ;;
               *)

@@ -40,8 +40,9 @@ Use exactly one of:
 
 The terminal marker must be the first non-empty line of the terminal comment,
 not buried after explanatory prose. `cc-auto-fire.yml`'s REVIEW wake matches
-on the comment body after trimming leading whitespace only, so a `DONE:`
-that isn't the first line will not fire REVIEW. This applies to every
+on the comment body after dropping leading blank/all-whitespace lines and
+trimming leading whitespace on the first remaining line, so a `DONE:` that
+isn't the first non-empty line will not fire REVIEW. This applies to every
 terminal comment, including a fresh `DONE:` posted after a correction — put
 any explanation, summary, or evidence after the marker line, never before it.
 
