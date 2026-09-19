@@ -116,20 +116,22 @@ jobs:
 
           Candidate row must satisfy every assertion BEFORE any Notion write:
           1. PROJECT = existing Cal Finance project mention/name only.
-          2. STATE = one line, max 24 characters. Prefix must be binary attention only: 🟢 when NEED ME? = NO; 🔴 when NEED ME? = YES. Never yellow.
+          2. STATE = one line, max 24 characters.
           3. NEED ME? = exactly YES or NO.
           4. VERIFIED = local Singapore clock only, format h:mm AM/PM, max 8 characters. No links, prose or dates.
           5. NOW = one line, max 80 characters. State only the single current action/blocker. No history, no NEXT list, no links, no hashes, no newline.
           6. Total row is exactly one physical table row. No cell may contain a paragraph, list, line break, or stacked events.
 
-          Validation rule: if any assertion fails, shorten/normalize the candidate before writing. If it still cannot comply, DO NOT mutate CHIEF OF STAFF. Never preserve or recreate the old verbose six-column shape.
+          Validation rule: if any assertion fails, shorten/normalize the candidate before writing. Never preserve or recreate the old verbose six-column shape.
 
-          Semantic rules:
-          - GitHub/native evidence is execution truth for transient activity.
-          - Cal Finance Project Home owns semantic scope, authority, sequencing and acceptance.
-          - RED means Calvin must act now. GREEN means Calvin does not need to act now.
+          ATTENTION CONTRACT — COPY, DO NOT INTERPRET:
+          - Cal Finance Project Home's first current `NEXT MOVE:` line is the sole attention authority.
+          - `NEXT MOVE: CALVIN` -> STATE gets a red prefix and NEED ME? = YES.
+          - `NEXT MOVE: AI`, `EXTERNAL`, or `PARKED` -> STATE gets a green prefix and NEED ME? = NO.
+          - If the line is missing, malformed, or contradictory, write `STALE / RECONCILIATION REQUIRED` rather than inferring GREEN from silence.
+          - Milestone COMPLETE, old NEEDS YOU/YOUR MOVE prose, and GitHub events do not decide human attention.
+          - GitHub/native evidence may refine the descriptive STATE/NOW only; it must not change the attention owner.
           - Do not dispatch, recover, rerank, create work, modify project contracts, or change Cal Finance Project Home.
-          - Do not turn AI/runtime failures into Calvin work unless a genuine human judgement, permission or acceptance gate exists.
           EOF
           )
 
