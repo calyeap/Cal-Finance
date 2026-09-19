@@ -1,5 +1,5 @@
 import Decimal from "decimal.js";
-import { CLEAN_PROVENANCE, combineProvenance } from "../provenance";
+import { CLEAN_PROVENANCE, MARKET_DATA_PROVENANCE, combineProvenance } from "../provenance";
 import { TAG_MAP } from "./tagMap";
 import { annualSeries, operatingMarginSeries, filedAnnualYearsCount, quarterlySeries } from "./history";
 import { computeAcquiredCashBasis, type AcquiredCashBasisResult } from "../modules/preRevenue";
@@ -341,14 +341,19 @@ export function buildCompanyInputs(
         value: m,
         provenance: CLEAN_PROVENANCE,
       })),
+      // Not CLEAN_PROVENANCE: that token is what the illustrative fixtures'
+      // hand-authored analyst.fiftyTwoWeek happens to carry, and a real run's
+      // range is a market-data-feed figure, not a fixture author's clean
+      // construction. MARKET_DATA_PROVENANCE is the acquisition path's own
+      // classification for that kind of value (see provenance.ts).
       fiftyTwoWeekLow:
         analyst.fiftyTwoWeek === null
           ? track("fiftyTwoWeekLow", null)
-          : { value: analyst.fiftyTwoWeek.low, provenance: CLEAN_PROVENANCE },
+          : { value: analyst.fiftyTwoWeek.low, provenance: MARKET_DATA_PROVENANCE },
       fiftyTwoWeekHigh:
         analyst.fiftyTwoWeek === null
           ? track("fiftyTwoWeekHigh", null)
-          : { value: analyst.fiftyTwoWeek.high, provenance: CLEAN_PROVENANCE },
+          : { value: analyst.fiftyTwoWeek.high, provenance: MARKET_DATA_PROVENANCE },
     },
 
     fcf: {

@@ -13,6 +13,7 @@ import { TICKERS_WITH_ANALYST_INPUTS } from "./acquisition/analystInputs";
 import { selectionToNonOperatingInvestments } from "./acquisition/nonOperatingJudgment";
 import { activeProvider } from "../marketdata";
 import { roundMoney } from "../money";
+import { fiftyTwoWeekRangeFrom, type FiftyTwoWeekRange } from "./fiftyTwoWeekRange";
 
 // ---------------------------------------------------------------------------
 // §2's ordering rule: "no calculation module may execute before Step 2 has
@@ -173,6 +174,56 @@ export async function latestPrice(
   }
 }
 
+const MS_PER_DAY = 86_400_000;
+// Comfortably more than the 364-day window fiftyTwoWeekRangeFrom actually
+// uses. The extra slack costs nothing — the pure helper filters to its own
+// window and applies its own coverage rule — and it means a `from` date that
+// lands on a closed market day never trims a real trading day off either end.
+const HISTORICAL_FETCH_DAYS = 380;
+
+function isoDateOnly(timestampMs: number): string {
+  return new Date(timestampMs).toISOString().slice(0, 10);
+}
+
+/**
+ * The trailing 52-week range of CLOSING prices (§7.2 M3), ending at the run's
+ * own price as-of date — never an intraday high/low, since
+ * `fetchHistoricalEod` serves closes.
+ *
+ * Keyed to `priceAsOfDate` rather than to "now" so the range and the price
+ * shown beside it describe the same day. Where there is no price as-of date
+ * (§3.4's price failure — see `latestPrice`), there is nothing to key the
+ * window to, so this is never called and the range is null (below) — the
+ * same fail-closed shape `latestPrice` itself already gives a fetch failure,
+ * applied one step earlier.
+ *
+ * Offline mode never calls the provider, for the same reason `latestPrice`
+ * does not: `ANALYZER_OFFLINE` stays the single switch it already is, and
+ * this outcome adds no second one or fallback path. An offline run keeps
+ * today's M3 INCOMPLETE.
+ *
+ * A failure — provider error, empty series, or a series too short for
+ * fiftyTwoWeekRangeFrom's own coverage rule — returns null rather than
+ * throwing: losing the range must return INCOMPLETE for M3 (§5.2), never take
+ * down a run whose filing facts acquired fine.
+ */
+export async function fiftyTwoWeekRange(
+  ticker: string,
+  priceAsOfDate: string
+): Promise<FiftyTwoWeekRange | null> {
+  if (isOffline()) return null;
+
+  try {
+    const provider = activeProvider();
+    const to = isoDateOnly(Date.parse(priceAsOfDate));
+    const from = isoDateOnly(Date.parse(to) - HISTORICAL_FETCH_DAYS * MS_PER_DAY);
+    const points = await provider.fetchHistoricalEod(ticker, "equity", from, to);
+    return fiftyTwoWeekRangeFrom(points, priceAsOfDate);
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Raised when a calculation is attempted before Step 2 is complete.
  *
@@ -249,24 +300,33 @@ export async function loadGateState(runId: string): Promise<GateState> {
     latestPrice(run.ticker),
   ]);
 
+  // §7.2 M3's 52-week range, fetched once here and passed to BOTH
+  // buildAcquiredRun calls below — never fetched a second time for the
+  // judgment-resolved call, exactly as `price` above already is not. Keyed to
+  // the price's own as-of date (fiftyTwoWeekRange's own doc); no price means
+  // no date to key the window to, so the range is null rather than anchored
+  // to an unrelated "now".
+  const fiftyTwoWeek = price === null ? null : await fiftyTwoWeekRange(run.ticker, price.timestamp);
+
   // Acquire once to learn the candidate investment line items, then resolve
   // §4.4's judgment against them. Enterprise value depends on the outcome:
   // with no judgment recorded the non-operating figure is null and every
   // EV-based output is INCOMPLETE. That is the correct state — no tag says
   // which of a company's investments are non-operating.
   const source = isOffline() ? ("CAPTURE" as const) : undefined;
-  const withoutJudgment = await buildAcquiredRun({ ticker: run.ticker, price, source });
+  const withoutJudgment = await buildAcquiredRun({ ticker: run.ticker, price, fiftyTwoWeek, source });
   const nonOperatingInvestments = selectionToNonOperatingInvestments(
     judgments.find((j) => j.judgmentKey === "NON-OPERATING INVESTMENTS")?.selection,
     withoutJudgment.acquired.acquisition.candidateNonOperatingInvestments
   );
 
   // The second call is served from the acquisition cache, so this costs no
-  // additional EDGAR request.
+  // additional EDGAR request — and fiftyTwoWeek is the SAME value fetched
+  // once above, so it costs no additional market-data request either.
   const acquired =
     nonOperatingInvestments === null
       ? withoutJudgment
-      : await buildAcquiredRun({ ticker: run.ticker, price, nonOperatingInvestments, source });
+      : await buildAcquiredRun({ ticker: run.ticker, price, fiftyTwoWeek, nonOperatingInvestments, source });
 
   const crossCheckFailedFactIds = acquired.acquired.crossCheckFailedFactIds;
   const fixture = acquired.fixture;

@@ -152,6 +152,17 @@ export async function buildAcquiredRun(
         "incomplete. A price is never estimated or carried forward from an earlier day."
     );
   }
+  if (options.fiftyTwoWeek != null) {
+    // M9-FIFTYTWOWEEK-01, SCOPE item 3. fetchHistoricalEod serves closes, not
+    // intraday extremes, so the range M3 receives is a CLOSING-PRICE 52-week
+    // range — narrower than an intraday high/low would be, and this says so
+    // plainly rather than letting the figure pass for one.
+    disclosures.push(
+      "The 52-week range is the trailing range of daily CLOSING prices, " +
+        "not an intraday high/low — the market-data feed this run reads serves " +
+        "closes, not intraday extremes."
+    );
+  }
 
   return { fixture, acquired, absentInputs, disclosures };
 }
