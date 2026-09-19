@@ -79,4 +79,33 @@ describe("fiftyTwoWeekRangeFrom", () => {
     expect(result).not.toBeNull();
     expect(result!.high.toString()).toBe("100");
   });
+
+  it("returns null when the unadjusted-close series spans a split between two adjacent trading days", () => {
+    // REVIEW on #184: `close` is unadjusted, and a raw min/max over a window
+    // containing a split publishes a range that was never actually traded.
+    // A 10:1 forward split lands between two literally consecutive trading
+    // days (200 and 199 days back) — exactly the shape a real split shows up
+    // as in a daily series.
+    const points = [point(360, 1150), point(200, 1200), point(199, 118), point(0, 125)];
+    expect(fiftyTwoWeekRangeFrom(points, AS_OF)).toBeNull();
+  });
+
+  it("does not false-positive on ordinary volatility spread across the window, even at a coincidental split ratio", () => {
+    // 100 -> 150 is exactly the 2/3 ratio `matchesCommonSplitRatio` matches
+    // (the reciprocal of 1.5x), but these two points are 364 days apart, not
+    // adjacent trading days — a year of ordinary price movement, not a split.
+    const points = [point(300, 100), point(150, 115), point(0, 108)];
+    const result = fiftyTwoWeekRangeFrom(points, AS_OF);
+    expect(result).not.toBeNull();
+    expect(result!.low.toString()).toBe("100");
+    expect(result!.high.toString()).toBe("115");
+  });
+
+  it("does not false-positive on a same-day-adjacent ratio that isn't a common split multiple", () => {
+    const points = [point(300, 100), point(298, 115), point(0, 108)];
+    const result = fiftyTwoWeekRangeFrom(points, AS_OF);
+    expect(result).not.toBeNull();
+    expect(result!.low.toString()).toBe("100");
+    expect(result!.high.toString()).toBe("115");
+  });
 });

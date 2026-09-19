@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 import { roundMoney } from "../money";
 import type { EodPricePoint } from "../marketdata/provider";
+import { matchesCommonSplitRatio } from "../marketdata/splitGuard";
 
 // ---------------------------------------------------------------------------
 // M9-FIFTYTWOWEEK-01 — the small deterministic helper §7.2 M3's range is
@@ -35,6 +36,20 @@ const TRAILING_DAYS = 52 * 7; // 364 — the trailing window this derives.
 // nearest trading day (weekends, holidays, a provider's own retention edge)
 // without accepting a window that is materially short of 52 weeks.
 const MIN_COVERAGE_DAYS = 300;
+
+// The widest calendar gap between two points still treated as adjacent
+// trading days for the split check below (splitGuard.ts's own contract is
+// close(T-1) vs close(T) — literally consecutive trading days). A real
+// `fetchHistoricalEod` series is daily, so two genuinely adjacent points are
+// a handful of calendar days apart at most (a weekend, or a holiday next to
+// one). 5 covers that with room to spare. Without this bound, two points far
+// apart in the window — an entirely ordinary year of price movement — can
+// coincidentally land on a common split ratio (e.g. a stock going from $100
+// to $150 is exactly 2/3, `matchesCommonSplitRatio`'s own 1/1.5 entry) and
+// falsely fail the range closed; a real split always shows up as an abrupt
+// move between two literally adjacent trading days, not a gradual one over
+// months.
+const MAX_ADJACENT_GAP_DAYS = 5;
 
 export interface FiftyTwoWeekRange {
   low: Decimal;
@@ -72,6 +87,23 @@ export function fiftyTwoWeekRangeFrom(
 
   const earliest = Date.parse(inWindow[0].date);
   if (asOf - earliest < MIN_COVERAGE_DAYS * MS_PER_DAY) return null;
+
+  // `close` is unadjusted (marketdata/historicalLoader.ts:87), and this repo
+  // already treats an unadjusted close series spanning a corporate action as
+  // corrupt (lib/marketdata/splitGuard.ts). A window this wide (364 days)
+  // routinely contains a split, so a raw min/max over it can publish a range
+  // that was never actually traded — reuse the same ratio check rather than
+  // reporting that. Restricted to actually-adjacent trading days (see
+  // MAX_ADJACENT_GAP_DAYS): the ratio check is only meaningful between two
+  // consecutive closes, not between two points a sparse series happens to
+  // place next to each other in this array.
+  for (let i = 1; i < inWindow.length; i++) {
+    const prev = inWindow[i - 1];
+    const curr = inWindow[i];
+    const gapDays = (Date.parse(curr.date) - Date.parse(prev.date)) / MS_PER_DAY;
+    if (gapDays > MAX_ADJACENT_GAP_DAYS) continue;
+    if (matchesCommonSplitRatio(prev.close / curr.close)) return null;
+  }
 
   const closes = inWindow.map((p) => new Decimal(p.close));
   return {

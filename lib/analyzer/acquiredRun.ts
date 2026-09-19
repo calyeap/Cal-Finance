@@ -158,7 +158,7 @@ export async function buildAcquiredRun(
     // range — narrower than an intraday high/low would be, and this says so
     // plainly rather than letting the figure pass for one.
     disclosures.push(
-      "The 52-week range below is the trailing range of daily CLOSING prices, " +
+      "The 52-week range is the trailing range of daily CLOSING prices, " +
         "not an intraday high/low — the market-data feed this run reads serves " +
         "closes, not intraday extremes."
     );

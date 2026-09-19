@@ -176,4 +176,36 @@ describe("M3 fails closed when the range cannot be honestly derived", () => {
     const result = assembleAnalysisResult(run.fixture);
     expect(result.diagnostics.marginHistory.suppressed).toBe(true);
   });
+
+  it("stays INCOMPLETE, reporting the corrupt range as unusable rather than a false 52-week high, when the unadjusted series spans a split", async () => {
+    const marketdata = await import("../marketdata");
+    vi.spyOn(marketdata, "activeProvider").mockReturnValue({
+      sourceName: "STUB",
+      resolveInstrument: async () => ({ outcome: "unknown" as const }),
+      fetchLatestEod: async () => ({ date: AS_OF, close: 499.7, adjustedClose: 499.7 }),
+      // A 10:1 forward split between two literally adjacent trading days
+      // partway through the window — real unadjusted closes, but not a
+      // series a raw min/max can honestly summarize.
+      fetchHistoricalEod: async () => [
+        { date: "2025-09-08", close: 480, adjustedClose: 480 },
+        { date: "2026-01-14", close: 4820, adjustedClose: 482 },
+        { date: "2026-01-15", close: 480.11, adjustedClose: 480.11 },
+        { date: AS_OF, close: 499.7, adjustedClose: 499.7 },
+      ],
+    });
+
+    const range = await fiftyTwoWeekRange("MSFT", AS_OF);
+    expect(range).toBeNull();
+
+    const run = await msftRun(range);
+    const result = assembleAnalysisResult(run.fixture);
+    const mh = result.diagnostics.marginHistory;
+
+    expect(mh.suppressed).toBe(true);
+    if (mh.suppressed) {
+      expect(mh.state).toBe("INCOMPLETE");
+      expect(mh.cause).toContain("fiftyTwoWeekLow");
+      expect(mh.cause).toContain("fiftyTwoWeekHigh");
+    }
+  });
 });
