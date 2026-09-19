@@ -1,10 +1,10 @@
 # M9 — real-company validation: MSFT and OKLO acceptance runs
 
-**Status: both acceptance runs open, compute, and render on both M9 surfaces. No presentation defect was found in either route. Both runs land on `INCOMPLETE`, which is the expected, first-class result for this pass (Calvin's `CALVIN DECISION`, 19 Sep 2026 09:07:39Z, option (B)).**
+**Status: both acceptance runs open, compute, and render on both M9 surfaces. No presentation defect was found in either route. Both runs render `INCOMPLETE` in slot 2 — the verbatim, observed output of today's unchanged `verdict.ts` (`:56`, `:65`, `:72`, `:78`), reported here as the observed result of a nonconforming implementation path awaiting its own outcome, not as a ruled end state for this pass.**
 
-This closes #118 runway item 10. Every M9 surface claim shipped before this
-(items 3, 4, 6, 7, 8, 9) rested on `MSFT_FIXTURE` / `OKLO_FIXTURE`, a
-synthetic reconstruction of the frozen design mocks
+Satisfies the condition #118 item 10 sets. Every M9 surface claim shipped
+before this (items 3, 4, 6, 7, 8, 9) rested on `MSFT_FIXTURE` /
+`OKLO_FIXTURE`, a synthetic reconstruction of the frozen design mocks
 (`lib/analyzer/fixtures/msft.ts:24`). This is the two M9 routes' first
 contact with a real fact set: one run per ticker, opened through the same
 gated path both routes read (`lib/analyzer/gate.ts`), acquired from the
@@ -12,10 +12,15 @@ committed SEC captures (`ANALYZER_OFFLINE=1`) rather than from either
 fixture, and rendered through `AnalyzerOverview` and `AnalyzerReport` exactly
 as `app/analyzer/[runId]/page.tsx` and `.../report/page.tsx` render them.
 
-Every claim below is a test in
-`app/components/analyzerSurfacesOnRealRun.test.tsx` and
-`lib/analyzer/m9RealCompanyValidationGuards.test.ts`, not only a statement
-here.
+The price, company-name, profile, twelve-slot-order, slot-2-presentation,
+slot-8-suppression and Section/anchor-order claims below are each a test in
+`app/components/analyzerSurfacesOnRealRun.test.tsx`; the `verdict.ts`-hash
+and gate-redirect claims are tests in
+`lib/analyzer/m9RealCompanyValidationGuards.test.ts`. The remaining
+per-ticker figures in §§2–3 (Gate 0/1 results, leverage/trust detail,
+`fairValueRange.kind`, the qualifying flags, and every OKLO pre-revenue
+figure) are recorded observation from the runs, per SCOPE item 3 — true,
+but not separately pinned by an assertion in either test file.
 
 ## 1. The pipeline actually run
 

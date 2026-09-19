@@ -150,8 +150,10 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
     it("slot 2 renders the INCOMPLETE presentation — state name, verdict.reason verbatim as the cause line, and no confidence figure", async () => {
       const { result, aiLayer } = await openRealRun(ticker, companyName);
       const verdict = deriveVerdict(result);
-      // Calvin's 19 Sep 2026 (B) ruling: INCOMPLETE is the first-class,
-      // expected result for this pass, not a defect. Both real runs are
+      // verdict.ts is unchanged (m9RealCompanyValidationGuards.test.ts pins
+      // its hash) and returns INCOMPLETE on every path today — the observed
+      // result of a nonconforming implementation path awaiting its own
+      // outcome, not a defect this outcome may fix. Both real runs are
       // asserted to land here explicitly rather than assumed.
       expect(verdict.status).toBe("INCOMPLETE");
 
