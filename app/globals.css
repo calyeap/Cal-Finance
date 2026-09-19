@@ -1473,6 +1473,17 @@ h6 {
   margin: 0 auto;
   padding: 32px 24px 96px;
 }
+/* §17.15 Compact (§6 priorities 4-5, runway item 6): this route has no
+   rail at any width, so the base rule above already puts .layout's main
+   column inside Compact's 320-976px range (900px - the 48px padding
+   above = 852px). Declared explicitly here, alongside the Standard/Wide
+   steps below, rather than left as an unstated default — one rule covers
+   both named phone widths (§6 tier 5: no second breakpoint below Compact). */
+@media (max-width: 1024px) {
+  .cb-analyzer .layout {
+    max-width: 900px;
+  }
+}
 /* §17.15 Standard/Wide (§6 priorities 1-3, runway item 6): this route has
    no rail, so .layout IS the main column and its only overhead is the
    32px/24px/96px padding above (24px on each side). max-width minus that
@@ -1747,6 +1758,29 @@ h6 {
   font-size: 11px;
   color: var(--muted);
   margin: 0 0 18px;
+}
+/* design.md:525 (§6 tier 4) — below 720px the two-column frame stacks
+   price-implied first, so the market's assumption reads before the
+   analyst's. Governs both Section H (Full Analysis) and Overview slot 4's
+   reuse of this same frame (ScenarioRangeStrip) — one selector, one rule,
+   both callers. Only the visual order flips (`order`, not a markup
+   change): the fair-value/range half stays first in the DOM because
+   design.md:523 requires H never to be shown without E adjacent, and that
+   pairing is untouched. Ported from the frozen mocks' own Compact
+   treatment of this exact component — mock-report-msft.html:277-279,
+   mock-report-oklo.html:253-255 — not invented here. */
+@media (max-width: 720px) {
+  .cb-analyzer .hframe {
+    grid-template-columns: 1fr;
+  }
+  .cb-analyzer .hframe > div:first-child {
+    order: 2;
+    border-right: 0;
+    border-top: 1px solid var(--hairline);
+  }
+  .cb-analyzer .hframe > div:last-child {
+    order: 1;
+  }
 }
 .cb-analyzer .rangebar {
   position: relative;
@@ -2042,6 +2076,18 @@ h6 {
 }
 .cb-analyzer .atglance .cur {
   background: var(--field);
+}
+/* SCOPE item 4 — no approved contract or frozen-design-doc source states a
+   Compact column count for this 4-column grid, but the frozen mocks (the
+   same approved artefacts this component's own comments already cite as
+   authoritative, e.g. "ported verbatim from mock-report-msft.html") both
+   already carry this exact rule for the identical .atglance class:
+   mock-report-msft.html:241, mock-report-oklo.html:224. Reused verbatim
+   rather than picking a column count on taste. */
+@media (max-width: 720px) {
+  .cb-analyzer .atglance {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 .cb-analyzer .striploc {
   font-size: 12px;
@@ -2938,7 +2984,12 @@ h6 {
 
    M9-RESPONSIVE-DESKTOP-01 closed tier 3 (Wide, §6 priority 3) on top of
    the above — see the Wide media queries on .layout and .fa-shell.
-   Compact/phone tiers 4-5 remain a later runway item, unchanged here.
+
+   M9-RESPONSIVE-COMPACT-01 closed tiers 4-5 (Compact, §6 priorities 4-5,
+   both named phone widths) on top of the above — see the Compact media
+   queries on .layout and .fa-shell, and the two 720px rules (.hframe
+   stacking per design.md:525, .atglance's column count) that sit near
+   their own base declarations elsewhere in this file rather than here.
    =================================================================== */
 
 /* ---------- Overview page (§2.1) ---------- */
@@ -3061,13 +3112,23 @@ h6 {
   font-weight: 600;
 }
 
-/* ---------- Full Analysis rail │ report column (§6 priorities 1-3 —
-   Standard and Wide; below 1024px this stacks in document order — not a
-   Compact design, just a non-breaking default that builds nothing
-   structurally preventing the later Compact tier, per §6 HARD BOUNDS)
-   ---------- */
+/* ---------- Full Analysis rail │ report column ----------
+   Compact (§6 priorities 4-5): below 1024px there is no grid — .fanav and
+   the report fall into normal document flow, rail then report, which
+   already matches §17.15's normative ordering for the part of it that
+   applies to this route (Full Analysis renders no Quick Read). No
+   collapse, drawer, accordion or sticky-on-scroll mechanism is added; the
+   only change is the padding rule directly below, so the rail sits at the
+   same 24px inset the report column already has instead of running flush
+   against the viewport edge while the report below it is inset.
+   Standard/Wide (§6 priorities 1-3): the grid below. ---------- */
 .cb-analyzer .fa-shell .fanav {
   margin-bottom: 32px;
+}
+@media (max-width: 1024px) {
+  .cb-analyzer .fa-shell {
+    padding: 0 24px;
+  }
 }
 @media (min-width: 1024px) {
   .cb-analyzer .fa-shell {
