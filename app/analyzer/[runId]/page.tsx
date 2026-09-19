@@ -50,6 +50,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ runId
         verdict={verdict}
         profileNotConfirmed={profileNotConfirmed}
         fullAnalysisHref={`/analyzer/${runId}/report`}
+        aiLayer={report.aiLayer}
       />
     </AnalyzerShell>
   );
