@@ -105,13 +105,29 @@ jobs:
           Semantic event: ${EVENT_DETAIL}
           Native item: ${TARGET_URL}
 
-          Read the exact current native item plus Cal Finance Project Home. Refresh ONLY the Cal Finance row in the CHIEF OF STAFF dashboard and read it back.
+          Read the exact current native item plus Cal Finance Project Home. Refresh ONLY the Cal Finance row in CHIEF OF STAFF and read it back.
 
-          Rules:
+          CHIEF OF STAFF RENDER CONTRACT — NON-NEGOTIABLE:
+          The PROJECTS table has exactly five columns:
+          PROJECT | STATE | NEED ME? | VERIFIED | NOW
+
+          Removed columns are forbidden: ON, LAST VERIFIED, NOW → NEXT.
+          History, audit trails, hashes, multi-event summaries and explanatory paragraphs belong in Project Home/GitHub, never this dashboard.
+
+          Candidate row must satisfy every assertion BEFORE any Notion write:
+          1. PROJECT = existing Cal Finance project mention/name only.
+          2. STATE = one line, max 24 characters. Prefix must be binary attention only: 🟢 when NEED ME? = NO; 🔴 when NEED ME? = YES. Never yellow.
+          3. NEED ME? = exactly YES or NO.
+          4. VERIFIED = local Singapore clock only, format h:mm AM/PM, max 8 characters. No links, prose or dates.
+          5. NOW = one line, max 80 characters. State only the single current action/blocker. No history, no NEXT list, no links, no hashes, no newline.
+          6. Total row is exactly one physical table row. No cell may contain a paragraph, list, line break, or stacked events.
+
+          Validation rule: if any assertion fails, shorten/normalize the candidate before writing. If it still cannot comply, DO NOT mutate CHIEF OF STAFF. Never preserve or recreate the old verbose six-column shape.
+
+          Semantic rules:
           - GitHub/native evidence is execution truth for transient activity.
           - Cal Finance Project Home owns semantic scope, authority, sequencing and acceptance.
-          - RED means Calvin is the current blocker and must act now. GREEN means Calvin does not need to act now. No yellow attention state.
-          - Update STATE / ON / NEED ME? / LAST VERIFIED / NOW → NEXT from current evidence.
+          - RED means Calvin must act now. GREEN means Calvin does not need to act now.
           - Do not dispatch, recover, rerank, create work, modify project contracts, or change Cal Finance Project Home.
           - Do not turn AI/runtime failures into Calvin work unless a genuine human judgement, permission or acceptance gate exists.
           EOF
