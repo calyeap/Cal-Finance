@@ -1,0 +1,99 @@
+# M9 acceptance — visual, responsive, finance logic, evidence/provenance, regression: PASS ON EACH DIMENSION, FAIL AS A WHOLE MILESTONE
+
+**Status: each of #118 runway item 11's five named dimensions passes, on the evidence below, for the two M9 routes as they exist today. M9 acceptance does not pass as a whole, because runway item 5 (Full Analysis's Business/Market Context content) is unbuilt and content-blocked, and because `deriveVerdict` returns `INCOMPLETE` on every run pending the milestone-8 comparator — both already-known, already-named conditions, not new findings. This is the honest result the outcome's own NOTES FOR BUILD predicted: several dimensions pass on the evidence in hand; the whole-milestone verdict does not, while item 5 is unbuilt and the dominant verdict slot can only ever render `INCOMPLETE`.**
+
+No fix was made to either M9 route, `AnalyzerOverview`, `AnalyzerReport`, `ValuationStrip`, `ScenarioRangeStrip`, or `app/globals.css`: this acceptance pass found no conformance defect in the two routes to fix. One file was added — `app/m9AcceptanceGaps.test.ts` — closing the three gaps the outcome named as unverified rather than claimed (rendered contrast, 200% zoom reflow, light/dark parity). `lib/analyzer/verdict.ts`, both gate redirects, and the `.cb-analyzer` token blocks are byte-unchanged from `238b4fa` (confirmed below, and by the pre-existing `m9RealCompanyValidationGuards.test.ts` guard, which still passes).
+
+## Run it yourself
+
+```
+npx tsc --noEmit
+TEST_DATABASE_URL=postgresql://<user>:<pass>@localhost:5432/calboard_test npm run migrate
+TEST_DATABASE_URL=postgresql://<user>:<pass>@localhost:5432/calboard_test npm test
+```
+
+The new contrast/zoom/parity/colour-independence/evidence-visibility assertions are `app/m9AcceptanceGaps.test.ts` (25 tests, all passing). `npx tsc --noEmit` is clean. `npm test` is 1743 passed / 1 failed, the failed test being `scripts/evidence/selfTest.test.ts`'s pre-existing local Playwright chromium gap (see §5) — the same failure, for the same reason, that items 9, 10 and 12's own BUILD runs recorded and that CI has proved three times does not reproduce there (PRs #169, #174, #178).
+
+---
+
+## 1. Visual — **PASS**
+
+Design contract §2.1 (twelve slots, fixed order), §2.2 (six sections, anchors), §4 (verdict/`INCOMPLETE` presentation), §5 (token table, both themes) and §7 (colour-independence) all hold, on the following evidence:
+
+- **Twelve-slot order and per-slot content rules**: `app/components/AnalyzerOverview.test.tsx` (pre-existing, unmodified) — all twelve slots present, in order, direct children of `main`.
+- **Six Full Analysis sections and anchors**: `app/components/AnalyzerReport.test.tsx` (pre-existing) — sections A, C, D, E, F, G, H, I, I2, B, J, `atglance`, and the six theme anchors, in contract order.
+- **Verdict/`INCOMPLETE` two-path distinction**: `app/components/DominantVerdictSlot.test.tsx` (pre-existing) — the completed and `INCOMPLETE` branches are structurally distinct render paths, not a colour swap.
+- **Rendered contrast ratios, both themes — the first of the two gaps this outcome closes.** `app/m9AcceptanceGaps.test.ts`'s "rendered contrast ratios" block computes WCAG 2.1 relative-luminance contrast over the hex values `globals.css` already declares, for every text/surface pair the two routes' reachable chrome actually produces: `--ink` and `--muted` (the only two text-colour roles any Overview/Report-reachable selector uses — see below) against `--ground`, `--field` and `--tint` (the only three surface roles). Measured, both themes:
+
+  | Pair | Light | Dark |
+  |---|---|---|
+  | ink / ground | 14.665 | 14.739 |
+  | ink / field | 15.595 | 13.394 |
+  | ink / tint | 13.044 | 12.432 |
+  | muted / ground | 5.918 | 6.430 |
+  | muted / field | 6.293 | 5.843 |
+  | muted / tint | **5.263** | **5.424** |
+
+  Every pair clears WCAG AA's 4.5:1 normal-text floor in both themes, muted-on-tint (the suppressing-state cause line on its tint wash) by the smallest margin. This is a real, computed pass, not a shortfall retuned away — no token was changed to produce this table. `--gain`/`--loss`/`--stale` are declared in the same token block (shared with Dashboard/Holdings) but a rule-level scan (same test file) confirms no selector reachable by `.verdictslot`, `.scenariorangestrip`, `.hframe`, `.ovslot`, `.pricechart`, `.rangebar`, `.updown`, `.fanav`, `.sechead`, `table.t`, `.finding`, `.atglance`, `.cell`, or the shared `.state`/`.name`/`.cause` mechanism ever references them — those three roles carry no contrast obligation on these two routes because the two routes never render financial-sentiment colour at all, which is itself the strongest form of colour-independence.
+- **`DominantVerdictSlot` and `ScenarioRangeStrip` reach §5's contrast table** — same test file, same computation; both roles use only `--ink`/`--muted` text on `--ground`/`--field`/`--tint`, per the table above. `.verdictslot.completed .verdictword` (the BUY/HOLD/SELL/INCOMPLETE word itself) is separately asserted to declare no `color` of its own, so it always renders in `--ink` regardless of status — the second, independent proof of §7's "no state, flag or provenance label is colour-only" for the single most prominent element on the page.
+- **200% zoom reflow — the second gap this outcome closes.** `app/m9AcceptanceGaps.test.ts`'s zoom block: a 200%-zoomed desktop viewport halves the effective CSS width, so the check reduces to the width-mode system `app/globalsCss.test.ts` already pins (Compact ≤1024px, Standard 1024–1600px, Wide ≥1600px — exhaustive by construction, and the file's only three breakpoints). Asserted for the three desktop tiers (#118 items 1–3): half-window (1366px → 683px zoomed), full desktop (1920px → 960px) and ultrawide (3440px → 1720px) all land in a defined mode; the half-window case specifically crosses into the ≤720px range where slot 4's price-implied-first stacking rule applies (`.hframe > div:last-child { order: 1; }`, pre-existing, re-asserted here as reached by a zoom path); and none of `.layout`, `.fa-shell`, `.topbar` gains an `overflow-x: scroll`/`auto` rule at any width — no horizontal-scroll rule was introduced, and none needed to be.
+- **Light/dark parity — the third gap this outcome closes.** `app/m9AcceptanceGaps.test.ts`'s parity block: exactly one `.cb-analyzer[data-theme="dark"]` rule exists in the entire stylesheet, and its body contains custom-property declarations only — no other property differs between light and dark anywhere in the file. This is a structural proof, not an inference: every other rule governing layout, chrome, states and components is theme-agnostic by construction, so "every state, slot and section that renders in dark renders equivalently in light" holds for the whole M9 surface at once, not sampled state-by-state. Light and dark also declare exactly the same ten token names (pre-existing `globalsCss.test.ts` assertion, re-checked here).
+- **Evidence/provenance is never hidden, at any width** — see §4 below; the same new test file confirms no `.state`/`.cause`/`.prov`/`.pi`/`.jreg` rule anywhere in `globals.css` truncates, collapses, or hides its content.
+
+No conformance defect was found. Nothing was fixed.
+
+## 2. Responsive — **PASS**
+
+All five #118 tiers, mapped onto §6's three modes, are asserted — by the pre-existing suite, not newly added here:
+
+- **No third column at any width**: `app/globalsCss.test.ts` ("no third column or sticky aside is introduced at Wide, on either route") — the Full Analysis grid's `grid-template-columns: 200px minmax(0, 1fr)` is declared exactly once (Standard); Wide widens the shell's `max-width` only.
+- **Right rails relocate/stack, never crush the reading flow**: the same file's Compact-tier assertions — `.fanav`'s Compact rule introduces no grid, no sticky position, and no third column; the inset moves to `.fanav` rather than doubling `.layout`'s own padding.
+- **Slot 4 stacks price-implied-first below 720px**: `app/globalsCss.test.ts` ("below 720px, `.hframe` stacks to a single column with the price-implied half ... ordered first") — confirmed against `ScenarioRangeStrip.tsx`'s own DOM order (the fair-value/analyst side is the first child, the price-implied restatement is the last child; the 720px rule sets `order: 2` / `order: 1` respectively, putting price-implied first) — re-exercised via the 200% zoom path in §1 above, not just at a narrow physical viewport.
+- **72ch prose measure holds, analytical content stays uncapped**: `app/globalsCss.test.ts` — `.overview .ovslot.editorial p` and `.verdictslot.completed .rationale` carry the 72ch cap; `.hframe` and `.pricechartsvg` carry none.
+- **All five #118 tiers, both named iPhone widths**: `app/globalsCss.test.ts` asserts the Compact main column lands inside §17.15's 320–976px range generically, and explicitly at both 390px (iPhone Pro class) and 430px (iPhone Pro Max class) for Full Analysis; the Overview route shares the same `.layout` rule.
+- **No slot's content exists only at wide widths**: the Wide `@media (min-width: 1600px)` block (per `app/globalsCss.test.ts`'s own accounting) touches only `.layout`, `.topbar`/`.topbar.fa` and `.fa-shell` `max-width` values — no new selector, and therefore no new content, appears only there.
+
+No conformance defect was found. Nothing was fixed.
+
+## 3. Finance logic — **PASS**
+
+Against the Mission Brief standard (*"material numbers remain traceable to executable calculations + correct evidence; uncertainty is preserved without contradictory claims"*) and the real runs item 10 recorded:
+
+- **Every material number traces to `AnalysisResult`.** `AnalyzerOverview.tsx` and `AnalyzerReport.tsx` read every rendered figure from the `AnalysisResult`/`VerdictResult` the route already computed — asserted by `app/components/AnalyzerOverview.test.tsx`, `AnalyzerReport.test.tsx` and, against real EDGAR data rather than a fixture, `app/components/analyzerSurfacesOnRealRun.test.tsx`. `docs/m9-real-company-validation-findings.md` (item 10, `238b4fa`) is the real-run fact set this claim reads against for MSFT and OKLO: every price, profile, verdict, suppression and pre-revenue figure in that document names its source field, and neither route's rendering introduced a numeral the acquisition/computation layer did not carry.
+- **No figure is computed in the view layer**, with one reviewed exception that is not a defect: `ScenarioRangeStrip.tsx`'s upside/downside percentage is arithmetic on two values `AnalysisResult` already carries (`fairValueRange.bear`/`bull` and `price.value`), the same "restate, don't recompute" pattern the frozen artefact's own Section H already used before this outcome — a percentage-of-difference display, not a new threshold, comparator, or financial computation. It was not introduced by this outcome and this outcome does not change it.
+- **No suppressed value renders as if present.** Every suppressing state (`LEVERAGE UNSUPPORTED IN v1`, `TRUST STATUS UNUSABLE`, `PROFILE NOT CONFIRMED`, RONIC/margin-history `INCOMPLETE`, FCF yield `PRECONDITION FAILED`, the four `NOT COMPUTED / SUPPRESSED` success-weight figures) renders its cause in place of a numeral — asserted per-module (`lib/analyzer/suppression.test.ts`, `suppressionConsumption.test.ts`, `notComputed.test.ts`, `trust.test.ts`) and confirmed against real runs in `docs/m9-real-company-validation-findings.md` §2–3.
+- **Uncertainty is preserved without contradictory claims.** `lib/analyzer/verdict.ts` (byte-unchanged; hash-pinned by `m9RealCompanyValidationGuards.test.ts`) returns `INCOMPLETE` with `trust.status === "UNUSABLE"`'s cause whenever the fair-value range is unusable, and the same cause propagates to slot 4's suppression state and slot 8's price-implied suppression — no slot asserts a conclusion another slot's suppressed state contradicts, both on the fixtures (`verdict.test.ts`) and on the two real runs (`docs/m9-real-company-validation-findings.md` §2–3, where MSFT and OKLO's verdict, fair-value range and slot-8 suppression all cite the identical `LEVERAGE UNSUPPORTED IN v1` cause).
+
+No conformance defect was found. Nothing was fixed, and no finance methodology, threshold, or comparator was touched, added, or invented.
+
+## 4. Evidence / provenance — **PASS**
+
+- **As-of dates, spot-check/judgment status and suppression causes are reviewable, and none is hidden, truncated or collapsed out of reach at any width.** `app/m9AcceptanceGaps.test.ts`'s new evidence-visibility check scans every rule in `globals.css` for `.state`, `.cause`, `.prov`, `.pi`, `.jreg` or `.name` in its selector and asserts none of them carries `overflow: hidden`, `text-overflow: ellipsis`, `-webkit-line-clamp`, `display: none` or `visibility: hidden`, at any breakpoint — the two `display: none` and one `overflow: hidden` rules that do exist elsewhere in the file target a `<details>` marker glyph and a Holdings screen-reader-only legend respectively, neither of which is a provenance element on the M9 routes.
+- **Section J (the provisional/unmodelled register) and the fact set's provenance display are never collapsed** — `AnalyzerReport.test.tsx` asserts Section J's presence and order; `EvidenceProvenanceSurface`'s role (contract §3) reuses `ProvenanceTokens`/`Disclosure` unchanged, and this outcome touched neither.
+- **The item-10 real runs are the fact set checked against**: `docs/m9-real-company-validation-findings.md` records, per ticker, that as-of dates, spot-check status (`SPOT-CHECK NOT REQUIRED` for OKLO's cash-per-share basis), and every suppression cause reached the surface on both routes with no truncation.
+
+No conformance defect was found. Nothing was fixed.
+
+## 5. Regression — **PASS, with the one already-proven-environmental exception named and separated**
+
+- **`npx tsc --noEmit`**: clean.
+- **`npm test`**: 1743 passed, 1 failed — `scripts/evidence/selfTest.test.ts`, `browserType.launch: Executable doesn't exist at .../chromium_headless_shell-1243/...`. This is the same pre-existing local Playwright chromium gap the issue names, which CI (not this local run) has now proved three times, on PRs #169, #174 and #178, does not reproduce there. Every one of the 1743 passing tests includes this outcome's own 25 new assertions in `app/m9AcceptanceGaps.test.ts`; no other test file changed behaviour.
+- **`lib/analyzer/verdict.ts` is byte-unchanged.** Confirmed both by `git status` (the file was never touched this outcome) and by `m9RealCompanyValidationGuards.test.ts`'s pre-existing sha256 pin, which still passes.
+- **The `.cb-analyzer` token block and its `[data-theme="dark"]` block are byte-identical to `238b4fa`.** `app/globals.css` was never touched this outcome; `app/globalsCss.test.ts`'s pre-existing byte-identity assertions (`ruleBody` full-body `.toBe()` comparison) still pass.
+- **The two gate redirects are byte-for-byte unchanged.** `app/analyzer/[runId]/page.tsx` and `.../report/page.tsx` were never touched this outcome; `m9RealCompanyValidationGuards.test.ts`'s pre-existing substring pins on both routes' `/profile` and `/facts` redirects still pass.
+- **No shipped behaviour from items 3, 4, 6, 7, 8, 9 or 10 changed** — the entire diff this outcome makes is one new test file; every existing test file's assertions, including the width/chrome/state/accessibility rules from PRs #165, #167, #169, #171, #174 and #178, ran unmodified and still pass.
+
+---
+
+## Whole-milestone statement
+
+**M9 acceptance does not pass as a whole.** Each of the five dimensions #118 item 11 names passes on the two M9 routes as they exist today, honestly and on test-backed evidence, not by narrowing the question until the answer was `PASS`. But the milestone itself is not accepted, for reasons this outcome does not fix and HARD BOUNDS forbids it from fixing:
+
+1. **Runway item 5 (Full Analysis's Business and Market Context content) is unbuilt and not dependency-safe.** No approved source defines its content (design contract §8 item 3). Slots 5 and 11 and the Market Context section remain structural frames, exactly as items 9 and 10 left them.
+2. **`deriveVerdict` returns `INCOMPLETE` on every run, unconditionally**, pending the milestone-8 §10.6.2 growth comparator (`lib/analyzer/verdict.ts`, byte-unchanged; `docs/design/m9-contract-reconciliation.md` §5–§6). The dominant verdict slot — #118's single most prominent element — cannot render a completed BUY/HOLD/SELL verdict for any real analysis today.
+3. **Design contract §8's three open items remain open**: the confidence computation (item 1), the §10.6.4 action-clause/verdict UI relationship (item 2), and Market Context's content source (item 3, same gap as #1 above). None was invented to make this acceptance look more complete than it is.
+4. **The §4.4 non-operating-investments judgment was never recorded for either item-10 real run.** This is the dominant, named cause of both MSFT's and OKLO's `INCOMPLETE` verdict and suppressed fair-value range (`docs/m9-real-company-validation-findings.md` §1, §4 item 1) — not a defect in either M9 route, and not this outcome's to resolve (recording one would be inventing an analyst judgment).
+5. **52-week high/low is never supplied to an acquired run** (`buildAcquiredRun`'s `fiftyTwoWeek` option is `null` on every call `lib/analyzer/gate.ts` makes) — a pre-existing product gap, not introduced or fixed here, that leaves margin-history and related Section D diagnostics `INCOMPLETE` on every real run.
+6. **The non-M9 Analyzer screens** (`/analyzer`, `facts`, `profile`, `snapshot`) **and the `app/` root** have no chrome or state handling of their own — a named gap since #171, reproduced identically here, not widened into.
+
+None of these six conditions is a defect this acceptance pass found in the two M9 routes' visual, responsive, finance-logic, evidence-provenance, or regression behaviour — each is a standing, previously-named condition outside this outcome's SCOPE to fix, restated here because #118 item 11 requires the whole-milestone statement to name exactly what blocks it. A well-evidenced mixed result — five dimensions passing, one milestone not yet acceptable — is the correct and expected outcome of this acceptance pass, not a failure of it.
