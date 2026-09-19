@@ -1,6 +1,7 @@
 import { notFound, redirect } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
 import { AnalyzerReport } from "@/app/components/AnalyzerReport";
+import { DominantVerdictSlot } from "@/app/components/DominantVerdictSlot";
 import { FullAnalysisNav } from "@/app/components/FullAnalysisNav";
 import { loadGateState, RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
 import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
@@ -78,10 +79,7 @@ export default async function ReportPage({ params }: { params: Promise<{ runId: 
     <AnalyzerShell>
       <div className="cb-steps">
         <div className="wrap" style={{ paddingBottom: 0 }}>
-          <div className="state">
-            <span className="name">Verdict — {verdict.status}</span>
-            <span className="cause">{verdict.reason}</span>
-          </div>
+          <DominantVerdictSlot verdict={verdict} />
           <form action={createDeepSnapshotAction} className="continue" style={{ marginTop: 14 }}>
             <input type="hidden" name="runId" value={runId} />
             <button className="act" type="submit">
