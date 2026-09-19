@@ -31,15 +31,11 @@ export function PriceChartPanel({ price }: { price: { value: Decimal; timestamp:
         <span className="p">${num(price.value)}</span>
         <span className="ts">{price.timestamp}</span>
       </div>
-      <svg
-        className="pricechartsvg"
-        viewBox="0 0 320 64"
-        role="img"
-        aria-label={`Current price $${num(price.value)} as of ${price.timestamp} — no price history is in this analysis' fact set`}
-      >
+      <svg className="pricechartsvg" viewBox="0 0 320 64" aria-hidden="true">
         <line x1="8" y1="32" x2="312" y2="32" className="axis" />
         <circle cx="312" cy="32" r="4" className="dot" />
       </svg>
+      <p className="sub">No price history is in this analysis&apos; fact set.</p>
     </div>
   );
 }

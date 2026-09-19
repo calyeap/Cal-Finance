@@ -479,9 +479,10 @@ function rowOf(section: HTMLElement, label: string | RegExp): HTMLElement {
 }
 
 // The value cell alone — a row's label can itself carry digits ("±1% rate
-// sensitivity").
+// sensitivity"). The label cell is a <th scope="row"> (M9-ACCESSIBILITY-01),
+// not a <td>, so the value is the row's only <td>.
 function valueOf(section: HTMLElement, label: string | RegExp): HTMLElement {
-  return rowOf(section, label).querySelectorAll("td")[1] as HTMLElement;
+  return rowOf(section, label).querySelector("td") as HTMLElement;
 }
 
 describe("AnalyzerReport — G, the rate at which the base case equals the price", () => {
@@ -707,5 +708,81 @@ describe("AnalyzerReport — closing recap inherits non-default cash provenance 
     const atGlance = container.querySelector("section#atglance") as HTMLElement;
     expect(within(atGlance).queryByText("Secondary")).toBeNull();
     expect(within(atGlance).queryByText("AI-extracted")).toBeNull();
+  });
+});
+
+// M9-ACCESSIBILITY-01 — runway item 9 (§16's Tables row): every <th> on
+// this route declares a scope, every row-label cell is a <th scope="row">,
+// and the reverse-DCF grid (a div-based CSS grid, not a <table>) announces
+// both its rate (column) and margin (row) header per cell via explicit
+// ARIA roles, grouped under role="row" wrappers — see AnalyzerReport.tsx's
+// own comment on why this outcome took the role="table"/"row" route rather
+// than a real <table> for that specific grid.
+describe("AnalyzerReport — table header semantics (M9-ACCESSIBILITY-01)", () => {
+  it("MSFT: every <th> rendered declares scope=col or scope=row", () => {
+    const { container } = render(<AnalyzerReport result={assembleAnalysisResult(MSFT_FIXTURE)} />);
+    const ths = Array.from(container.querySelectorAll("th"));
+    expect(ths.length).toBeGreaterThan(0);
+    for (const th of ths) {
+      expect(["col", "row"]).toContain(th.getAttribute("scope"));
+    }
+  });
+
+  it("OKLO (pre-revenue — exercises the success-definitions, unit-economics and funding-stack tables too): every <th> declares scope=col or scope=row", () => {
+    const { container } = render(<AnalyzerReport result={assembleAnalysisResult(OKLO_FIXTURE)} />);
+    const ths = Array.from(container.querySelectorAll("th"));
+    expect(ths.length).toBeGreaterThan(0);
+    for (const th of ths) {
+      expect(["col", "row"]).toContain(th.getAttribute("scope"));
+    }
+  });
+
+  it("every table.t row's label cell is a <th scope=\"row\">, never a <td>, on both fixtures", () => {
+    for (const fixture of [MSFT_FIXTURE, OKLO_FIXTURE]) {
+      const { container } = render(<AnalyzerReport result={assembleAnalysisResult(fixture)} />);
+      const tables = Array.from(container.querySelectorAll("table.t"));
+      expect(tables.length).toBeGreaterThan(0);
+      for (const table of tables) {
+        for (const row of Array.from(table.querySelectorAll("tbody tr"))) {
+          const firstCell = row.firstElementChild;
+          if (firstCell === null) continue; // no empty rows are rendered, but guard anyway
+          expect(firstCell.tagName).toBe("TH");
+          expect(firstCell.getAttribute("scope")).toBe("row");
+        }
+      }
+      cleanup();
+    }
+  });
+
+  it("the reverse-DCF grid is a valid ARIA table: every cell/columnheader/rowheader is owned by a role=\"row\", and a named cell's row/column association resolves structurally", () => {
+    const { container } = render(<AnalyzerReport result={assembleAnalysisResult(MSFT_FIXTURE)} />);
+    const grid = container.querySelector(".grid") as HTMLElement;
+    expect(grid.getAttribute("role")).toBe("table");
+
+    const rows = Array.from(grid.querySelectorAll(':scope > [role="row"]'));
+    expect(rows).toHaveLength(4); // header row + current/median/stress
+
+    // Every columnheader/rowheader/cell must be owned by a role="row" ancestor.
+    for (const el of Array.from(grid.querySelectorAll('[role="columnheader"], [role="rowheader"], [role="cell"]'))) {
+      expect(el.closest('[role="row"]')).not.toBeNull();
+    }
+
+    const headerRow = rows[0];
+    const headerCells = Array.from(headerRow.querySelectorAll('[role="columnheader"]'));
+    expect(headerCells).toHaveLength(4); // empty corner + r = 8% / 10% / 12%
+    const r8Index = headerCells.findIndex((h) => h.textContent === "r = 8%");
+    expect(r8Index).toBeGreaterThan(-1);
+
+    const currentRow = rows.find((r) => r.querySelector('[role="rowheader"]')?.textContent === "current") as HTMLElement;
+    expect(currentRow).not.toBeUndefined();
+    const rowChildren = Array.from(currentRow.children);
+    // The row's own rowheader sits at position 0, matching the header
+    // row's corner cell, so the row is self-describing without indices.
+    expect(rowChildren[0].getAttribute("role")).toBe("rowheader");
+    // The cell in the same column position as "r = 8%" in the header row
+    // is the cell that must be announced against it — proven by DOM
+    // position within each row, not by index attributes alone.
+    const targetCell = rowChildren[r8Index];
+    expect(targetCell.getAttribute("role")).toBe("cell");
   });
 });

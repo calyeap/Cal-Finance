@@ -347,6 +347,53 @@ describe("globals.css — M9 route-level states (M9-STATE-HANDLING-01)", () => {
   });
 });
 
+describe("globals.css — M9 accessibility pass (M9-ACCESSIBILITY-01, runway item 9)", () => {
+  it(".cb-analyzer carries its own :focus-visible rule at design.md:975's exact treatment, token-only", () => {
+    const rule = ruleBody(".cb-analyzer :focus-visible");
+    expect(rule).toMatch(/outline:\s*2px solid var\(--ink\)\s*;/);
+    expect(rule).toMatch(/outline-offset:\s*3px\s*;/);
+    expect(rule).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
+
+  // globals.css is checked in with CRLF line endings — normalise before any
+  // byte-for-byte comparison so the assertion doesn't depend on a
+  // checkout's line-ending settings.
+  const normalise = (s: string) => s.replace(/\r\n/g, "\n");
+
+  it("the global :focus-visible rule at :root is byte-unchanged — still --color-text, 2px, offset 2px", () => {
+    const rule = normalise(ruleBody(":focus-visible"));
+    expect(rule).toBe("\n  outline: 2px solid var(--color-text);\n  outline-offset: 2px;\n");
+    // Exactly one unscoped :focus-visible rule — the Analyzer's is scoped
+    // under .cb-analyzer, never a second bare declaration.
+    expect(css.match(/^:focus-visible\s*\{/gm)).toHaveLength(1);
+  });
+
+  it("the .cb-analyzer token block and its dark block are byte-identical to 8f6f6a1 — this outcome adds a focus rule, not a token", () => {
+    const lightTokens = normalise(ruleBody(".cb-analyzer"));
+    expect(lightTokens).toBe(
+      "\n  --ground: #F2EEE5;\n  --ink: #1F1C17;\n  --muted: #5F5A50;\n  --hairline: #E2DBCC;\n  --line-strong: #CBC2AE;\n  --field: #F8F5EE;\n  --gain: #1B6B4A;\n  --loss: #A3352A;\n  --stale: #856713;\n  --tint: #E8E1D2;\n  background: var(--ground);\n  color: var(--ink);\n  min-height: 100vh;\n  /* The frozen mocks are set in IBM Plex Sans, and every spacing and\n     line-length judgement in them was made against its metrics. The\n     next/font variable is on <html>, but this container never consumed it,\n     so the Analyzer alone rendered in the system stack — a different\n     typeface from the one the design was drawn in. Same declaration as\n     .cb-dash and .holdings-chrome, which have always had it. */\n  font-family: var(--font-ibm-plex-sans), \"IBM Plex Sans\", system-ui, -apple-system, \"Segoe UI\", sans-serif;\n  font-feature-settings: \"tnum\" 1;\n"
+    );
+    const darkTokens = normalise(ruleBody('.cb-analyzer[data-theme="dark"]'));
+    expect(darkTokens).toBe(
+      "\n  --ground: #16181A;\n  --ink: #E9EAE7;\n  --muted: #979CA1;\n  --hairline: #2C2F33;\n  --line-strong: #3C4045;\n  --field: #1E2124;\n  --gain: #56B98C;\n  --loss: #E27A66;\n  --stale: #D9AB45;\n  --tint: #24272A;\n"
+    );
+  });
+
+  it("every table.t <th> is scoped: thead th keeps the uppercase column-header look, tbody th (row headers) shares one rule with td rather than inheriting it", () => {
+    const theadRule = ruleBody(".cb-analyzer table.t thead th");
+    expect(theadRule).toMatch(/text-transform:\s*uppercase\s*;/);
+    // The row-label <th scope="row"> cells promoted from <td> must share
+    // td's rule, not the thead th rule above — a semantics change, not a
+    // restyle to the uppercase/muted column-header look.
+    expect(css).toMatch(/\.cb-analyzer table\.t td,\s*\n\s*\.cb-analyzer table\.t tbody th \{/);
+    const tbodyThRule = ruleBody(".cb-analyzer table.t tbody th");
+    expect(tbodyThRule).not.toMatch(/text-transform/);
+    expect(tbodyThRule).toMatch(/padding:\s*12px 0 12px 20px\s*;/);
+    expect(tbodyThRule).toMatch(/text-align:\s*right\s*;/);
+    expect(css).toMatch(/\.cb-analyzer table\.t td:first-child,\s*\n\s*\.cb-analyzer table\.t tbody th:first-child \{/);
+  });
+});
+
 describe("globals.css — .cb-dash regressions", () => {
   it(".toggle sizes to its own content (inline-flex), not the full section width", () => {
     // display: flex on a plain block <div> still stretches to 100% of its

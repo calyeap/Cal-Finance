@@ -323,17 +323,25 @@ function FigureValue({ figure, format }: { figure: Figure<Decimal>; format: (v: 
   );
 }
 
-function ReverseDcfCellView({ cell }: { cell: ReverseDcfCell }) {
+function ReverseDcfCellView({
+  cell,
+  ariaRowIndex,
+  ariaColIndex,
+}: {
+  cell: ReverseDcfCell;
+  ariaRowIndex: number;
+  ariaColIndex: number;
+}) {
   if (cell.fiveYearGrowth.suppressed) {
     return (
-      <div className="cell suppressed">
+      <div className="cell suppressed" role="cell" aria-rowindex={ariaRowIndex} aria-colindex={ariaColIndex}>
         <span className="name">{cell.fiveYearGrowth.state}</span>
         <span className="cause">{humanizeCause(cell.fiveYearGrowth.cause)}</span>
       </div>
     );
   }
   return (
-    <div className="cell">
+    <div className="cell" role="cell" aria-rowindex={ariaRowIndex} aria-colindex={ariaColIndex}>
       <div className="line">
         <span className="lbl">yrs 1-5 growth</span>
         <b>{pct(cell.fiveYearGrowth.value)}</b>
@@ -628,19 +636,19 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           <table className="t">
             <tbody>
               <tr>
-                <td>Gate 0 — supported profile</td>
+                <th scope="row">Gate 0 — supported profile</th>
                 <td>
                   <span className="v">{gates.gate0.result}</span>
                 </td>
               </tr>
               <tr>
-                <td>Gate 1 — history sufficiency</td>
+                <th scope="row">Gate 1 — history sufficiency</th>
                 <td>
                   <span className="v">{gates.gate1.state ?? `${gates.gate1.filedYearsCount} filed years`}</span>
                 </td>
               </tr>
               <tr>
-                <td>Leverage precondition{preRevenue && " — company today"}</td>
+                <th scope="row">Leverage precondition{preRevenue && " — company today"}</th>
                 <td>
                   <span className="v">{gates.leverage.result}</span>
                   {gates.leverage.netDebtRatio !== null && <div className="sub">net debt ratio {pct(gates.leverage.netDebtRatio)}</div>}
@@ -651,7 +659,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
               </tr>
               {preRevenue && gates.leverage.leveredResidualExceptionApplies && (
                 <tr>
-                  <td>Leverage precondition — success cases</td>
+                  <th scope="row">Leverage precondition — success cases</th>
                   <td>
                     <div className="sub">
                       A success-case cash flow is a residual after debt and is levered by construction — the levered-residual exception
@@ -675,13 +683,13 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           <table className="t">
             <thead>
               <tr>
-                <th>Diagnostic</th>
-                <th>Value</th>
+                <th scope="col">Diagnostic</th>
+                <th scope="col">Value</th>
               </tr>
             </thead>
             <tbody>
               <tr>
-                <td>Reinvestment, RONIC (5yr)</td>
+                <th scope="row">Reinvestment, RONIC (5yr)</th>
                 <td>
                   {diagnostics.reinvestmentRonic.ronic.suppressed ? (
                     <StateBlock figure={diagnostics.reinvestmentRonic.ronic} />
@@ -698,16 +706,16 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                 </td>
               </tr>
               <tr>
-                <td>
+                <th scope="row">
                   Implied return on new capital
                   <div className="sub">current fiscal year, year-over-year</div>
-                </td>
+                </th>
                 <td>
                   <FigureValue figure={diagnostics.impliedReturnOnNewCapital.value} format={pct} />
                 </td>
               </tr>
               <tr>
-                <td>Margin history</td>
+                <th scope="row">Margin history</th>
                 <td>
                   {diagnostics.marginHistory.suppressed ? (
                     <StateBlock figure={diagnostics.marginHistory} />
@@ -723,10 +731,10 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                 </td>
               </tr>
               <tr>
-                <td>
+                <th scope="row">
                   FCF yield + growth
                   <div className="sub">conditional output</div>
-                </td>
+                </th>
                 <td className={diagnostics.fcfYieldGrowth.precondition === "PRECONDITION FAILED" ? "state" : undefined}>
                   {diagnostics.fcfYieldGrowth.precondition === "PRECONDITION FAILED" ? (
                     <>
@@ -740,14 +748,14 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                 </td>
               </tr>
               <tr>
-                <td>Run-rate comparison</td>
+                <th scope="row">Run-rate comparison</th>
                 <td>
                   <span className="v">{diagnostics.runRate.seasonalityTestResult}</span>
                   {diagnostics.runRate.ttm !== null && <div className="sub">TTM {num(diagnostics.runRate.ttm, 0)}</div>}
                 </td>
               </tr>
               <tr>
-                <td>Shape mismatch</td>
+                <th scope="row">Shape mismatch</th>
                 <td>
                   <span className="v">{diagnostics.shapeMismatch.fired ? "FIRED" : "not fired"}</span>
                   {diagnostics.shapeMismatch.gapPoints !== null && <div className="sub">gap {pct(diagnostics.shapeMismatch.gapPoints)}</div>}
@@ -788,16 +796,16 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
               <table className="t">
                 <thead>
                   <tr>
-                    <th>Success definition</th>
-                    <th>V_success</th>
-                    <th>V_fail</th>
-                    <th>Success weight</th>
+                    <th scope="col">Success definition</th>
+                    <th scope="col">V_success</th>
+                    <th scope="col">V_fail</th>
+                    <th scope="col">Success weight</th>
                   </tr>
                 </thead>
                 <tbody>
                   {preRevenue.successDefinitions.map((row, i) => (
                     <tr key={i}>
-                      <td>{row.definition}</td>
+                      <th scope="row">{row.definition}</th>
                       <td>
                         <span className="v">${num(row.vSuccess)}</span>
                         {row.vSuccessAsOfDate && <div className="sub">as of {row.vSuccessAsOfDate}</div>}
@@ -839,7 +847,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
               <table className="t">
                 <tbody>
                   <tr>
-                    <td>Cash per share</td>
+                    <th scope="row">Cash per share</th>
                     <td>
                       {cashPerShareState !== null ? (
                         <BoundStateBlock bound={cashPerShareState} />
@@ -853,7 +861,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                     </td>
                   </tr>
                   <tr>
-                    <td>Quarterly burn / runway</td>
+                    <th scope="row">Quarterly burn / runway</th>
                     <td>
                       {/* Each half of this combined cell qualifies from its
                           OWN dependencies, independently (H3 conformance
@@ -884,16 +892,16 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                     </td>
                   </tr>
                   <tr>
-                    <td>
+                    <th scope="row">
                       Unit-economics breakeven
                       <div className="sub">evaluated before the scale solve</div>
-                    </td>
+                    </th>
                     <td>
                       <FigureValue figure={preRevenue.unitEconomicsBreakeven} format={(v) => `$${num(v, 2)}/unit`} />
                     </td>
                   </tr>
                   <tr>
-                    <td>Dilution required (back-loaded reference)</td>
+                    <th scope="row">Dilution required (back-loaded reference)</th>
                     <td>
                       <span className="v">{formatDollarSigned(preRevenue.dilutionRequired)}</span>
                     </td>
@@ -913,11 +921,11 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                   </caption>
                   <thead>
                     <tr>
-                      <th>Year</th>
-                      <th>Project debt</th>
-                      <th>Customer prepayments</th>
-                      <th>Retained OCF</th>
-                      <th>New equity</th>
+                      <th scope="col">Year</th>
+                      <th scope="col">Project debt</th>
+                      <th scope="col">Customer prepayments</th>
+                      <th scope="col">Retained OCF</th>
+                      <th scope="col">New equity</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -929,7 +937,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                       const equity = line("new_equity");
                       return (
                         <tr key={y.year}>
-                          <td>{y.year}</td>
+                          <th scope="row">{y.year}</th>
                           <td>
                             <span className="v">{debt?.line === "project_debt" ? `${pct(debt.shareOfCapex, 0)} of capex` : "—"}</span>
                           </td>
@@ -996,45 +1004,66 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             is not a warning by itself; it means the valuation is more sensitive to whether growth and returns on
             new investment hold up.
           </Disclosure>
-          <div className="grid">
-            <div></div>
-            <div className="colhead">r = 8%</div>
-            <div className="colhead">r = 10%</div>
-            <div className="colhead">r = 12%</div>
-            {(["current", "median", "stress"] as const).map((level) => (
-              <Fragment key={level}>
-                <div className="rowhead">{level}</div>
+          {/* M9-ACCESSIBILITY-01 — §16 requires this grid to announce both
+              its rate (column) and margin (row) header for any given cell.
+              ARIA's table/row/cell roles require a row as their owning
+              context, so each row (header row included) is grouped in a
+              div carrying role="row". display: contents on those wrapper
+              divs keeps the grid-template-columns four-column auto-flow —
+              the .grid/.colhead/.rowhead/.cell rules PR #165/#167/#169
+              shipped are descendant selectors, so the extra wrapper level
+              changes no shipped rule. aria-rowindex/aria-colindex stay on
+              the cells as position hints; with real rows present they are
+              redundant but harmless. */}
+          <div className="grid" role="table" aria-label="Reverse DCF grid — margin level by discount rate">
+            <div role="row" style={{ display: "contents" }}>
+              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={1}></div>
+              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={2}>
+                r = 8%
+              </div>
+              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={3}>
+                r = 10%
+              </div>
+              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={4}>
+                r = 12%
+              </div>
+            </div>
+            {(["current", "median", "stress"] as const).map((level, li) => (
+              <div key={level} role="row" style={{ display: "contents" }}>
+                <div className="rowhead" role="rowheader" aria-rowindex={li + 2} aria-colindex={1}>
+                  {level}
+                </div>
                 {priceImplied.reverseDcfGrid
                   .filter((c) => c.marginLevel === level)
-                  .map((c) => (
-                    <ReverseDcfCellView cell={c} key={`${level}-${c.rate}`} />
+                  .map((c, ci) => (
+                    <ReverseDcfCellView cell={c} key={`${level}-${c.rate}`} ariaRowIndex={li + 2} ariaColIndex={ci + 2} />
                   ))}
-              </Fragment>
+              </div>
             ))}
           </div>
           <table className="t" style={{ marginTop: "20px" }}>
             <tbody>
               <tr>
-                <td>Steady-state EV</td>
+                <th scope="row">Steady-state EV</th>
                 <td>
                   <FigureValue figure={priceImplied.steadyStateEv} format={(v) => `$${num(v, 0)}`} />
                 </td>
               </tr>
               <tr>
-                <td>PVGO</td>
+                <th scope="row">PVGO</th>
                 <td>
                   <FigureValue figure={priceImplied.pvgo} format={(v) => `$${num(v, 0)}`} />
                 </td>
               </tr>
               <tr>
-                <td>PVGO share of EV</td>
+                <th scope="row">PVGO share of EV</th>
                 <td>
                   <FigureValue figure={priceImplied.pvgoShareOfEv} format={pct} />
                 </td>
               </tr>
               {priceImplied.nopatGap && (
                 <tr>
-                  <td>NOPAT gap (current vs median-margin)</td>
+                  <th scope="row">NOPAT gap (current vs median-margin)</th>
                   <td>
                     <span className="v">
                       ${num(priceImplied.nopatGap.current, 0)} vs ${num(priceImplied.nopatGap.medianMargin, 0)}
@@ -1043,16 +1072,16 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                 </tr>
               )}
               <tr>
-                <td>
+                <th scope="row">
                   Implied exit multiple
                   <div className="sub">divides {priceImplied.impliedExitMultiple.dividesMetric}</div>
-                </td>
+                </th>
                 <td>
                   <FigureValue figure={priceImplied.impliedExitMultiple.value} format={(v) => `${num(v, 1)}x`} />
                 </td>
               </tr>
               <tr>
-                <td>±1% rate sensitivity</td>
+                <th scope="row">±1% rate sensitivity</th>
                 <td>
                   {rateSensitivityState !== null ? (
                     <BoundStateBlock bound={rateSensitivityState} />
@@ -1080,10 +1109,10 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           <table className="t">
             <thead>
               <tr>
-                <th>Scenario</th>
-                <th>Growth</th>
-                <th>Margin</th>
-                <th>Reinvestment</th>
+                <th scope="col">Scenario</th>
+                <th scope="col">Growth</th>
+                <th scope="col">Margin</th>
+                <th scope="col">Reinvestment</th>
               </tr>
             </thead>
             <tbody>
@@ -1105,10 +1134,10 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                   );
                 return (
                   <tr key={s}>
-                    <td>
+                    <th scope="row">
                       {SCENARIO_LABELS[s]}
                       <div className="sub">{d.writtenAnchor}</div>
-                    </td>
+                    </th>
                     {noneAuthored ? (
                       // One state across the three columns rather than the same
                       // state three times over.
@@ -1139,7 +1168,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           <table className="t">
             <tbody>
               <tr>
-                <td>Bear / base / bull values</td>
+                <th scope="row">Bear / base / bull values</th>
                 <td>
                   <span className="v">
                     ${num(scenarioOutputs.values.bear, 0)} / ${num(scenarioOutputs.values.base, 0)} / ${num(scenarioOutputs.values.bull, 0)}
@@ -1147,7 +1176,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                 </td>
               </tr>
               <tr>
-                <td>
+                <th scope="row">
                   {/* CF-V2-PROOF-01, folding in the CalFinance v2 Product Decision Log
                       ruling of 14 Sep 2026: "no surface may use the word 'probability'" —
                       equal scenario weighting is a display convention, not a claim about
@@ -1156,19 +1185,19 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                       (scenarioOutputs.weightedDistribution), unchanged. */}
                   Scenario-weighted value
                   <div className="sub">display only, never a headline</div>
-                </td>
+                </th>
                 <td>
                   <span className="v">${num(scenarioOutputs.weightedDistribution, 0)}</span>
                 </td>
               </tr>
               <tr>
-                <td>Location of current price within the scenario range</td>
+                <th scope="row">Location of current price within the scenario range</th>
                 <td>
                   <span className="v">{pct(scenarioOutputs.priceLocationWithinRange, 0)}</span>
                 </td>
               </tr>
               <tr>
-                <td>Discount rate at which the base case equals the price</td>
+                <th scope="row">Discount rate at which the base case equals the price</th>
                 <td>
                   {/* A null rate is either of two outcomes — nothing ran, or
                       the search found no root — and only the bound state says
@@ -1181,7 +1210,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                 </td>
               </tr>
               <tr>
-                <td>Debt share in the sensitivity table</td>
+                <th scope="row">Debt share in the sensitivity table</th>
                 <td>
                   <span className="v">removed (I10)</span>
                 </td>
@@ -1514,16 +1543,16 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           <table className="t records">
             <thead>
               <tr>
-                <th>Fact</th>
-                <th>Value</th>
-                <th>Provenance</th>
-                <th>As-of / retrieved</th>
+                <th scope="col">Fact</th>
+                <th scope="col">Value</th>
+                <th scope="col">Provenance</th>
+                <th scope="col">As-of / retrieved</th>
               </tr>
             </thead>
             <tbody>
               {result.facts.map((f) => (
                 <tr key={f.id}>
-                  <td>{f.name}</td>
+                  <th scope="row">{f.name}</th>
                   <td>
                     <span className="v">{f.value === null ? "—" : f.value.toString()}</span>
                   </td>
@@ -1557,7 +1586,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             <tbody>
               {buildProvisionalRegister(result).map((row) => (
                 <tr key={row.key}>
-                  <td>{row.label}</td>
+                  <th scope="row">{row.label}</th>
                   <td>
                     <span className="v">{row.impact}</span>
                     <div className="sub">{row.detail}</div>
