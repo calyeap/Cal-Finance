@@ -479,7 +479,7 @@ function buildProvisionalRegister(result: AnalysisResult): ProvisionalRow[] {
 // third is the one that must never be silent. A rejected sentence that leaves
 // no trace is indistinguishable from a call that was never made, which would
 // hide precisely the event these checks exist to catch.
-function AiLayerNote({ aiLayer }: { aiLayer: AiLayerReport | undefined }) {
+export function AiLayerNote({ aiLayer }: { aiLayer: AiLayerReport | undefined }) {
   if (aiLayer === undefined) return null;
   if (aiLayer.status === "COMPLETED") {
     return aiLayer.model === null ? null : <p className="note">Written by {aiLayer.model}.</p>;
