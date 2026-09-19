@@ -1006,31 +1006,30 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           </Disclosure>
           {/* M9-ACCESSIBILITY-01 — §16 requires this grid to announce both
               its rate (column) and margin (row) header for any given cell.
-              The grid-template-columns layout above is a flat auto-flow of
-              direct children (Fragment adds no DOM node), which a real
-              <table> cannot reproduce without a role="row" wrapper set to
-              display: contents to keep the four-column auto-flow — and
-              display: contents is documented to drop an element's own role
-              from the accessibility tree in some browser/AT combinations,
-              which would silently defeat the exact thing this exists to
-              fix. aria-rowindex / aria-colindex on the existing cells
-              (ARIA's own documented alternative "in the absence of row
-              elements") gets the same announcement with no DOM
-              restructuring and no touch to the grid/colhead/rowhead/cell
-              rules PR #165 / #167 / #169 shipped. */}
+              ARIA's table/row/cell roles require a row as their owning
+              context, so each row (header row included) is grouped in a
+              div carrying role="row". display: contents on those wrapper
+              divs keeps the grid-template-columns four-column auto-flow —
+              the .grid/.colhead/.rowhead/.cell rules PR #165/#167/#169
+              shipped are descendant selectors, so the extra wrapper level
+              changes no shipped rule. aria-rowindex/aria-colindex stay on
+              the cells as position hints; with real rows present they are
+              redundant but harmless. */}
           <div className="grid" role="table" aria-label="Reverse DCF grid — margin level by discount rate">
-            <div aria-hidden="true"></div>
-            <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={2}>
-              r = 8%
-            </div>
-            <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={3}>
-              r = 10%
-            </div>
-            <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={4}>
-              r = 12%
+            <div role="row" style={{ display: "contents" }}>
+              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={1}></div>
+              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={2}>
+                r = 8%
+              </div>
+              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={3}>
+                r = 10%
+              </div>
+              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={4}>
+                r = 12%
+              </div>
             </div>
             {(["current", "median", "stress"] as const).map((level, li) => (
-              <Fragment key={level}>
+              <div key={level} role="row" style={{ display: "contents" }}>
                 <div className="rowhead" role="rowheader" aria-rowindex={li + 2} aria-colindex={1}>
                   {level}
                 </div>
@@ -1039,7 +1038,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                   .map((c, ci) => (
                     <ReverseDcfCellView cell={c} key={`${level}-${c.rate}`} ariaRowIndex={li + 2} ariaColIndex={ci + 2} />
                   ))}
-              </Fragment>
+              </div>
             ))}
           </div>
           <table className="t" style={{ marginTop: "20px" }}>

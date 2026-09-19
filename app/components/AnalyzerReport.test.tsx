@@ -715,9 +715,9 @@ describe("AnalyzerReport — closing recap inherits non-default cash provenance 
 // this route declares a scope, every row-label cell is a <th scope="row">,
 // and the reverse-DCF grid (a div-based CSS grid, not a <table>) announces
 // both its rate (column) and margin (row) header per cell via explicit
-// ARIA roles and indices — see AnalyzerReport.tsx's own comment on why
-// this outcome took the role="table" route rather than a real <table> for
-// that specific grid.
+// ARIA roles, grouped under role="row" wrappers — see AnalyzerReport.tsx's
+// own comment on why this outcome took the role="table"/"row" route rather
+// than a real <table> for that specific grid.
 describe("AnalyzerReport — table header semantics (M9-ACCESSIBILITY-01)", () => {
   it("MSFT: every <th> rendered declares scope=col or scope=row", () => {
     const { container } = render(<AnalyzerReport result={assembleAnalysisResult(MSFT_FIXTURE)} />);
@@ -754,31 +754,35 @@ describe("AnalyzerReport — table header semantics (M9-ACCESSIBILITY-01)", () =
     }
   });
 
-  it("the reverse-DCF grid announces both axes via role=table/columnheader/rowheader/cell with matching aria indices, for a named cell", () => {
+  it("the reverse-DCF grid is a valid ARIA table: every cell/columnheader/rowheader is owned by a role=\"row\", and a named cell's row/column association resolves structurally", () => {
     const { container } = render(<AnalyzerReport result={assembleAnalysisResult(MSFT_FIXTURE)} />);
     const grid = container.querySelector(".grid") as HTMLElement;
     expect(grid.getAttribute("role")).toBe("table");
 
-    const colHeaders = Array.from(grid.querySelectorAll('[role="columnheader"]'));
-    expect(colHeaders).toHaveLength(3);
-    const r8Header = colHeaders.find((h) => h.textContent === "r = 8%") as HTMLElement;
-    expect(r8Header).not.toBeUndefined();
-    expect(r8Header.getAttribute("aria-rowindex")).toBe("1");
-    const r8ColIndex = r8Header.getAttribute("aria-colindex");
+    const rows = Array.from(grid.querySelectorAll(':scope > [role="row"]'));
+    expect(rows).toHaveLength(4); // header row + current/median/stress
 
-    const rowHeaders = Array.from(grid.querySelectorAll('[role="rowheader"]'));
-    expect(rowHeaders).toHaveLength(3);
-    const currentRowHeader = rowHeaders.find((h) => h.textContent === "current") as HTMLElement;
-    expect(currentRowHeader).not.toBeUndefined();
-    const currentRowIndex = currentRowHeader.getAttribute("aria-rowindex");
-    expect(currentRowHeader.getAttribute("aria-colindex")).toBe("1");
+    // Every columnheader/rowheader/cell must be owned by a role="row" ancestor.
+    for (const el of Array.from(grid.querySelectorAll('[role="columnheader"], [role="rowheader"], [role="cell"]'))) {
+      expect(el.closest('[role="row"]')).not.toBeNull();
+    }
 
-    // The cell at (current, r = 8%) must carry role="cell" with exactly
-    // the row header's aria-rowindex and the column header's aria-colindex
-    // — the pairing a screen reader uses to announce both headers.
-    const targetCell = Array.from(grid.querySelectorAll('[role="cell"]')).find(
-      (c) => c.getAttribute("aria-rowindex") === currentRowIndex && c.getAttribute("aria-colindex") === r8ColIndex
-    );
-    expect(targetCell).not.toBeUndefined();
+    const headerRow = rows[0];
+    const headerCells = Array.from(headerRow.querySelectorAll('[role="columnheader"]'));
+    expect(headerCells).toHaveLength(4); // empty corner + r = 8% / 10% / 12%
+    const r8Index = headerCells.findIndex((h) => h.textContent === "r = 8%");
+    expect(r8Index).toBeGreaterThan(-1);
+
+    const currentRow = rows.find((r) => r.querySelector('[role="rowheader"]')?.textContent === "current") as HTMLElement;
+    expect(currentRow).not.toBeUndefined();
+    const rowChildren = Array.from(currentRow.children);
+    // The row's own rowheader sits at position 0, matching the header
+    // row's corner cell, so the row is self-describing without indices.
+    expect(rowChildren[0].getAttribute("role")).toBe("rowheader");
+    // The cell in the same column position as "r = 8%" in the header row
+    // is the cell that must be announced against it — proven by DOM
+    // position within each row, not by index attributes alone.
+    const targetCell = rowChildren[r8Index];
+    expect(targetCell.getAttribute("role")).toBe("cell");
   });
 });
