@@ -14,6 +14,114 @@ function ruleBody(selector: string): string {
   return match[1];
 }
 
+// Same idea as ruleBody, but scoped to a substring (e.g. the concatenated
+// body of every @media block at a given breakpoint) so a selector that is
+// declared more than once at different breakpoints can be told apart.
+function ruleBodyIn(scope: string, selector: string): string {
+  const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = scope.match(new RegExp(`${escaped}\\s*\\{([^}]*)\\}`));
+  if (!match) {
+    throw new Error(`No CSS rule found for selector: ${selector} in given scope`);
+  }
+  return match[1];
+}
+
+// Concatenates the (brace-balanced) bodies of every top-level occurrence of
+// a given `@media (...)` block in the stylesheet. globals.css repeats the
+// same breakpoint in several places, one per feature section (the existing
+// `@media (max-width: 720px)` blocks already do this), so a plain indexOf
+// can't be used to find "the" block for a given query.
+function collectMediaBodies(query: string): string {
+  const bodies: string[] = [];
+  let searchFrom = 0;
+  for (;;) {
+    const idx = css.indexOf(query, searchFrom);
+    if (idx === -1) break;
+    const braceStart = css.indexOf("{", idx);
+    let depth = 0;
+    let end = -1;
+    for (let i = braceStart; i < css.length; i++) {
+      if (css[i] === "{") depth++;
+      else if (css[i] === "}") {
+        depth--;
+        if (depth === 0) {
+          end = i;
+          break;
+        }
+      }
+    }
+    if (end === -1) throw new Error(`Unbalanced braces for media query: ${query}`);
+    bodies.push(css.slice(braceStart + 1, end));
+    searchFrom = end + 1;
+  }
+  if (bodies.length === 0) throw new Error(`No @media rule found: ${query}`);
+  return bodies.join("\n");
+}
+
+describe("globals.css — M9 responsive width system (§17.15 Standard/Wide, item 6)", () => {
+  const standard = collectMediaBodies("@media (min-width: 1024px)");
+  const wide = collectMediaBodies("@media (min-width: 1600px)");
+
+  function maxWidthOf(scope: string, selector: string): number {
+    const match = ruleBodyIn(scope, selector).match(/max-width:\s*(\d+)px\s*;/);
+    if (!match) throw new Error(`No pixel max-width found for ${selector}`);
+    return Number(match[1]);
+  }
+
+  it("defines a Wide (>=1600px) rule for both M9 routes", () => {
+    expect(() => ruleBodyIn(wide, ".cb-analyzer .layout")).not.toThrow();
+    expect(() => ruleBodyIn(wide, ".cb-analyzer .fa-shell")).not.toThrow();
+  });
+
+  it("Overview route's main column (.layout has no rail) lands in Standard's 976-1164px range and grows, not narrows, at Wide", () => {
+    // .layout's only overhead is its own 24px-each-side padding.
+    const overhead = 48;
+    const standardMain = maxWidthOf(standard, ".cb-analyzer .layout") - overhead;
+    const wideMain = maxWidthOf(wide, ".cb-analyzer .layout") - overhead;
+    expect(standardMain).toBeGreaterThanOrEqual(976);
+    expect(standardMain).toBeLessThanOrEqual(1164);
+    expect(wideMain).toBeGreaterThanOrEqual(1164);
+    expect(wideMain).toBeGreaterThan(standardMain);
+  });
+
+  it("Full Analysis main column (the grid's 1fr track) lands in Standard's range and grows at Wide, rail/gap unchanged", () => {
+    const shellStandard = ruleBodyIn(standard, ".cb-analyzer .fa-shell");
+    expect(shellStandard).toMatch(/grid-template-columns:\s*200px minmax\(0,\s*1fr\)\s*;/);
+    expect(shellStandard).toMatch(/gap:\s*40px\s*;/);
+    // rail (200px) + gap (40px) + padding (24px x2 = 48px) sit outside the
+    // main column, per the issue's own arithmetic on the pre-fix CSS.
+    const overhead = 288;
+    const standardMain = maxWidthOf(standard, ".cb-analyzer .fa-shell") - overhead;
+    const wideMain = maxWidthOf(wide, ".cb-analyzer .fa-shell") - overhead;
+    expect(standardMain).toBeGreaterThanOrEqual(976);
+    expect(standardMain).toBeLessThanOrEqual(1164);
+    expect(wideMain).toBeGreaterThanOrEqual(1164);
+    expect(wideMain).toBeGreaterThan(standardMain);
+  });
+
+  it("no third column or sticky aside is introduced at Wide, on either route", () => {
+    expect(wide).not.toMatch(/grid-template-columns/);
+    expect(wide).not.toMatch(/position:\s*sticky/);
+    // The Full Analysis grid is declared exactly once (Standard) — Wide
+    // widens the shell without redefining its tracks.
+    const faShellGridDecls = css.match(/\.cb-analyzer \.fa-shell\s*\{[^}]*grid-template-columns/g) ?? [];
+    expect(faShellGridDecls).toHaveLength(1);
+  });
+
+  it("prose measure is unchanged by the Wide step, and analytical containers are not prose-capped", () => {
+    // SCOPE item 4: the editorial prose cap is aligned to the contract's
+    // stated 72ch measure, not left at the old 66ch.
+    expect(ruleBody(".cb-analyzer .overview .ovslot.editorial p")).toMatch(/max-width:\s*72ch\s*;/);
+    // Analytical containers (ValuationStrip's fair-value frame, the price
+    // chart) use the column and carry no prose-measure cap.
+    expect(ruleBody(".cb-analyzer .hframe")).not.toMatch(/max-width/);
+    expect(ruleBody(".cb-analyzer .pricechartsvg")).not.toMatch(/max-width/);
+    // The Wide block itself only widens containers — it introduces no ch
+    // measure of its own.
+    expect(wide).not.toMatch(/\dch\s*;/);
+  });
+});
+
 describe("globals.css — .cb-dash regressions", () => {
   it(".toggle sizes to its own content (inline-flex), not the full section width", () => {
     // display: flex on a plain block <div> still stretches to 100% of its
