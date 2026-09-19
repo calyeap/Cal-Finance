@@ -122,6 +122,95 @@ describe("globals.css — M9 responsive width system (§17.15 Standard/Wide, ite
   });
 });
 
+describe("globals.css — M9 Compact (§17.15 tiers 4-5, item 6, M9-RESPONSIVE-COMPACT-01)", () => {
+  const compact = collectMediaBodies("@media (max-width: 1024px)");
+  const narrow = collectMediaBodies("@media (max-width: 720px)");
+  const standard = collectMediaBodies("@media (min-width: 1024px)");
+
+  it("defines a Compact (<=1024px) rule for both M9 routes", () => {
+    expect(() => ruleBodyIn(compact, ".cb-analyzer .layout")).not.toThrow();
+    expect(() => ruleBodyIn(compact, ".cb-analyzer .fa-shell .fanav")).not.toThrow();
+  });
+
+  it("Overview route's Compact main column lands inside §17.15's 320-976px range", () => {
+    const match = ruleBodyIn(compact, ".cb-analyzer .layout").match(/max-width:\s*(\d+)px\s*;/);
+    if (!match) throw new Error("no pixel max-width in Compact .layout rule");
+    const overhead = 48; // .layout's own 24px-each-side padding, same as Standard/Wide.
+    const compactMain = Number(match[1]) - overhead;
+    expect(compactMain).toBeGreaterThanOrEqual(320);
+    expect(compactMain).toBeLessThanOrEqual(976);
+  });
+
+  it("Full Analysis's Compact rule introduces no grid, sticky aside, or third column — the inset is on .fanav, not the shell, so it doesn't double .layout's own padding", () => {
+    // A bare `.fa-shell` rule in the Compact block would add its own
+    // horizontal padding on top of .layout's (nested inside the shell on
+    // this route), pushing the main column outside §17.15's 320-976px
+    // range — the inset belongs on .fanav instead, which sits beside
+    // .layout rather than around it.
+    expect(() => ruleBodyIn(compact, ".cb-analyzer .fa-shell")).toThrow();
+    const fanavCompact = ruleBodyIn(compact, ".cb-analyzer .fa-shell .fanav");
+    expect(fanavCompact).not.toMatch(/grid-template-columns/);
+    expect(fanavCompact).not.toMatch(/position:\s*sticky/);
+    expect(fanavCompact).toMatch(/padding:\s*0 24px\s*;/);
+  });
+
+  it("Full Analysis's Compact main column lands inside §17.15's 320-976px range at both named phone widths, now that the shell adds no overhead of its own", () => {
+    // Overhead is .layout's own 24px-each-side padding only (the same
+    // overhead the Overview route uses above) — .fa-shell no longer
+    // carries a Compact padding rule that would double it.
+    const overhead = 48;
+    for (const viewport of [390, 430]) {
+      const main = viewport - overhead;
+      expect(main).toBeGreaterThanOrEqual(320);
+      expect(main).toBeLessThanOrEqual(976);
+    }
+  });
+
+  it("below 720px, .hframe stacks to a single column with the price-implied half (the second child) ordered first, per design.md:525", () => {
+    expect(ruleBodyIn(narrow, ".cb-analyzer .hframe")).toMatch(/grid-template-columns:\s*1fr\s*;/);
+    const firstChild = ruleBodyIn(narrow, ".cb-analyzer .hframe > div:first-child");
+    const lastChild = ruleBodyIn(narrow, ".cb-analyzer .hframe > div:last-child");
+    expect(firstChild).toMatch(/order:\s*2\s*;/);
+    expect(lastChild).toMatch(/order:\s*1\s*;/);
+    // A right-hand hairline is meaningless once the frame is one full-width
+    // column — dropped, not left dangling on the now-second half.
+    expect(firstChild).toMatch(/border-right:\s*0\s*;/);
+  });
+
+  it("this same 720px .hframe rule also governs Section H — one selector, one rule, not a component-specific duplicate", () => {
+    const hframeDecls = css.match(/\.cb-analyzer \.hframe\s*\{[^}]*grid-template-columns/g) ?? [];
+    // Exactly two: the always-on base rule (1fr 1fr) and this one 720px
+    // override (1fr) — never a second, differently-scoped selector for
+    // Section H or for Overview slot 4's reuse of the same class.
+    expect(hframeDecls).toHaveLength(2);
+  });
+
+  it("at 720px, .atglance drops to two columns — cited from the frozen mocks' own Compact rule for this class, not chosen on taste", () => {
+    expect(ruleBodyIn(narrow, ".cb-analyzer .atglance")).toMatch(
+      /grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)\s*;/
+    );
+  });
+
+  it("no second breakpoint below Compact was introduced for the M9 routes — every max-width query touching .cb-analyzer content is 720px (the project's pre-existing shared breakpoint) or 1024px (this outcome's new Compact ceiling)", () => {
+    const cbAnalyzerCss = css.slice(css.indexOf(".cb-analyzer {"));
+    const maxWidths = new Set(
+      [...cbAnalyzerCss.matchAll(/@media \(max-width:\s*(\d+)px\)/g)].map((m) => m[1])
+    );
+    expect([...maxWidths].sort()).toEqual(["1024", "720"]);
+  });
+
+  it("nothing at or above 1024px changed: the Standard/Wide grid, gap, sticky rail and 72ch prose cap from PR #165 are untouched", () => {
+    const shellStandard = ruleBodyIn(standard, ".cb-analyzer .fa-shell");
+    expect(shellStandard).toMatch(/grid-template-columns:\s*200px minmax\(0,\s*1fr\)\s*;/);
+    expect(shellStandard).toMatch(/gap:\s*40px\s*;/);
+    expect(ruleBodyIn(standard, ".cb-analyzer .fa-shell .fanav")).toMatch(/position:\s*sticky\s*;/);
+    expect(ruleBody(".cb-analyzer .overview .ovslot.editorial p")).toMatch(/max-width:\s*72ch\s*;/);
+    // Compact carries no `ch` prose cap of its own (§17.15: prose "fills"
+    // below 1024px, the 72ch cap starts at Standard).
+    expect(compact).not.toMatch(/\dch\s*;/);
+  });
+});
+
 describe("globals.css — .cb-dash regressions", () => {
   it(".toggle sizes to its own content (inline-flex), not the full section width", () => {
     // display: flex on a plain block <div> still stretches to 100% of its
