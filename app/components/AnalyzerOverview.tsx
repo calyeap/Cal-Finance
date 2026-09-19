@@ -6,7 +6,7 @@ import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { DominantVerdictSlot } from "./DominantVerdictSlot";
 import { PriceChartPanel } from "./PriceChartPanel";
 import { ScenarioRangeStrip } from "./ScenarioRangeStrip";
-import { AiLayerNote, humanizeCause } from "./AnalyzerReport";
+import { AiLayerNote, humanizeCause, CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 
 // M9-DESKTOP-SHELL-01 — the Overview page's twelve-slot frame, per
@@ -209,7 +209,10 @@ export function AnalyzerOverview({
           aiLayer={aiLayer}
           extra={
             challengerSelection === null ? null : (
-              <p className="note">Challenger point — {challengerSelection.selected.evidence}</p>
+              <>
+                <p className="note">Challenger point — {challengerSelection.selected.evidence}</p>
+                <span className="selrule">{CHALLENGER_SELECTION_RULE_NOTE}</span>
+              </>
             )
           }
         />

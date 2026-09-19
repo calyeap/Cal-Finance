@@ -2894,7 +2894,8 @@ h6 {
 }
 
 /* §17.7.1's required copy — "selected by report order, not by damage". */
-.cb-analyzer .sec-i .selrule {
+.cb-analyzer .sec-i .selrule,
+.cb-analyzer .overview .ovslot .selrule {
   display: block;
   font-size: 12px;
   color: var(--muted);

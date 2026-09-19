@@ -2,6 +2,7 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen } from "@testing-library/react";
 import { AnalyzerOverview } from "./AnalyzerOverview";
+import { CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
@@ -250,6 +251,10 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
     expect(container.querySelector("#slot-7")!.textContent).toContain(
       "The margin expansion assumed in the base case has no precedent in the company's own history."
     );
+    // §17.7.1 — the rendered copy must state the finding was selected by
+    // report order, not by damage, and never call it the strongest. This is
+    // Section I's exact sentence, imported rather than restated.
+    expect(container.querySelector("#slot-7")!.textContent).toContain(CHALLENGER_SELECTION_RULE_NOTE);
   });
 
   it("slot 7 surfaces nothing challenger-related when the challenger call has not completed", () => {
@@ -257,5 +262,23 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
       <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
     );
     expect(container.querySelector("#slot-7")!.textContent).not.toMatch(/Challenger point/);
+    expect(container.querySelector("#slot-7")!.textContent).not.toContain(CHALLENGER_SELECTION_RULE_NOTE);
+  });
+
+  it("slot 7 surfaces nothing challenger-related when the challenger call completed but found nothing", () => {
+    const withEmptyChallenger: AnalysisResult = {
+      ...result,
+      challenger: { findings: [], completedAt: "2026-09-19T00:00:00.000Z" },
+    };
+    const { container } = render(
+      <AnalyzerOverview
+        result={withEmptyChallenger}
+        verdict={verdict}
+        profileNotConfirmed={false}
+        fullAnalysisHref="/analyzer/x/report"
+      />
+    );
+    expect(container.querySelector("#slot-7")!.textContent).not.toMatch(/Challenger point/);
+    expect(container.querySelector("#slot-7")!.textContent).not.toContain(CHALLENGER_SELECTION_RULE_NOTE);
   });
 });
