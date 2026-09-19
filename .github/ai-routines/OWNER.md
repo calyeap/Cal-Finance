@@ -40,6 +40,20 @@ Both wake sources run the same process below: reconcile first, then decide.
    an owned field cannot be verified from current evidence, write `—` or
    `STALE / RECONCILIATION REQUIRED`; never present unverifiable old state
    as current. Read the write back to confirm it landed before continuing.
+
+   **Closed-ruling guard — mandatory before any Calvin gate.** If the wake
+   target, issue text, implementation note, stale spec, or model output asks
+   for a decision that Project Home already marks as a FINAL OWNER RULING,
+   settled decision, resolved gate, or otherwise explicitly closed unless
+   Calvin reopens it, the Project Home ruling wins. Treat the conflicting
+   ask as stale evidence, reconcile it away, and continue under the settled
+   ruling. Never emit `CALVIN REQUIRED` for that same decision unless Calvin
+   has explicitly reopened it or genuinely new evidence creates a different
+   decision that the existing ruling does not answer. In particular, the
+   settled BUY / HOLD / SELL / INCOMPLETE front-end verdict ruling must not
+   be re-raised merely because M8 growth-comparator work is incomplete;
+   Project Home explicitly says that missing comparator alone does not force
+   INCOMPLETE.
 2. **Emit the completion receipt.** Only once that write has been read back
    and confirmed current, post a comment on the wake target whose first
    non-empty line is exactly `OWNER RECONCILED: <one-line evidence>` (e.g.
