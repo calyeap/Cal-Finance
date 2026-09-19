@@ -9,6 +9,7 @@ on:
     types: [labeled, closed]
 
 permissions:
+  contents: read
   issues: write
   pull-requests: write
 

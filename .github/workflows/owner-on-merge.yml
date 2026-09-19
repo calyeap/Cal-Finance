@@ -26,6 +26,7 @@ on:
     types: [closed]
 
 permissions:
+  contents: read
   issues: write
   pull-requests: write
 
