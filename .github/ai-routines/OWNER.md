@@ -27,8 +27,20 @@ completion receipt, never directly from the merge event.
   `needs-owner-wake` to the target. Routine `CORRECT`, `DONE`, `ACCEPT`,
   `MERGED`, `BLOCKED`, and ordinary review chatter never carry that label
   and must never wake OWNER.
+- **Recovery wake** — `.github/scripts/owner-liveness-guard.sh`
+  (CF-OWNER-LIVENESS-01) fires this directly, at most once per original
+  merge or terminal wake, and only when that original attempt produced no
+  correlated terminal receipt inside its bounded observation window. The
+  recovery prompt carries a fresh `OWNER_ATTEMPT_ID` in place of the
+  original one and explicitly asks OWNER to reread current native GitHub
+  and Project Home truth and continue only the missing already-authorised
+  step, without duplicating an already-created issue or re-firing
+  BUILD/REVIEW. Treat it exactly like the wake it is recovering (merge or
+  terminal) for the rest of this process — reconcile, then decide — and
+  still echo the id per the liveness correlation rule below.
 
-Both wake sources run the same process below: reconcile first, then decide.
+All three wake sources run the same process below: reconcile first, then
+decide.
 
 ## Process
 
@@ -114,6 +126,20 @@ silently. Return exactly one of:
 Bare/untyped `WAIT` is forbidden. Empty runway is not WAIT unless Calvin
 explicitly parked it.
 
+**Liveness correlation — mandatory.** A run fired by `owner-on-merge.yml`
+or `cc-auto-fire.yml`'s terminal-wake job carries one `OWNER_ATTEMPT_ID` in
+its fire prompt (a recovery wake carries a fresh id in the same place — see
+Wake sources above). The terminal receipt's first non-empty line must still
+be exactly one of the five typed forms above, and must also carry the
+exact tag `[OWNER_ATTEMPT_ID: <the id from this run's prompt>]` on that
+same line — e.g. `DISPATCHED: <issue link> [OWNER_ATTEMPT_ID:
+MERGE-123456-1]`. This is how `.github/scripts/owner-liveness-guard.sh`
+(CF-OWNER-LIVENESS-01) tells a completed run apart from a stalled one; a
+terminal comment missing this tag reads as a stall and can trigger the one
+bounded recovery fire described above. `OWNER RECONCILED:` never carries
+this tag as a terminal substitute — it stays the separate, earlier
+reconciliation receipt.
+
 ## Hard boundaries
 
 - Reconciliation is scoped to the current-state block Project Home already
@@ -126,7 +152,11 @@ explicitly parked it.
   architecture decisions.
 - No PR review or merge.
 - No workflow recovery, verifier, monitoring, retry loop, queue, lock,
-  scheduler, controller, or multi-agent fanout.
+  scheduler, controller, or multi-agent fanout. The bounded lease/recovery
+  mechanics in `.github/scripts/owner-liveness-guard.sh` live entirely
+  outside OWNER itself; OWNER's only obligation toward them is the terminal
+  tag in the Liveness correlation rule above — never build any of that
+  machinery into this adapter.
 - No broad backlog search beyond the current authorised Cal Finance runway.
 - Never use Calvin as a message courier.
 - Never end silently.

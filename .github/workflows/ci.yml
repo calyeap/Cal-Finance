@@ -88,6 +88,16 @@ jobs:
       - name: Check out the pull request head
         uses: actions/checkout@v4
 
+      # CF-OWNER-LIVENESS-01: deterministic, network-free classification
+      # checks for the OWNER liveness guard's terminal-receipt contract.
+      # Needs only bash + jq (both present on this runner image), so it
+      # runs before the Node toolchain is even installed.
+      - name: Run OWNER liveness guard unit tests
+        run: bash .github/scripts/owner-liveness-lib.test.sh
+
+      - name: Run OWNER liveness guard control-flow tests
+        run: bash .github/scripts/owner-liveness-guard.test.sh
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

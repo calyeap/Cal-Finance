@@ -8,12 +8,25 @@ name: Fire Cal Finance OWNER on merged PR
 # terminal-outcome (non-merge) OWNER wake lives in cc-auto-fire.yml, gated on
 # the needs-owner-wake label BUILD/REVIEW apply for a STOP or CALVIN
 # REQUIRED outcome.
+#
+# CF-OWNER-LIVENESS-01
+# HTTP 2xx from the fire below proves only that an OWNER session was
+# created, not that it later produced a terminal result — the PR #180
+# failure this outcome exists to close. Each fire here carries one unique
+# OWNER_ATTEMPT_ID that OWNER must echo in its terminal receipt (see
+# OWNER.md's "Liveness correlation" rule), and once the fire succeeds and
+# the START receipt below is posted, .github/scripts/owner-liveness-guard.sh
+# takes over: one bounded observation window, at most one recovery fire,
+# and a durable exhaustion receipt if that recovery also stalls. This job
+# therefore now legitimately runs up to roughly two lease windows long
+# (~40 minutes at the default 20-minute lease), not just a few seconds.
 
 on:
   pull_request:
     types: [closed]
 
 permissions:
+  contents: read
   issues: write
   pull-requests: write
 
@@ -21,11 +34,23 @@ jobs:
   fire-owner-on-merge:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     steps:
+      # owner-liveness-guard.sh needs to exist on disk. Pinned to the merge
+      # commit itself (not the default `github.ref`, which for a closed
+      # pull_request event is the PR's synthetic merge ref and can be gone
+      # by the time this runs) so this always checks out exactly what
+      # landed on the base branch.
+      - name: Check out merged commit
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.merge_commit_sha }}
+
       - name: Resolve merged PR
         id: target
         run: |
           echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          echo "attempt_id=MERGE-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
       - name: Fire CALBOARD-OWNER API trigger
         id: fire
@@ -35,6 +60,7 @@ jobs:
           TARGET_REPO: ${{ github.repository }}
           TARGET_NUMBER: ${{ steps.target.outputs.number }}
           MERGE_SHA: ${{ github.event.pull_request.merge_commit_sha }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
         run: |
           set -uo pipefail
 
@@ -45,7 +71,7 @@ jobs:
             exit 0
           fi
 
-          PROMPT="Repository ${TARGET_REPO}, PR #${TARGET_NUMBER} merged at ${MERGE_SHA}. This is the native post-merge OWNER continuation wake. Follow the current .github/ai-routines/OWNER.md adapter exactly: first reconcile the full owned current-state block in Cal Finance Project Home from fresh evidence and read it back, then confirm no active product BUILD or product PR is already in flight, then create at most one bounded, dependency-safe, already-authorised GitHub issue with needs-build-wake applied. If no safe dispatch exists, return a justified WAIT. If a genuine product/methodology/architecture decision is required, raise exactly one closed CALVIN REQUIRED question. Do not repair Chief of Staff, do not review or merge PRs, and do not take on any broader orchestration role beyond the owned-block reconciliation OWNER.md defines."
+          PROMPT="Repository ${TARGET_REPO}, PR #${TARGET_NUMBER} merged at ${MERGE_SHA}. This is the native post-merge OWNER continuation wake. Follow the current .github/ai-routines/OWNER.md adapter exactly: first reconcile the full owned current-state block in Cal Finance Project Home from fresh evidence and read it back, then confirm no active product BUILD or product PR is already in flight, then create at most one bounded, dependency-safe, already-authorised GitHub issue with needs-build-wake applied. If no safe dispatch exists, return a justified WAIT. If a genuine product/methodology/architecture decision is required, raise exactly one closed CALVIN REQUIRED question. Do not repair Chief of Staff, do not review or merge PRs, and do not take on any broader orchestration role beyond the owned-block reconciliation OWNER.md defines. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}: per OWNER.md's liveness correlation rule, your terminal receipt's first non-empty line must still be exactly one of the typed forms (DISPATCHED: / WAIT: AI — / WAIT: EXTERNAL — / WAIT: PARKED — / CALVIN REQUIRED:) and must also include the exact tag [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}] on that same line."
           REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/owner_merge_response.json -w '%{http_code}' \
@@ -75,7 +101,8 @@ jobs:
         run: |
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="CF-OWNER-DISPATCH-01: fired CALBOARD-OWNER (tiny dispatcher) from merged PR (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+            -f body="$(printf 'OWNER ATTEMPT START: %s\nwake_class: MERGE\nCF-OWNER-DISPATCH-01: fired CALBOARD-OWNER (tiny dispatcher) from merged PR (HTTP %s). session: %s (%s)' \
+              "${{ steps.target.outputs.attempt_id }}" "${{ steps.fire.outputs.http_code }}" "${{ steps.fire.outputs.session_id }}" "${{ steps.fire.outputs.session_url }}")"
 
       - name: Report OWNER continuation fire failure
         if: steps.fire.outputs.ok != 'true'
@@ -97,3 +124,21 @@ jobs:
 
           echo "::error::CALBOARD-OWNER merged-PR fire failed with HTTP ${{ steps.fire.outputs.http_code }}"
           exit 1
+
+      # CF-OWNER-LIVENESS-01
+      # Only reached once the fire above succeeded and the START receipt
+      # landed. Watches this exact attempt for a correlated terminal
+      # receipt, fires the one bounded recovery if it stalls, and posts the
+      # durable exhaustion receipt if the recovery also stalls. Never
+      # touches BUILD/REVIEW/Project Home itself.
+      - name: Run OWNER liveness guard
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+          WAKE_CLASS: MERGE
+        run: bash .github/scripts/owner-liveness-guard.sh

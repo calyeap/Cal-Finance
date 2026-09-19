@@ -9,6 +9,7 @@ on:
     types: [labeled, closed]
 
 permissions:
+  contents: read
   issues: write
   pull-requests: write
 
@@ -302,14 +303,32 @@ jobs:
   # never for DONE, ACCEPT, MERGED, BLOCKED, CORRECT, or ordinary chatter.
   # OWNER itself never applies this label, so its own DISPATCHED/WAIT/
   # CALVIN REQUIRED output cannot re-fire this job.
+  # CF-OWNER-LIVENESS-01 note: this job runs up to roughly two lease
+  # windows long (~40 minutes at the default 20-minute lease) once the fire
+  # below succeeds, because owner-liveness-guard.sh's bounded observation
+  # window and single recovery run as later steps in this same job. See
+  # that script and OWNER.md's "Liveness correlation" rule for the full
+  # contract; the label-routing comment above this job is otherwise
+  # unchanged.
   fire-owner-on-terminal:
     if: github.event.label.name == 'needs-owner-wake'
     runs-on: ubuntu-latest
+    timeout-minutes: 50
     steps:
+      # owner-liveness-guard.sh needs to exist on disk. Pinned explicitly to
+      # the default branch: this job is reached via an `issues`/
+      # `pull_request` labeled event, which has no natural head ref of its
+      # own to fall back to.
+      - name: Check out default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
       - name: Resolve target
         id: target
         run: |
           echo "number=${{ github.event.issue.number || github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          echo "attempt_id=TERMINAL-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
       - name: Fire CALBOARD-OWNER API trigger
         id: fire
@@ -318,6 +337,7 @@ jobs:
           OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
           TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
         run: |
           set -uo pipefail
 
@@ -328,7 +348,7 @@ jobs:
             exit 0
           fi
 
-          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} carries needs-owner-wake: a terminal STOP or CALVIN REQUIRED outcome, not a merge. Follow the current .github/ai-routines/OWNER.md adapter's terminal-wake path exactly: first reconcile the full owned current-state block in Cal Finance Project Home from fresh evidence (including this item's own terminal outcome) and read it back, then confirm whether a product BUILD or product PR is already in flight (this item usually still is), then either WAIT, dispatch at most one bounded already-authorised next outcome, or raise exactly one closed CALVIN REQUIRED question. Do not repair Chief of Staff, do not review or merge PRs, and do not take on any broader orchestration role beyond the owned-block reconciliation OWNER.md defines."
+          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} carries needs-owner-wake: a terminal STOP or CALVIN REQUIRED outcome, not a merge. Follow the current .github/ai-routines/OWNER.md adapter's terminal-wake path exactly: first reconcile the full owned current-state block in Cal Finance Project Home from fresh evidence (including this item's own terminal outcome) and read it back, then confirm whether a product BUILD or product PR is already in flight (this item usually still is), then either WAIT, dispatch at most one bounded already-authorised next outcome, or raise exactly one closed CALVIN REQUIRED question. Do not repair Chief of Staff, do not review or merge PRs, and do not take on any broader orchestration role beyond the owned-block reconciliation OWNER.md defines. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}: per OWNER.md's liveness correlation rule, your terminal receipt's first non-empty line must still be exactly one of the typed forms (DISPATCHED: / WAIT: AI — / WAIT: EXTERNAL — / WAIT: PARKED — / CALVIN REQUIRED:) and must also include the exact tag [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}] on that same line."
           REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/owner_terminal_response.json -w '%{http_code}' \
@@ -355,7 +375,8 @@ jobs:
         run: |
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="CF-OWNER-RECONCILE-01: fired CALBOARD-OWNER (terminal wake) for needs-owner-wake (HTTP ${{ steps.fire.outputs.http_code }}). session: ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+            -f body="$(printf 'OWNER ATTEMPT START: %s\nwake_class: TERMINAL\nCF-OWNER-RECONCILE-01: fired CALBOARD-OWNER (terminal wake) for needs-owner-wake (HTTP %s). session: %s (%s)' \
+              "${{ steps.target.outputs.attempt_id }}" "${{ steps.fire.outputs.http_code }}" "${{ steps.fire.outputs.session_id }}" "${{ steps.fire.outputs.session_url }}")"
 
       - name: Remove OWNER terminal-wake label
         if: steps.fire.outputs.ok == 'true'
@@ -374,3 +395,21 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="CF-OWNER-RECONCILE-01: CALBOARD-OWNER terminal-wake fire failed (HTTP ${{ steps.fire.outputs.http_code }})."
           exit 1
+
+      # CF-OWNER-LIVENESS-01
+      # Only reached once the fire above succeeded and the START receipt
+      # landed. Watches this exact attempt for a correlated terminal
+      # receipt, fires the one bounded recovery if it stalls, and posts the
+      # durable exhaustion receipt if the recovery also stalls. Never
+      # touches BUILD/REVIEW/Project Home itself.
+      - name: Run OWNER liveness guard
+        if: steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+          WAKE_CLASS: TERMINAL
+        run: bash .github/scripts/owner-liveness-guard.sh
