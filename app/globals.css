@@ -3277,3 +3277,30 @@ h6 {
 .cb-analyzer .sechead.theme {
   scroll-margin-top: 24px;
 }
+
+/* ---------- Route-level states (M9-STATE-HANDLING-01) ----------
+   not-found.tsx / error.tsx / loading.tsx, the nearest boundary for the
+   whole [runId] segment. Reuses .state/.name/.cause verbatim (no new
+   suppressing-state mechanism) and the Overview action's existing
+   treatment (.cb-analyzer .overview .act, same declarations) rather than
+   the Dashboard/Holdings-global button-link treatment — every colour here already
+   resolves through a §5 token (--field, --line-strong, --ink) or an
+   already-shipped role (--tint, --ink, --muted via .state itself), so
+   no new colour role or token is introduced. */
+.cb-analyzer .routestate .actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 14px;
+}
+.cb-analyzer .routestate .act {
+  display: inline-block;
+  font: inherit;
+  font-size: 14px;
+  padding: 12px 22px;
+  border: 1px solid var(--line-strong);
+  background: var(--field);
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
