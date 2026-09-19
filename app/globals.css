@@ -1464,6 +1464,16 @@ h6 {
   --tint: #24272A;
 }
 
+/* M9-ACCESSIBILITY-01: the Analyzer never got the .cb-dash / .holdings-chrome
+   :focus-visible re-scope, so its ring resolved through the global :root
+   --color-text — invisible in dark mode (#1a1a1a on #16181A). Same
+   treatment as the disclosure summary rules below and frozen
+   design.md:975's exact values. */
+.cb-analyzer :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
 /* ---------- Calboard chrome (M9-THEME-COMPLETION-01) ----------
    design.md:961's composition (wordmark 18px/500/-0.01em, nav 20px gap, 30px
    bare icon buttons, --muted resting / --ink hover) and
@@ -1734,7 +1744,7 @@ h6 {
   border-collapse: collapse;
   font-size: 13px;
 }
-.cb-analyzer table.t th {
+.cb-analyzer table.t thead th {
   font-size: 11px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -1744,16 +1754,25 @@ h6 {
   padding: 0 0 10px;
   border-bottom: 1px solid var(--line-strong);
 }
-.cb-analyzer table.t th:first-child {
+.cb-analyzer table.t thead th:first-child {
   text-align: left;
 }
-.cb-analyzer table.t td {
+/* M9-ACCESSIBILITY-01 — the row-label cell of every body row is now a
+   <th scope="row"> (§16's Tables row), not a <td>. Without this arm it
+   would inherit the .cb-analyzer table.t thead th treatment above
+   (uppercase, muted, bold) instead of matching the plain row text every
+   other cell in the row already has — a semantics change must not become
+   a restyle. */
+.cb-analyzer table.t td,
+.cb-analyzer table.t tbody th {
   padding: 12px 0 12px 20px;
   border-bottom: 1px solid var(--hairline);
   text-align: right;
   vertical-align: top;
+  font-weight: inherit;
 }
-.cb-analyzer table.t td:first-child {
+.cb-analyzer table.t td:first-child,
+.cb-analyzer table.t tbody th:first-child {
   text-align: left;
   padding-left: 0;
 }
