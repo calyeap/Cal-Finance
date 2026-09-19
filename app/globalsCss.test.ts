@@ -129,7 +129,7 @@ describe("globals.css — M9 Compact (§17.15 tiers 4-5, item 6, M9-RESPONSIVE-C
 
   it("defines a Compact (<=1024px) rule for both M9 routes", () => {
     expect(() => ruleBodyIn(compact, ".cb-analyzer .layout")).not.toThrow();
-    expect(() => ruleBodyIn(compact, ".cb-analyzer .fa-shell")).not.toThrow();
+    expect(() => ruleBodyIn(compact, ".cb-analyzer .fa-shell .fanav")).not.toThrow();
   });
 
   it("Overview route's Compact main column lands inside §17.15's 320-976px range", () => {
@@ -141,11 +141,29 @@ describe("globals.css — M9 Compact (§17.15 tiers 4-5, item 6, M9-RESPONSIVE-C
     expect(compactMain).toBeLessThanOrEqual(976);
   });
 
-  it("Full Analysis's Compact rule introduces no grid, sticky aside, or third column — the rail stays in normal document flow, only its inset changes", () => {
-    const shellCompact = ruleBodyIn(compact, ".cb-analyzer .fa-shell");
-    expect(shellCompact).not.toMatch(/grid-template-columns/);
-    expect(shellCompact).not.toMatch(/position:\s*sticky/);
-    expect(shellCompact).toMatch(/padding:\s*0 24px\s*;/);
+  it("Full Analysis's Compact rule introduces no grid, sticky aside, or third column — the inset is on .fanav, not the shell, so it doesn't double .layout's own padding", () => {
+    // A bare `.fa-shell` rule in the Compact block would add its own
+    // horizontal padding on top of .layout's (nested inside the shell on
+    // this route), pushing the main column outside §17.15's 320-976px
+    // range — the inset belongs on .fanav instead, which sits beside
+    // .layout rather than around it.
+    expect(() => ruleBodyIn(compact, ".cb-analyzer .fa-shell")).toThrow();
+    const fanavCompact = ruleBodyIn(compact, ".cb-analyzer .fa-shell .fanav");
+    expect(fanavCompact).not.toMatch(/grid-template-columns/);
+    expect(fanavCompact).not.toMatch(/position:\s*sticky/);
+    expect(fanavCompact).toMatch(/padding:\s*0 24px\s*;/);
+  });
+
+  it("Full Analysis's Compact main column lands inside §17.15's 320-976px range at both named phone widths, now that the shell adds no overhead of its own", () => {
+    // Overhead is .layout's own 24px-each-side padding only (the same
+    // overhead the Overview route uses above) — .fa-shell no longer
+    // carries a Compact padding rule that would double it.
+    const overhead = 48;
+    for (const viewport of [390, 430]) {
+      const main = viewport - overhead;
+      expect(main).toBeGreaterThanOrEqual(320);
+      expect(main).toBeLessThanOrEqual(976);
+    }
   });
 
   it("below 720px, .hframe stacks to a single column with the price-implied half (the second child) ordered first, per design.md:525", () => {

@@ -3120,13 +3120,17 @@ h6 {
    collapse, drawer, accordion or sticky-on-scroll mechanism is added; the
    only change is the padding rule directly below, so the rail sits at the
    same 24px inset the report column already has instead of running flush
-   against the viewport edge while the report below it is inset.
+   against the viewport edge while the report below it is inset. The inset
+   is applied to .fanav itself, not the shell — .layout (nested inside the
+   shell on this route) already carries its own 24px horizontal padding, so
+   insetting the shell too would double that overhead and push the Compact
+   main column outside §17.15's 320-976px range.
    Standard/Wide (§6 priorities 1-3): the grid below. ---------- */
 .cb-analyzer .fa-shell .fanav {
   margin-bottom: 32px;
 }
 @media (max-width: 1024px) {
-  .cb-analyzer .fa-shell {
+  .cb-analyzer .fa-shell .fanav {
     padding: 0 24px;
   }
 }
