@@ -1473,6 +1473,22 @@ h6 {
   margin: 0 auto;
   padding: 32px 24px 96px;
 }
+/* §17.15 Standard/Wide (§6 priorities 1-3, runway item 6): this route has
+   no rail, so .layout IS the main column and its only overhead is the
+   32px/24px/96px padding above (24px on each side). max-width minus that
+   48px must land in Standard's 976-1164px main-column range, and Wide's
+   must be larger still without narrowing prose (unaffected — it is capped
+   in ch, not by this container). */
+@media (min-width: 1024px) {
+  .cb-analyzer .layout {
+    max-width: 1160px;
+  }
+}
+@media (min-width: 1600px) {
+  .cb-analyzer .layout {
+    max-width: 1360px;
+  }
+}
 .cb-analyzer main {
   min-width: 0;
 }
@@ -2919,6 +2935,10 @@ h6 {
    theme tokens (reused as-is, no new colour role), §6 responsive tiers
    1-2 only (desktop half-window and full desktop — tiers 3-5 are a later
    runway item and are not built here).
+
+   M9-RESPONSIVE-DESKTOP-01 closed tier 3 (Wide, §6 priority 3) on top of
+   the above — see the Wide media queries on .layout and .fa-shell.
+   Compact/phone tiers 4-5 remain a later runway item, unchanged here.
    =================================================================== */
 
 /* ---------- Overview page (§2.1) ---------- */
@@ -2935,7 +2955,10 @@ h6 {
 }
 .cb-analyzer .overview .ovslot.editorial p {
   margin: 0;
-  max-width: 66ch;
+  /* Aligned to §6 priority 1 / design.md §17.15's stated 72ch prose
+     measure (and to every other prose cap in this stylesheet, e.g.
+     :2038, :2619, :2705) — no approved source sets 66ch for this block. */
+  max-width: 72ch;
 }
 .cb-analyzer .overview .ovslot.editorial .note {
   margin-top: 8px;
@@ -3038,10 +3061,11 @@ h6 {
   font-weight: 600;
 }
 
-/* ---------- Full Analysis rail │ report column (§6 priority 1-2 only;
-   below 1024px this stacks in document order — not a Compact design,
-   just a non-breaking default that builds nothing structurally
-   preventing the later Compact tier, per §6 HARD BOUNDS) ---------- */
+/* ---------- Full Analysis rail │ report column (§6 priorities 1-3 —
+   Standard and Wide; below 1024px this stacks in document order — not a
+   Compact design, just a non-breaking default that builds nothing
+   structurally preventing the later Compact tier, per §6 HARD BOUNDS)
+   ---------- */
 .cb-analyzer .fa-shell .fanav {
   margin-bottom: 32px;
 }
@@ -3051,7 +3075,10 @@ h6 {
     grid-template-columns: 200px minmax(0, 1fr);
     gap: 40px;
     align-items: start;
-    max-width: 1160px;
+    /* §17.15 Standard: the grid's 1fr track is the main column. Overhead
+       outside it is the 200px rail + 40px gap + 48px padding (24px × 2)
+       = 288px, so max-width minus 288px must land in 976-1164px. */
+    max-width: 1400px;
     margin: 0 auto;
     padding: 0 24px 96px;
   }
@@ -3064,6 +3091,14 @@ h6 {
     max-width: none;
     margin: 0;
     padding: 0;
+  }
+}
+/* §17.15 Wide (≥1600px): same rail│report composition (rail width, gap and
+   padding unchanged — no third column, no grid redefinition), only the
+   shell widens so the main column grows past 1164px instead of narrowing. */
+@media (min-width: 1600px) {
+  .cb-analyzer .fa-shell {
+    max-width: 1600px;
   }
 }
 
