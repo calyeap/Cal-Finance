@@ -70,6 +70,30 @@ export const CLEAN_PROVENANCE: ProvenanceTokens = {
   verificationState: "CONFIRMED",
 };
 
+// A figure read off a market-data feed rather than a filing tag — acquire.ts's
+// own "price" fact record classifies exactly this kind of value PRIMARY
+// (a structured feed field is not a filing element, but it is not a call
+// transcript or aggregator commentary either — §3.2's SECONDARY is press
+// coverage and third-party narrative, not a vendor's own quoted trade data)
+// and DETERMINISTIC/STRUCTURED (a deterministic parse of a structured feed,
+// no model involved).
+//
+// Where acquire.ts's "price" fact then goes on to SPOT-CHECK PENDING, it is
+// because that fact is QUEUED at Step 2 — an analyst can look at it. A figure
+// built here has no such fact: it is supplied straight into an AnalystInputs
+// slot outside the fact array (the same shape the illustrative fixtures use
+// for `fiftyTwoWeek`), so nothing will ever move it to CONFIRMED. Claiming
+// CONFIRMED would assert a human check that never happens; claiming
+// SPOT-CHECK PENDING would claim a queue membership that never resolves.
+// SPOT-CHECK NOT REQUIRED is the state §3.2 defines for exactly this: real,
+// acquired, and "not a human confirmation" — which must never be displayed as
+// one.
+export const MARKET_DATA_PROVENANCE: ProvenanceTokens = {
+  sourceClass: "PRIMARY",
+  extractionType: "DETERMINISTIC/STRUCTURED",
+  verificationState: "SPOT-CHECK NOT REQUIRED",
+};
+
 // §3.2's four values, exhaustively. UNVERIFIED is absent — since amendment M7
 // it names only the §5.1 propagation state, not a value of this field.
 const VERIFICATION_STATE_LABELS: Record<VerificationState, string> = {
