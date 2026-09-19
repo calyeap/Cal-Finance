@@ -94,6 +94,13 @@ const CAUSE_ACRONYMS = new Set([
 // rendered cause, so the class cannot recur as new modules/sections are
 // built — no calculation, gate, threshold or field changes; this only
 // reformats a string already in the Analysis Result.
+// §17.7.1's required copy — "selected by report order, not by damage." Section
+// I renders it below; Overview slot 7 (M9-OVERVIEW-CHALLENGER-COPY-01)
+// imports this same constant rather than restating the sentence, so the two
+// callers cannot drift into different wording for the same rule.
+export const CHALLENGER_SELECTION_RULE_NOTE =
+  "Selected because it is bound to the earliest report section (§17.7.1) — a fixed ordering rule, not a ranking by severity. Calboard does not rank objections. The full set is in Section I2.";
+
 export function humanizeCause(cause: string): string {
   const withSpacedWords = cause.replace(/\b[a-z][a-zA-Z0-9]*\b/g, (token) => {
     if (!/[A-Z]/.test(token)) {
@@ -1379,11 +1386,7 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                     ) : (
                       <>
                         {challengerSelection.selected.evidence}{" "}
-                        <span className="selrule">
-                          Selected because it is bound to the earliest report section (§17.7.1) — a fixed ordering
-                          rule, not a ranking by severity. Calboard does not rank objections. The full set is in
-                          Section I2.
-                        </span>
+                        <span className="selrule">{CHALLENGER_SELECTION_RULE_NOTE}</span>
                       </>
                     )}
                   </dd>
