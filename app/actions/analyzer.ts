@@ -148,7 +148,10 @@ export async function recordProfileDecisionAction(formData: FormData): Promise<v
     await recordProfileDecision(runId, decision, recommended, null);
   }
 
-  redirect(`/analyzer/${runId}/report`);
+  // M9-DESKTOP-SHELL-01 — Overview is now the top-level destination for a
+  // run (docs/design/m9-analyzer-design-contract.md §2.1); Full Analysis
+  // remains reachable from Overview slot 12.
+  redirect(`/analyzer/${runId}`);
 }
 
 /**

@@ -2910,3 +2910,157 @@ h6 {
     font-size: 18px;
   }
 }
+
+/* ===================================================================
+   M9-DESKTOP-SHELL-01 — the Overview page and the Full Analysis rail.
+   docs/design/m9-analyzer-design-contract.md §3 component roles, §5
+   theme tokens (reused as-is, no new colour role), §6 responsive tiers
+   1-2 only (desktop half-window and full desktop — tiers 3-5 are a later
+   runway item and are not built here).
+   =================================================================== */
+
+/* ---------- Overview page (§2.1) ---------- */
+.cb-analyzer .overview .ovslot {
+  margin-bottom: 32px;
+}
+.cb-analyzer .overview .ovslot.structural h3 {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cb-analyzer .overview .ovslot.structural .note {
+  margin: 0;
+}
+.cb-analyzer .overview .act {
+  display: inline-block;
+  font: inherit;
+  font-size: 14px;
+  padding: 12px 22px;
+  border: 1px solid var(--line-strong);
+  background: var(--field);
+  color: var(--ink);
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/* ---------- DominantVerdictSlot (§3, §4) ---------- */
+/* INCOMPLETE reuses .state/.name/.cause verbatim — the same suppressing-
+   state mechanism as every other state in the product (design.md §6):
+   left-aligned, no glyph, breaking the rhythm the completed path below
+   establishes. */
+.cb-analyzer .verdictslot.completed {
+  text-align: right;
+  padding: 10px 0;
+}
+.cb-analyzer .verdictslot.completed .verdictword {
+  display: block;
+  font-size: 32px;
+  font-weight: 600;
+  font-feature-settings: "tnum" 1;
+}
+.cb-analyzer .verdictslot.completed .confidence {
+  display: block;
+  min-height: 1px;
+}
+.cb-analyzer .verdictslot.completed .rationale {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: var(--muted);
+  max-width: 72ch;
+  margin-left: auto;
+}
+
+/* ---------- PriceChartPanel (§3) ---------- */
+.cb-analyzer .pricechart .pricerow {
+  display: flex;
+  gap: 20px;
+  align-items: baseline;
+  margin: 0 0 10px;
+}
+.cb-analyzer .pricechartsvg {
+  display: block;
+  width: 100%;
+  height: 64px;
+}
+.cb-analyzer .pricechartsvg .axis {
+  stroke: var(--line-strong);
+  stroke-width: 1;
+}
+.cb-analyzer .pricechartsvg .dot {
+  fill: var(--ink);
+}
+
+/* ---------- ScenarioRangeStrip (§3, §4/§10.6.3 suppression) ---------- */
+.cb-analyzer .scenariorangestrip .updown {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 10px 0 0;
+}
+
+/* ---------- FullAnalysisNav rail (§2.2, §3) ---------- */
+.cb-analyzer .fanav {
+  font-size: 13px;
+}
+.cb-analyzer .fanav-overview {
+  display: block;
+  font-size: 12px;
+  color: var(--muted);
+  text-decoration: none;
+  margin-bottom: 16px;
+}
+.cb-analyzer .fanav ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.cb-analyzer .fanav a {
+  display: block;
+  padding: 6px 0 6px 10px;
+  border-left: 2px solid transparent;
+  color: var(--muted);
+  text-decoration: none;
+}
+.cb-analyzer .fanav a.active {
+  border-left-color: var(--ink);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+/* ---------- Full Analysis rail │ report column (§6 priority 1-2 only;
+   below 1024px this stacks in document order — not a Compact design,
+   just a non-breaking default that builds nothing structurally
+   preventing the later Compact tier, per §6 HARD BOUNDS) ---------- */
+.cb-analyzer .fa-shell .fanav {
+  margin-bottom: 32px;
+}
+@media (min-width: 1024px) {
+  .cb-analyzer .fa-shell {
+    display: grid;
+    grid-template-columns: 200px minmax(0, 1fr);
+    gap: 40px;
+    align-items: start;
+    max-width: 1160px;
+    margin: 0 auto;
+    padding: 0 24px 96px;
+  }
+  .cb-analyzer .fa-shell .fanav {
+    position: sticky;
+    top: 24px;
+    margin-bottom: 0;
+  }
+  .cb-analyzer .fa-shell .layout {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+  }
+}
+
+/* ---------- Full Analysis theme headers — the six anchors, styled like
+   every other .sechead in the document, not a new visual system
+   ---------- */
+.cb-analyzer .sechead.theme {
+  scroll-margin-top: 24px;
+}

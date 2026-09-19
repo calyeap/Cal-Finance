@@ -66,10 +66,16 @@ describe("AnalyzerReport — MSFT", () => {
     expect(screen.queryByText("D — Funding stack")).toBeNull();
   });
 
-  it("report order is exactly A, B, C, D, E, F, G, H, I, I2, J, at-a-glance — J immediately followed by at-a-glance, no section between them", () => {
+  it("report order is exactly A, C, D, E, F, G, H, I, I2, B, J, at-a-glance — J immediately followed by at-a-glance, no section between them (M9 §2.2 regroups B under Evidence, alongside J)", () => {
     const { container } = render(<AnalyzerReport result={result} />);
     const ids = Array.from(container.querySelectorAll("main > section")).map((el) => el.id);
-    expect(ids).toEqual(["quickread", "A", "B", "C", "D", "E", "F", "G", "H", "I", "I2", "J", "atglance"]);
+    expect(ids).toEqual(["quickread", "A", "C", "D", "E", "F", "G", "H", "I", "I2", "B", "J", "atglance"]);
+  });
+
+  it("the six Full Analysis theme anchors are present, in contract order, as non-section marker elements", () => {
+    const { container } = render(<AnalyzerReport result={result} />);
+    const themeIds = Array.from(container.querySelectorAll("main > .sechead.theme")).map((el) => el.id);
+    expect(themeIds).toEqual(["business", "financials", "valuation", "risks-thesis", "market-context", "evidence"]);
   });
 
   it("Section J shows plain-English labels with units, never a raw PolicyConstants key (defect 4)", () => {
@@ -151,10 +157,10 @@ describe("AnalyzerReport — OKLO", () => {
     expect(screen.getByText(/Unit-economics breakeven/)).not.toBeNull();
   });
 
-  it("report order is exactly A, B, C, D, E, F, G, H, I, I2, J, at-a-glance — J immediately followed by at-a-glance, no extra section inserted for the pre-revenue material", () => {
+  it("report order is exactly A, C, D, E, F, G, H, I, I2, B, J, at-a-glance — J immediately followed by at-a-glance, no extra section inserted for the pre-revenue material", () => {
     const { container } = render(<AnalyzerReport result={result} />);
     const ids = Array.from(container.querySelectorAll("main > section")).map((el) => el.id);
-    expect(ids).toEqual(["quickread", "A", "B", "C", "D", "E", "F", "G", "H", "I", "I2", "J", "atglance"]);
+    expect(ids).toEqual(["quickread", "A", "C", "D", "E", "F", "G", "H", "I", "I2", "B", "J", "atglance"]);
   });
 
   it("both funding-stack ramps render with their four lines", () => {

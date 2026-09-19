@@ -94,7 +94,7 @@ const CAUSE_ACRONYMS = new Set([
 // rendered cause, so the class cannot recur as new modules/sections are
 // built — no calculation, gate, threshold or field changes; this only
 // reformats a string already in the Analysis Result.
-function humanizeCause(cause: string): string {
+export function humanizeCause(cause: string): string {
   const withSpacedWords = cause.replace(/\b[a-z][a-zA-Z0-9]*\b/g, (token) => {
     if (!/[A-Z]/.test(token)) {
       // No internal camel hump — still translate a bare acronym
@@ -592,47 +592,24 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           </Disclosure>
         </section>
 
-        {/* ============ B ============ */}
-        <section id="B">
-          <div className="sechead">
-            <h2>B — Fact set with provenance</h2>
-            <span className="k">All six fields</span>
-          </div>
-          <hr />
-          <table className="t records">
-            <thead>
-              <tr>
-                <th>Fact</th>
-                <th>Value</th>
-                <th>Provenance</th>
-                <th>As-of / retrieved</th>
-              </tr>
-            </thead>
-            <tbody>
-              {result.facts.map((f) => (
-                <tr key={f.id}>
-                  <td>{f.name}</td>
-                  <td>
-                    <span className="v">{f.value === null ? "—" : f.value.toString()}</span>
-                  </td>
-                  <td>
-                    <ProvenanceMarks
-                      tokens={{ sourceClass: f.sourceClass, extractionType: f.extractionType, verificationState: f.verificationState }}
-                      full
-                    />
-                    <div className="sub">
-                      {f.type} · {f.source}
-                    </div>
-                  </td>
-                  <td>
-                    <span className="v">{f.asOfDate}</span>
-                    {f.retrievalTimestamp && <div className="sub">retrieved {f.retrievalTimestamp}</div>}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </section>
+        {/* ============ Business (M9 — empty anchored frame; §2.2 permits
+            this per docs/design/m9-analyzer-design-contract.md SCOPE item 6
+            ("sections may be empty anchored frames at this item"); content
+            is runway item 5, not this outcome's HARD BOUNDS ============ */}
+        <div className="sechead theme" id="business">
+          <h2>Business</h2>
+          <span className="k">What the company does and how</span>
+        </div>
+        <hr />
+        <p className="note">Not yet available — Business section content has not been built for this analysis.</p>
+
+        {/* ============ Financials (M9 — theme anchor; regroups Sections
+            C-D, presentation grouping only) ============ */}
+        <div className="sechead theme" id="financials">
+          <h2>Financials</h2>
+          <span className="k">The deterministic diagnostics</span>
+        </div>
+        <hr />
 
         {/* ============ C ============ */}
         <section id="C">
@@ -973,6 +950,16 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </>
           )}
         </section>
+
+        {/* ============ Valuation (M9 — theme anchor; regroups the frozen
+            artefact's Sections E-H per docs/design/m9-analyzer-design-
+            contract.md §2.2, presentation grouping only, no content
+            change) ============ */}
+        <div className="sechead theme" id="valuation">
+          <h2>Valuation</h2>
+          <span className="k">Price-implied, analyst scenarios and the fair-value range</span>
+        </div>
+        <hr />
 
         {/* ============ E ============ */}
         <section id="E">
@@ -1354,6 +1341,14 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           )}
         </section>
 
+        {/* ============ Risks & Thesis (M9 — theme anchor; regroups
+            Sections I/I2, presentation grouping only) ============ */}
+        <div className="sechead theme" id="risks-thesis">
+          <h2>Risks &amp; Thesis</h2>
+          <span className="k">The editorial interpretation layer, in full</span>
+        </div>
+        <hr />
+
         {/* ============ I, I2 ============ */}
         <section id="I">
           <div className="sechead">
@@ -1481,6 +1476,71 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
               )}
             </div>
           )}
+        </section>
+
+        {/* ============ Market Context (M9 — empty anchored frame; no
+            approved content source beyond the existing fact set yet, per
+            docs/design/m9-analyzer-design-contract.md §2.2 / §8 item 3
+            ============ */}
+        <div className="sechead theme" id="market-context">
+          <h2>Market Context</h2>
+          <span className="k">Sourced, comparative context</span>
+        </div>
+        <hr />
+        <p className="note">Not yet available — Market Context has no approved content source beyond the existing sections yet.</p>
+
+        {/* ============ Evidence (M9 — theme anchor; regroups Section B's
+            fact-set provenance display alongside Section J's register, per
+            m9-analyzer-design-contract.md §2.2: "the fact set's full
+            provenance display" belongs here, not under Business — B is
+            relocated from its Milestone 6 position immediately after A to
+            here, presentation grouping only, no content change) ============ */}
+        <div className="sechead theme" id="evidence">
+          <h2>Evidence</h2>
+          <span className="k">The provenance and disclosure register, in full</span>
+        </div>
+        <hr />
+
+        {/* ============ B ============ */}
+        <section id="B">
+          <div className="sechead">
+            <h2>B — Fact set with provenance</h2>
+            <span className="k">All six fields</span>
+          </div>
+          <hr />
+          <table className="t records">
+            <thead>
+              <tr>
+                <th>Fact</th>
+                <th>Value</th>
+                <th>Provenance</th>
+                <th>As-of / retrieved</th>
+              </tr>
+            </thead>
+            <tbody>
+              {result.facts.map((f) => (
+                <tr key={f.id}>
+                  <td>{f.name}</td>
+                  <td>
+                    <span className="v">{f.value === null ? "—" : f.value.toString()}</span>
+                  </td>
+                  <td>
+                    <ProvenanceMarks
+                      tokens={{ sourceClass: f.sourceClass, extractionType: f.extractionType, verificationState: f.verificationState }}
+                      full
+                    />
+                    <div className="sub">
+                      {f.type} · {f.source}
+                    </div>
+                  </td>
+                  <td>
+                    <span className="v">{f.asOfDate}</span>
+                    {f.retrievalTimestamp && <div className="sub">retrieved {f.retrievalTimestamp}</div>}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </section>
 
         {/* ============ J ============ */}
