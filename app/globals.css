@@ -1464,6 +1464,110 @@ h6 {
   --tint: #24272A;
 }
 
+/* ---------- Calboard chrome (M9-THEME-COMPLETION-01) ----------
+   design.md:961's composition (wordmark 18px/500/-0.01em, nav 20px gap, 30px
+   bare icon buttons, --muted resting / --ink hover) and
+   docs/frozen/mock-report-msft.html:30-43's `.cb-topbar` rules, adapted to
+   this file's existing ancestor-scoped-class convention (`.cb-dash .topbar`,
+   `.holdings-chrome .topbar`) rather than the mock's standalone
+   `.cb-topbar` name. The bar's own max-width/padding replace the mock's
+   literal 1460px/1900px with whichever container governs the route it sits
+   on (design.md:1021) — see the `.fa` variant below. */
+.cb-analyzer .topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 24px 24px 0;
+}
+.cb-analyzer .brand {
+  font-size: 18px;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  color: var(--ink);
+  text-decoration: none;
+}
+.cb-analyzer .topbar .nav {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+.cb-analyzer .topbar .nav a {
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 15px;
+}
+.cb-analyzer .topbar .nav a:hover {
+  color: var(--ink);
+}
+.cb-analyzer .topbar .nav a.on {
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 5px;
+  text-decoration-thickness: 1px;
+}
+.cb-analyzer .iconbare {
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  padding: 0;
+}
+.cb-analyzer .iconbare:hover {
+  color: var(--ink);
+}
+.cb-analyzer .iconbare svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+/* Standard/Wide: the Overview route's bar tracks `.layout` (the default
+   values above already match .layout's own Compact 900px); the Full
+   Analysis bar (`.fa` — report/page.tsx's variant="report") instead tracks
+   `.fa-shell`, the container carrying the section rail, whose own cap
+   diverges from .layout's at these two widths. */
+@media (min-width: 1024px) {
+  .cb-analyzer .topbar {
+    max-width: 1160px;
+  }
+  .cb-analyzer .topbar.fa {
+    max-width: 1400px;
+  }
+}
+@media (min-width: 1600px) {
+  .cb-analyzer .topbar {
+    max-width: 1360px;
+  }
+  .cb-analyzer .topbar.fa {
+    max-width: 1600px;
+  }
+}
+/* Compact phone breakpoint, verbatim from the frozen mocks
+   (mock-report-msft.html:244-245) — wrap, not a hamburger or drawer. */
+@media (max-width: 720px) {
+  .cb-analyzer .topbar {
+    flex-wrap: wrap;
+    row-gap: 12px;
+    padding: 20px 20px 0;
+  }
+  .cb-analyzer .topbar .nav {
+    gap: 14px;
+    flex-wrap: wrap;
+  }
+}
+
 /* Single dominant reading path (Quick Read at the top of `main`, then the
    full A-J report) — corrected from an earlier permanent two-column
    layout that competed with the report for attention. No sidebar; wide

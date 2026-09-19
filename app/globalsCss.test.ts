@@ -211,6 +211,98 @@ describe("globals.css — M9 Compact (§17.15 tiers 4-5, item 6, M9-RESPONSIVE-C
   });
 });
 
+describe("globals.css — §5 both-theme contrast check for the new M9 component roles (contract §5, item 6)", () => {
+  it("DominantVerdictSlot, ScenarioRangeStrip and the Overview's slot chrome carry zero colour literals — every colour they use resolves through a §5 token, so both themes are reached automatically", () => {
+    // The M9-DESKTOP-SHELL-01 block covers .verdictslot (DominantVerdictSlot),
+    // .scenariorangestrip/.hframe/.pi (ScenarioRangeStrip), .pricechart*
+    // (PriceChartPanel), .fanav (FullAnalysisNav) and .overview .ovslot* (the
+    // Overview's own slot chrome) — every M9 component role §16's last
+    // accessibility validation predates. It runs to the end of the file.
+    const block = css.slice(css.indexOf("M9-DESKTOP-SHELL-01 — the Overview page"));
+    expect(block.length).toBeGreaterThan(0);
+    expect(block).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
+
+  it("the suppressing-state chrome those roles share (.state/.name/.cause) is likewise token-only, not a literal colour", () => {
+    expect(ruleBody(".cb-analyzer .state")).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
+});
+
+describe("globals.css — M9 shared Calboard chrome (M9-THEME-COMPLETION-01)", () => {
+  const standard = collectMediaBodies("@media (min-width: 1024px)");
+  const wide = collectMediaBodies("@media (min-width: 1600px)");
+  const narrow = collectMediaBodies("@media (max-width: 720px)");
+
+  it("matches design.md:961's composition — 18px/500/-0.01em wordmark, 20px nav gap, 30px bare icon buttons, --muted resting / --ink hover", () => {
+    expect(ruleBody(".cb-analyzer .brand")).toMatch(/font-size:\s*18px\s*;/);
+    expect(ruleBody(".cb-analyzer .brand")).toMatch(/font-weight:\s*500\s*;/);
+    expect(ruleBody(".cb-analyzer .brand")).toMatch(/letter-spacing:\s*-0\.01em\s*;/);
+    expect(ruleBody(".cb-analyzer .topbar .nav")).toMatch(/gap:\s*20px\s*;/);
+    expect(ruleBody(".cb-analyzer .iconbare")).toMatch(/width:\s*30px\s*;/);
+    expect(ruleBody(".cb-analyzer .iconbare")).toMatch(/height:\s*30px\s*;/);
+    expect(ruleBody(".cb-analyzer .iconbare")).toMatch(/color:\s*var\(--muted\)\s*;/);
+    expect(ruleBody(".cb-analyzer .iconbare:hover")).toMatch(/color:\s*var\(--ink\)\s*;/);
+  });
+
+  it("the bar carries zero colour literals — every colour resolves through a §5 token, same as the rest of the M9 stylesheet", () => {
+    const topbarBlock = css.slice(css.indexOf(".cb-analyzer .topbar {"), css.indexOf(".cb-analyzer .layout {"));
+    expect(topbarBlock).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+  });
+
+  it("the Overview bar's max-width tracks .layout at every width mode (design.md:1021)", () => {
+    expect(ruleBody(".cb-analyzer .topbar")).toMatch(/max-width:\s*900px\s*;/);
+    expect(ruleBodyIn(standard, ".cb-analyzer .topbar")).toMatch(/max-width:\s*1160px\s*;/);
+    expect(ruleBodyIn(wide, ".cb-analyzer .topbar")).toMatch(/max-width:\s*1360px\s*;/);
+  });
+
+  it("the Full Analysis bar (.fa) tracks .fa-shell at Standard/Wide instead, where the rail lives — .layout's values would misalign it", () => {
+    expect(ruleBodyIn(standard, ".cb-analyzer .topbar.fa")).toMatch(/max-width:\s*1400px\s*;/);
+    expect(ruleBodyIn(wide, ".cb-analyzer .topbar.fa")).toMatch(/max-width:\s*1600px\s*;/);
+  });
+
+  it("below 1024px both routes' bars share .layout's 900px cap — .fa-shell itself carries no max-width there, so no .fa override is declared", () => {
+    const compact = collectMediaBodies("@media (max-width: 1024px)");
+    expect(() => ruleBodyIn(compact, ".cb-analyzer .topbar.fa")).toThrow();
+    expect(() => ruleBodyIn(compact, ".cb-analyzer .topbar")).toThrow();
+  });
+
+  it("Compact phone behaviour is the frozen mocks' own rule verbatim (mock-report-msft.html:244-245) — wrap, 12px row-gap, 20px/20px/0 padding, 14px wrapping nav gap, no hamburger or drawer", () => {
+    expect(ruleBodyIn(narrow, ".cb-analyzer .topbar")).toMatch(/flex-wrap:\s*wrap\s*;/);
+    expect(ruleBodyIn(narrow, ".cb-analyzer .topbar")).toMatch(/row-gap:\s*12px\s*;/);
+    expect(ruleBodyIn(narrow, ".cb-analyzer .topbar")).toMatch(/padding:\s*20px 20px 0\s*;/);
+    expect(ruleBodyIn(narrow, ".cb-analyzer .topbar .nav")).toMatch(/gap:\s*14px\s*;/);
+    expect(ruleBodyIn(narrow, ".cb-analyzer .topbar .nav")).toMatch(/flex-wrap:\s*wrap\s*;/);
+    expect(narrow).not.toMatch(/hamburger|drawer/i);
+  });
+
+  it("the .cb-analyzer token block and its [data-theme=\"dark\"] block are byte-identical to e3da0be — this outcome redeclares no §5 token", () => {
+    const lightTokens = ruleBody(".cb-analyzer");
+    expect(lightTokens).toMatch(/--ground:\s*#F2EEE5\s*;/);
+    expect(lightTokens).toMatch(/--field:\s*#F8F5EE\s*;/);
+    expect(lightTokens).toMatch(/--line-strong:\s*#CBC2AE\s*;/);
+    expect(lightTokens).toMatch(/--muted:\s*#5F5A50\s*;/);
+    expect(lightTokens).toMatch(/--tint:\s*#E8E1D2\s*;/);
+    const darkTokens = ruleBody('.cb-analyzer[data-theme="dark"]');
+    expect(darkTokens).toMatch(/--ground:\s*#16181A\s*;/);
+    expect(darkTokens).toMatch(/--field:\s*#1E2124\s*;/);
+    expect(darkTokens).toMatch(/--line-strong:\s*#3C4045\s*;/);
+    expect(darkTokens).toMatch(/--muted:\s*#979CA1\s*;/);
+    expect(darkTokens).toMatch(/--tint:\s*#24272A\s*;/);
+    // Exactly one declaration of each token role in scope — this outcome adds
+    // no second token set alongside the approved one.
+    expect(css.match(/\.cb-analyzer\s*\{/g)).toHaveLength(1);
+    expect(css.match(/\.cb-analyzer\[data-theme="dark"\]\s*\{/g)).toHaveLength(1);
+  });
+
+  it("no second breakpoint below Compact and no new max-width value were introduced by the chrome — still only 720px and 1024px", () => {
+    const cbAnalyzerCss = css.slice(css.indexOf(".cb-analyzer {"));
+    const maxWidths = new Set(
+      [...cbAnalyzerCss.matchAll(/@media \(max-width:\s*(\d+)px\)/g)].map((m) => m[1])
+    );
+    expect([...maxWidths].sort()).toEqual(["1024", "720"]);
+  });
+});
+
 describe("globals.css — .cb-dash regressions", () => {
   it(".toggle sizes to its own content (inline-flex), not the full section width", () => {
     // display: flex on a plain block <div> still stretches to 100% of its

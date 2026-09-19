@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
+import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import { AnalyzerOverview } from "@/app/components/AnalyzerOverview";
 import { loadGateState, RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
 import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
@@ -45,6 +46,7 @@ export default async function OverviewPage({ params }: { params: Promise<{ runId
 
   return (
     <AnalyzerShell>
+      <AnalyzerTopBar variant="overview" />
       <AnalyzerOverview
         result={report.result}
         verdict={verdict}
