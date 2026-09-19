@@ -1,6 +1,7 @@
 import { Fragment } from "react";
 import { notFound, redirect } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
+import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import { ProfileDecisionForm } from "@/app/components/ProfileDecisionForm";
 import { loadGateState, RunNotFoundError } from "@/lib/analyzer/gate";
 import { PROFILE_LABELS } from "@/lib/analyzer/profileLabels";
@@ -47,6 +48,7 @@ export default async function ProfilePage({ params }: { params: Promise<{ runId:
 
   return (
     <AnalyzerShell>
+      <AnalyzerTopBar variant="steps" />
       <div className="cb-steps">
         <div className="wrap">
           <div className="sechead">

@@ -1578,6 +1578,17 @@ h6 {
   }
 }
 
+/* M9-NONM9-CHROME-01 — the entry/facts/profile bar (`variant="steps"`)
+   tracks `.cb-analyzer .cb-steps .wrap` instead, whose own max-width
+   (globals.css, `.cb-analyzer .cb-steps .wrap`) is a flat 1100px at every
+   viewport width — unlike `.layout`/`.fa-shell`, it carries no Standard/Wide
+   step-up. One unconditional override therefore already tracks it "at every
+   width mode" (design.md:1021); a Standard/Wide media block here would just
+   repeat the same 1100px value. */
+.cb-analyzer .topbar.steps {
+  max-width: 1100px;
+}
+
 /* Single dominant reading path (Quick Read at the top of `main`, then the
    full A-J report) — corrected from an earlier permanent two-column
    layout that competed with the report for attention. No sidebar; wide

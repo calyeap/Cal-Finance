@@ -103,6 +103,38 @@ describe("AnalyzerTopBar", () => {
     );
     expect(reportContainer.querySelector(".topbar")).toHaveClass("fa");
   });
+
+  // M9-NONM9-CHROME-01 — the entry/facts/profile screens' bar tracks
+  // `.cb-analyzer .cb-steps .wrap` instead of `.layout`/`.fa-shell`, via a
+  // third modifier class rather than a route-specific variant of the same
+  // markup, keeping this the one TopBarControls/ThemeContext/PrivacyContext
+  // instance every route drives.
+  it('variant="steps" adds the .steps modifier the entry/facts/profile width tracking reads, and neither .fa nor bare', () => {
+    const { container } = render(
+      <Providers>
+        <AnalyzerTopBar variant="steps" />
+      </Providers>
+    );
+    const bar = container.querySelector(".topbar")!;
+    expect(bar).toHaveClass("steps");
+    expect(bar).not.toHaveClass("fa");
+  });
+
+  it('variant="steps" still renders the full shared chrome — wordmark, primary nav with aria-current, and both utility controls', () => {
+    render(
+      <Providers>
+        <AnalyzerTopBar variant="steps" />
+      </Providers>
+    );
+    expect(screen.getByRole("link", { name: /calboard home/i })).toHaveAttribute("href", "/");
+    const current = screen.getByRole("link", { name: /stock analyzer/i });
+    expect(current).toHaveClass("on");
+    expect(current).toHaveAttribute("aria-current", "page");
+    expect(screen.getByRole("link", { name: /^dashboard$/i })).toHaveAttribute("href", "/");
+    expect(screen.getByRole("link", { name: /^holdings$/i })).toHaveAttribute("href", "/holdings");
+    expect(screen.getByRole("button", { name: /hide values/i })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /switch to dark mode/i })).toBeInTheDocument();
+  });
 });
 
 // SCOPE item 9 / DONE WHEN's first bullet: "both M9 routes render the
@@ -127,5 +159,60 @@ describe("both M9 routes wire AnalyzerTopBar into AnalyzerShell", () => {
       "utf-8"
     );
     expect(source).toMatch(/<AnalyzerShell>\s*<AnalyzerTopBar variant="report" \/>/);
+  });
+});
+
+// M9-NONM9-CHROME-01, DONE WHEN: "all four screens render AnalyzerTopBar,
+// pinned by colocated tests following the existing AnalyzerTopBar.test.tsx
+// … pattern." Same source-assertion technique as above — proves the wiring
+// exists on the page, not only that the component works in isolation.
+describe("the four non-M9 Analyzer screens wire AnalyzerTopBar into AnalyzerShell", () => {
+  it('app/analyzer/page.tsx (the entry screen) renders AnalyzerTopBar variant="steps" as AnalyzerShell\'s first child', () => {
+    const source = readFileSync(path.resolve(__dirname, "../analyzer/page.tsx"), "utf-8");
+    expect(source).toMatch(/<AnalyzerShell>\s*<AnalyzerTopBar variant="steps" \/>/);
+  });
+
+  it('app/analyzer/[runId]/facts/page.tsx renders AnalyzerTopBar variant="steps" as AnalyzerShell\'s first child', () => {
+    const source = readFileSync(
+      path.resolve(__dirname, "../analyzer/[runId]/facts/page.tsx"),
+      "utf-8"
+    );
+    expect(source).toMatch(/<AnalyzerShell>\s*<AnalyzerTopBar variant="steps" \/>/);
+  });
+
+  it('app/analyzer/[runId]/profile/page.tsx renders AnalyzerTopBar variant="steps" as AnalyzerShell\'s first child', () => {
+    const source = readFileSync(
+      path.resolve(__dirname, "../analyzer/[runId]/profile/page.tsx"),
+      "utf-8"
+    );
+    expect(source).toMatch(/<AnalyzerShell>\s*<AnalyzerTopBar variant="steps" \/>/);
+  });
+
+  it('app/analyzer/[runId]/snapshot/[version]/page.tsx renders AnalyzerTopBar variant="overview" as AnalyzerShell\'s first child, tracking the same .layout container AnalyzerReport itself renders into on this route', () => {
+    const source = readFileSync(
+      path.resolve(__dirname, "../analyzer/[runId]/snapshot/[version]/page.tsx"),
+      "utf-8"
+    );
+    expect(source).toMatch(/<AnalyzerShell>\s*\{\/\*[\s\S]*?\*\/\}\s*<AnalyzerTopBar variant="overview" \/>/);
+  });
+});
+
+// DONE WHEN: "a test proves the theme control on the four screens drives
+// the same ThemeContext the M9 routes drive — one mechanism, not a second
+// toggle." AnalyzerTopBar is one component with no per-variant state of its
+// own, so mounting two instances at once and toggling one is a direct proof
+// that every variant reads/writes the single root-mounted ThemeContext.
+describe("the same ThemeContext drives every variant — one toggle, not a second one for the non-M9 screens", () => {
+  it("toggling the theme control on a variant=\"steps\" bar is observed by a variant=\"overview\" bar mounted alongside it", () => {
+    render(
+      <Providers>
+        <AnalyzerTopBar variant="steps" />
+        <AnalyzerTopBar variant="overview" />
+      </Providers>
+    );
+    const toggles = screen.getAllByRole("button", { name: /switch to dark mode/i });
+    expect(toggles).toHaveLength(2);
+    fireEvent.click(toggles[0]);
+    expect(screen.getAllByRole("button", { name: /switch to light mode/i })).toHaveLength(2);
   });
 });

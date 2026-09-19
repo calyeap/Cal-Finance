@@ -1,4 +1,5 @@
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
+import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import { AnalyzerEntry } from "@/app/components/AnalyzerEntry";
 
 // Screen 1 — the analyzer's entry point (§2 Step 1, design route table).
@@ -15,6 +16,7 @@ export default async function AnalyzerEntryPage({
 
   return (
     <AnalyzerShell>
+      <AnalyzerTopBar variant="steps" />
       <AnalyzerEntry fixtureMissing={unavailablefixture} />
     </AnalyzerShell>
   );

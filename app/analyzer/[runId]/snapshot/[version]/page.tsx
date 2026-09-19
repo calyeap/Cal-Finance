@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
+import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import { AnalyzerReport } from "@/app/components/AnalyzerReport";
 import { reopenDeepSnapshot } from "@/lib/analyzer/snapshotAnalysis";
 import { trustStatusLine, trustConsequenceLine } from "@/lib/analyzer/trustCopy";
@@ -27,6 +28,11 @@ export default async function SnapshotPage({
 
   return (
     <AnalyzerShell>
+      {/* AnalyzerReport below renders its own `.layout` container (no
+          `.fa-shell` rail on this reopen route), so the bar tracks the same
+          container the Overview route's bar does — see AnalyzerTopBar's
+          variant comment. */}
+      <AnalyzerTopBar variant="overview" />
       <div className="cb-steps">
         <div className="wrap" style={{ paddingBottom: 0 }}>
           <div className="state">
