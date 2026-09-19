@@ -275,6 +275,25 @@ describe("globals.css — M9 shared Calboard chrome (M9-THEME-COMPLETION-01)", (
     expect(narrow).not.toMatch(/hamburger|drawer/i);
   });
 
+  // M9-NONM9-CHROME-01 — the entry/facts/profile bar (`.topbar.steps`)
+  // tracks `.cb-analyzer .cb-steps .wrap` (globals.css:2285), whose own
+  // max-width is a flat 1100px with no Standard/Wide step-up, unlike
+  // `.layout`/`.fa-shell` above. One unconditional override — not a
+  // per-breakpoint media rule — keeps it equal to its container "at every
+  // width mode" (design.md:1021) precisely because the container itself
+  // never changes width.
+  it("the entry/facts/profile bar (.steps) tracks .cb-analyzer .cb-steps .wrap — a flat 1100px at every width mode, declared once, not per breakpoint", () => {
+    expect(ruleBody(".cb-analyzer .cb-steps .wrap")).toMatch(/max-width:\s*1100px\s*;/);
+    expect(ruleBody(".cb-analyzer .topbar.steps")).toMatch(/max-width:\s*1100px\s*;/);
+    // No Standard/Wide override exists for .steps — the base rule already
+    // matches its container at every mode, so a repeated 1100px declaration
+    // there would be redundant, not a second value.
+    expect(() => ruleBodyIn(standard, ".cb-analyzer .topbar.steps")).toThrow();
+    expect(() => ruleBodyIn(wide, ".cb-analyzer .topbar.steps")).toThrow();
+    // Declared exactly once — a flat rule, not repeated per breakpoint.
+    expect(css.match(/\.cb-analyzer \.topbar\.steps\s*\{/g)).toHaveLength(1);
+  });
+
   it("the .cb-analyzer token block and its [data-theme=\"dark\"] block are byte-identical to e3da0be — this outcome redeclares no §5 token", () => {
     const lightTokens = ruleBody(".cb-analyzer");
     expect(lightTokens).toMatch(/--ground:\s*#F2EEE5\s*;/);

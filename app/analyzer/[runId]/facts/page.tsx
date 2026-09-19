@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
+import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import { FactCard } from "@/app/components/FactCard";
 import { loadGateState, RunNotFoundError } from "@/lib/analyzer/gate";
 import { getFactDecisions, getJudgments } from "@/lib/analyzer/runStore";
@@ -53,6 +54,7 @@ export default async function FactsPage({ params }: { params: Promise<{ runId: s
 
   return (
     <AnalyzerShell>
+      <AnalyzerTopBar variant="steps" />
       <div className="cb-steps">
         <div className="wrap">
           <div className="sechead">
