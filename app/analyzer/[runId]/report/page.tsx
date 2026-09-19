@@ -1,5 +1,6 @@
 import { notFound, redirect } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
+import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import { AnalyzerReport } from "@/app/components/AnalyzerReport";
 import { DominantVerdictSlot } from "@/app/components/DominantVerdictSlot";
 import { FullAnalysisNav } from "@/app/components/FullAnalysisNav";
@@ -77,6 +78,7 @@ export default async function ReportPage({ params }: { params: Promise<{ runId: 
 
   return (
     <AnalyzerShell>
+      <AnalyzerTopBar variant="report" />
       <div className="cb-steps">
         <div className="wrap" style={{ paddingBottom: 0 }}>
           <DominantVerdictSlot verdict={verdict} />
