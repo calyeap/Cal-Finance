@@ -95,6 +95,9 @@ jobs:
       - name: Run OWNER liveness guard unit tests
         run: bash .github/scripts/owner-liveness-lib.test.sh
 
+      - name: Run OWNER liveness guard control-flow tests
+        run: bash .github/scripts/owner-liveness-guard.test.sh
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

@@ -54,7 +54,7 @@ post_comment() {
 # Sleeps the observation window, then echoes "complete" or "missing".
 wait_and_check() {
   local attempt_id="$1" started_at="$2"
-  echo "owner-liveness: watching attempt ${attempt_id} for ${LEASE_MINUTES}m (started ${started_at})"
+  echo "owner-liveness: watching attempt ${attempt_id} for ${LEASE_MINUTES}m (started ${started_at})" >&2
   sleep "$(( LEASE_MINUTES * 60 ))"
   local comments
   comments="$(fetch_comments)"
@@ -147,4 +147,6 @@ main() {
   exit 1
 }
 
-main
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  main
+fi
