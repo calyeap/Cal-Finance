@@ -303,6 +303,50 @@ describe("globals.css — M9 shared Calboard chrome (M9-THEME-COMPLETION-01)", (
   });
 });
 
+describe("globals.css — M9 route-level states (M9-STATE-HANDLING-01)", () => {
+  it("reuses .state/.name/.cause verbatim — no second suppressing-state mechanism for the new route states", () => {
+    // The route files render the pre-existing .state/.name/.cause markup
+    // (app/analyzer/[runId]/not-found.tsx, error.tsx, loading.tsx); this
+    // guards that this outcome declared no parallel treatment for it.
+    expect(css.match(/\.cb-analyzer \.state \.name\s*\{/g)).toHaveLength(1);
+    expect(css.match(/\.cb-analyzer \.state \.cause\s*\{/g)).toHaveLength(1);
+  });
+
+  it("the new .routestate action carries zero colour literals — every colour resolves through a §5 token or an already-shipped role", () => {
+    expect(ruleBody(".cb-analyzer .routestate .act")).not.toMatch(/#[0-9a-fA-F]{3,8}\b/);
+    expect(ruleBody(".cb-analyzer .routestate .act")).toMatch(/border:\s*1px solid var\(--line-strong\)\s*;/);
+    expect(ruleBody(".cb-analyzer .routestate .act")).toMatch(/background:\s*var\(--field\)\s*;/);
+    expect(ruleBody(".cb-analyzer .routestate .act")).toMatch(/color:\s*var\(--ink\)\s*;/);
+  });
+
+  it("no .status-msg, .status-danger or --color-danger appears under .cb-analyzer — those are Dashboard/Holdings-global and outside §5's token set", () => {
+    const cbAnalyzerCss = css.slice(css.indexOf(".cb-analyzer {"));
+    expect(cbAnalyzerCss).not.toMatch(/\.status-msg/);
+    expect(cbAnalyzerCss).not.toMatch(/\.status-danger/);
+    expect(cbAnalyzerCss).not.toMatch(/--color-danger/);
+    expect(cbAnalyzerCss).not.toMatch(/\.button-link/);
+  });
+
+  it("the .cb-analyzer token block and its dark block are unchanged by this outcome — the same token names in both themes, no new §5 token or colour role", () => {
+    const tokenNames = (body: string) => [...body.matchAll(/(--[a-z-]+):/g)].map((m) => m[1]).sort();
+    const lightNames = tokenNames(ruleBody(".cb-analyzer"));
+    const darkNames = tokenNames(ruleBody('.cb-analyzer[data-theme="dark"]'));
+    expect(lightNames).toEqual(darkNames);
+    expect(lightNames).toEqual([
+      "--field",
+      "--gain",
+      "--ground",
+      "--hairline",
+      "--ink",
+      "--line-strong",
+      "--loss",
+      "--muted",
+      "--stale",
+      "--tint",
+    ]);
+  });
+});
+
 describe("globals.css — .cb-dash regressions", () => {
   it(".toggle sizes to its own content (inline-flex), not the full section width", () => {
     // display: flex on a plain block <div> still stretches to 100% of its
