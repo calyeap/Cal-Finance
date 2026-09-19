@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { render, screen, fireEvent, cleanup } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { PrivacyProvider, usePrivacy } from "./PrivacyContext";
 import { ThemeProvider, useTheme } from "./ThemeContext";
 import { AnalyzerTopBar } from "./AnalyzerTopBar";
@@ -100,5 +102,30 @@ describe("AnalyzerTopBar", () => {
       </Providers>
     );
     expect(reportContainer.querySelector(".topbar")).toHaveClass("fa");
+  });
+});
+
+// SCOPE item 9 / DONE WHEN's first bullet: "both M9 routes render the
+// chrome … verified by test, not by inspection." The suite above tests
+// AnalyzerTopBar in isolation — it would pass unchanged if the two-line
+// page wiring below were deleted. Same source-assertion technique as
+// app/globalsCss.test.ts and lib/analyzer/verificationStateVocabulary.test.ts:
+// read each route's page file and assert it actually renders the chrome,
+// as the first child inside AnalyzerShell, rather than trusting inspection.
+describe("both M9 routes wire AnalyzerTopBar into AnalyzerShell", () => {
+  it("app/analyzer/[runId]/page.tsx renders AnalyzerTopBar variant=\"overview\" as AnalyzerShell's first child", () => {
+    const source = readFileSync(
+      path.resolve(__dirname, "../analyzer/[runId]/page.tsx"),
+      "utf-8"
+    );
+    expect(source).toMatch(/<AnalyzerShell>\s*<AnalyzerTopBar variant="overview" \/>/);
+  });
+
+  it("app/analyzer/[runId]/report/page.tsx renders AnalyzerTopBar variant=\"report\" as AnalyzerShell's first child", () => {
+    const source = readFileSync(
+      path.resolve(__dirname, "../analyzer/[runId]/report/page.tsx"),
+      "utf-8"
+    );
+    expect(source).toMatch(/<AnalyzerShell>\s*<AnalyzerTopBar variant="report" \/>/);
   });
 });
