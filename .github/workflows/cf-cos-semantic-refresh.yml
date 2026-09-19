@@ -1,0 +1,135 @@
+name: Cal Finance Chief of Staff semantic refresh
+
+# Thin projection bridge only.
+# Native GitHub activity is execution truth; Cal Finance Project Home owns semantic scope/authority.
+# Existing cc-auto-fire.yml already refreshes Chief of Staff after OWNER RECONCILED.
+# This workflow closes the transient-state gap: BUILD/REVIEW/PR/terminal events update the row immediately.
+
+on:
+  issues:
+    types: [opened, closed]
+  pull_request:
+    types: [opened, closed]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+concurrency:
+  group: cf-cos-semantic-refresh
+  cancel-in-progress: true
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Recognise meaningful Cal Finance state change
+        id: event
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_ACTION: ${{ github.event.action }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          ISSUE_TITLE: ${{ github.event.issue.title }}
+          ISSUE_URL: ${{ github.event.issue.html_url }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+        run: |
+          set -euo pipefail
+          echo "recognized=false" >> "$GITHUB_OUTPUT"
+
+          case "$EVENT_NAME" in
+            issues)
+              if [ "$EVENT_ACTION" = "opened" ] || [ "$EVENT_ACTION" = "closed" ]; then
+                echo "recognized=true" >> "$GITHUB_OUTPUT"
+                echo "number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+                echo "url=$ISSUE_URL" >> "$GITHUB_OUTPUT"
+                echo "detail=Cal Finance issue #${ISSUE_NUMBER} ${EVENT_ACTION}: ${ISSUE_TITLE}" >> "$GITHUB_OUTPUT"
+              fi
+              ;;
+            pull_request)
+              echo "recognized=true" >> "$GITHUB_OUTPUT"
+              echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+              echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
+              echo "detail=Cal Finance pull request #${PR_NUMBER} ${EVENT_ACTION}: ${PR_TITLE}" >> "$GITHUB_OUTPUT"
+              ;;
+            issue_comment)
+              TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e '/[^[:space:]]/,$!d' -e 's/^[[:space:]]*//')
+              FIRST_LINE=$(printf '%s\n' "$TRIMMED" | head -n 1 | sed -e 's/[[:space:]]*$//')
+              case "$FIRST_LINE" in
+                'BUILD FIRED:'*|'REVIEW FIRED:'*|'DONE:'*|\
+                'ACCEPT'|'ACCEPT '*|'ACCEPT:'*|\
+                'CORRECT'|'CORRECT '*|'CORRECT:'*|\
+                'BLOCKED:'*|'STOP:'*|'RECONCILIATION REQUIRED:'*|'CALVIN REQUIRED:'*)
+                  echo "recognized=true" >> "$GITHUB_OUTPUT"
+                  echo "number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
+                  echo "url=$COMMENT_URL" >> "$GITHUB_OUTPUT"
+                  echo "detail=Cal Finance semantic receipt on item #${ISSUE_NUMBER}: ${FIRST_LINE}" >> "$GITHUB_OUTPUT"
+                  ;;
+                'OWNER RECONCILED:'*)
+                  # Existing cc-auto-fire.yml owns this post-reconciliation refresh.
+                  ;;
+              esac
+              ;;
+          esac
+
+      - name: Refresh only the Cal Finance Chief of Staff row
+        if: steps.event.outputs.recognized == 'true'
+        env:
+          WATCH_FIRE_URL_PRIMARY: ${{ secrets.WATCH_FIRE_URL }}
+          WATCH_FIRE_TOKEN_PRIMARY: ${{ secrets.WATCH_FIRE_TOKEN }}
+          CF_FIRE_URL: ${{ secrets.BUILD_FIRE_URL }}
+          CF_FIRE_TOKEN: ${{ secrets.BUILD_FIRE_TOKEN }}
+          TARGET_NUMBER: ${{ steps.event.outputs.number }}
+          TARGET_URL: ${{ steps.event.outputs.url }}
+          EVENT_DETAIL: ${{ steps.event.outputs.detail }}
+        run: |
+          set -euo pipefail
+
+          FIRE_URL="${WATCH_FIRE_URL_PRIMARY:-${CF_FIRE_URL:-}}"
+          FIRE_TOKEN="${WATCH_FIRE_TOKEN_PRIMARY:-${CF_FIRE_TOKEN:-}}"
+          if [ -z "$FIRE_URL" ] || [ -z "$FIRE_TOKEN" ]; then
+            echo "::error::No projection-capable fire URL/token is available."
+            exit 1
+          fi
+
+          PROMPT=$(cat <<EOF
+          Projection refresh only for Cal Finance.
+
+          Semantic event: ${EVENT_DETAIL}
+          Native item: ${TARGET_URL}
+
+          Read the exact current native item plus Cal Finance Project Home. Refresh ONLY the Cal Finance row in the CHIEF OF STAFF dashboard and read it back.
+
+          Rules:
+          - GitHub/native evidence is execution truth for transient activity.
+          - Cal Finance Project Home owns semantic scope, authority, sequencing and acceptance.
+          - RED means Calvin is the current blocker and must act now. GREEN means Calvin does not need to act now. No yellow attention state.
+          - Update STATE / ON / NEED ME? / LAST VERIFIED / NOW → NEXT from current evidence.
+          - Do not dispatch, recover, rerank, create work, modify project contracts, or change Cal Finance Project Home.
+          - Do not turn AI/runtime failures into Calvin work unless a genuine human judgement, permission or acceptance gate exists.
+          EOF
+          )
+
+          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text:$text}')
+          HTTP_CODE=$(curl -sS -o /tmp/cf_cos_refresh.json -w '%{http_code}' \
+            --request POST "$FIRE_URL" \
+            --header "Authorization: Bearer $FIRE_TOKEN" \
+            --header "anthropic-version: 2023-06-01" \
+            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
+            --header "Content-Type: application/json" \
+            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
+
+          if [ "$HTTP_CODE" = "curl_error" ] || [ "$HTTP_CODE" -lt 200 ] 2>/dev/null || [ "$HTTP_CODE" -ge 300 ] 2>/dev/null; then
+            echo "::error::Cal Finance Chief of Staff refresh fire failed: HTTP/status ${HTTP_CODE}."
+            exit 1
+          fi
+
+          SESSION_ID=$(jq -r '.claude_code_session_id // "unknown"' /tmp/cf_cos_refresh.json)
+          echo "Cal Finance Chief of Staff semantic refresh fired: ${SESSION_ID}" >> "$GITHUB_STEP_SUMMARY"
