@@ -54,9 +54,45 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
 
+      # CF-OUTCOME-LOOP-LEAN-01
+      # Deterministic BUILD admission guard: issue #188 fired two BUILD
+      # sessions for the same target within ~30 seconds because nothing
+      # checked for an already-open attempt first. build-duplicate-lib.sh's
+      # classification (see that file) is pure/network-free and unit
+      # tested; this step only supplies it the target's current comments.
+      - name: Check out default branch
+        if: steps.target.outputs.skip != 'true'
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Check for an already-open BUILD attempt
+        id: dedup
+        if: steps.target.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+        run: |
+          set -uo pipefail
+          # shellcheck source=../scripts/build-duplicate-lib.sh
+          source .github/scripts/build-duplicate-lib.sh
+
+          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${TARGET_NUMBER}/comments" \
+            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
+          echo "status=$(build_duplicate_status "$COMMENTS")" >> "$GITHUB_OUTPUT"
+
+      - name: Report duplicate suppression
+        if: steps.target.outputs.skip != 'true' && steps.dedup.outputs.status == 'duplicate'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
+            -f body="DUPLICATE SUPPRESSED: an open BUILD attempt already exists for this target with no terminal result yet — not firing a second worker."
+
       - name: Fire CALBOARD-BUILD
         id: fire
-        if: steps.target.outputs.skip != 'true'
+        if: steps.target.outputs.skip != 'true' && steps.dedup.outputs.status != 'duplicate'
         env:
           BUILD_FIRE_URL: ${{ secrets.BUILD_FIRE_URL }}
           BUILD_FIRE_TOKEN: ${{ secrets.BUILD_FIRE_TOKEN }}
@@ -101,7 +137,9 @@ jobs:
             -f body="BUILD FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
 
       - name: Remove BUILD wake label
-        if: github.event.label.name == 'needs-build-wake' && steps.fire.outputs.ok == 'true'
+        if: >-
+          github.event.label.name == 'needs-build-wake' &&
+          (steps.fire.outputs.ok == 'true' || steps.dedup.outputs.status == 'duplicate')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -109,7 +147,10 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-build-wake" || true
 
       - name: Report BUILD fire failure
-        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok != 'true'
+        if: >-
+          steps.target.outputs.skip != 'true' &&
+          steps.dedup.outputs.status != 'duplicate' &&
+          steps.fire.outputs.ok != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -124,6 +165,14 @@ jobs:
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'DONE:'))
     runs-on: ubuntu-latest
     steps:
+      # CF-OUTCOME-LOOP-LEAN-01: terminal-routing-lib.sh needs to exist on
+      # disk to bind the PR reference to the terminal/first-line contract
+      # (see that file) and to recognise a DONE: EVIDENCE completion.
+      - name: Check out default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
       - name: Resolve target
         id: target
         env:
@@ -131,14 +180,16 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
+          # shellcheck source=../scripts/terminal-routing-lib.sh
+          source .github/scripts/terminal-routing-lib.sh
 
           if [ "${{ github.event_name }}" = "issue_comment" ]; then
             # Robust to leading blank/all-whitespace lines: drop them, then
             # trim leading whitespace on the first non-empty line and require
             # the terminal marker there. A quoted/example "DONE:" elsewhere
             # in the comment must not fire this.
-            TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e '/[^[:space:]]/,$!d' -e 's/^[[:space:]]*//')
-            case "$TRIMMED" in
+            FIRST_LINE="$(terminal_first_line "$COMMENT_BODY")"
+            case "$FIRST_LINE" in
               DONE:*) ;;
               *)
                 echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -146,7 +197,21 @@ jobs:
                 ;;
             esac
 
-            NUMBER=$(printf '%s' "$COMMENT_BODY" | grep -oE '/pull/[0-9]+' | head -1 | grep -oE '[0-9]+' || true)
+            case "$FIRST_LINE" in
+              "DONE: EVIDENCE"*)
+                # Evidence-only completion (see BUILD.md): no PR to review.
+                # BUILD applies needs-owner-wake itself for this outcome, so
+                # REVIEW must never fire here and must not post the
+                # "no PR link" skip message either — this is expected, not
+                # an error.
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+            esac
+
+            # CF-OUTCOME-LOOP-LEAN-01: bound to the terminal line itself —
+            # never scrape a /pull/N from later prose/examples/quoted text.
+            NUMBER="$(terminal_pr_number_from_first_line "$COMMENT_BODY")"
             if [ -z "$NUMBER" ] && [ -n "${{ github.event.issue.pull_request.url }}" ]; then
               NUMBER="${{ github.event.issue.number }}"
             fi

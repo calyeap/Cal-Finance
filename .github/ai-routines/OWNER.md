@@ -23,10 +23,11 @@ completion receipt, never directly from the merge event.
 - **Merge wake** — a PR merged. Normal continuation path.
 - **Terminal wake** — BUILD or REVIEW posted a true state-changing terminal
   outcome (`STOP`, including a `STOP: RECONCILIATION REQUIRED — ...`
-  authority-conflict stop, or `CALVIN REQUIRED`) and applied
-  `needs-owner-wake` to the target. Routine `CORRECT`, `DONE`, `ACCEPT`,
-  `MERGED`, `BLOCKED`, and ordinary review chatter never carry that label
-  and must never wake OWNER.
+  authority-conflict stop; `CALVIN REQUIRED`; `DONE: EVIDENCE`, BUILD's
+  evidence-only completion with no PR to hand to REVIEW; or `BLOCKED`) and
+  applied `needs-owner-wake` to the target. Routine `CORRECT`, a normal
+  `DONE: <PR link>`, `ACCEPT`, `MERGED`, and ordinary review chatter never
+  carry that label and must never wake OWNER.
 - **Recovery wake** — `.github/scripts/owner-liveness-guard.sh`
   (CF-OWNER-LIVENESS-01) fires this directly, at most once per original
   merge or terminal wake, and only when that original attempt produced no
@@ -52,6 +53,21 @@ decide.
    an owned field cannot be verified from current evidence, write `—` or
    `STALE / RECONCILIATION REQUIRED`; never present unverifiable old state
    as current. Read the write back to confirm it landed before continuing.
+
+   **Overwrite-only current state — mandatory.** The owned current-state
+   block holds the current reading only, never a growing log of past ones.
+   Replace each owned field's value outright; never append a fresh reading
+   beside an old one, and never leave a reading marked `SUPERSEDED` (or
+   equivalent) sitting inside current state — delete it as part of this
+   reconciliation. A stale reading that is still genuinely useful belongs in
+   `RECENT CHANGES` or the existing history area, summarised in one line, not
+   preserved verbatim in current state. This is ordinary reconciliation
+   hygiene, not a special pass: apply it on every run, and remove any
+   superseded material already present even if this event didn't create it
+   — including a stale temporary callout (e.g. a dated "MANUAL CONTROL —
+   TEMPORARY" notice) that no longer reflects current operation. Preserve
+   enough recent history for auditability; do not turn Project Home into an
+   ever-growing event log.
 
    **Closed-ruling guard — mandatory before any Calvin gate.** If the wake
    target, issue text, implementation note, stale spec, or model output asks
@@ -94,17 +110,27 @@ decide.
    readback did not succeed, do not emit this receipt — fall through to a
    terminal outcome that reflects the stale state, so the derived board is
    never refreshed as current on unverified evidence.
-3. Confirm there is no active product BUILD or product PR already in
+3. **Routine issue closure (bounded).** Scoped only to the wake target
+   itself — this is not a backlog sweep. Close the wake target's linked
+   originating issue only when it is an ordinary issue (never an umbrella
+   issue, a tracking/meta issue, or a methodology/policy issue) and its
+   stated outcome is now clearly satisfied by either an `ACCEPT`ed and
+   merged PR (merge wake) or a completed `DONE: EVIDENCE` result (terminal
+   wake). If satisfaction is unclear, or the issue is umbrella/tracking/
+   meta/methodology/policy, leave it open — do not guess. When closing, set
+   `state_reason: completed` and post one closing comment naming the
+   satisfying PR or evidence.
+4. Confirm there is no active product BUILD or product PR already in
    flight (a just-stopped or Calvin-gated PR/issue still counts as active).
-4. Select the first dependency-safe outcome already authorised by that
+5. Select the first dependency-safe outcome already authorised by that
    runway.
-5. Create exactly one bounded GitHub issue containing `OUTCOME`,
+6. Create exactly one bounded GitHub issue containing `OUTCOME`,
    `AUTHORITY`, `SCOPE`, `DONE WHEN`, `HARD BOUNDS`, `CALVIN REQUIRED`,
    `OUTCOME-ID`.
-6. Add `needs-build-wake`.
-7. Stop.
+7. Add `needs-build-wake`.
+8. Stop.
 
-On a terminal wake, step 3 will normally find the just-stopped item still
+On a terminal wake, step 4 will normally find the just-stopped item still
 active and resolve to `WAIT: AI` — step 1's reconciliation and step 2's
 receipt are still mandatory even when no dispatch follows.
 
@@ -145,6 +171,10 @@ reconciliation receipt.
 - Reconciliation is scoped to the current-state block Project Home already
   assigns OWNER; it is not a general Notion-writing licence, and it is not
   Chief of Staff repair or refresh ownership.
+- Issue closure is limited to the current wake target's own linked issue,
+  ordinary issues only, and only when clearly satisfied — never a broad
+  closure sweep, and never an umbrella, tracking/meta, or methodology/
+  policy issue.
 - One dispatch maximum per run.
 - Already-authorised work only; follow runway ordering — do not invent or
   reprioritise work.
