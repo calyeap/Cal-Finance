@@ -368,86 +368,6 @@ jobs:
             exit 1
           fi
 
-  # CF-OWNER-SINGLE-WRITER-01 addendum (issue #197 ADDENDUM, posted
-  # 2026-09-21T11:09:44Z — before this outcome's original DONE, so it was
-  # in force at build time).
-  #
-  # Live gap: after Calvin answered #196 with
-  # `CALVIN RULING — APPROVE OPTION B`, the ruling was durably recorded on
-  # GitHub but woke nothing — OWNER's own CALVIN REQUIRED terminal output
-  # never re-applies needs-owner-wake to itself (see fire-owner-on-terminal
-  # below), so Project Home stayed `NEXT MOVE: CALVIN` until a human
-  # applied the label by hand. A genuine human ruling on a current
-  # CALVIN REQUIRED gate must instead produce exactly one OWNER wake, with
-  # no manual label/courier action, and without triggering OWNER for
-  # arbitrary comments.
-  #
-  # This job only re-applies needs-owner-wake — it never fires OWNER
-  # itself. That reuses the existing terminal-wake edge end-to-end:
-  # fire-owner-on-terminal below already consumes this exact label inside
-  # the cf-owner-single-writer concurrency group, so "exactly one wake" and
-  # duplicate-admission suppression both fall out of
-  # CF-OWNER-SINGLE-WRITER-01's existing mechanism rather than needing
-  # anything new here. See calvin-ruling-lib.sh / calvin-ruling-lib.test.sh
-  # for the classification contract (non-bot author, the comment's own
-  # first line is a CALVIN RULING marker, and the target's current typed
-  # gate — its most recent BUILD/REVIEW/OWNER state-changing terminal
-  # marker — is still an unanswered CALVIN REQUIRED:) and its regression
-  # coverage.
-  fire-owner-on-calvin-ruling:
-    if: github.event_name == 'issue_comment'
-    runs-on: ubuntu-latest
-    steps:
-      - name: Check out default branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-
-      - name: Resolve target
-        id: target
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
-        run: |
-          set -uo pipefail
-          # shellcheck source=../scripts/calvin-ruling-lib.sh
-          source .github/scripts/calvin-ruling-lib.sh
-
-          FIRST_LINE="$(calvin_ruling_first_line "$COMMENT_BODY")"
-          if ! calvin_ruling_is_ruling_first_line "$FIRST_LINE"; then
-            echo "skip=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
-
-      - name: Decide whether the target's current gate is still open
-        id: decide
-        if: steps.target.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          COMMENT_BODY: ${{ github.event.comment.body }}
-          IS_BOT: ${{ github.event.comment.user.type == 'Bot' }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-        run: |
-          set -uo pipefail
-          # shellcheck source=../scripts/calvin-ruling-lib.sh
-          source .github/scripts/calvin-ruling-lib.sh
-
-          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${TARGET_NUMBER}/comments" \
-            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
-
-          echo "wake=$(calvin_ruling_should_wake "$COMMENTS" "$COMMENT_BODY" "$IS_BOT")" >> "$GITHUB_OUTPUT"
-
-      - name: Re-apply needs-owner-wake for the answered gate
-        if: steps.decide.outputs.wake == 'wake'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method POST \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels" \
-            -f "labels[]=needs-owner-wake"
-
   # CF-OWNER-RECONCILE-01
   # Terminal non-merge OWNER wake: BUILD/REVIEW apply needs-owner-wake only
   # for a true state-changing terminal outcome (STOP or CALVIN REQUIRED),
@@ -466,18 +386,52 @@ jobs:
   # verbatim — see that workflow's header comment for the full rationale
   # and owner-single-writer-lib.test.sh / owner-single-writer-config.test.sh
   # for the regression coverage.
+  #
+  # CF-OWNER-SINGLE-WRITER-01 addendum, corrected (issue #197 ADDENDUM):
+  # a genuine human ruling on a current CALVIN REQUIRED gate must produce
+  # exactly one OWNER wake, with no manual label/courier action, and
+  # without triggering OWNER for arbitrary comments. The first version of
+  # this fix ran the classification in a separate fire-owner-on-calvin-ruling
+  # job that only re-applied the needs-owner-wake label, on the assumption
+  # that doing so would re-enter this job's own `labeled`-event trigger.
+  # It doesn't: GitHub Actions does not start a new workflow run from an
+  # event produced by the repository's own GITHUB_TOKEN (the documented
+  # recursion guard), so that label write never actually fired anything —
+  # the ruling path was inert end to end in production even though its
+  # classifier was correct and fully covered by tests.
+  #
+  # Fixed by routing a qualifying `issue_comment` ruling directly into this
+  # job instead of through a label hop it can never itself trigger. The
+  # `Resolve target` step below runs the same calvin-ruling-lib.sh
+  # classification (non-bot author, the comment's own first line is a
+  # CALVIN RULING marker, and the target's current typed gate — its most
+  # recent BUILD/REVIEW/OWNER state-changing terminal marker — is still an
+  # unanswered CALVIN REQUIRED:) and sets skip=true when it doesn't qualify;
+  # every later step is gated on skip != 'true'. A qualifying ruling reaches
+  # the exact same fire, admission guard, and liveness recovery as any other
+  # terminal wake, inside the same cf-owner-single-writer concurrency group,
+  # so "exactly one wake" and duplicate-admission suppression fall out of
+  # the mechanism this job already gives the label-triggered path — no new
+  # decision surface. See calvin-ruling-lib.sh / calvin-ruling-lib.test.sh
+  # for the classification contract and calvin-ruling-reachability.test.sh
+  # for the structural regression coverage that catches this exact class of
+  # defect (an edge whose only effect is a workflow-authored label write
+  # depended on as a trigger).
   fire-owner-on-terminal:
-    if: github.event.label.name == 'needs-owner-wake'
+    if: >-
+      github.event.label.name == 'needs-owner-wake' ||
+      (github.event_name == 'issue_comment' &&
+        contains(github.event.comment.body, 'CALVIN RULING'))
     runs-on: ubuntu-latest
     timeout-minutes: 50
     concurrency:
       group: cf-owner-single-writer
       cancel-in-progress: false
     steps:
-      # owner-liveness-guard.sh needs to exist on disk. Pinned explicitly to
-      # the default branch: this job is reached via an `issues`/
-      # `pull_request` labeled event, which has no natural head ref of its
-      # own to fall back to.
+      # owner-liveness-guard.sh and calvin-ruling-lib.sh need to exist on
+      # disk. Pinned explicitly to the default branch: the label-triggered
+      # path is reached via an `issues`/`pull_request` labeled event, which
+      # has no natural head ref of its own to fall back to.
       - name: Check out default branch
         uses: actions/checkout@v4
         with:
@@ -485,8 +439,32 @@ jobs:
 
       - name: Resolve target
         id: target
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          IS_BOT: ${{ github.event.comment.user.type == 'Bot' }}
         run: |
-          echo "number=${{ github.event.issue.number || github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
+          set -uo pipefail
+
+          if [ "$EVENT_NAME" = "issue_comment" ]; then
+            # shellcheck source=../scripts/calvin-ruling-lib.sh
+            source .github/scripts/calvin-ruling-lib.sh
+
+            NUMBER="${{ github.event.issue.number }}"
+            COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
+
+            if [ "$(calvin_ruling_should_wake "$COMMENTS" "$COMMENT_BODY" "$IS_BOT")" != "wake" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          else
+            NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=TERMINAL-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
       # CF-OWNER-SINGLE-WRITER-01: advisory only — see owner-on-merge.yml's
@@ -494,6 +472,7 @@ jobs:
       # cf-owner-single-writer concurrency group on this job is what
       # actually prevents overlapping fires.
       - name: Record OWNER admission context
+        if: steps.target.outputs.skip != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
@@ -503,6 +482,7 @@ jobs:
 
       - name: Fire CALBOARD-OWNER API trigger
         id: fire
+        if: steps.target.outputs.skip != 'true'
         env:
           OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
           OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
@@ -540,7 +520,7 @@ jobs:
           fi
 
       - name: Report OWNER terminal-wake fire
-        if: steps.fire.outputs.ok == 'true'
+        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -550,7 +530,7 @@ jobs:
               "${{ steps.target.outputs.attempt_id }}" "${{ steps.fire.outputs.http_code }}" "${{ steps.fire.outputs.session_id }}" "${{ steps.fire.outputs.session_url }}")"
 
       - name: Remove OWNER terminal-wake label
-        if: steps.fire.outputs.ok == 'true'
+        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -558,7 +538,7 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-owner-wake" || true
 
       - name: Report OWNER terminal-wake fire failure
-        if: steps.fire.outputs.ok != 'true'
+        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok != 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -574,7 +554,7 @@ jobs:
       # durable exhaustion receipt if the recovery also stalls. Never
       # touches BUILD/REVIEW/Project Home itself.
       - name: Run OWNER liveness guard
-        if: steps.fire.outputs.ok == 'true'
+        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}

@@ -8,13 +8,16 @@
 # comments, and duplicate/overlapping admission must still be suppressed.
 #
 # calvin_ruling_should_wake is the single decision cc-auto-fire.yml's
-# fire-owner-on-calvin-ruling job consults before re-applying
-# needs-owner-wake; that label re-application is the only side effect this
-# job has — the actual OWNER fire, single-writer serialization, and
-# duplicate suppression all reuse fire-owner-on-terminal and the
-# cf-owner-single-writer concurrency group CF-OWNER-SINGLE-WRITER-01
-# already built (see owner-single-writer-lib.test.sh /
-# owner-single-writer-config.test.sh).
+# fire-owner-on-terminal job consults (in its `Resolve target` step) before
+# admitting a qualifying issue_comment ruling straight into the same fire,
+# single-writer serialization, and duplicate suppression every other
+# terminal wake already gets via the cf-owner-single-writer concurrency
+# group CF-OWNER-SINGLE-WRITER-01 built (see owner-single-writer-lib.test.sh
+# / owner-single-writer-config.test.sh). This file covers the pure
+# classification only; calvin-ruling-reachability.test.sh separately
+# guards that the classification is actually wired to something that fires
+# OWNER, rather than to a workflow-authored label write depended on as a
+# trigger (the defect this edge originally shipped with).
 
 set -uo pipefail
 

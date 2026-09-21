@@ -4,21 +4,29 @@
 # force at build time).
 #
 # Pure, network-free helpers shared by cc-auto-fire.yml's
-# fire-owner-on-calvin-ruling job and its unit tests
-# (calvin-ruling-lib.test.sh). No gh/curl calls happen in this file, so the
-# classification contract can be exercised deterministically in CI.
+# fire-owner-on-terminal job (its `Resolve target` step, on the
+# issue_comment path) and its unit tests (calvin-ruling-lib.test.sh /
+# calvin-ruling-reachability.test.sh). No gh/curl calls happen in this
+# file, so the classification contract can be exercised deterministically
+# in CI.
 #
 # Closes the addendum's observed gap: after Calvin answered #196 with
 # `CALVIN RULING — APPROVE OPTION B`, the ruling was durably recorded on
 # GitHub but woke nothing — OWNER's own CALVIN REQUIRED terminal output
-# never re-applies needs-owner-wake to itself (see cc-auto-fire.yml's
+# never re-arms its own wake path (see cc-auto-fire.yml's
 # fire-owner-on-terminal header comment), so Project Home stayed
-# `NEXT MOVE: CALVIN` until a human applied the label by hand. The rule: a
+# `NEXT MOVE: CALVIN` until a human intervened by hand. The rule: a
 # non-bot comment whose own first line is a `CALVIN RULING` marker must
-# re-apply needs-owner-wake, but only when the target's current typed gate
-# — its most recent BUILD/REVIEW/OWNER state-changing terminal marker — is
-# still an unanswered `CALVIN REQUIRED:`, so this never fires on arbitrary
-# comments or on an item with no open gate.
+# wake OWNER, but only when the target's current typed gate — its most
+# recent BUILD/REVIEW/OWNER state-changing terminal marker — is still an
+# unanswered `CALVIN REQUIRED:`, so this never fires on arbitrary comments
+# or on an item with no open gate. (An earlier version of this fix routed
+# a qualifying ruling through a re-applied needs-owner-wake label instead
+# of straight into fire-owner-on-terminal; that label write, performed by
+# a workflow step under GITHUB_TOKEN, never actually re-triggered anything
+# — GitHub Actions does not start a new run from an event its own
+# GITHUB_TOKEN produced — so fire-owner-on-terminal now classifies and
+# admits the issue_comment path directly instead.)
 
 set -uo pipefail
 
