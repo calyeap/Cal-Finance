@@ -368,6 +368,86 @@ jobs:
             exit 1
           fi
 
+  # CF-OWNER-SINGLE-WRITER-01 addendum (issue #197 ADDENDUM, posted
+  # 2026-09-21T11:09:44Z — before this outcome's original DONE, so it was
+  # in force at build time).
+  #
+  # Live gap: after Calvin answered #196 with
+  # `CALVIN RULING — APPROVE OPTION B`, the ruling was durably recorded on
+  # GitHub but woke nothing — OWNER's own CALVIN REQUIRED terminal output
+  # never re-applies needs-owner-wake to itself (see fire-owner-on-terminal
+  # below), so Project Home stayed `NEXT MOVE: CALVIN` until a human
+  # applied the label by hand. A genuine human ruling on a current
+  # CALVIN REQUIRED gate must instead produce exactly one OWNER wake, with
+  # no manual label/courier action, and without triggering OWNER for
+  # arbitrary comments.
+  #
+  # This job only re-applies needs-owner-wake — it never fires OWNER
+  # itself. That reuses the existing terminal-wake edge end-to-end:
+  # fire-owner-on-terminal below already consumes this exact label inside
+  # the cf-owner-single-writer concurrency group, so "exactly one wake" and
+  # duplicate-admission suppression both fall out of
+  # CF-OWNER-SINGLE-WRITER-01's existing mechanism rather than needing
+  # anything new here. See calvin-ruling-lib.sh / calvin-ruling-lib.test.sh
+  # for the classification contract (non-bot author, the comment's own
+  # first line is a CALVIN RULING marker, and the target's current typed
+  # gate — its most recent BUILD/REVIEW/OWNER state-changing terminal
+  # marker — is still an unanswered CALVIN REQUIRED:) and its regression
+  # coverage.
+  fire-owner-on-calvin-ruling:
+    if: github.event_name == 'issue_comment'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Resolve target
+        id: target
+        env:
+          COMMENT_BODY: ${{ github.event.comment.body }}
+        run: |
+          set -uo pipefail
+          # shellcheck source=../scripts/calvin-ruling-lib.sh
+          source .github/scripts/calvin-ruling-lib.sh
+
+          FIRST_LINE="$(calvin_ruling_first_line "$COMMENT_BODY")"
+          if ! calvin_ruling_is_ruling_first_line "$FIRST_LINE"; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          echo "skip=false" >> "$GITHUB_OUTPUT"
+          echo "number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
+
+      - name: Decide whether the target's current gate is still open
+        id: decide
+        if: steps.target.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
+          IS_BOT: ${{ github.event.comment.user.type == 'Bot' }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+        run: |
+          set -uo pipefail
+          # shellcheck source=../scripts/calvin-ruling-lib.sh
+          source .github/scripts/calvin-ruling-lib.sh
+
+          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${TARGET_NUMBER}/comments" \
+            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
+
+          echo "wake=$(calvin_ruling_should_wake "$COMMENTS" "$COMMENT_BODY" "$IS_BOT")" >> "$GITHUB_OUTPUT"
+
+      - name: Re-apply needs-owner-wake for the answered gate
+        if: steps.decide.outputs.wake == 'wake'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method POST \
+            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels" \
+            -f "labels[]=needs-owner-wake"
+
   # CF-OWNER-RECONCILE-01
   # Terminal non-merge OWNER wake: BUILD/REVIEW apply needs-owner-wake only
   # for a true state-changing terminal outcome (STOP or CALVIN REQUIRED),

@@ -39,8 +39,25 @@ completion receipt, never directly from the merge event.
   BUILD/REVIEW. Treat it exactly like the wake it is recovering (merge or
   terminal) for the rest of this process — reconcile, then decide — and
   still echo the id per the liveness correlation rule below.
+- **Ruling wake** — CF-OWNER-SINGLE-WRITER-01 addendum (issue #197
+  ADDENDUM): `cc-auto-fire.yml`'s `fire-owner-on-calvin-ruling` job
+  re-applies `needs-owner-wake` when a non-bot comment's own first line is
+  a `CALVIN RULING` marker (e.g. `CALVIN RULING — APPROVE OPTION B`) and
+  the target's current typed gate — its most recent BUILD/REVIEW/OWNER
+  state-changing terminal marker — is still an unanswered
+  `CALVIN REQUIRED:`. This closes the gap where OWNER's own restated
+  `CALVIN REQUIRED:` terminal output never re-arms its own wake label, so a
+  genuine human ruling previously sat unread until someone applied the
+  label by hand. This label re-application is routing context only, not
+  authority expansion — it reaches this exact same terminal-wake path
+  below (job `fire-owner-on-terminal`) inside the same
+  `cf-owner-single-writer` concurrency group, so a ruling wake is treated
+  exactly like any other terminal wake once fired. See
+  `.github/scripts/calvin-ruling-lib.sh` /
+  `.github/scripts/calvin-ruling-lib.test.sh` for the classification
+  contract and regression coverage.
 
-All three wake sources run the same process below: reconcile first, then
+All four wake sources run the same process below: reconcile first, then
 decide.
 
 ## Single-writer serialization
@@ -217,6 +234,12 @@ reconciliation receipt.
   concurrency group plus an advisory guard script on the two fire paths,
   not a new orchestrator, queue service, database, or lock server — OWNER
   itself carries no new obligation from it beyond what's described there.
+  Likewise the ruling wake above (CF-OWNER-SINGLE-WRITER-01 addendum) is
+  one label re-application inside `cc-auto-fire.yml`, gated on a typed
+  marker plus a still-open gate check — not a new decision surface, a
+  courier role, or a broader comment-triggered dispatch mechanism; OWNER
+  itself carries no new obligation from it beyond the wake it already
+  knows how to process.
 - No broad backlog search beyond the current authorised Cal Finance runway.
 - Never use Calvin as a message courier.
 - Never end silently.

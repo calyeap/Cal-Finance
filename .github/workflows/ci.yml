@@ -107,6 +107,12 @@ jobs:
       - name: Run OWNER single-writer concurrency config tests
         run: bash .github/scripts/owner-single-writer-config.test.sh
 
+      # CF-OWNER-SINGLE-WRITER-01 addendum: deterministic, network-free
+      # classification checks for the CALVIN RULING -> needs-owner-wake
+      # re-arm edge (issue #197 ADDENDUM, 11:09:44Z).
+      - name: Run CALVIN ruling wake classification unit tests
+        run: bash .github/scripts/calvin-ruling-lib.test.sh
+
       # CF-OUTCOME-LOOP-LEAN-01: deterministic, network-free classification
       # checks for the fire-review DONE:/PR-parsing contract, the fire-build
       # duplicate-suppression contract, and the semantic-refresh workflow's
