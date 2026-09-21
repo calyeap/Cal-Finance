@@ -45,8 +45,10 @@ import {
 } from "./suppression";
 import type {
   AnalysisResult,
+  BusinessSectionContent,
   FactRecord,
   Figure,
+  MarketContextSectionContent,
   OverrideRecord,
   Profile,
   ProfileClassificationInputs,
@@ -98,6 +100,14 @@ export interface CompanyFixture {
   companyName: string;
   price: { value: Decimal; timestamp: string };
   facts: FactRecord[];
+
+  // M9-ITEM5-CONTENT-01. Optional — a fixture built before this outcome, or
+  // one testing something unrelated, carries neither; assembleAnalysisResult
+  // then falls back to the same honest "not yet available" content the
+  // sections rendered before this outcome. The acquisition path
+  // (acquiredRun.ts) always sets both, from the fact set it already acquired.
+  business?: BusinessSectionContent;
+  marketContext?: MarketContextSectionContent;
 
   gate0: Gate0Input;
   gate1: Gate1Input;
@@ -795,6 +805,14 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     // not run renders both sections honestly empty rather than inventing copy.
     challenger: null,
     interpretation: { statements: [], pageOne: null },
+    // M9-ITEM5-CONTENT-01. The acquisition path always sets both on the
+    // fixture; anything else falls back to the pre-existing honest empty
+    // frame rather than assembly inventing content.
+    business: fixture.business ?? {
+      narrative: null,
+      unavailableReason: "Business section content has not been built for this analysis.",
+    },
+    marketContext: fixture.marketContext ?? { sic: null, sicDescription: null },
     policy: {
       constants: POLICY,
       undefinedConstants: fixture.configuredConstants,

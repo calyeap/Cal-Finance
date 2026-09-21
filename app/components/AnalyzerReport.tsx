@@ -607,16 +607,31 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           </Disclosure>
         </section>
 
-        {/* ============ Business (M9 — empty anchored frame; §2.2 permits
-            this per docs/design/m9-analyzer-design-contract.md SCOPE item 6
-            ("sections may be empty anchored frames at this item"); content
-            is runway item 5, not this outcome's HARD BOUNDS ============ */}
+        {/* ============ Business (M9-ITEM5-CONTENT-01 — the filer's own
+            10-K Item 1, via the fixed extraction rule; EditorialProseBlock
+            role, spec.md §8.3 limits: the excerpt is rendered verbatim, with
+            no fact, ranking or portfolio-action language added to it)
+            ============ */}
         <div className="sechead theme" id="business">
           <h2>Business</h2>
           <span className="k">What the company does and how</span>
         </div>
         <hr />
-        <p className="note">Not yet available — Business section content has not been built for this analysis.</p>
+        {result.business.narrative === null ? (
+          <p className="note">
+            Not yet available —{" "}
+            {result.business.unavailableReason ?? "Business section content has not been built for this analysis."}
+          </p>
+        ) : (
+          <>
+            <p>{result.business.narrative.text}</p>
+            <p className="note">
+              Source: the filer&apos;s own {result.business.narrative.filingForm} Item 1, filed{" "}
+              {result.business.narrative.filingDate} (accession {result.business.narrative.accessionNumber}).
+              Extraction rule {result.business.narrative.ruleVersion}.
+            </p>
+          </>
+        )}
 
         {/* ============ Financials (M9 — theme anchor; regroups Sections
             C-D, presentation grouping only) ============ */}
@@ -1510,16 +1525,27 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           )}
         </section>
 
-        {/* ============ Market Context (M9 — empty anchored frame; no
-            approved content source beyond the existing fact set yet, per
-            docs/design/m9-analyzer-design-contract.md §2.2 / §8 item 3
-            ============ */}
+        {/* ============ Market Context (M9-ITEM5-CONTENT-01 — the
+            already-acquired SEC SIC classification, rendered as category
+            framing only; Calvin's 21 Sep 2026 ruling, issue #195, does not
+            authorise any peer, index or sector-average comparison, per
+            docs/design/m9-analyzer-design-contract.md §8 item 3 ============ */}
         <div className="sechead theme" id="market-context">
           <h2>Market Context</h2>
           <span className="k">Sourced, comparative context</span>
         </div>
         <hr />
-        <p className="note">Not yet available — Market Context has no approved content source beyond the existing sections yet.</p>
+        <p className="note">
+          Category framing only, from the SEC&apos;s own industry classification for this filer — not a peer,
+          index or sector-average comparison. No such comparison is being shown.
+        </p>
+        {result.marketContext.sic === null || result.marketContext.sicDescription === null ? (
+          <p className="note">Not yet available — no SEC industry classification was acquired for this analysis.</p>
+        ) : (
+          <p>
+            SEC classification (SIC {result.marketContext.sic}): {result.marketContext.sicDescription}
+          </p>
+        )}
 
         {/* ============ Evidence (M9 — theme anchor; regroups Section B's
             fact-set provenance display alongside Section J's register, per
