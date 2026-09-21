@@ -1,4 +1,6 @@
 import type { VerdictResult } from "@/lib/analyzer/verdict";
+import type { TrustStatus } from "@/lib/analyzer/types";
+import { evidenceStatusLabel } from "@/lib/analyzer/trustCopy";
 
 // M9-DESKTOP-SHELL-01 — Overview slot 2, per docs/design/m9-analyzer-design-
 // contract.md §3, §4.
@@ -29,7 +31,13 @@ import type { VerdictResult } from "@/lib/analyzer/verdict";
 // exercised render path — not a hypothetical — per the M9 outcome's
 // instruction not to build or test only the INCOMPLETE-always world.
 
-export function DominantVerdictSlot({ verdict }: { verdict: VerdictResult }) {
+export function DominantVerdictSlot({
+  verdict,
+  trustStatus,
+}: {
+  verdict: VerdictResult;
+  trustStatus: TrustStatus;
+}) {
   if (verdict.status === "INCOMPLETE") {
     return (
       <div className="verdictslot state incomplete">
@@ -42,21 +50,28 @@ export function DominantVerdictSlot({ verdict }: { verdict: VerdictResult }) {
   return (
     <div className="verdictslot completed">
       <span className="verdictword">{verdict.status}</span>
-      <ConfidenceIndicator />
+      <ConfidenceIndicator status={trustStatus} />
       <RationaleLine text={verdict.reason} />
     </div>
   );
 }
 
-// contract §3, §8 item 1 — structurally present, rendering nothing. No
-// approved source defines how M9's verdict-level confidence figure is
-// computed (m9-contract-reconciliation.md §4), and none may be invented
-// here. Present in the DOM (so its adjacency to a completed verdict is
-// real, testable structure, per §2.1 slot 2's "confidence only when the
-// analysis is not INCOMPLETE") but empty until a methodology decision
-// gives it a figure.
-function ConfidenceIndicator() {
-  return <span className="confidence" data-role="confidence-indicator" />;
+// contract §3, §8 item 1 — RESOLVED, 21 Sep 2026 (Calvin's ruling on #196,
+// 11:01:20Z, Option B; see design contract §8 item 1). No numeric
+// verdict-level confidence figure is or may be computed (that question stays
+// open per m9-contract-reconciliation.md §4); this instead reuses the
+// already-computed §9.6 `TrustStatus` — a qualitative statement of evidence
+// completeness, not a certainty claim — as the slot's content. Present only
+// on the completed path (§2.1 slot 2's settled render condition, unchanged),
+// via `evidenceStatusLabel`, whose copy bounds (no "confidence" / probability
+// / certainty / score / percentage; UNUSABLE read as a fact about the run,
+// never the company) are the ruling's stated risk for this outcome.
+function ConfidenceIndicator({ status }: { status: TrustStatus }) {
+  return (
+    <span className="confidence" data-role="confidence-indicator">
+      {evidenceStatusLabel(status)}
+    </span>
+  );
 }
 
 // The one-sentence rationale beside a completed verdict (contract §3,

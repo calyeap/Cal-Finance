@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { trustStatusLine, trustConsequenceLine } from "./trustCopy";
+import { trustStatusLine, trustConsequenceLine, evidenceStatusLabel } from "./trustCopy";
 
 // ---------------------------------------------------------------------------
 // The page-one trust line, derived rather than written.
@@ -52,5 +52,40 @@ describe("§9.6 — the consequence sentence follows the status, not the copy", 
     for (const status of ["CLEAN", "PARTIAL", "UNUSABLE"] as const) {
       expect(trustConsequenceLine(status)).not.toMatch(/\b(bad|avoid|overvalued|risky|poor)\b/i);
     }
+  });
+});
+
+// M9-CONFIDENCE-LABEL-01 (issue #201, Calvin's ruling on #196, 21 Sep 2026
+// 11:01:20Z) — the Overview slot-2 evidence-status label. Its copy bounds are
+// the ruling's stated risk for Option B: wording that reads like a
+// statistical confidence claim, or that lets UNUSABLE be read as a judgement
+// on the company rather than on the analysis.
+describe("evidenceStatusLabel — the slot-2 label, bounded by Calvin's ruling on #196", () => {
+  it.each(["CLEAN", "PARTIAL", "UNUSABLE"] as const)("returns a non-empty label for %s", (status) => {
+    expect(evidenceStatusLabel(status).length).toBeGreaterThan(0);
+  });
+
+  it("never uses confidence/probability/certainty/score language, for any status", () => {
+    for (const status of ["CLEAN", "PARTIAL", "UNUSABLE"] as const) {
+      expect(evidenceStatusLabel(status)).not.toMatch(/\b(confidence|probability|probabilities|certainty|certain|score)\b/i);
+    }
+  });
+
+  it("never renders a percentage, for any status", () => {
+    for (const status of ["CLEAN", "PARTIAL", "UNUSABLE"] as const) {
+      expect(evidenceStatusLabel(status)).not.toMatch(/\d+(\.\d+)?\s*%/);
+    }
+  });
+
+  it("states plainly that the label describes evidence, not certainty", () => {
+    for (const status of ["CLEAN", "PARTIAL", "UNUSABLE"] as const) {
+      expect(evidenceStatusLabel(status)).toMatch(/evidence/i);
+    }
+  });
+
+  it("never lets UNUSABLE read as a judgement about the company (§9.6)", () => {
+    const label = evidenceStatusLabel("UNUSABLE");
+    expect(label).not.toMatch(/\b(bad|avoid|overvalued|risky|poor)\b/i);
+    expect(label).toMatch(/this run/i);
   });
 });

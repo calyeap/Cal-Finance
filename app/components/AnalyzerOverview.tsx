@@ -174,7 +174,7 @@ export function AnalyzerOverview({
 
         {/* Slot 2 — the dominant verdict. */}
         <div className="ovslot" id="slot-2">
-          <DominantVerdictSlot verdict={verdict} />
+          <DominantVerdictSlot verdict={verdict} trustStatus={result.trust.status} />
         </div>
 
         {/* Slot 3 — current price and its chart. */}
