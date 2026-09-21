@@ -1,5 +1,13 @@
 # Document 3 — Technical Design Document (v1.2)
 
+> **HISTORICAL V1 CONTRACT — NOT CURRENT BUILD AUTHORITY.** This is a
+> historical V1 product contract. It is **not** current Stock Analyzer / V2
+> product authority. Current implementation authority must be resolved
+> through the Technical Specs Index and the current authorities it names —
+> start at [`docs/CURRENT-AUTHORITY.md`](../CURRENT-AUTHORITY.md). Do not
+> infer current semantics from this file where a later explicit authority
+> conflicts with it.
+
 **Supersedes:** `03-TDD-v1.1.md`.
 **Scope:** Product V1 — Portfolio + News Intelligence.
 **Conventions:** all money and quantity columns `NUMERIC(28,10)` — never floating point. All timestamps `TIMESTAMPTZ`, stored UTC. Milestone tags `[M1] [M2] [M3] [M4]`.
