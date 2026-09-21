@@ -46,3 +46,32 @@ export function trustConsequenceLine(status: TrustStatus): string {
       return "Every output this run produces can be used as it stands.";
   }
 }
+
+// ---------------------------------------------------------------------------
+// M9-CONFIDENCE-LABEL-01 (issue #201, Calvin's ruling on #196, 21 Sep 2026
+// 11:01:20Z, Option B) — the Overview slot-2 `ConfidenceIndicator` label.
+//
+// This is a SEPARATE mapping from the two functions above. Those render a
+// full state-slot sentence for the page-one trust block; this renders one
+// short label adjacent to a completed BUY/HOLD/SELL verdict, where the
+// component's name (`ConfidenceIndicator`) and its position beside a verdict
+// invite exactly the reading Calvin's ruling forbids: a numeric-flavoured
+// certainty claim. So the copy here is deliberately narrower than
+// `trustStatusLine`'s: it never uses "confidence", "probability",
+// "certainty", "score" or a percentage, it says in its own words that it
+// describes evidence completeness rather than certainty in the verdict, and
+// under UNUSABLE it says so as a statement about this run, never about the
+// company (§9.6).
+// ---------------------------------------------------------------------------
+
+/** The Overview slot-2 evidence-status label — a pure mapping, no computation. */
+export function evidenceStatusLabel(status: TrustStatus): string {
+  switch (status) {
+    case "CLEAN":
+      return "Evidence behind this analysis: complete.";
+    case "PARTIAL":
+      return "Evidence behind this analysis: partial.";
+    case "UNUSABLE":
+      return "Evidence behind this analysis: unusable — a statement about this run, not the company.";
+  }
+}

@@ -81,7 +81,7 @@ export default async function ReportPage({ params }: { params: Promise<{ runId: 
       <AnalyzerTopBar variant="report" />
       <div className="cb-steps">
         <div className="wrap" style={{ paddingBottom: 0 }}>
-          <DominantVerdictSlot verdict={verdict} />
+          <DominantVerdictSlot verdict={verdict} trustStatus={trust.status} />
           <form action={createDeepSnapshotAction} className="continue" style={{ marginTop: 14 }}>
             <input type="hidden" name="runId" value={runId} />
             <button className="act" type="submit">
