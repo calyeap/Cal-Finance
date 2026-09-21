@@ -1,5 +1,13 @@
 # Document 2 — Technical Requirements / Architecture Document (v1.2)
 
+> **HISTORICAL V1 CONTRACT — NOT CURRENT BUILD AUTHORITY.** This is a
+> historical V1 product contract. It is **not** current Stock Analyzer / V2
+> product authority. Current implementation authority must be resolved
+> through the Technical Specs Index and the current authorities it names —
+> start at [`docs/CURRENT-AUTHORITY.md`](../CURRENT-AUTHORITY.md). Do not
+> infer current semantics from this file where a later explicit authority
+> conflicts with it.
+
 **Supersedes:** `02-TRD-v1.1.md`.
 **Scope:** Product V1 — Portfolio + News Intelligence.
 **Design principle:** *the simplest architecture that one person, working primarily with AI assistance and unwilling to be a sysadmin, can operate reliably for five years — and extend into V2–V4 without a rewrite.*
