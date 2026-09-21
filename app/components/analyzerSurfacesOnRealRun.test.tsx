@@ -111,6 +111,11 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       capturedClose: "499.70",
       fixtureMockPrice: "510.12",
       expectedProfile: "MATURE_PROFITABLE_STABLE_FCF",
+      // The __capture.sic / __capture.sicDescription this capture carries
+      // (lib/analyzer/acquisition/captures/msft-companyfacts.json), matching
+      // §2's own recorded "Gate 0 | PASS (sector/industry: ...)" cell.
+      expectedSic: "7372",
+      expectedSicDescription: "Services-Prepackaged Software",
     },
     {
       ticker: "OKLO",
@@ -119,8 +124,19 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       capturedClose: "41.27",
       fixtureMockPrice: "14.50",
       expectedProfile: "PRE_REVENUE_UNPROFITABLE",
+      expectedSic: "4911",
+      expectedSicDescription: "Electric Services",
     },
-  ])("$ticker", ({ ticker, companyName, expectedCompanyName, capturedClose, fixtureMockPrice, expectedProfile }) => {
+  ])("$ticker", ({
+    ticker,
+    companyName,
+    expectedCompanyName,
+    capturedClose,
+    fixtureMockPrice,
+    expectedProfile,
+    expectedSic,
+    expectedSicDescription,
+  }) => {
     it("opens a real acquired run through the gated path — the recorded capture close, never the fixture's synthetic mock price", async () => {
       const { result, recommendedProfile } = await openRealRun(ticker, companyName);
 
@@ -219,6 +235,35 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
 
       const themeIds = Array.from(container.querySelectorAll("main > .sechead.theme")).map((el) => el.id);
       expect(themeIds).toEqual(THEME_ANCHOR_ORDER);
+    });
+
+    // CF-REALRUN-CURRENT-01 — the two M9 surfaces that changed since the
+    // pass docs/m9-real-company-validation-findings.md records (PR #200),
+    // observed on a real run for the first time.
+
+    it("Market Context renders the real SEC SIC classification (PR #200), never the not-yet-available state", async () => {
+      const { result, aiLayer } = await openRealRun(ticker, companyName);
+      expect(result.marketContext.sic).toBe(expectedSic);
+      expect(result.marketContext.sicDescription).toBe(expectedSicDescription);
+
+      const { container } = render(<AnalyzerReport result={result} aiLayer={aiLayer} />);
+      expect(container.textContent).toContain(
+        `SEC classification (SIC ${expectedSic}): ${expectedSicDescription}`
+      );
+      expect(container.textContent).not.toContain(
+        "Not yet available — no SEC industry classification was acquired for this analysis."
+      );
+    });
+
+    it("Business renders the disclosed capture empty state (M9-ITEM5-CONTENT-01 SCOPE item 3), never the filer's 10-K narrative — unreachable from an offline capture run by design, not fixed here", async () => {
+      const { result, aiLayer } = await openRealRun(ticker, companyName);
+      expect(result.business.narrative).toBeNull();
+
+      const { container } = render(<AnalyzerReport result={result} aiLayer={aiLayer} />);
+      expect(container.textContent).toContain(
+        "Not yet available — 10-K Item 1 excerpts are not part of the committed SEC capture — this run " +
+          "reads captured XBRL facts only, and the extraction rule requires a live EDGAR filing-document fetch."
+      );
     });
 
     it("renders without throwing when the profile is Cannot-judge (not human-confirmed) too — the other §6.3 path this run's real profile decision could have taken", async () => {
