@@ -18,6 +18,9 @@ summarises.
   `docs/frozen/` is currently approved) → Technical Specs Index.
 - **Current M9 UX contract** →
   [`docs/design/m9-analyzer-design-contract.md`](design/m9-analyzer-design-contract.md).
+- **Current acceptance state** (outcome → implementation proof →
+  real-company validation → Calvin acceptance, per acceptance-relevant
+  outcome) → [`docs/acceptance-matrix.md`](acceptance-matrix.md).
 - **Code / runtime truth** (what the code currently does, what's tested,
   what's merged) → this repository directly: `git log`, the working tree,
   tests, CI, GitHub — never memory or a prior report.
