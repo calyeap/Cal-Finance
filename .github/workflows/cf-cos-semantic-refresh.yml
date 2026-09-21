@@ -3,12 +3,19 @@ name: Cal Finance Chief of Staff semantic refresh
 # Thin projection bridge only.
 # Native GitHub activity is execution truth; Cal Finance Project Home owns semantic scope/authority.
 # Existing cc-auto-fire.yml already refreshes Chief of Staff after OWNER RECONCILED.
-# This workflow closes the transient-state gap: BUILD/REVIEW/PR/terminal events update the row immediately.
+# This workflow closes the transient-state gap: a meaningful terminal or
+# reconciliation receipt updates the row immediately.
+#
+# CF-OUTCOME-LOOP-LEAN-01: narrowed from firing on every BUILD FIRED / DONE
+# / ACCEPT / CORRECT / PR event to meaningful terminal/reconciliation
+# receipts only (issue #193's "semantic refresh fires too often" finding).
+# The `pull_request` trigger was dropped as redundant with this: a merge's
+# projection refresh already runs from OWNER's own `OWNER RECONCILED:`
+# receipt via cc-auto-fire.yml, and a bare PR open/close carries no
+# attention-relevant semantic change of its own.
 
 on:
   issues:
-    types: [opened, closed]
-  pull_request:
     types: [opened, closed]
   issue_comment:
     types: [created]
@@ -35,9 +42,6 @@ jobs:
           ISSUE_NUMBER: ${{ github.event.issue.number }}
           ISSUE_TITLE: ${{ github.event.issue.title }}
           ISSUE_URL: ${{ github.event.issue.html_url }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-          PR_TITLE: ${{ github.event.pull_request.title }}
-          PR_URL: ${{ github.event.pull_request.html_url }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           COMMENT_URL: ${{ github.event.comment.html_url }}
         run: |
@@ -53,19 +57,18 @@ jobs:
                 echo "detail=Cal Finance issue #${ISSUE_NUMBER} ${EVENT_ACTION}: ${ISSUE_TITLE}" >> "$GITHUB_OUTPUT"
               fi
               ;;
-            pull_request)
-              echo "recognized=true" >> "$GITHUB_OUTPUT"
-              echo "number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
-              echo "url=$PR_URL" >> "$GITHUB_OUTPUT"
-              echo "detail=Cal Finance pull request #${PR_NUMBER} ${EVENT_ACTION}: ${PR_TITLE}" >> "$GITHUB_OUTPUT"
-              ;;
             issue_comment)
+              # CF-OUTCOME-LOOP-LEAN-01: meaningful terminal/reconciliation
+              # receipts only. 'BUILD FIRED:'/'REVIEW FIRED:' are mid-cycle
+              # attempt-start receipts, not terminal outcomes, and 'CORRECT'
+              # is a bounded in-scope correction request, not a semantic
+              # state change — none of the three change NEED ME?/attention,
+              # so they no longer trigger a refresh.
               TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e '/[^[:space:]]/,$!d' -e 's/^[[:space:]]*//')
               FIRST_LINE=$(printf '%s\n' "$TRIMMED" | head -n 1 | sed -e 's/[[:space:]]*$//')
               case "$FIRST_LINE" in
-                'BUILD FIRED:'*|'REVIEW FIRED:'*|'DONE:'*|\
+                'DONE:'*|\
                 'ACCEPT'|'ACCEPT '*|'ACCEPT:'*|\
-                'CORRECT'|'CORRECT '*|'CORRECT:'*|\
                 'BLOCKED:'*|'STOP:'*|'RECONCILIATION REQUIRED:'*|'CALVIN REQUIRED:'*)
                   echo "recognized=true" >> "$GITHUB_OUTPUT"
                   echo "number=$ISSUE_NUMBER" >> "$GITHUB_OUTPUT"
@@ -82,20 +85,23 @@ jobs:
       - name: Refresh only the Cal Finance Chief of Staff row
         if: steps.event.outputs.recognized == 'true'
         env:
-          WATCH_FIRE_URL_PRIMARY: ${{ secrets.WATCH_FIRE_URL }}
-          WATCH_FIRE_TOKEN_PRIMARY: ${{ secrets.WATCH_FIRE_TOKEN }}
-          CF_FIRE_URL: ${{ secrets.BUILD_FIRE_URL }}
-          CF_FIRE_TOKEN: ${{ secrets.BUILD_FIRE_TOKEN }}
+          WATCH_FIRE_URL: ${{ secrets.WATCH_FIRE_URL }}
+          WATCH_FIRE_TOKEN: ${{ secrets.WATCH_FIRE_TOKEN }}
           TARGET_NUMBER: ${{ steps.event.outputs.number }}
           TARGET_URL: ${{ steps.event.outputs.url }}
           EVENT_DETAIL: ${{ steps.event.outputs.detail }}
         run: |
           set -euo pipefail
 
-          FIRE_URL="${WATCH_FIRE_URL_PRIMARY:-${CF_FIRE_URL:-}}"
-          FIRE_TOKEN="${WATCH_FIRE_TOKEN_PRIMARY:-${CF_FIRE_TOKEN:-}}"
+          # CF-OUTCOME-LOOP-LEAN-01: this is a WATCH/projection refresh
+          # only. It must never fall back to BUILD_FIRE_URL — that routed a
+          # projection action to the BUILD routine, one of the observed
+          # outcome-loop holes. If WATCH's own secrets are absent, fail
+          # cleanly instead.
+          FIRE_URL="${WATCH_FIRE_URL:-}"
+          FIRE_TOKEN="${WATCH_FIRE_TOKEN:-}"
           if [ -z "$FIRE_URL" ] || [ -z "$FIRE_TOKEN" ]; then
-            echo "::error::No projection-capable fire URL/token is available."
+            echo "::error::WATCH_FIRE_URL or WATCH_FIRE_TOKEN secret is missing; not falling back to another routine's fire endpoint."
             exit 1
           fi
 

@@ -98,6 +98,19 @@ jobs:
       - name: Run OWNER liveness guard control-flow tests
         run: bash .github/scripts/owner-liveness-guard.test.sh
 
+      # CF-OUTCOME-LOOP-LEAN-01: deterministic, network-free classification
+      # checks for the fire-review DONE:/PR-parsing contract, the fire-build
+      # duplicate-suppression contract, and the semantic-refresh workflow's
+      # narrowed trigger/marker set.
+      - name: Run terminal routing unit tests
+        run: bash .github/scripts/terminal-routing-lib.test.sh
+
+      - name: Run BUILD duplicate suppression unit tests
+        run: bash .github/scripts/build-duplicate-lib.test.sh
+
+      - name: Run Chief of Staff semantic refresh structural tests
+        run: bash .github/scripts/cf-cos-semantic-refresh.test.sh
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

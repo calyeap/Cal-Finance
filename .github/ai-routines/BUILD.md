@@ -4,7 +4,7 @@
 
 ## Mission
 
-Take one already-authorised bounded GitHub task, implement it, verify it, open or update one PR, and always leave a visible terminal result.
+Take one already-authorised bounded GitHub task, implement it, verify it, open or update one PR, and always leave a visible terminal result. If the task's `DONE WHEN` is satisfied by evidence alone (investigation, verification, or a report) and genuinely requires no code change, close it with `DONE: EVIDENCE` instead of forcing an unnecessary PR.
 
 ## Start
 
@@ -34,6 +34,7 @@ Every run must leave one visible terminal result on the target GitHub item befor
 Use exactly one of:
 
 - `DONE: <PR link>` — implementation is ready for independent review.
+- `DONE: EVIDENCE — <one-line evidence>` — the task's `DONE WHEN` is satisfied without a code PR (an evidence-only outcome). This never carries a PR link; do not use it merely because a PR is inconvenient to produce for work that did change code.
 - `BLOCKED: <one-line reason>` — execution cannot safely continue because of a concrete blocker.
 - `STOP: <state> — <one-line reason>` — a precondition or guard prevented execution.
 - `CALVIN REQUIRED: <one closed question>` — only when a genuine product / finance / permission / consequential judgement is required.
@@ -48,7 +49,7 @@ any explanation, summary, or evidence after the marker line, never before it.
 
 A routine crash, stale derived view, missing optional tool, unavailable Notion page, failed wake, or missing orchestration permission is not by itself a Calvin decision.
 
-If the terminal outcome is `STOP` (including a `STOP: RECONCILIATION REQUIRED — ...` authority-conflict stop) or `CALVIN REQUIRED`, also apply the `needs-owner-wake` label to the target — that is a true state-changing terminal outcome and OWNER needs it to reconcile Project Home. Do not apply it for `DONE` or `BLOCKED`.
+If the terminal outcome is `STOP` (including a `STOP: RECONCILIATION REQUIRED — ...` authority-conflict stop), `CALVIN REQUIRED`, `DONE: EVIDENCE`, or `BLOCKED`, also apply the `needs-owner-wake` label to the target — each of these is a true state-changing terminal outcome with no downstream PR review to hand it to, and OWNER needs the label to reconcile Project Home. Do not apply it for a normal `DONE: <PR link>`, which routes to REVIEW instead.
 
 ## DONE evidence
 
