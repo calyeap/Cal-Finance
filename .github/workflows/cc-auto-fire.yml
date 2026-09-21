@@ -381,10 +381,18 @@ jobs:
   # that script and OWNER.md's "Liveness correlation" rule for the full
   # contract; the label-routing comment above this job is otherwise
   # unchanged.
+  # CF-OWNER-SINGLE-WRITER-01: this job shares the `cf-owner-single-writer`
+  # concurrency group with owner-on-merge.yml's fire-owner-on-merge job
+  # verbatim — see that workflow's header comment for the full rationale
+  # and owner-single-writer-lib.test.sh / owner-single-writer-config.test.sh
+  # for the regression coverage.
   fire-owner-on-terminal:
     if: github.event.label.name == 'needs-owner-wake'
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    concurrency:
+      group: cf-owner-single-writer
+      cancel-in-progress: false
     steps:
       # owner-liveness-guard.sh needs to exist on disk. Pinned explicitly to
       # the default branch: this job is reached via an `issues`/
@@ -400,6 +408,18 @@ jobs:
         run: |
           echo "number=${{ github.event.issue.number || github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
           echo "attempt_id=TERMINAL-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+
+      # CF-OWNER-SINGLE-WRITER-01: advisory only — see owner-on-merge.yml's
+      # header comment and owner-single-writer-guard.sh. Never blocks; the
+      # cf-owner-single-writer concurrency group on this job is what
+      # actually prevents overlapping fires.
+      - name: Record OWNER admission context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+        run: bash .github/scripts/owner-single-writer-guard.sh
 
       - name: Fire CALBOARD-OWNER API trigger
         id: fire

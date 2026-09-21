@@ -43,6 +43,32 @@ completion receipt, never directly from the merge event.
 All three wake sources run the same process below: reconcile first, then
 decide.
 
+## Single-writer serialization
+
+CF-OWNER-SINGLE-WRITER-01 closes a demonstrated race (issue #197): two or
+more CALBOARD-OWNER attempts — fired from the merge wake
+(`owner-on-merge.yml`) and the terminal wake (`cc-auto-fire.yml`'s
+`fire-owner-on-terminal` job), on different PRs/issues — overlapped and
+wrote the same Project Home concurrently. Both fire paths now run inside
+the same `cf-owner-single-writer` GitHub Actions concurrency group, so at
+most one of those jobs is ever in progress at once; a second wake queues
+behind the first, and a third wake arriving while the second is still
+queued replaces it with the newest (GitHub Actions' own concurrency-group
+behaviour) rather than piling up. A later wake is never permanently
+dropped this way — whichever wake is queued when the current holder
+finishes always fires next, with fresh evidence — and a stale wake can
+never fire (and therefore never commit) after a newer one already has,
+since fires are strictly ordered by that queue. `owner-single-writer-guard.sh`
+runs just before each fire and posts an advisory `OWNER ADMISSION:` note
+when it observes another attempt is still unresolved; it never blocks —
+the concurrency group is what actually enforces this.
+
+This is enforced entirely at the workflow layer. OWNER's own process below
+is unchanged and needs no awareness of it: by the time an OWNER session is
+actually running, it is always the sole active writer, and its normal
+"reconcile from fresh evidence" step already covers whatever a coalesced,
+queued-away wake was about.
+
 ## Process
 
 1. **Reconcile.** Re-read only the minimum current native/project evidence
@@ -186,7 +212,11 @@ reconciliation receipt.
   mechanics in `.github/scripts/owner-liveness-guard.sh` live entirely
   outside OWNER itself; OWNER's only obligation toward them is the terminal
   tag in the Liveness correlation rule above — never build any of that
-  machinery into this adapter.
+  machinery into this adapter. The same applies to the single-writer
+  serialization above (CF-OWNER-SINGLE-WRITER-01): it is a GitHub Actions
+  concurrency group plus an advisory guard script on the two fire paths,
+  not a new orchestrator, queue service, database, or lock server — OWNER
+  itself carries no new obligation from it beyond what's described there.
 - No broad backlog search beyond the current authorised Cal Finance runway.
 - Never use Calvin as a message courier.
 - Never end silently.

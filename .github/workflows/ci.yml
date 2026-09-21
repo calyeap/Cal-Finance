@@ -98,6 +98,15 @@ jobs:
       - name: Run OWNER liveness guard control-flow tests
         run: bash .github/scripts/owner-liveness-guard.test.sh
 
+      # CF-OWNER-SINGLE-WRITER-01: deterministic, network-free regression
+      # coverage for the repo-wide OWNER admission/holder logic and for the
+      # workflow-level concurrency config both OWNER fire paths depend on.
+      - name: Run OWNER single-writer admission unit tests
+        run: bash .github/scripts/owner-single-writer-lib.test.sh
+
+      - name: Run OWNER single-writer concurrency config tests
+        run: bash .github/scripts/owner-single-writer-config.test.sh
+
       # CF-OUTCOME-LOOP-LEAN-01: deterministic, network-free classification
       # checks for the fire-review DONE:/PR-parsing contract, the fire-build
       # duplicate-suppression contract, and the semantic-refresh workflow's
