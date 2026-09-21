@@ -865,6 +865,38 @@ export interface TrustResult {
 }
 
 // ---------------------------------------------------------------------------
+// Full Analysis's Business and Market Context sections. M9-ITEM5-CONTENT-01,
+// implementing Calvin's 21 Sep 2026 10:39:55Z ruling (issue #195, Option B).
+// ---------------------------------------------------------------------------
+
+/** The filer's own 10-K Item 1 excerpt, under the fixed, versioned rule in
+ * lib/analyzer/acquisition/item1Extraction.ts. */
+export interface BusinessSectionNarrative {
+  text: string;
+  /** ITEM1_EXTRACTION_RULE_VERSION at acquisition time — travels with the excerpt. */
+  ruleVersion: string;
+  filingForm: string;
+  filingDate: string;
+  accessionNumber: string;
+}
+
+/** `narrative` and `unavailableReason` are exclusive — content is never
+ * present without a reason for its absence being equally available to say
+ * why not, and the reason is never invented at render time. */
+export interface BusinessSectionContent {
+  narrative: BusinessSectionNarrative | null;
+  unavailableReason: string | null;
+}
+
+/** The already-acquired SEC SIC classification, rendered as category framing
+ * only (§2.2's "scoped down to what the existing facts support" rule) — never
+ * a peer, index or sector-average comparison. */
+export interface MarketContextSectionContent {
+  sic: string | null;
+  sicDescription: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // §10.0.1 — the Analysis Result itself
 // ---------------------------------------------------------------------------
 
@@ -900,6 +932,11 @@ export interface AnalysisResult {
   // (§8.5.4); null beforehand.
   challenger: ChallengerResult | null;
   interpretation: InterpretationResult;
+  // M9-ITEM5-CONTENT-01 — Full Analysis's Business and Market Context
+  // sections. Always present as a real, reasoned value: content or a stated
+  // reason it is absent, never a silent gap.
+  business: BusinessSectionContent;
+  marketContext: MarketContextSectionContent;
   policy: {
     constants: PolicyConstants;
     undefinedConstants: UndefinedPolicyConstants;

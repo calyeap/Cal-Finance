@@ -115,6 +115,40 @@ export class SecClient {
    * report built on a fact set that was never acquired.
    */
   async getJson<T = unknown>(url: string): Promise<T> {
+    const response = await this.request(url, "application/json");
+
+    try {
+      return (await response.json()) as T;
+    } catch (err) {
+      throw new SecAccessError(
+        url,
+        response.status,
+        `response was not JSON: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  /**
+   * One GET, rate-limited, failing closed, returning raw text rather than
+   * parsed JSON — the filing-document surface (M9-ITEM5-CONTENT-01) serves
+   * HTML, not JSON, and the extraction rule reads it as text.
+   */
+  async getText(url: string): Promise<string> {
+    const response = await this.request(url, "text/html,text/plain;q=0.9,*/*;q=0.8");
+
+    try {
+      return await response.text();
+    } catch (err) {
+      throw new SecAccessError(
+        url,
+        response.status,
+        `response body could not be read: ${err instanceof Error ? err.message : String(err)}`
+      );
+    }
+  }
+
+  /** The shared rate-limited, fail-closed request the JSON and text surfaces both build on. */
+  private async request(url: string, accept: string): Promise<Response> {
     await this.waitForSlot();
 
     const controller = new AbortController();
@@ -128,7 +162,7 @@ export class SecClient {
           // EDGAR serves gzip; asking for it is part of being a well-behaved
           // client under the same policy that requires the User-Agent.
           "Accept-Encoding": "gzip, deflate",
-          Accept: "application/json",
+          Accept: accept,
         },
         signal: controller.signal,
       });
@@ -145,15 +179,7 @@ export class SecClient {
       throw new SecAccessError(url, response.status, response.statusText || "non-OK status");
     }
 
-    try {
-      return (await response.json()) as T;
-    } catch (err) {
-      throw new SecAccessError(
-        url,
-        response.status,
-        `response was not JSON: ${err instanceof Error ? err.message : String(err)}`
-      );
-    }
+    return response;
   }
 
   /** The ticker-to-CIK directory. */
@@ -173,6 +199,17 @@ export class SecClient {
     return this.getJson<SubmissionsDocument>(
       `https://data.sec.gov/submissions/CIK${cik}.json`
     );
+  }
+
+  /**
+   * One filing's primary document, raw — the FILING DOCUMENT surface
+   * (M9-ITEM5-CONTENT-01), never the XBRL `companyfacts` endpoint. The
+   * caller names the accession number and document filename, both read off
+   * `submissions()`; this method adds no lookup of its own, just the same
+   * rate-limit and fail-closed discipline every other request here carries.
+   */
+  async filingDocument(cik: string, accessionNumber: string, primaryDocument: string): Promise<string> {
+    return this.getText(filingDocumentUrl(cik, accessionNumber, primaryDocument));
   }
 
   private waitForSlot(): Promise<void> {
@@ -271,6 +308,18 @@ export function cikForTicker(
     }
   }
   return null;
+}
+
+/**
+ * The EDGAR Archives URL for one filing's primary document — the rendered
+ * filing itself, not a JSON API. `cik` accepts either form (padded or not);
+ * the Archives path wants it WITHOUT leading zeros. `accessionNumber` accepts
+ * either form (with or without dashes); the Archives path wants it without.
+ */
+export function filingDocumentUrl(cik: string, accessionNumber: string, primaryDocument: string): string {
+  const cikNoLeadingZeros = String(Number(cik));
+  const accessionNoDashes = accessionNumber.replace(/-/g, "");
+  return `https://www.sec.gov/Archives/edgar/data/${cikNoLeadingZeros}/${accessionNoDashes}/${primaryDocument}`;
 }
 
 /**

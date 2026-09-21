@@ -5,6 +5,7 @@ import {
   SecRateLimitError,
   SecUserAgentMissingError,
   cikForTicker,
+  filingDocumentUrl,
 } from "./secClient";
 
 // ---------------------------------------------------------------------------
@@ -157,6 +158,45 @@ describe("SecClient — rate limiting", () => {
 
     expect(at[1] - at[0]).toBeGreaterThanOrEqual(35);
     expect(at[2] - at[1]).toBeGreaterThanOrEqual(35);
+  });
+});
+
+describe("filingDocumentUrl — the filing-document surface, not the XBRL API", () => {
+  it("builds the Archives URL, stripping the CIK's leading zeros and the accession number's dashes", () => {
+    expect(filingDocumentUrl("0000789019", "0000320193-26-000106", "msft-10k.htm")).toBe(
+      "https://www.sec.gov/Archives/edgar/data/789019/000032019326000106/msft-10k.htm"
+    );
+  });
+});
+
+describe("SecClient.filingDocument — one filing document's raw text", () => {
+  it("fetches the Archives URL and returns the response as text, not parsed JSON", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("<html>Item 1. Business</html>", { status: 200 }));
+    const client = new SecClient({
+      userAgent: "Calboard/1.0 (someone@example.com)",
+      fetchImpl: fetchMock,
+      minIntervalMs: 0,
+    });
+
+    const text = await client.filingDocument("0000789019", "0000320193-26-000106", "msft-10k.htm");
+
+    expect(text).toBe("<html>Item 1. Business</html>");
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://www.sec.gov/Archives/edgar/data/789019/000032019326000106/msft-10k.htm"
+    );
+  });
+
+  it("fails closed on a rate-limited response, same as getJson", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response("blocked", { status: 429 }));
+    const client = new SecClient({
+      userAgent: "Calboard/1.0 (someone@example.com)",
+      fetchImpl: fetchMock,
+      minIntervalMs: 0,
+    });
+
+    await expect(client.filingDocument("789019", "0000320193-26-000106", "msft-10k.htm")).rejects.toBeInstanceOf(
+      SecRateLimitError
+    );
   });
 });
 

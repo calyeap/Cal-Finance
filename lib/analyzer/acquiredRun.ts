@@ -9,6 +9,7 @@ import {
   hasInsurancePremiumOrReserveLineItems,
 } from "./acquisition/gate0Inputs";
 import type { CompanyFixture } from "./assemble";
+import type { BusinessSectionContent, MarketContextSectionContent } from "./types";
 
 // ---------------------------------------------------------------------------
 // One run's inputs, assembled from real filings.
@@ -115,7 +116,18 @@ export async function buildAcquiredRun(
     acquiredAt: options.acquiredAt,
   });
 
-  const { fixture, absentInputs } = buildCompanyInputs(
+  // M9-ITEM5-CONTENT-01. Neither goes through buildCompanyInputs' numeric
+  // fixture shape — `business` is the already-fetched Item 1 narrative
+  // (or its reason for absence), and `marketContext` restates the same
+  // sic/sicDescription Gate 0 already reads off `acquired`, this time for
+  // the report's Market Context section rather than a classification test.
+  const business: BusinessSectionContent = acquired.business;
+  const marketContext: MarketContextSectionContent = {
+    sic: acquired.sic,
+    sicDescription: acquired.sicDescription,
+  };
+
+  const { fixture: fixtureWithoutSourceContent, absentInputs } = buildCompanyInputs(
     acquired.acquisition,
     acquired.companyFacts,
     {
@@ -163,6 +175,8 @@ export async function buildAcquiredRun(
         "closes, not intraday extremes."
     );
   }
+
+  const fixture: CompanyFixture = { ...fixtureWithoutSourceContent, business, marketContext };
 
   return { fixture, acquired, absentInputs, disclosures };
 }
