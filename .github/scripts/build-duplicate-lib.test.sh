@@ -16,6 +16,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=build-duplicate-lib.sh
 source "${SCRIPT_DIR}/build-duplicate-lib.sh"
 
+WORKFLOW="${SCRIPT_DIR}/../workflows/cc-auto-fire.yml"
+
 FAILURES=0
 
 assert_eq() {
@@ -24,6 +26,16 @@ assert_eq() {
     echo "ok - $desc"
   else
     echo "not ok - $desc (expected [$expected], got [$actual])"
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+
+assert_contains() {
+  local desc="$1" pattern="$2"
+  if grep -qF -- "$pattern" "$WORKFLOW"; then
+    echo "ok - $desc"
+  else
+    echo "not ok - $desc (missing [$pattern])"
     FAILURES=$((FAILURES + 1))
   fi
 }
@@ -94,6 +106,22 @@ unsorted=$(jq -n '
 ')
 status=$(build_duplicate_status "$unsorted")
 assert_eq "classification is order-independent (sorts by created_at internally)" "clear" "$status"
+
+# --- structural regression anchor for TEST / PROOF REQUIREMENT 3: the
+# classifier above is only deterministic once an earlier "BUILD FIRED:"
+# receipt has actually landed, which needs the fire-build job itself
+# serialized per target so two near-simultaneous wakes can't both read
+# "no open attempt" before either one posts its receipt. -----------------
+
+if [ ! -f "$WORKFLOW" ]; then
+  echo "not ok - $WORKFLOW exists"
+  FAILURES=$((FAILURES + 1))
+else
+  assert_contains "fire-build has a per-target concurrency group" \
+    'group: fire-build-${{ github.event.issue.number || github.event.pull_request.number }}'
+  assert_contains "fire-build concurrency queues rather than cancels a waiting run" \
+    "cancel-in-progress: false"
+fi
 
 echo
 if [ "$FAILURES" -eq 0 ]; then
