@@ -2,6 +2,8 @@
 
 **Status: both acceptance runs open, compute, and render on both M9 surfaces. No presentation defect was found in either route. Both runs render `INCOMPLETE` in slot 2 — the verbatim, observed output of today's unchanged `verdict.ts` (`:56`, `:65`, `:72`, `:78`), reported here as the observed result of a nonconforming implementation path awaiting its own outcome, not as a ruled end state for this pass.**
 
+**Update — CF-S44-RECORD-01, 2026-09-21.** Calvin's §4.4 ruling on issue #188 (`CALVIN DECISION`, 2026-09-21T08:19:14Z) has been recorded for MSFT through the existing `recordJudgment` product path and re-run against this run. §1 and §2 below now describe that recorded state; the "no judgment recorded" observation that follows describes the run's original, pre-ruling state and OKLO's continuing state — OKLO has zero tagged candidates, so no selection was ever possible for it and nothing about it changed. MSFT's verdict is still `INCOMPLETE`, for the separate §10.6.2 reason §2 now records.
+
 Satisfies the condition #118 item 10 sets. Every M9 surface claim shipped
 before this (items 3, 4, 6, 7, 8, 9) rested on `MSFT_FIXTURE` /
 `OKLO_FIXTURE`, a synthetic reconstruction of the frozen design mocks
@@ -20,7 +22,14 @@ and gate-redirect claims are tests in
 per-ticker figures in §§2–3 (Gate 0/1 results, leverage/trust detail,
 `fairValueRange.kind`, the qualifying flags, and every OKLO pre-revenue
 figure) are recorded observation from the runs, per SCOPE item 3 — true,
-but not separately pinned by an assertion in either test file.
+but not separately pinned by an assertion in either test file, **except**
+MSFT's ruled figures in §2: the recorded selection, enterprise value,
+leverage `PASS` and ratio, trust `PARTIAL`, `fairValueRange.kind`, the
+guard against the all-candidates sum, the twelve-slot and slot-2 render
+checks, and OKLO's unchanged states, are each pinned by
+`lib/analyzer/nonOperatingJudgmentRecordedOnRealRun.test.ts` and
+`app/components/nonOperatingJudgmentRecordedOnRealRun.test.tsx`
+(CF-S44-RECORD-01).
 
 ## 1. The pipeline actually run
 
@@ -33,11 +42,26 @@ regardless of what credentials happen to be set in the environment running
 the suite — HARD BOUNDS forbids any model/AI call here).
 
 No §4.4 non-operating-investments judgment (`recordJudgment`) was recorded
-for either run. The issue's own SCOPE 1 pipeline does not name that step,
-and answering it would mean this BUILD run inventing an investment
-classification for MSFT's or OKLO's real balance-sheet securities — an
-analytical judgment this run has no basis to make and HARD BOUNDS forbids
-inventing. Its absence is itself the largest single finding below.
+for either run at the time this pass was originally written. The issue's own
+SCOPE 1 pipeline did not name that step, and answering it then would have
+meant this BUILD run inventing an investment classification for MSFT's or
+OKLO's real balance-sheet securities — an analytical judgment that run had
+no basis to make.
+
+**CF-S44-RECORD-01, 2026-09-21 — MSFT only.** Calvin has since ruled the
+classification on issue #188 (`CALVIN DECISION`, 2026-09-21T08:19:14Z): the
+FY2026 `us-gaap:LongTermInvestments` aggregate ($36.348B) alone is MSFT's
+non-operating investment balance; the narrower `EquityMethodInvestments` and
+`EquitySecuritiesWithoutReadilyDeterminableFairValueAmount` tags are
+components of it, not additional amounts, per the primary-source 10-K
+addendum on #188. That ruling is now recorded for MSFT's real run —
+`recordJudgment(runId, "NON-OPERATING INVESTMENTS", "us-gaap:LongTermInvestments", ...)`
+— through the same `selectionToNonOperatingInvestments` → `gate.ts` seam the
+pipeline above already used for every other input. **OKLO is unchanged**:
+it has zero tagged non-operating-investment candidates, so no selection was
+ever possible for it, ruled or otherwise, and its absence was never this
+outcome's to fix (an independent missing `treasury-method-dilution` tag
+blocks its EV regardless — §4 item 1 below now reflects both facts).
 
 ## 2. MSFT
 
@@ -48,30 +72,31 @@ inventing. Its absence is itself the largest single finding below.
 | Recommended / confirmed profile | `MATURE_PROFITABLE_STABLE_FCF`, same enum `MSFT_FIXTURE` uses — but here it is Gate 0's own classification of the real fact set, not a value carried from the fixture. |
 | Gate 0 | `PASS` (sector/industry: Services-Prepackaged Software). |
 | Gate 1 | 13 filed years — no suppressing state. |
-| Leverage | `LEVERAGE UNSUPPORTED IN v1` — `netDebtRatio` is `null` because enterprise value is `INCOMPLETE` (§4.4's judgment, §1 above). |
-| Trust | `UNUSABLE`, `determinedBy` naming `LEVERAGE UNSUPPORTED IN v1`. |
-| Fair-value range | `suppressed` (`state: "LEVERAGE UNSUPPORTED IN v1"`) — §9.3's rule removes the range under any suppressing state that names it, ahead of computing one. |
-| Verdict (slot 2 / `DominantVerdictSlot`) | `INCOMPLETE` — *"Decision-critical analysis is incomplete — LEVERAGE UNSUPPORTED IN v1 — inputs missing — the ratio could not be computed, so the precondition fails closed."* Rendered verbatim as the cause line; no `.confidence` element renders (§2.1 slot 2: confidence only when the analysis is not `INCOMPLETE`). |
-| Qualifying flag | `MARGIN AT HISTORICAL HIGH` (the real operating-margin history). |
+| Leverage | **`PASS`** — `netDebtRatio` ≈ **0.808%**, below `POLICY.leverageThreshold`'s 10%. Was `LEVERAGE UNSUPPORTED IN v1` before the ruling, because enterprise value was `INCOMPLETE` on §4.4's unanswered judgment (§1 above). |
+| Trust | **`PARTIAL`** (was `UNUSABLE`). `determinedBy`: the `MARGIN AT HISTORICAL HIGH` qualifying flag, and 14 diagnostics still `INCOMPLETE` on missing REQUIRED inputs — RONIC, reinvestment, the FCF definitions and P/E among them, and the ±1% rate-sensitivity pair, independently of §4.4 and untouched by this outcome. |
+| Fair-value range | **`range`** (was `suppressed`) — bear **$265.00**, bull **$650.00**, unsuppressed now that leverage passes and no suppressing state names the range. |
+| Verdict (slot 2 / `DominantVerdictSlot`) | Still **`INCOMPLETE`** — but for a different, separate reason now that trust is no longer `UNUSABLE` and the range is no longer `suppressed`: *"Decision-critical analysis is incomplete — a fair-value range alone cannot determine BUY / HOLD / SELL. Synthesizing a verdict also requires the required-versus-achieved growth comparator (spec §10.6.2), and that fact has not been acquired yet (spec §10.6.5, milestone M8). Recovery: this verdict becomes available once M8 delivers the comparator fact."* Rendered verbatim as the cause line; no `.confidence` element renders (§2.1 slot 2: confidence only when the analysis is not `INCOMPLETE`). This is `verdict.ts`'s own unconditional-`INCOMPLETE` behaviour (byte-unchanged; §5), not a defect this outcome may fix. |
+| Qualifying flag | `MARGIN AT HISTORICAL HIGH` (the real operating-margin history) — unaffected by the ruling. |
 
 **Overview — all twelve slots present, none absent.** Slot 1: real company
 name, ticker, as-of date. Slot 2: the `INCOMPLETE` presentation above. Slot
 3: the price, with *"No price history is in this analysis' fact set"* — the
 offline capture (`prices.json`) carries one recorded close per ticker, never
 a series, so there is nothing to chart; not a defect. Slot 4: `ValuationStrip`
-shows Bear `—` / Bull `—` (the range is suppressed) beside Base `$510`
-(`scenarioOutputs.values.base` — computed from the *analyst's* scenario
-drivers, which for MSFT are still the validation-set numbers per
+now shows Bear **$265** / Bull **$650** (the range computes) beside Base
+`$510` (`scenarioOutputs.values.base` — computed from the *analyst's*
+scenario drivers, which for MSFT are still the validation-set numbers per
 `analystInputs.ts`'s own disclosure, not acquired; this is a different,
-always-computed diagnostic from the fair-value range itself, so it is
-unaffected by the leverage suppression), then the `LEVERAGE UNSUPPORTED IN
-v1` state for the range itself. Slots 5 and 11: the pre-existing "Not yet
-available" structural frames (issue #160 SCOPE item 7 / #171), unchanged.
+always-computed diagnostic from the fair-value range itself, and was never
+affected by the leverage suppression). Slots 5 and 11: the pre-existing "Not
+yet available" structural frames (issue #160 SCOPE item 7 / #171), unchanged.
 Slots 6, 7, 9, 10: "the interpretation call has not run for this analysis"
-plus the AI layer's `NOT CONFIGURED` note. Slot 8 (price-implied restatement):
-`steadyStateEv` and `pvgoShareOfEv` are both suppressed, so the slot shows
-the `LEVERAGE UNSUPPORTED IN v1` state — never a numeral the Analysis Result
-does not carry. Slot 12: the link to Full Analysis.
+plus the AI layer's `NOT CONFIGURED` note. Slot 8 (price-implied
+restatement): **`steadyStateEv` and `pvgoShareOfEv` are no longer
+suppressed** — steady-state EV ≈ **$1.10T**, PVGO share of EV ≈ **70.3%** —
+now rendering the figures the Analysis Result actually carries, where
+before the ruling both showed the `LEVERAGE UNSUPPORTED IN v1` state. Slot
+12: the link to Full Analysis.
 
 **Full Analysis — Sections A–J intact, six themed anchors present**
 (`business`, `financials`, `valuation`, `risks-thesis`, `market-context`,
@@ -131,16 +156,16 @@ above.
 
 ## 4. Named gaps — recorded, not fixed here
 
-1. **No §4.4 non-operating-investments judgment was recorded for either
-   run.** This is the dominant cause of both runs' suppression: enterprise
-   value is `INCOMPLETE`, leverage fails closed, trust is `UNUSABLE`, and
-   the fair-value range is suppressed under that one cause on both tickers
-   — not evidence about either company's actual leverage, and not a defect
-   in either M9 route. A future pass that records an answer (through the
-   same `recordJudgment` seam the facts screen already uses) would let the
-   range compute end-to-end and is the natural next real-data step, but
-   recording one here would be this outcome inventing an analyst judgment,
-   which HARD BOUNDS forbids.
+1. **CLOSED for MSFT, unchanged for OKLO.** No §4.4 non-operating-investments
+   judgment was recorded for either run when this finding was first written;
+   that was the dominant cause of both runs' suppression. **CF-S44-RECORD-01
+   (2026-09-21) records Calvin's ruling (#188) for MSFT** — §2 above — and
+   enterprise value, leverage, trust and the fair-value range all change as
+   a result. **OKLO is unaffected**: it has zero tagged non-operating-
+   investment candidates (§3), so no selection was ever possible for it,
+   ruled or otherwise, and an independent missing `treasury-method-dilution`
+   tag blocks its EV regardless — not a defect in either M9 route, and not
+   this outcome's to fix.
 2. **Neither run has price history.** The offline capture (`prices.json`)
    carries one recorded close per ticker, not a series; slot 3 renders *"No
    price history is in this analysis' fact set"* on both. Not a defect —

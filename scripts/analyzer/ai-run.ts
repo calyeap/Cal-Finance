@@ -14,6 +14,7 @@ import { analystCallIfConfigured } from "../../lib/analyzer/ai/anthropicCall";
 import type { AnalystCall } from "../../lib/analyzer/ai/analystCall";
 import { buildSlotCatalogue } from "../../lib/analyzer/ai/slots";
 import type { AnalysisResult } from "../../lib/analyzer/types";
+import { resolveNonOperatingSelection } from "./resolveNonOperatingSelection";
 
 // ---------------------------------------------------------------------------
 // One real run, end to end, through the M7 flow — and then a report of what
@@ -105,14 +106,14 @@ async function main(): Promise<void> {
   // It is a FLAG here rather than a default for the same reason. Passing
   // --nonoperating records a judgment; the value printed below says which one
   // was recorded, so a run's output can never be read as though the analyzer
-  // had decided this itself.
+  // had decided this itself. The value is "none", or one of this run's own
+  // candidate tags (or several, " + "-joined) — never every candidate
+  // regardless of what was asked for; an unrecognised tag fails loudly
+  // rather than silently falling back to joining everything.
   const nonOperating = process.argv.find((a) => a.startsWith("--nonoperating="))?.split("=")[1];
   if (nonOperating !== undefined) {
     const candidates = gateState.acquired.acquired.acquisition.candidateNonOperatingInvestments;
-    const selection =
-      nonOperating === "none"
-        ? "None of these are non-operating"
-        : candidates.map((c) => c.tag).join(" + ");
+    const selection = resolveNonOperatingSelection(nonOperating, candidates);
     await recordJudgment(runId, "NON-OPERATING INVESTMENTS", selection, "Recorded for a verification run.");
     console.log(`§4.4 judgment: NON-OPERATING INVESTMENTS = ${selection}`);
   } else {
