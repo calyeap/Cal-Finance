@@ -4,6 +4,15 @@
 
 **Update — CF-S44-RECORD-01, 2026-09-21.** Calvin's §4.4 ruling on issue #188 (`CALVIN DECISION`, 2026-09-21T08:19:14Z) has been recorded for MSFT through the existing `recordJudgment` product path and re-run against this run. §1 and §2 below now describe that recorded state; the "no judgment recorded" observation that follows describes the run's original, pre-ruling state and OKLO's continuing state — OKLO has zero tagged candidates, so no selection was ever possible for it and nothing about it changed. MSFT's verdict is still `INCOMPLETE`, for the separate §10.6.2 reason §2 now records.
 
+**Update — CF-REALRUN-CURRENT-01, 2026-09-21, re-run at `2c805b4`.** Both runs
+re-observed against current `master`, adding the two M9 surfaces that changed
+after this file was last written and had never been observed on a real run:
+Market Context's SEC SIC category framing (PR #200, `5b2c728`) and the
+verdict slot's evidence-status label (PR #204, `736e773`). Nothing in §1–§3's
+prior content changed — the same pipeline, the same MSFT ruling, the same
+OKLO absence — so this update only adds the new observations below and one
+new named gap in §4. No new capture, no new ticker, no product code change.
+
 Satisfies the condition #118 item 10 sets. Every M9 surface claim shipped
 before this (items 3, 4, 6, 7, 8, 9) rested on `MSFT_FIXTURE` /
 `OKLO_FIXTURE`, a synthetic reconstruction of the frozen design mocks
@@ -29,7 +38,14 @@ guard against the all-candidates sum, the twelve-slot and slot-2 render
 checks, and OKLO's unchanged states, are each pinned by
 `lib/analyzer/nonOperatingJudgmentRecordedOnRealRun.test.ts` and
 `app/components/nonOperatingJudgmentRecordedOnRealRun.test.tsx`
-(CF-S44-RECORD-01).
+(CF-S44-RECORD-01); and the two new §2/§3 observations below (Market Context's
+rendered SIC classification, Business's rendered capture empty state), each
+pinned by a new `it` in `app/components/analyzerSurfacesOnRealRun.test.tsx`
+(CF-REALRUN-CURRENT-01). The evidence-status label's absence on both runs was
+already pinned, incidentally, by that file's pre-existing slot-2
+`.confidence`-is-null assertion — written before `DominantVerdictSlot` grew
+the `ConfidenceIndicator` it now guards, and confirmed on this re-run to still
+cover it (§2, §3 below).
 
 ## 1. The pipeline actually run
 
@@ -77,6 +93,9 @@ blocks its EV regardless — §4 item 1 below now reflects both facts).
 | Fair-value range | **`range`** (was `suppressed`) — bear **$265.00**, bull **$650.00**, unsuppressed now that leverage passes and no suppressing state names the range. |
 | Verdict (slot 2 / `DominantVerdictSlot`) | Still **`INCOMPLETE`** — but for a different, separate reason now that trust is no longer `UNUSABLE` and the range is no longer `suppressed`: *"Decision-critical analysis is incomplete — a fair-value range alone cannot determine BUY / HOLD / SELL. Synthesizing a verdict also requires the required-versus-achieved growth comparator (spec §10.6.2), and that fact has not been acquired yet (spec §10.6.5, milestone M8). Recovery: this verdict becomes available once M8 delivers the comparator fact."* Rendered verbatim as the cause line; no `.confidence` element renders (§2.1 slot 2: confidence only when the analysis is not `INCOMPLETE`). This is `verdict.ts`'s own unconditional-`INCOMPLETE` behaviour (byte-unchanged; §5), not a defect this outcome may fix. |
 | Qualifying flag | `MARGIN AT HISTORICAL HIGH` (the real operating-margin history) — unaffected by the ruling. |
+| Market Context (PR #200) — CF-REALRUN-CURRENT-01 | Renders **`SEC classification (SIC 7372): Services-Prepackaged Software`**, the capture's own `__capture.sic` / `__capture.sicDescription`, beside the fixed "not a peer, index or sector-average comparison" disclaimer — never the "Not yet available" branch. The same SIC and description Gate 0 itself classifies against (§2 table, `Gate 0` row above): one real classification read on both paths, not two. |
+| Business (PR #200) — CF-REALRUN-CURRENT-01 | Renders the **disclosed capture empty state**, verbatim: *"Not yet available — 10-K Item 1 excerpts are not part of the committed SEC capture — this run reads captured XBRL facts only, and the extraction rule requires a live EDGAR filing-document fetch. Chosen as the honest empty state for CAPTURE runs rather than extending the capture shape (M9-ITEM5-CONTENT-01 SCOPE item 3)."* `result.business.narrative` is `null`, as `CAPTURE_BUSINESS_CONTENT` (`provider.ts:150-156`) fixes for every `ANALYZER_OFFLINE` run — the filer's own 10-K Item 1 narrative is unreachable from this offline pass by that settled decision, not a defect (§4 item 8 below). |
+| Evidence-status label (PR #204) — CF-REALRUN-CURRENT-01 | **Absent.** `DominantVerdictSlot` renders `ConfidenceIndicator` (`.confidence`) only on the completed-verdict branch (`DominantVerdictSlot.tsx:50-56`); this run's verdict is `INCOMPLETE`, so the `INCOMPLETE`-branch markup renders instead (`:41-48`) and no `.confidence` element exists in slot 2 — confirmed by assertion, not merely by reading the branch. |
 
 **Overview — all twelve slots present, none absent.** Slot 1: real company
 name, ticker, as-of date. Slot 2: the `INCOMPLETE` presentation above. Slot
@@ -130,6 +149,9 @@ expected for this profile.
 | Trust | `UNUSABLE`. |
 | Fair-value range | **`suppressed`, not `pre-revenue-distribution`.** This is the one outcome-level difference from every existing OKLO fixture test (`verdict.test.ts`, `AnalyzerReport.test.tsx`), which always drive `OKLO_FIXTURE` directly and so never exercise an unanswered §4.4 judgment. Read against `assemble.ts`'s own suppression order (`rangeRemovedBy = stateRemovingFairValueRange(suppressing)`, evaluated before the pre-revenue/range branch is chosen), this is the documented, intended rule — leverage suppression removes the range ahead of shaping it — not a defect. Recorded as a real difference in *shape*, confirmed correct by reading the suppression code, not fixed. |
 | Verdict | `INCOMPLETE`, the same `LEVERAGE UNSUPPORTED IN v1` reason string as MSFT — both runs share one cause, for the same reason (§1). |
+| Market Context (PR #200) — CF-REALRUN-CURRENT-01 | Renders **`SEC classification (SIC 4911): Electric Services`**, the capture's own `__capture.sic` / `__capture.sicDescription`, beside the same fixed disclaimer as MSFT — never "Not yet available". Matches Gate 0's own sector/industry classification above. |
+| Business (PR #200) — CF-REALRUN-CURRENT-01 | Renders the **same disclosed capture empty state** as MSFT, verbatim (§2 above) — `CAPTURE_BUSINESS_CONTENT` is one fixed constant shared by every `ANALYZER_OFFLINE` run, not computed per ticker. `result.business.narrative` is `null`. |
+| Evidence-status label (PR #204) — CF-REALRUN-CURRENT-01 | **Absent**, same reason as MSFT (§2 above): this run's verdict is `INCOMPLETE`, so `DominantVerdictSlot` never reaches the branch that renders `.confidence`. |
 
 **The pre-revenue module itself is fully populated from the real filing,
 independent of the leverage suppression above** (it is not one of the
@@ -208,6 +230,21 @@ above.
    for this offline-capture reason rather than the old wiring gap, now
    pinned by assertion:
    `lib/analyzer/fiftyTwoWeekOfflineOnRealRun.test.ts` (new).
+8. **Business's 10-K Item 1 narrative is unreachable from a capture run, on
+   both real tickers — CF-REALRUN-CURRENT-01, 2026-09-21.** `provider.ts`'s
+   `fromCapture` always returns the fixed `CAPTURE_BUSINESS_CONTENT` constant
+   (`:150-156`) rather than the filer's actual Item 1 text; `businessNarrativeFrom`
+   (`:225-265`), which does the real EDGAR filing-document fetch and
+   extraction, runs only inside `fromEdgar`, the live path. This is
+   `M9-ITEM5-CONTENT-01` SCOPE item 3's own settled, disclosed decision — not
+   extending the capture shape to carry a 10-K excerpt — reaffirmed rather
+   than reopened here (HARD BOUNDS). Consequence, now observed rather than
+   assumed: PR #200's Business half remains validated on the live path only;
+   every offline acceptance run, this one included, shows the empty state,
+   never the narrative. Pinned by the two new `it` blocks in
+   `app/components/analyzerSurfacesOnRealRun.test.tsx` asserting
+   `result.business.narrative` is `null` and the disclosed reason renders, on
+   both MSFT and OKLO.
 
 ## 5. What this outcome does not do
 
