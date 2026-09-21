@@ -20,6 +20,21 @@ name: Fire Cal Finance OWNER on merged PR
 # and a durable exhaustion receipt if that recovery also stalls. This job
 # therefore now legitimately runs up to roughly two lease windows long
 # (~40 minutes at the default 20-minute lease), not just a few seconds.
+#
+# CF-OWNER-SINGLE-WRITER-01
+# issue #197 documented live evidence of overlapping CALBOARD-OWNER
+# attempts (fired from this workflow's merge wake and cc-auto-fire.yml's
+# terminal wake, on different PRs/issues) racing the same Cal Finance
+# Project Home write. The `cf-owner-single-writer` concurrency group below
+# is shared verbatim with cc-auto-fire.yml's fire-owner-on-terminal job:
+# GitHub Actions runs at most one job in that group at a time, queues a
+# second arrival, and — if a third arrives while the second is still
+# queued — replaces the queued one with the newest, so a later wake is
+# never permanently lost and a stale wake can never run (and therefore
+# commit) after a newer one. owner-single-writer-guard.sh below only adds
+# a readable audit trail on top of that; it never blocks the fire itself.
+# See .github/ai-routines/OWNER.md and owner-single-writer-lib.test.sh /
+# owner-single-writer-config.test.sh.
 
 on:
   pull_request:
@@ -35,6 +50,9 @@ jobs:
     if: github.event.pull_request.merged == true
     runs-on: ubuntu-latest
     timeout-minutes: 50
+    concurrency:
+      group: cf-owner-single-writer
+      cancel-in-progress: false
     steps:
       # owner-liveness-guard.sh needs to exist on disk. Pinned to the merge
       # commit itself (not the default `github.ref`, which for a closed
@@ -51,6 +69,18 @@ jobs:
         run: |
           echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
           echo "attempt_id=MERGE-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+
+      # CF-OWNER-SINGLE-WRITER-01: advisory only — see the header comment
+      # above and owner-single-writer-guard.sh. Never blocks; the
+      # cf-owner-single-writer concurrency group on this job is what
+      # actually prevents overlapping fires.
+      - name: Record OWNER admission context
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+        run: bash .github/scripts/owner-single-writer-guard.sh
 
       - name: Fire CALBOARD-OWNER API trigger
         id: fire

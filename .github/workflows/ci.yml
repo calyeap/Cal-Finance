@@ -98,6 +98,30 @@ jobs:
       - name: Run OWNER liveness guard control-flow tests
         run: bash .github/scripts/owner-liveness-guard.test.sh
 
+      # CF-OWNER-SINGLE-WRITER-01: deterministic, network-free regression
+      # coverage for the repo-wide OWNER admission/holder logic and for the
+      # workflow-level concurrency config both OWNER fire paths depend on.
+      - name: Run OWNER single-writer admission unit tests
+        run: bash .github/scripts/owner-single-writer-lib.test.sh
+
+      - name: Run OWNER single-writer concurrency config tests
+        run: bash .github/scripts/owner-single-writer-config.test.sh
+
+      # CF-OWNER-SINGLE-WRITER-01 addendum: deterministic, network-free
+      # classification checks for the CALVIN RULING -> OWNER wake edge
+      # (issue #197 ADDENDUM, 11:09:44Z).
+      - name: Run CALVIN ruling wake classification unit tests
+        run: bash .github/scripts/calvin-ruling-lib.test.sh
+
+      # Structural regression coverage for the delivery mechanism itself:
+      # the pure classifier above can be 12/12 correct while the edge is
+      # still inert in production if it's wired through a workflow-authored
+      # label write depended on as a trigger (GitHub Actions does not
+      # re-enter a workflow from an event produced by its own GITHUB_TOKEN).
+      # Guards against that exact class of defect regressing.
+      - name: Run CALVIN ruling wake reachability tests
+        run: bash .github/scripts/calvin-ruling-reachability.test.sh
+
       # CF-OUTCOME-LOOP-LEAN-01: deterministic, network-free classification
       # checks for the fire-review DONE:/PR-parsing contract, the fire-build
       # duplicate-suppression contract, and the semantic-refresh workflow's
