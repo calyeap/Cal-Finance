@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# CF-OWNER-SINGLE-WRITER-01 addendum, corrected (issue #197 ADDENDUM)
+# CF-OWNER-SINGLE-WRITER-01 addendum, corrected twice (issue #197 ADDENDUM)
 #
 # Deterministic, network-free structural check on cc-auto-fire.yml. The
 # first version of the ruling-wake edge ran the classification in its own
@@ -13,10 +13,21 @@
 # was broken. This test guards against that exact class of defect
 # regressing: an edge whose only production effect is a workflow-authored
 # label write depended on as a trigger.
+#
+# Second correction: once routed directly into fire-owner-on-terminal, the
+# job-level `if:` prefilter used `contains(github.event.comment.body, ...)`
+# — a substring match. Because the classifier's "skip" decision is a
+# *step*-level gate, any comment merely mentioning the marker still started
+# the job and claimed the cf-owner-single-writer concurrency group before
+# exiting, which could evict a genuinely queued OWNER wake. This test also
+# guards against that: any job sharing cf-owner-single-writer that admits
+# issue_comment events must anchor its match to the start of the comment
+# body (startsWith), never a bare substring (contains).
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+GITHUB_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 WORKFLOWS_DIR="$(cd "${SCRIPT_DIR}/../workflows" && pwd)"
 CC_AUTO_FIRE="${WORKFLOWS_DIR}/cc-auto-fire.yml"
 
@@ -88,6 +99,25 @@ else
     still_grouped="true"
   fi
   assert_true "the merged job still shares the cf-owner-single-writer concurrency group" "$still_grouped"
+
+  if [ "$still_grouped" = "true" ] && [ "$has_issue_comment_admission" = "true" ]; then
+    # The job-level `if:` is a prefilter that runs before any step-level
+    # "skip" classification, so it alone decides whether this job starts
+    # and claims the concurrency group. A substring `contains()` match here
+    # lets any comment that merely mentions the marker evict a genuinely
+    # queued wake; only a start-anchored `startsWith()` match confines
+    # admission to comments whose own body opens with it.
+    anchored_admission="false"
+    if printf '%s\n' "$terminal_block" | grep -q "startsWith(github.event.comment.body, 'CALVIN RULING')"; then
+      anchored_admission="true"
+    fi
+    not_substring_admission="true"
+    if printf '%s\n' "$terminal_block" | grep -q "contains(github.event.comment.body, 'CALVIN RULING')"; then
+      not_substring_admission="false"
+    fi
+    assert_true "the issue_comment admission on the cf-owner-single-writer job is start-anchored (startsWith), not a substring match" "$anchored_admission"
+    assert_true "the issue_comment admission on the cf-owner-single-writer job does not use a bare substring (contains) match" "$not_substring_admission"
+  fi
 fi
 
 # --- no workflow may write needs-owner-wake as its own trigger mechanism -
@@ -96,9 +126,24 @@ fi
 # for the labeled-event path above. What must never exist again is a
 # workflow *step*, running as GITHUB_TOKEN, that adds this label and
 # expects that write to start a new workflow run — exactly the dead end
-# fire-owner-on-calvin-ruling relied on.
+# fire-owner-on-calvin-ruling relied on. Scoped to the whole .github/ tree,
+# not just workflows/, since the dead-end pattern could equally reappear in
+# a .github/scripts/*.sh helper invoked from a workflow step. A hit is only
+# counted when the matching line itself isn't a comment (its content, after
+# stripping the "file:line:" prefix and leading whitespace, doesn't start
+# with "#") — a real label write followed by a trailing shell comment must
+# still count.
 
-label_write_count="$(grep -rn 'labels\[\]=.*needs-owner-wake' "$WORKFLOWS_DIR" | grep -v ':.*#' | wc -l | tr -d ' ')"
+label_write_count=0
+while IFS= read -r hit; do
+  [ -z "$hit" ] && continue
+  content="${hit#*:*:}"
+  trimmed="$(printf '%s' "$content" | sed -e 's/^[[:space:]]*//')"
+  case "$trimmed" in
+    "#"*) ;; # a genuine comment line quoting the pattern, not a real write
+    *) label_write_count=$((label_write_count + 1)) ;;
+  esac
+done < <(grep -rn 'labels\[\]=.*needs-owner-wake' "$GITHUB_DIR")
 assert_eq "no workflow step writes needs-owner-wake as its own (dead-end) trigger mechanism" "0" "$label_write_count"
 
 echo

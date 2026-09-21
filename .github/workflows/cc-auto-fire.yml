@@ -417,11 +417,26 @@ jobs:
   # for the structural regression coverage that catches this exact class of
   # defect (an edge whose only effect is a workflow-authored label write
   # depended on as a trigger).
+  #
+  # Second correction: the job-level `if:` prefilter above originally used
+  # `contains(github.event.comment.body, 'CALVIN RULING')`, a substring
+  # match. Because `skip` is a *step*-level gate, any comment merely
+  # mentioning the marker (e.g. quoting it as evidence in a REVIEW comment)
+  # still started this job and claimed the `cf-owner-single-writer`
+  # concurrency group through checkout and a paginated comments fetch
+  # before exiting — which could evict a genuinely queued OWNER wake for a
+  # different target, violating #197's "a newer wake must not be lost"
+  # requirement (a no-op admission reconciles nothing, so it is not an
+  # interchangeable member of the queue). Fixed by anchoring the prefilter
+  # to `startsWith(...)` so only a comment whose own body opens with the
+  # marker can start the job at all; `calvin_ruling_should_wake` remains
+  # authoritative for author/gate-state classification once it does. See
+  # calvin-ruling-reachability.test.sh for the regression coverage.
   fire-owner-on-terminal:
     if: >-
       github.event.label.name == 'needs-owner-wake' ||
       (github.event_name == 'issue_comment' &&
-        contains(github.event.comment.body, 'CALVIN RULING'))
+        startsWith(github.event.comment.body, 'CALVIN RULING'))
     runs-on: ubuntu-latest
     timeout-minutes: 50
     concurrency:
