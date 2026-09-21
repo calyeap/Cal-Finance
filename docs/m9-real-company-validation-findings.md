@@ -103,9 +103,17 @@ before the ruling both showed the `LEVERAGE UNSUPPORTED IN v1` state. Slot
 `evidence`), in contract order. Section D's diagnostics are mostly
 `INCOMPLETE` (RONIC and implied-return-on-new-capital need five years of
 delta NOPAT/invested capital that this run's acquisition does not carry;
-margin history needs a 52-week high/low that was never supplied to this
+~~margin history needs a 52-week high/low that was never supplied to this
 run — `buildAcquiredRun`'s `fiftyTwoWeek` option is `null` on every acquired
-run today, not something this validation introduced). FCF yield + growth
+run today, not something this validation introduced~~ **PARTIALLY CLOSED —
+M9-FIFTYTWOWEEK-01, PR #184 (`c121a97`, 2026-09-19).** The wiring is fixed:
+`gate.ts` now supplies `fiftyTwoWeek` to `buildAcquiredRun`. But on this
+offline captured run `fiftyTwoWeek` still resolves to `null` — `gate.ts`'s
+own `fiftyTwoWeekRange` fails closed under `ANALYZER_OFFLINE` by design, and
+`prices.json` carries one recorded close for MSFT, not a series (§4 finding
+2 below) — so margin history stays `INCOMPLETE` for the same reason as
+before, now confirmed by
+`lib/analyzer/fiftyTwoWeekOfflineOnRealRun.test.ts`). FCF yield + growth
 shows `PRECONDITION FAILED`. No pre-revenue-only D subsection renders, as
 expected for this profile.
 
@@ -183,11 +191,23 @@ above.
 6. **The interpretation and challenger calls do not run**, per HARD BOUNDS
    (no model/AI call in this outcome) — both surfaces render the AI layer's
    `NOT CONFIGURED` note on both runs.
-7. **52-week high/low is never supplied to an acquired run today**
+7. ~~**52-week high/low is never supplied to an acquired run today**
    (`buildAcquiredRun`'s `fiftyTwoWeek` option is `null` on every call
    `lib/analyzer/gate.ts` makes) — a pre-existing product gap this
    validation surfaces rather than introduces; margin-history and related
-   D diagnostics report `INCOMPLETE` on both runs because of it.
+   D diagnostics report `INCOMPLETE` on both runs because of it.~~
+   **WIRING CLOSED, OBSERVED STATE UNCHANGED — M9-FIFTYTWOWEEK-01, PR #184
+   (`c121a97`, 2026-09-19).** `gate.ts` now supplies `fiftyTwoWeek` to both
+   `buildAcquiredRun` calls. On these two offline captured runs it still
+   resolves to `null` for both MSFT and OKLO: `gate.ts`'s own
+   `fiftyTwoWeekRange` fails closed under `ANALYZER_OFFLINE` by design
+   (never reaching the provider), and the committed `prices.json` carries
+   one recorded close per ticker, not a series (finding 2 above) — there
+   is no history to serve even with the wiring gap closed. Margin history
+   and the related Section D diagnostics stay `INCOMPLETE` on both runs,
+   for this offline-capture reason rather than the old wiring gap, now
+   pinned by assertion:
+   `lib/analyzer/fiftyTwoWeekOfflineOnRealRun.test.ts` (new).
 
 ## 5. What this outcome does not do
 
