@@ -29,6 +29,18 @@ jobs:
       group: fire-build-${{ github.event.issue.number || github.event.pull_request.number }}
       cancel-in-progress: false
     steps:
+      # CF-CORRECT-ROUTER-01: moved ahead of "Resolve target" (unconditional
+      # — this job's precise CORRECT match needs terminal-routing-lib.sh on
+      # disk before it can run) so the step below can share the same
+      # network-free, unit-tested marker classification fire-review already
+      # uses, instead of a second hand-rolled copy that can drift out of
+      # sync with it (as the inline case statement did for PR #218's
+      # "## CORRECT" shape).
+      - name: Check out default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
       - name: Resolve target
         id: target
         env:
@@ -36,22 +48,22 @@ jobs:
           COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           set -uo pipefail
+          # shellcheck source=../scripts/terminal-routing-lib.sh
+          source .github/scripts/terminal-routing-lib.sh
 
           if [ "$EVENT_NAME" = "issue_comment" ]; then
             # Top-level PR conversation comment whose first terminal outcome is
-            # CORRECT. Drop leading blank/all-whitespace lines, then trim
-            # leading whitespace on the first non-empty line, so an
-            # indented/quoted "CORRECT:" elsewhere in a comment can't
-            # accidentally match, and resolve to this exact PR only (no
+            # CORRECT. terminal_is_correct_marker drops leading blank/
+            # all-whitespace lines, trims the first non-empty line, and
+            # strips a harmless Markdown heading prefix (e.g. "## CORRECT")
+            # before matching CORRECT/CORRECT:, so an indented/quoted
+            # "CORRECT:" elsewhere in the comment still can't accidentally
+            # match, and resolution stays bound to this exact PR only (no
             # cross-PR link parsing).
-            TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e '/[^[:space:]]/,$!d' -e 's/^[[:space:]]*//')
-            case "$TRIMMED" in
-              CORRECT|CORRECT:*) ;;
-              *)
-                echo "skip=true" >> "$GITHUB_OUTPUT"
-                exit 0
-                ;;
-            esac
+            if [ "$(terminal_is_correct_marker "$COMMENT_BODY")" != "true" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
             NUMBER="${{ github.event.issue.number }}"
           else
             NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
@@ -66,12 +78,6 @@ jobs:
       # checked for an already-open attempt first. build-duplicate-lib.sh's
       # classification (see that file) is pure/network-free and unit
       # tested; this step only supplies it the target's current comments.
-      - name: Check out default branch
-        if: steps.target.outputs.skip != 'true'
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.repository.default_branch }}
-
       - name: Check for an already-open BUILD attempt
         id: dedup
         if: steps.target.outputs.skip != 'true'
@@ -251,7 +257,7 @@ jobs:
             exit 0
           fi
 
-          PROMPT="Repository ${TARGET_REPO}, PR/item #${TARGET_NUMBER}. Run CALBOARD-CC-AUTO / REVIEW for this exact target. Post ACCEPT, CORRECT, CALVIN REQUIRED, or STOP before ending."
+          PROMPT="Repository ${TARGET_REPO}, PR/item #${TARGET_NUMBER}. Run CALBOARD-CC-AUTO / REVIEW for this exact target. Post a literal ACCEPT:, CORRECT:, CALVIN REQUIRED:, or STOP: as the first non-empty line before ending — no Markdown heading prefix."
           REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/review_response.json -w '%{http_code}' \
