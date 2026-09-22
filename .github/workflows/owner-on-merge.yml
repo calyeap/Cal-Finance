@@ -70,6 +70,26 @@ jobs:
           echo "number=${{ github.event.pull_request.number }}" >> "$GITHUB_OUTPUT"
           echo "attempt_id=MERGE-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
+      - name: Resolve execution ledger config
+        id: ledger_config
+        run: |
+          echo "ledger_issue_number=$(jq -r '.ledger_issue_number' .github/config/execution-ledger.json)" >> "$GITHUB_OUTPUT"
+
+      # CF-OWNER-FASTPATH-SHADOW-01 (issue #212, scope items 1-4): records
+      # this fire as a ledger dispatch intent before it happens, inside the
+      # same cf-owner-single-writer concurrency group as the fire itself —
+      # see execution-ledger-guard.sh's header. Always advisory/best-effort:
+      # never blocks or fails this job, exactly like the admission step
+      # above.
+      - name: Record execution ledger dispatch intent
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LEDGER_ISSUE_REPO: ${{ github.repository }}
+          LEDGER_ISSUE_NUMBER: ${{ steps.ledger_config.outputs.ledger_issue_number }}
+          EVENT_KIND: OWNER_FIRE
+          EVENT_KEY: ${{ steps.target.outputs.attempt_id }}
+        run: bash .github/scripts/execution-ledger-guard.sh record-intent OWNER_FIRE "https://github.com/${{ github.repository }}/issues/${{ steps.target.outputs.number }}"
+
       # CF-OWNER-SINGLE-WRITER-01: advisory only — see the header comment
       # above and owner-single-writer-guard.sh. Never blocks; the
       # cf-owner-single-writer concurrency group on this job is what
@@ -154,6 +174,20 @@ jobs:
 
           echo "::error::CALBOARD-OWNER merged-PR fire failed with HTTP ${{ steps.fire.outputs.http_code }}"
           exit 1
+
+      # CF-OWNER-FASTPATH-SHADOW-01: closes the outbox regardless of
+      # whether the fire above succeeded or failed — a failed fire still
+      # means the dispatch intent is resolved (it did not happen), not
+      # left open for a future sweep to misread as still in flight.
+      - name: Complete execution ledger dispatch intent
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LEDGER_ISSUE_REPO: ${{ github.repository }}
+          LEDGER_ISSUE_NUMBER: ${{ steps.ledger_config.outputs.ledger_issue_number }}
+          EVENT_KIND: OWNER_FIRE
+          EVENT_KEY: ${{ steps.target.outputs.attempt_id }}
+        run: bash .github/scripts/execution-ledger-guard.sh complete-intent "${{ steps.fire.outputs.ok == 'true' && 'dispatched' || 'failed' }}"
 
       # CF-OWNER-LIVENESS-01
       # Only reached once the fire above succeeded and the START receipt

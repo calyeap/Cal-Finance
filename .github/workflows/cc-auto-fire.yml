@@ -85,7 +85,16 @@ jobs:
 
           COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${TARGET_NUMBER}/comments" \
             --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
-          echo "status=$(build_duplicate_status "$COMMENTS")" >> "$GITHUB_OUTPUT"
+          DUP_STATUS="$(build_duplicate_status "$COMMENTS")"
+          echo "status=$DUP_STATUS" >> "$GITHUB_OUTPUT"
+
+          # CF-OWNER-FASTPATH-SHADOW-01 (issue #212, scope item 6):
+          # shadow-only — logs what the hard-coded allowlist would do
+          # against this exact deterministic admission decision. Never
+          # gates anything; the duplicate suppression above already ran.
+          # shellcheck source=../scripts/fastpath-shadow-lib.sh
+          source .github/scripts/fastpath-shadow-lib.sh
+          echo "$(fastpath_shadow_format BUILD_DUPLICATE_ADMIT "$(fastpath_shadow_classify_build_duplicate "$DUP_STATUS")")"
 
       - name: Report duplicate suppression
         if: steps.target.outputs.skip != 'true' && steps.dedup.outputs.status == 'duplicate'
@@ -221,6 +230,17 @@ jobs:
             if [ -z "$NUMBER" ] && [ -n "${{ github.event.issue.pull_request.url }}" ]; then
               NUMBER="${{ github.event.issue.number }}"
             fi
+
+            # CF-OWNER-FASTPATH-SHADOW-01 (issue #212, scope item 6):
+            # shadow-only — logs what the hard-coded allowlist would do
+            # against this exact deterministic routing decision, before
+            # the real skip/PR-resolution logic below acts on it. Never
+            # gates anything.
+            if [ -n "$NUMBER" ]; then HAS_PR=true; else HAS_PR=false; fi
+            # shellcheck source=../scripts/fastpath-shadow-lib.sh
+            source .github/scripts/fastpath-shadow-lib.sh
+            echo "$(fastpath_shadow_format REVIEW_TERMINAL_ROUTE "$(fastpath_shadow_classify_review_terminal "$FIRST_LINE" "$HAS_PR")")"
+
             if [ -z "$NUMBER" ]; then
               gh api --method POST "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
                 -f body="REVIEW FIRE SKIPPED: DONE comment carries no PR link"
@@ -495,6 +515,25 @@ jobs:
           ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
         run: bash .github/scripts/owner-single-writer-guard.sh
 
+      - name: Resolve execution ledger config
+        id: ledger_config
+        if: steps.target.outputs.skip != 'true'
+        run: |
+          echo "ledger_issue_number=$(jq -r '.ledger_issue_number' .github/config/execution-ledger.json)" >> "$GITHUB_OUTPUT"
+
+      # CF-OWNER-FASTPATH-SHADOW-01 (issue #212, scope items 1-4): see
+      # owner-on-merge.yml's matching step and execution-ledger-guard.sh's
+      # header. Always advisory/best-effort: never blocks or fails this job.
+      - name: Record execution ledger dispatch intent
+        if: steps.target.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LEDGER_ISSUE_REPO: ${{ github.repository }}
+          LEDGER_ISSUE_NUMBER: ${{ steps.ledger_config.outputs.ledger_issue_number }}
+          EVENT_KIND: OWNER_FIRE
+          EVENT_KEY: ${{ steps.target.outputs.attempt_id }}
+        run: bash .github/scripts/execution-ledger-guard.sh record-intent OWNER_FIRE "https://github.com/${{ github.repository }}/issues/${{ steps.target.outputs.number }}"
+
       - name: Fire CALBOARD-OWNER API trigger
         id: fire
         if: steps.target.outputs.skip != 'true'
@@ -561,6 +600,18 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="CF-OWNER-RECONCILE-01: CALBOARD-OWNER terminal-wake fire failed (HTTP ${{ steps.fire.outputs.http_code }})."
           exit 1
+
+      # CF-OWNER-FASTPATH-SHADOW-01: closes the outbox regardless of fire
+      # outcome — see owner-on-merge.yml's matching step.
+      - name: Complete execution ledger dispatch intent
+        if: always() && steps.target.outputs.skip != 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          LEDGER_ISSUE_REPO: ${{ github.repository }}
+          LEDGER_ISSUE_NUMBER: ${{ steps.ledger_config.outputs.ledger_issue_number }}
+          EVENT_KIND: OWNER_FIRE
+          EVENT_KEY: ${{ steps.target.outputs.attempt_id }}
+        run: bash .github/scripts/execution-ledger-guard.sh complete-intent "${{ steps.fire.outputs.ok == 'true' && 'dispatched' || 'failed' }}"
 
       # CF-OWNER-LIVENESS-01
       # Only reached once the fire above succeeded and the START receipt

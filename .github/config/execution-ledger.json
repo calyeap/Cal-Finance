@@ -1,0 +1,5 @@
+{
+  "_comment": "CF-OWNER-FASTPATH-SHADOW-01 (issue #212). Points execution-ledger-guard.sh / stall-sweep-guard.sh at the dedicated, non-semantic ledger tracking issue (#213 — 'do not close'). See .github/scripts/execution-ledger-lib.sh for the ledger's shape and storage model.",
+  "ledger_issue_number": 213,
+  "project_id": "cal-finance"
+}

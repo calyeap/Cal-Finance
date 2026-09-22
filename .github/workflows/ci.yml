@@ -135,6 +135,29 @@ jobs:
       - name: Run Chief of Staff semantic refresh structural tests
         run: bash .github/scripts/cf-cos-semantic-refresh.test.sh
 
+      # CF-OWNER-FASTPATH-SHADOW-01: deterministic, network-free coverage
+      # for issue #212's tiny execution ledger (dedupe, compare-and-set,
+      # crash-safe outbox), its I/O wrapper's control flow, the
+      # deterministic stall sweep's classification and control flow, the
+      # shadow-only fast-path allowlist, and the latency reporting helper.
+      - name: Run execution ledger unit tests
+        run: bash .github/scripts/execution-ledger-lib.test.sh
+
+      - name: Run execution ledger guard control-flow tests
+        run: bash .github/scripts/execution-ledger-guard.test.sh
+
+      - name: Run stall sweep classification unit tests
+        run: bash .github/scripts/stall-sweep-lib.test.sh
+
+      - name: Run stall sweep guard control-flow tests
+        run: bash .github/scripts/stall-sweep-guard.test.sh
+
+      - name: Run fast-path shadow classification unit tests
+        run: bash .github/scripts/fastpath-shadow-lib.test.sh
+
+      - name: Run latency report unit tests
+        run: bash .github/scripts/latency-report-lib.test.sh
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

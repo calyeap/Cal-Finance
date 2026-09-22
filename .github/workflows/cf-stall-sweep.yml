@@ -1,0 +1,59 @@
+name: Cal Finance deterministic stall sweep
+
+# CF-OWNER-FASTPATH-SHADOW-01 (issue #212, scope item 5)
+#
+# A cheap, read-mostly scheduled safety check for Cal Finance: a genuinely
+# stalled project (active per the execution ledger, nothing running, no
+# gate, no park, no in-flight dispatch — see stall-sweep-lib.sh for the
+# exact classification) wakes OWNER, never BUILD/REVIEW directly, and only
+# once per sweep. This is a safety net for a missed/dropped event, not a
+# second orchestrator — see stall-sweep-guard.sh's header for why its own
+# evidence stays GitHub-native rather than reading Notion.
+#
+# Runs inside the same `cf-owner-single-writer` concurrency group both
+# native OWNER fire paths already share (owner-on-merge.yml,
+# cc-auto-fire.yml's fire-owner-on-terminal job) — issue #212's scope item
+# 2 ("OWNER and any future fast path must pass through the same per-
+# project write/admission boundary"). A sweep that finds nothing to do
+# queues briefly behind a real OWNER attempt and then simply observes it
+# is no longer stalled; it is never a second writer.
+
+on:
+  schedule:
+    - cron: "17 */2 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: write
+
+jobs:
+  sweep:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    concurrency:
+      group: cf-owner-single-writer
+      cancel-in-progress: false
+    steps:
+      - name: Check out default branch
+        uses: actions/checkout@v4
+
+      - name: Resolve ledger config
+        id: config
+        run: |
+          echo "ledger_issue_number=$(jq -r '.ledger_issue_number' .github/config/execution-ledger.json)" >> "$GITHUB_OUTPUT"
+
+      - name: Run deterministic stall sweep
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          LEDGER_ISSUE_NUMBER: ${{ steps.config.outputs.ledger_issue_number }}
+        run: |
+          if [ -z "${OWNER_FIRE_URL:-}" ] || [ -z "${OWNER_FIRE_TOKEN:-}" ]; then
+            echo "::warning::OWNER_FIRE_URL or OWNER_FIRE_TOKEN repository secret is missing; skipping this sweep (advisory, no fire possible)."
+            exit 0
+          fi
+          bash .github/scripts/stall-sweep-guard.sh
