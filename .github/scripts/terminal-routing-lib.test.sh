@@ -10,6 +10,10 @@
 #   4. A quoted/example /pull/N later in the comment cannot redirect
 #      REVIEW — only the first line's own reference counts.
 #   5. The existing normal DONE: <PR link> route stays green.
+#
+# CF-CORRECT-ROUTER-01 additionally covers the demonstrated PR #218
+# failure shape (REVIEW's first line was "## CORRECT") plus the existing
+# accepted CORRECT / CORRECT: shapes and the quoted/example-text guard.
 
 set -uo pipefail
 
@@ -76,6 +80,27 @@ assert_eq "PR number binds to the first /pull/N on the first line itself, not a 
 
 no_link=$(terminal_pr_number_from_first_line "DONE: implementation ready, see the PR opened separately")
 assert_empty "DONE with no /pull/N on the first line resolves no PR number" "$no_link"
+
+# --- terminal_is_correct_marker (CF-CORRECT-ROUTER-01) -------------------
+
+assert_eq "bare CORRECT still matches" "true" "$(terminal_is_correct_marker "CORRECT")"
+assert_eq "CORRECT: with detail still matches" "true" "$(terminal_is_correct_marker "CORRECT: fix the off-by-one in the parser")"
+
+# Exact PR #218 failure shape: REVIEW's first line was "## CORRECT".
+assert_eq "## CORRECT (PR #218 failure shape) matches" "true" "$(terminal_is_correct_marker "## CORRECT")"
+assert_eq "## CORRECT: with detail matches" "true" "$(terminal_is_correct_marker "$(printf '## CORRECT: tighten the null check\n\nSee the diff for detail.')")"
+
+# Leading blank lines before a heading-prefixed marker still resolve.
+assert_eq "leading blank lines before ## CORRECT still match" "true" "$(terminal_is_correct_marker "$(printf '\n\n  ## CORRECT\nbody\n')")"
+
+# A quoted/example CORRECT later in the comment must not fire when the
+# first line itself is not a terminal marker.
+not_first_line=$(printf 'ACCEPT: looks good\n\nEarlier drafts said "## CORRECT" but that was superseded.')
+assert_eq "quoted ## CORRECT later in the comment does not match" "false" "$(terminal_is_correct_marker "$not_first_line")"
+
+# A near-miss word must not match either shape.
+assert_eq "CORRECTED (no colon) does not match" "false" "$(terminal_is_correct_marker "CORRECTED")"
+assert_eq "## CORRECTED (no colon) does not match" "false" "$(terminal_is_correct_marker "## CORRECTED")"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then

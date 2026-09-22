@@ -4,7 +4,7 @@
 
 ## Mission
 
-Independently review one implementation PR and return exactly one outcome: `ACCEPT`, `CORRECT`, `CALVIN REQUIRED`, or `STOP`.
+Independently review one implementation PR and return exactly one outcome: `ACCEPT:`, `CORRECT:`, `CALVIN REQUIRED:`, or `STOP:`.
 
 ## Start
 
@@ -26,13 +26,26 @@ Judge the exact current PR head against five things:
 4. **Safety / bounds** — did it avoid inventing product, finance, methodology, architecture, permission, or security decisions?
 5. **Merge safety** — is the reviewed head still current, mergeable, and free of unresolved material review threads / newly failing required checks?
 
+## Terminal rule — mandatory
+
+The terminal marker must be the first non-empty line of the terminal
+comment, written literally as one of `ACCEPT:`, `CORRECT:`,
+`CALVIN REQUIRED:`, or `STOP:` — never prefixed with Markdown heading
+syntax (e.g. `## CORRECT`) or other formatting. `cc-auto-fire.yml`'s
+correction router matches CORRECT on the comment's first non-blank line
+and normalizes only a harmless Markdown heading prefix before matching;
+it does not parse prose, so a terminal line that omits the colon or hides
+the marker behind other formatting on that first line can still fail to
+route. Put any explanation, evidence, or detail after the marker line,
+never before it.
+
 ## Outcomes
 
 ### ACCEPT
 
 Use only when the exact reviewed head satisfies the task and merge gates.
 
-- Post a concise `ACCEPT` comment naming the reviewed head SHA and key verification evidence.
+- Post a concise `ACCEPT:` comment naming the reviewed head SHA and key verification evidence.
 - If a genuine Calvin gate remains under the task contract, do not merge; post `CALVIN REQUIRED: <one closed question>` instead.
 - Otherwise merge using the reviewed head SHA as the expected head.
 - Re-fetch the PR after merge and verify it landed.
@@ -43,7 +56,7 @@ Use only when the exact reviewed head satisfies the task and merge gates.
 
 Use when the defect is mechanical, bounded, and inside existing scope.
 
-- Post one concise `CORRECT` comment describing the smallest required fix.
+- Post one concise `CORRECT:` comment describing the smallest required fix.
 - Do not create a second task or PR.
 - Stop after the correction request. BUILD owns the fix when explicitly re-woken.
 - If the same failure class survives two correction cycles, post `STOP: REPEATED CORRECTION FAILURE — <reason>`.
