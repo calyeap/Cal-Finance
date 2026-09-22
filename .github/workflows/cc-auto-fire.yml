@@ -501,15 +501,39 @@ jobs:
       # the OWNER fire below: a push failure here must never delay or
       # alter OWNER's own reconciliation, and OWNER's own fire outcome
       # must never gate whether this push attempt happens.
+      #
+      # The "Check out default branch" step above deliberately checks out
+      # the default branch rather than any PR head — this job fires OWNER,
+      # a privileged routine, and must never execute not-yet-merged/
+      # not-yet-reviewed script content from an arbitrary PR branch. That
+      # means calvin-gate-push-lib.sh itself is only present on the
+      # checked-out tree once *this very outcome's PR* has merged; on any
+      # run before that (including this outcome's own PR, if it ever
+      # raises a CALVIN REQUIRED gate on itself — exactly what happened
+      # when this landed) the file legitimately does not exist yet. This
+      # step must degrade to is_gate=false in that case, not crash: a hard
+      # failure here (observed once, live, on this outcome's own PR #222)
+      # aborts the job before the "Fire CALBOARD-OWNER" step below ever
+      # runs, which would silently break the CALVIN REQUIRED -> OWNER wake
+      # for every item in the repo until merge — far worse than one
+      # missed push. continue-on-error is kept as defense in depth on top
+      # of the explicit existence check, matching the Send step below.
       - name: Resolve Calvin Gate push target
         id: gate
         if: steps.target.outputs.skip != 'true' && github.event_name != 'issue_comment'
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
           TARGET_NUMBER: ${{ steps.target.outputs.number }}
         run: |
           set -uo pipefail
+
+          if [ ! -f .github/scripts/calvin-gate-push-lib.sh ]; then
+            echo "calvin-gate-push: calvin-gate-push-lib.sh not present on the checked-out default branch yet (pre-merge); skipping push for this run."
+            echo "is_gate=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
           # shellcheck source=../scripts/calvin-gate-push-lib.sh
           source .github/scripts/calvin-gate-push-lib.sh
 

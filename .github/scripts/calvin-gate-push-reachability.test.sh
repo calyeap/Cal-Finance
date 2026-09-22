@@ -90,6 +90,26 @@ if printf '%s\n' "$push_target_step" | grep -q "github.event_name != 'issue_comm
 fi
 assert_true "the Calvin Gate push target step excludes the issue_comment/CALVIN RULING admission path" "$excludes_issue_comment"
 
+# --- regression guard: this exact step crashed the whole job live on
+# PR #222 (the outcome's own PR) because the job's checkout step pins to
+# the default branch — which pre-merge does not yet have
+# calvin-gate-push-lib.sh — and this step had no continue-on-error and no
+# existence guard, so sourcing a missing file failed the step and aborted
+# the job before "Fire CALBOARD-OWNER" ever ran. Both fixes must hold. ---
+
+target_step_continue_on_error="false"
+if printf '%s\n' "$push_target_step" | grep -q 'continue-on-error: true'; then
+  target_step_continue_on_error="true"
+fi
+assert_true "the Calvin Gate push target step sets continue-on-error: true (regression: PR #222 crashed the job without this)" "$target_step_continue_on_error"
+
+full_terminal_block="$(extract_job_block "$CC_AUTO_FIRE" "fire-owner-on-terminal")"
+guards_missing_lib="false"
+if printf '%s\n' "$full_terminal_block" | grep -q '\[ ! -f .github/scripts/calvin-gate-push-lib.sh \]'; then
+  guards_missing_lib="true"
+fi
+assert_true "the Calvin Gate push target step checks calvin-gate-push-lib.sh exists before sourcing it (regression: PR #222 crashed on a pre-merge checkout missing the file)" "$guards_missing_lib"
+
 # --- a push failure can never fail the job or block the OWNER fire -------
 
 send_push_step="$(printf '%s\n' "$terminal_block" | awk '
