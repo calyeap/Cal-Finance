@@ -1,9 +1,11 @@
 // scripts/evidence/drive.ts
 import type { Browser, Page } from "playwright";
 import { captureAt } from "./capture";
-import { WIDTHS, TICKERS, UNDECIDED_SUFFIX } from "./config";
+import { WIDTHS, TICKERS } from "./config";
 import type { ProbeDocument } from "./preflight/types";
 import { loadGateState } from "@/lib/analyzer/gate";
+import { queuedFacts } from "@/lib/analyzer/spotCheck";
+import { getFactDecisions } from "@/lib/analyzer/runStore";
 import { LostWriteError, inspectRunDecisions, inspectRunsForTicker } from "./consequential";
 
 /**
@@ -18,23 +20,32 @@ import { LostWriteError, inspectRunDecisions, inspectRunsForTicker } from "./con
  * not to render. Same failure family as a verification state travelling beside
  * a fact instead of deriving from the decision.
  *
- * `outstandingFactIds` is the queue itself here, because this is called before
- * any decision is recorded — and that assumption is asserted rather than
- * assumed, so a future caller that resumes a part-decided run finds out loudly
- * instead of silently checking a short list.
+ * CF-ANALYZER-AUTORUN-01 — this used to return `outstandingFactIds` and refuse
+ * a run that already carried decisions, because it was called on an untouched
+ * run and the outstanding set was then the queue itself. Since Calvin's ruling
+ * of 22 September 2026 04:28:04Z a run reaches the runner already answered by
+ * the software, so the queue is read directly and the invariant is inverted:
+ * the run must be verification-complete when the runner arrives, which is the
+ * property the ruling asks the product to have. A run still carrying an
+ * outstanding fact means the automatic pass did not do its job, and that stops
+ * the runner rather than being captured as though it had.
  */
 export async function expectedQueueForRun(runId: string, ticker: string): Promise<string[]> {
   const state = await loadGateState(runId);
 
-  if (state.outstandingFactIds.length !== state.queuedCount) {
+  if (state.outstandingFactIds.length > 0) {
     throw new Error(
-      `${ticker}: run ${runId} already carries decisions — ` +
-        `${state.queuedCount} queued but ${state.outstandingFactIds.length} outstanding. ` +
-        `The expected queue is only the outstanding set on an untouched run.`
+      `${ticker}: run ${runId} is not verification-complete — ` +
+        `${state.queuedCount} queued, ${state.outstandingFactIds.length} still undecided ` +
+        `(${state.outstandingFactIds.join(", ")}). The normal path must reach a report without a human.`
     );
   }
 
-  return state.outstandingFactIds;
+  return queuedFacts(
+    state.fixture.facts,
+    state.crossCheckFailedFactIds,
+    state.derivedExemption
+  ).map((f) => f.id);
 }
 
 /**
@@ -151,8 +162,13 @@ export async function driveRun(
     // reported as UNKNOWN rather than thrown as a generic error, which would
     // exit on the preflight-FAIL code for a measurement that never happened.
     await page.click('button:has-text("Begin analysis")');
+    // CF-ANALYZER-AUTORUN-01 — Begin analysis now lands on the run's Overview,
+    // not on Screen 2. That is the outcome: acquisition, routine verification
+    // and the Step 6 determination all happen behind this one click (Calvin,
+    // 22 September 2026 04:28:04Z). The runner follows the product rather than
+    // the other way round.
     try {
-      await page.waitForURL(/\/analyzer\/[0-9a-f-]{36}\/facts$/, { timeout: 30_000 });
+      await page.waitForURL(/\/analyzer\/[0-9a-f-]{36}$/, { timeout: 60_000 });
     } catch {
       throw new LostWriteError(
         { operation: "Begin analysis", ticker, runId: null },
@@ -160,9 +176,14 @@ export async function driveRun(
       );
     }
 
-    const match = page.url().match(/\/analyzer\/([0-9a-f-]{36})\/facts/);
+    const match = page.url().match(/\/analyzer\/([0-9a-f-]{36})$/);
     if (match === null) throw new Error(`${ticker}: no runId in ${page.url()}`);
     runId = match[1];
+
+    // Screen 2 is a detail route now, reached rather than routed into.
+    await page.goto(new URL(`/analyzer/${runId}/facts`, baseUrl).toString(), {
+      waitUntil: "networkidle",
+    });
 
     // The queue is derived from THIS run's gate state, never hardcoded and
     // never from a fixture: a fact that should be queued but has no card in the
@@ -172,21 +193,16 @@ export async function driveRun(
       page.locator(`form:has(input[name="factId"][value="${factId}"])`);
     await assertCardsForQueue(ticker, queue, async (factId) => (await cardFor(factId).count()) > 0);
 
-    // Captured here — immediately after Begin analysis, before this run's
-    // queue carries a single decision. A fresh context navigating straight to
-    // the persisted, still-undecided run, exactly as the decided screens below
-    // navigate fresh contexts to the persisted, worked run: this is a real run
-    // in the undecided state, not the decided run with something reset.
-    const factsUrl = new URL(`/analyzer/${runId}/facts`, baseUrl).toString();
-    for (const width of WIDTHS) {
-      const undecidedDoc = await captureAt(browser, {
-        target: `s2-facts-${slug}${UNDECIDED_SUFFIX}`,
-        width,
-        url: factsUrl,
-        outDir,
-      });
-      captured.set(`s2-facts-${slug}${UNDECIDED_SUFFIX}|${width}`, undecidedDoc);
-    }
+    // CF-ANALYZER-AUTORUN-01 — the `-undecided` capture is gone, and so is the
+    // gated-Continue check that ran only against it. Not because the state
+    // stopped mattering, but because it is no longer reachable through the
+    // product: Calvin's 22 September 2026 ruling means a run that exists has
+    // already been answered by the software, so there is no moment between
+    // "Begin analysis" and a decided queue for a browser to be pointed at.
+    // Capturing it would have required seeding the database behind the UI,
+    // which is exactly what this runner refuses to do (see this function's
+    // own doc comment). `checkContinueGated` itself is unchanged and is still
+    // proved both ways by the fixture-driven self-test.
 
     for (const [index, factId] of queue.entries()) {
       const card = cardFor(factId);
@@ -205,7 +221,13 @@ export async function driveRun(
       // Deterministic per-card wait, not networkidle: this is an in-place
       // server action (see resolveTicker's doc comment above), and several
       // cards are on screen, so the wait is scoped to this card's own submit
-      // button re-rendering "Change decision" (FactCard.tsx:192).
+      // button re-rendering "Change decision" (FactCard.tsx).
+      //
+      // CF-ANALYZER-AUTORUN-01 — the card already reads "Change decision"
+      // before this click, because the software answered it first, so this
+      // wait no longer distinguishes a landed write from a lost one on its
+      // own. The lost-write inspection below is what still does, and it reads
+      // the run's own decisions rather than the DOM.
       //
       // Consequential write: the decision may have recorded even if this wait
       // times out, so the run's own gate state is inspected before anyone
@@ -215,6 +237,17 @@ export async function driveRun(
       } catch {
         throw new LostWriteError(
           { operation: "record decision", ticker, runId },
+          await inspectRunDecisions(runId, ticker)
+        );
+      }
+
+      // The write the DOM can no longer confirm, confirmed against the store.
+      // Read per card rather than once at the end so a lost write names the
+      // card it was lost on, which is what §5.5's report is for.
+      const recorded = (await getFactDecisions(runId)).find((d) => d.factId === factId);
+      if (recorded === undefined || recorded.decision !== value || recorded.origin !== "HUMAN") {
+        throw new LostWriteError(
+          { operation: `record decision on ${factId}`, ticker, runId },
           await inspectRunDecisions(runId, ticker)
         );
       }

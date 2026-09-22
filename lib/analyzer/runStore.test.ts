@@ -80,7 +80,10 @@ describe("runStore", () => {
     it("records a confirmation with no reason code", async () => {
       await recordFactDecision(runId, "capex", "CONFIRMED", null);
       expect(await getFactDecisions(runId)).toEqual([
-        { factId: "capex", decision: "CONFIRMED", reasonCode: null },
+        // CF-ANALYZER-AUTORUN-01 — every decision now records WHO took it.
+        // A decision recorded through this function is a human one, always,
+        // and the origin is written literally rather than passed in.
+        { factId: "capex", decision: "CONFIRMED", reasonCode: null, origin: "HUMAN" },
       ]);
     });
 
@@ -124,7 +127,7 @@ describe("runStore", () => {
       await recordFactDecision(runId, "capex", "CONFIRMED", null);
       await recordFactDecision(runId, "capex", "NOT CONFIRMED", "NOT LOCATED");
       expect(await getFactDecisions(runId)).toEqual([
-        { factId: "capex", decision: "NOT CONFIRMED", reasonCode: "NOT LOCATED" },
+        { factId: "capex", decision: "NOT CONFIRMED", reasonCode: "NOT LOCATED", origin: "HUMAN" },
       ]);
     });
 

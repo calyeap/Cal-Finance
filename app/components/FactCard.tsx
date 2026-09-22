@@ -95,10 +95,32 @@ export function FactCard({
         }
       : decision
       ? {
-          name: decision.decision === "CONFIRMED" ? "Confirmed" : "Cannot verify",
-          cause: decision.reasonCode
-            ? `${decision.reasonCode} · dependent outputs return INCOMPLETE`
-            : "Counts toward spot-check completion",
+          // CF-ANALYZER-AUTORUN-01 — WHO decided is part of the state, not a
+          // footnote to it. §3.2 requires that a state which is not a human
+          // confirmation "must never be displayed as one", and since Calvin's
+          // 22 September 2026 04:28:04Z ruling a CONFIRMED fact may have been
+          // confirmed by the software. So the name says which, on the one
+          // screen whose whole purpose is establishing what was checked and by
+          // whom. The recorded origin is read, never inferred from anything
+          // else on the card.
+          name:
+            decision.decision === "CONFIRMED"
+              ? decision.origin === "AUTOMATIC"
+                ? "Confirmed automatically"
+                : "Confirmed by you"
+              : decision.origin === "AUTOMATIC"
+                ? "Not confirmed automatically"
+                : "Cannot verify",
+          cause:
+            (decision.origin === "AUTOMATIC"
+              ? "Recorded by the software, not by a person. "
+              : "Recorded by you. ") +
+            (decision.reasonCode
+              ? `${decision.reasonCode} · dependent outputs return INCOMPLETE`
+              : "Counts toward spot-check completion") +
+            (decision.origin === "AUTOMATIC"
+              ? ". Record your own decision below to replace it."
+              : ""),
         }
       : null;
 
@@ -269,6 +291,17 @@ export function FactCard({
           <dd>{fact.extractionType}</dd>
           <dt>Verification state</dt>
           <dd>{verificationState}</dd>
+          {/* CF-ANALYZER-AUTORUN-01 — beside the state, never merged into it:
+              criterion A24 fixes the state at four values, so who set it is
+              its own row. Absent where no decision set the state, because
+              naming an origin for a pending or exempt fact would claim a
+              confirmation nobody and nothing made. */}
+          {decision && (
+            <>
+              <dt>Recorded by</dt>
+              <dd>{decision.origin === "AUTOMATIC" ? "AUTOMATIC (software)" : "HUMAN (analyst)"}</dd>
+            </>
+          )}
           <dt>As-of / period</dt>
           <dd>{fact.asOfDate}</dd>
           <dt>Retrieval timestamp</dt>

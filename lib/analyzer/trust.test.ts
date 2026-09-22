@@ -73,6 +73,8 @@ function factNotConfirmed(): FactRecord {
     supersedesFactId: null,
     tagMappingVersion: "v1",
     derivedFrom: null,
+    verificationOrigin: null,
+    verificationReasonCode: null,
   };
 }
 

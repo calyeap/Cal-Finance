@@ -149,6 +149,7 @@ describe("Step 2 fact cards hold independent decisions", () => {
       factId: QUEUED[0].id,
       decision: "CONFIRMED",
       reasonCode: null,
+      origin: "HUMAN",
     };
 
     function renderDecided(decision: StoredFactDecision = DECIDED) {
@@ -185,6 +186,7 @@ describe("Step 2 fact cards hold independent decisions", () => {
         factId: QUEUED[0].id,
         decision: "NOT CONFIRMED",
         reasonCode: "NOT LOCATED",
+        origin: "HUMAN",
       });
       checked = (screen.getAllByRole("radio") as HTMLInputElement[]).find((r) => r.checked);
       expect(checked?.value).toBe("NOT CONFIRMED");
@@ -209,10 +211,10 @@ describe("Step 2 fact cards hold independent decisions", () => {
     // The generalised invariant, over every state a queued card can be in.
     it.each([
       ["undecided", undefined],
-      ["confirmed", { factId: QUEUED[0].id, decision: "CONFIRMED", reasonCode: null }],
+      ["confirmed", { factId: QUEUED[0].id, decision: "CONFIRMED", reasonCode: null, origin: "HUMAN" }],
       [
         "not confirmed",
-        { factId: QUEUED[0].id, decision: "NOT CONFIRMED", reasonCode: "NOT LOCATED" },
+        { factId: QUEUED[0].id, decision: "NOT CONFIRMED", reasonCode: "NOT LOCATED", origin: "HUMAN" },
       ],
     ] as const)("asserts exactly one state when %s", (_label, decision) => {
       const fact = decision
@@ -254,12 +256,12 @@ describe("Step 2 fact cards hold independent decisions", () => {
       ["undecided, queued", undefined, true],
       [
         "confirmed",
-        { factId: QUEUED[0].id, decision: "CONFIRMED", reasonCode: null },
+        { factId: QUEUED[0].id, decision: "CONFIRMED", reasonCode: null, origin: "HUMAN" },
         true,
       ],
       [
         "not confirmed",
-        { factId: QUEUED[0].id, decision: "NOT CONFIRMED", reasonCode: "NOT LOCATED" },
+        { factId: QUEUED[0].id, decision: "NOT CONFIRMED", reasonCode: "NOT LOCATED", origin: "HUMAN" },
         true,
       ],
       ["exempt", undefined, false],
@@ -300,7 +302,7 @@ describe("Step 2 fact cards hold independent decisions", () => {
         <FactCard
           runId={RUN_ID}
           fact={fact}
-          decision={{ factId: fact.id, decision: "CONFIRMED", reasonCode: null }}
+          decision={{ factId: fact.id, decision: "CONFIRMED", reasonCode: null, origin: "HUMAN" }}
           queued
                   displayValue={formatFactValue((fact).value, factUnit((fact).id))}
         />
@@ -317,7 +319,7 @@ describe("Step 2 fact cards hold independent decisions", () => {
         <FactCard
           runId={RUN_ID}
           fact={fact}
-          decision={{ factId: fact.id, decision: "CONFIRMED", reasonCode: null }}
+          decision={{ factId: fact.id, decision: "CONFIRMED", reasonCode: null, origin: "HUMAN" }}
           queued
                   displayValue={formatFactValue((fact).value, factUnit((fact).id))}
         />

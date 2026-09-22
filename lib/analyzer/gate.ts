@@ -16,11 +16,24 @@ import { roundMoney } from "../money";
 import { fiftyTwoWeekRangeFrom, type FiftyTwoWeekRange } from "./fiftyTwoWeekRange";
 
 // ---------------------------------------------------------------------------
-// §2's ordering rule: "no calculation module may execute before Step 2 has
-// been completed by a human. The software must enforce this, not merely
-// recommend it." Design §104: the gate is server-side, and no calculation
-// module may be reachable by any route, refresh, deep link or API call until
-// every material fact carries a decision.
+// §2's ordering rule: no calculation module may execute before Step 2 has
+// been completed. The software must enforce this, not merely recommend it.
+// Design §104: the gate is server-side, and no calculation module may be
+// reachable by any route, refresh, deep link or API call until every material
+// fact carries a decision.
+//
+// CF-ANALYZER-AUTORUN-01 — Calvin's CALVIN RULING of 22 September 2026
+// 04:28:04Z amended WHO completes Step 2 in the normal path: "Acquisition,
+// validation, calculation and routine verification should execute
+// automatically behind the scenes." §2 Step 2, §3.8's completion rule and
+// criterion A1 are amended to match (docs/frozen/calboard-stock-analyzer-
+// v1-spec.md §14.8). THE GATE BELOW IS NOT AMENDED AND DOES NOT MOVE. It still
+// refuses before any calculation module when a queued fact carries no
+// decision; what changed is that lib/analyzer/autoRun.ts can now answer the
+// queue without a human, so the normal path reaches verification-complete on
+// its own. A reader tempted to relax the check below because "the automatic
+// pass will have run" is removing the only thing that makes that claim
+// checkable.
 //
 // This module is the ONLY route from a runId to an AnalysisResult. It is a
 // chokepoint by construction: computeAnalysisForRun is the single exported
@@ -227,10 +240,16 @@ export async function fiftyTwoWeekRange(
 /**
  * Raised when a calculation is attempted before Step 2 is complete.
  *
- * This is a refusal, not an error state to be rendered as a broken page: the
- * routes catch it and redirect to Screen 2, which is where the analyst has
- * work to do. It carries the outstanding fact ids so the caller can say what
- * remains rather than only that something does.
+ * This is a refusal, not an error state to be rendered as a broken page. It
+ * carries the outstanding fact ids so the caller can say what remains rather
+ * than only that something does.
+ *
+ * CF-ANALYZER-AUTORUN-01 — the routes no longer answer it by sending the
+ * analyst to Screen 2. The normal path answers the queue automatically before
+ * a report is asked for (lib/analyzer/autoRun.ts), so reaching this from a
+ * route means the automatic pass could not complete, and what the analyst gets
+ * is an INCOMPLETE report naming what is outstanding — never an operator
+ * workflow (Calvin, 22 September 2026 04:28:04Z).
  */
 export class SpotCheckIncompleteError extends Error {
   readonly runId: string;
@@ -239,7 +258,7 @@ export class SpotCheckIncompleteError extends Error {
   constructor(runId: string, outstandingFactIds: string[]) {
     super(
       `Spot-check incomplete for run ${runId}: ${outstandingFactIds.length} queued fact(s) carry no decision. ` +
-        `No calculation module may execute before Step 2 has been completed by a human (§2).`
+        `No calculation module may execute before Step 2 is complete (§2).`
     );
     this.name = "SpotCheckIncompleteError";
     this.runId = runId;
@@ -356,7 +375,16 @@ export async function loadGateState(runId: string): Promise<GateState> {
   // data came to disagree.
   const facts = applyDecisions(
     fixture.facts,
-    new Map(decisions.map((d) => [d.factId, d.decision])),
+    // CF-ANALYZER-AUTORUN-01 — the whole stored decision now, not only its
+    // decision half: the origin and the §3.8.4 code travel onto the fact so
+    // every surface reads the same record, and none of them has to ask the
+    // store a second question to find out who decided.
+    new Map(
+      decisions.map((d) => [
+        d.factId,
+        { decision: d.decision, origin: d.origin, reasonCode: d.reasonCode },
+      ])
+    ),
     crossCheckFailedFactIds,
     derivedExemption
   );

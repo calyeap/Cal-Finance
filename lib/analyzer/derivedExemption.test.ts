@@ -35,6 +35,8 @@ function tagged(id: string, value: string): FactRecord {
     supersedesFactId: null,
     tagMappingVersion: MAPPING,
     derivedFrom: null,
+    verificationOrigin: null,
+    verificationReasonCode: null,
   };
 }
 

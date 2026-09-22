@@ -20,6 +20,7 @@ import type {
   ReasonCode,
   ProfileDecision,
   JudgmentKey,
+  DecisionOrigin,
   StoredFactDecision,
   StoredJudgment,
 } from "./decisions";
@@ -30,6 +31,7 @@ export type {
   ReasonCode,
   ProfileDecision,
   JudgmentKey,
+  DecisionOrigin,
   StoredFactDecision,
   StoredJudgment,
 };
@@ -43,6 +45,19 @@ export interface AnalyzerRun {
   profile: string | null;
   profileOverrideReason: string | null;
   profileHumanConfirmed: boolean;
+  /**
+   * CF-ANALYZER-AUTORUN-01 — the profile the acquired inputs recommended,
+   * recorded by the software when Step 6 resolved automatically, or null.
+   *
+   * Deliberately separate from `profileDecision`: §6.3's three outcomes are a
+   * HUMAN's outcomes, and writing one of them for a determination nobody made
+   * would state something false in the field the report reads to decide
+   * whether a human confirmed the profile. A run carrying this still has
+   * profileDecision null and profileHumanConfirmed false, so PROFILE NOT
+   * CONFIRMED, the trust consequence (§9.6) and the §10.6.3 suppression all
+   * keep working exactly as they did.
+   */
+  profileAutoResolved: string | null;
 }
 
 
@@ -73,7 +88,8 @@ export async function getRun(runId: string): Promise<AnalyzerRun | null> {
 
   const { rows } = await getPool().query(
     `SELECT run_id, ticker, resolved_company_name, created_at,
-            profile_decision, profile, profile_override_reason, profile_human_confirmed
+            profile_decision, profile, profile_override_reason, profile_human_confirmed,
+            profile_auto_resolved
        FROM analyzer_runs
       WHERE run_id = $1`,
     [runId]
@@ -90,6 +106,7 @@ export async function getRun(runId: string): Promise<AnalyzerRun | null> {
     profile: r.profile,
     profileOverrideReason: r.profile_override_reason,
     profileHumanConfirmed: r.profile_human_confirmed,
+    profileAutoResolved: r.profile_auto_resolved,
   };
 }
 
@@ -119,20 +136,75 @@ export async function recordFactDecision(
   }
 
   await getPool().query(
-    `INSERT INTO analyzer_run_fact_decisions (run_id, fact_id, decision, reason_code)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO analyzer_run_fact_decisions (run_id, fact_id, decision, reason_code, origin)
+     VALUES ($1, $2, $3, $4, 'HUMAN')
      ON CONFLICT (run_id, fact_id)
      DO UPDATE SET decision = EXCLUDED.decision,
                    reason_code = EXCLUDED.reason_code,
+                   origin = EXCLUDED.origin,
                    decided_at = now()`,
     [runId, factId, decision, reasonCode]
+  );
+}
+
+/**
+ * Records the decisions the SOFTWARE took on a run's queue
+ * (CF-ANALYZER-AUTORUN-01, Calvin's 22 Sep 2026 04:28:04Z ruling).
+ *
+ * Two properties this function exists to hold, neither of which is optional:
+ *
+ * 1. **`origin = 'AUTOMATIC'`, always, literal.** It is not a parameter, so no
+ *    caller can route an automatic confirmation through this path and have it
+ *    recorded as a human one. The human path (recordFactDecision above) writes
+ *    'HUMAN' the same way, for the same reason.
+ * 2. **`DO NOTHING`, not `DO UPDATE`.** A fact an analyst has already decided
+ *    is left exactly as they decided it. That makes the automatic pass
+ *    idempotent — running it twice on the same run is a no-op — and makes it
+ *    safe to run on a run someone is part-way through, which is what lets it
+ *    sit on the ordinary load path without a second state machine deciding
+ *    when it may fire.
+ *
+ * The §3.8.4 reason-code rule is not relaxed for this path: the same
+ * validation the human path performs runs here, and the table's CHECK
+ * constraint refuses a bad row underneath both.
+ */
+export async function recordAutomaticFactDecisions(
+  runId: string,
+  decisions: readonly { factId: string; decision: FactDecision; reasonCode: ReasonCode | null }[]
+): Promise<void> {
+  if (decisions.length === 0) return;
+
+  for (const d of decisions) {
+    if (d.decision === "NOT CONFIRMED" && d.reasonCode === null) {
+      throw new Error(
+        "Cannot verify requires a reason code (§3.8.4): CONTRADICTED BY SOURCE or NOT LOCATED"
+      );
+    }
+    if (d.decision === "CONFIRMED" && d.reasonCode !== null) {
+      throw new Error("Confirm carries no reason code (§3.8.4)");
+    }
+  }
+
+  // One statement rather than one per fact: the whole queue is answered by a
+  // single deterministic pass, so it lands as a single write.
+  await getPool().query(
+    `INSERT INTO analyzer_run_fact_decisions (run_id, fact_id, decision, reason_code, origin)
+     SELECT $1, d.fact_id, d.decision, d.reason_code, 'AUTOMATIC'
+       FROM UNNEST($2::text[], $3::text[], $4::text[]) AS d(fact_id, decision, reason_code)
+     ON CONFLICT (run_id, fact_id) DO NOTHING`,
+    [
+      runId,
+      decisions.map((d) => d.factId),
+      decisions.map((d) => d.decision),
+      decisions.map((d) => d.reasonCode),
+    ]
   );
 }
 
 export async function getFactDecisions(runId: string): Promise<StoredFactDecision[]> {
   if (!isUuid(runId)) return [];
   const { rows } = await getPool().query(
-    `SELECT fact_id, decision, reason_code
+    `SELECT fact_id, decision, reason_code, origin
        FROM analyzer_run_fact_decisions
       WHERE run_id = $1
       ORDER BY decided_at`,
@@ -142,6 +214,7 @@ export async function getFactDecisions(runId: string): Promise<StoredFactDecisio
     factId: r.fact_id,
     decision: r.decision,
     reasonCode: r.reason_code,
+    origin: r.origin,
   }));
 }
 
@@ -221,6 +294,43 @@ export async function recordProfileDecision(
             profile_decided_at = now()
       WHERE run_id = $1`,
     [runId, decision, profile, overrideReason, humanConfirmed]
+  );
+}
+
+/**
+ * Records the Step 6 outcome the SOFTWARE reached (CF-ANALYZER-AUTORUN-01).
+ *
+ * §6.3 gives a human three outcomes. This is none of them, and it deliberately
+ * does not write `profile_decision`: the run proceeds on the profile the
+ * acquired inputs themselves recommended, and the record says that is what
+ * happened rather than borrowing a word that would claim an analyst answered.
+ *
+ * `profile_human_confirmed` is untouched and stays FALSE, which is the whole
+ * point. PROFILE NOT CONFIRMED still raises, trust still drops below CLEAN
+ * (§9.6) and the §10.6 position is still suppressed (§10.6.3) — this outcome
+ * removes a stop from the normal path, it does not manufacture a confirmation
+ * nobody gave.
+ *
+ * `WHERE ... IS NULL` makes it idempotent and makes a human decision win: once
+ * an analyst has decided on Screen 3, or once an earlier pass has recorded the
+ * automatic resolution, a later pass writes nothing.
+ */
+export async function recordAutomaticProfileResolution(
+  runId: string,
+  recommendedProfile: string
+): Promise<void> {
+  if (recommendedProfile.trim() === "") {
+    throw new Error("An automatic profile resolution records the profile it resolved to");
+  }
+
+  await getPool().query(
+    `UPDATE analyzer_runs
+        SET profile_auto_resolved = $2,
+            profile_auto_resolved_at = now()
+      WHERE run_id = $1
+        AND profile_auto_resolved IS NULL
+        AND profile_decision IS NULL`,
+    [runId, recommendedProfile]
   );
 }
 

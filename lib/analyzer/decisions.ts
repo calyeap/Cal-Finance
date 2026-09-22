@@ -31,10 +31,26 @@ export const JUDGMENT_KEYS: readonly JudgmentKey[] = [
   "MEDIAN-MARGIN NOPAT WINDOW",
 ];
 
+/**
+ * WHO took a Step 2 decision — CF-ANALYZER-AUTORUN-01, on Calvin's ruling of
+ * 22 September 2026 04:28:04Z.
+ *
+ * This is NOT a third decision and NOT a fifth verification state. §3.8.3's
+ * two decisions are unchanged and criterion A24 still fixes the verification
+ * state at four values; the origin travels beside the decision instead, which
+ * is the shape the 8 September 2026 "record, do not amend" ruling established
+ * for exactly this class of question.
+ *
+ * It exists so the record can never present an automatic confirmation as a
+ * human one. Every surface that shows a decision shows this beside it.
+ */
+export type DecisionOrigin = "HUMAN" | "AUTOMATIC";
+
 export interface StoredFactDecision {
   factId: string;
   decision: FactDecision;
   reasonCode: ReasonCode | null;
+  origin: DecisionOrigin;
 }
 
 export interface StoredJudgment {
