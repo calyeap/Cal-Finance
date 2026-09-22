@@ -132,6 +132,12 @@ function taggedFactRecord(
     supersedesFactId: null,
     tagMappingVersion: TAG_MAPPING_VERSION,
     derivedFrom: null,
+    // CF-ANALYZER-AUTORUN-01 — acquisition takes no Step 2 decision, so
+    // nothing set this fact's verification state yet. null is the honest
+    // value and the fail-closed one: a record that named an origin here
+    // would be claiming a confirmation before the queue has been answered.
+    verificationOrigin: null,
+    verificationReasonCode: null,
   };
 }
 
@@ -171,6 +177,12 @@ function derivedFactRecord(
     tagMappingVersion: null,
     // §3.1's "inputs are themselves recorded", as data rather than as prose.
     derivedFrom: fromFactIds,
+    // CF-ANALYZER-AUTORUN-01 — acquisition takes no Step 2 decision, so
+    // nothing set this fact's verification state yet. null is the honest
+    // value and the fail-closed one: a record that named an origin here
+    // would be claiming a confirmation before the queue has been answered.
+    verificationOrigin: null,
+    verificationReasonCode: null,
   };
 }
 
@@ -246,6 +258,12 @@ export function acquire(input: AcquisitionInput): AcquisitionResult {
       tagMappingVersion: null,
       // A feed value, not a computation.
       derivedFrom: null,
+      // CF-ANALYZER-AUTORUN-01 — acquisition takes no Step 2 decision, so
+      // nothing set this fact's verification state yet. null is the honest
+      // value and the fail-closed one: a record that named an origin here
+      // would be claiming a confirmation before the queue has been answered.
+      verificationOrigin: null,
+      verificationReasonCode: null,
     });
     crossCheckFacts.push({
       factId: "price",

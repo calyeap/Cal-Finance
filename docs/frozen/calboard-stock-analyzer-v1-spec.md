@@ -108,7 +108,11 @@ Two rules govern this step.
 
 **No price renders on Step 1.** Price is acquired with the fact set and carries its timestamp (§3.4); showing it at entry would put an unsourced, untimestamped figure on screen before the fact contract applies, and would open the run with the number the analyst is trying not to anchor on.
 
-**Step 2 — Fact acquisition and human spot-check.** Software acquires the fact set per §3, classifies every figure per §4, and presents the **queued material facts** for human confirmation before any calculation runs. This step is mandatory and cannot be skipped or defaulted. It exists because the realistic failure path for Calboard is deterministic arithmetic on wrong facts (§3.1).
+**Step 2 — Fact acquisition and spot-check.** Software acquires the fact set per §3, classifies every figure per §4, and every **queued material fact** carries a decision before any calculation runs. This step is mandatory and cannot be skipped or defaulted. It exists because the realistic failure path for Calboard is deterministic arithmetic on wrong facts (§3.1).
+
+**Amended 22 September 2026 (M9-1) — who performs the routine confirmation.** This step previously *presented* the queued facts for human confirmation and required a person to answer each one in the normal path. Calvin ruled on 22 September 2026 at 04:28:04Z that "acquisition, validation, calculation and routine verification should execute automatically behind the scenes," so in the normal path **the software takes the decision itself** wherever it can defend one: the fact's §3.8.2 cross-checks did not fail, it has a value, it carries its §3.2 provenance, it was not AI-extracted, and its source class is PRIMARY. Where any of those does not hold, the software records **NOT CONFIRMED** with its §3.8.4 reason code and §5 returns INCOMPLETE for every dependent output — an honest incomplete report, never a queue put in front of the analyst.
+
+**What this amendment does not change.** Nothing about *what* is verified, *what* is recorded, or *when* calculation may run. The queue is the same queue (§3.8, §3.8.1), the §3.8.2 cross-checks still run on every input, every fact still carries all six §3.2 fields, the two decisions and their reason codes are unchanged (§3.8.3, §3.8.4), and the ordering rule below still forbids a calculation module before every queued fact carries a decision. **The record distinguishes the two origins.** A decision the software took is stored and displayed as automatic; it is never presented as a human confirmation, which §3.2 forbids independently. A human spot-check remains available on the Step 2 screen, and a decision a person records replaces the automatic one.
 
 **Not every material fact is queued.** A fact acquired through a **fixed, versioned tag mapping** is not spot-checked (§3.8.1). What remains in the queue is the AI-extracted set — the population in which all four recorded errors occurred. The exempted facts are covered instead by the deterministic input cross-checks of §3.8.2.
 
@@ -132,7 +136,7 @@ Two rules govern this step.
 
 **Step 10 — Result assembly.** The machine-readable Analysis Result is assembled per §10.0, with the challenger findings merged only after that call has completed. The narrative report is rendered from the result object.
 
-**Ordering rule:** no calculation module may execute before Step 2 has been completed by a human. The software must enforce this, not merely recommend it.
+**Ordering rule:** no calculation module may execute before Step 2 is complete. The software must enforce this, not merely recommend it. *(Amended 22 September 2026, M9-1: "by a human" is struck from the completion condition and from nowhere else. The rule, the enforcement and the point at which it applies are unchanged — only who may have answered the queue.)*
 
 > **Reading note on two numbering systems.** This document uses "Step *n*" for two different things and they must not be confused. A bare **Step *n*** is a step of this ten-step user flow, and those are the numbers the M7 amendment renumbered. A **§10 Step *n*** is a step of the *methodology's* §10 and belongs to the frozen contract; those numbers are unchanged and must never be renumbered to match this flow. The load-bearing valuation boundary discussed in §1.1 and §8.3 is **§10 Step 5**, the methodology's, not this flow's Step 5.
 
@@ -268,9 +272,11 @@ Microsoft illustrates the size of the effect: 14.6% CAGR on the mixed basis orig
 
 Per I15 this choice is a **judgment presented as a fact**. Software flags it; the human confirms. See §4.4.
 
-### 3.8 Human spot-check
+### 3.8 Spot-check
 
 Mandatory, before any calculation. This is the register's own first recommendation for the product spec.
+
+**Amended 22 September 2026 (M9-1).** This section was headed *Human spot-check*. Calvin's ruling of 22 September 2026 04:28:04Z amends **who performs the routine confirmation in the normal path** — the software does, where it can defend the confirmation (§2 Step 2) — and amends nothing else in this section. The material-fact list below, the presentation requirement, the behaviour on non-confirmation and the reason for all three are unchanged, and a human spot-check remains available and remains authoritative where one is made.
 
 **Material facts requiring confirmation:**
 
@@ -307,6 +313,8 @@ Falling back is not free. **Every fallback is recorded on the fact** with which 
 2. **The exemption changes what is queued, not what is carried.** An exempt fact still carries all six §3.2 fields, still displays them, still propagates its labels under §3.3, and still appears in report section B. It is not spot-checked; it is not hidden.
 
 **Consequence for the Step 2 gate:** *spot-check complete* means every **queued** material fact carries a decision. The §2 ordering rule and criterion A1 are otherwise unchanged — no calculation module runs before that.
+
+*(Amended 22 September 2026, M9-1.) The completion rule is unchanged in what it requires — every queued material fact carries a decision — and amended only in who may have taken that decision: since Calvin's ruling of 22 September 2026 04:28:04Z the software takes it in the normal path wherever it can defend one (§2 Step 2), and records it as automatic. A queued fact with no decision at all still fails this rule, and a decision is still per fact: there is no bulk confirmation, no default and no skip.*
 
 ### 3.8.2 Deterministic input cross-checks — a milestone M8 requirement
 
@@ -1243,7 +1251,7 @@ Observable conditions. Each is PASS / FAIL, not a judgment.
 
 | # | Criterion |
 |---|---|
-| A1 | No calculation module executes before the human spot-check (§3.8) is complete |
+| A1 | No calculation module executes before the spot-check (§3.8) is complete — every queued material fact carries a decision, and each decision records whether the software or a human took it. *(Amended 22 September 2026, M9-1: "human" struck from the completion condition; the criterion's test and the point at which it applies are unchanged.)* |
 | A2 | Every figure in every output is traceable to an acquired record carrying source, source class and timestamp |
 | A3 | A figure derived from a SECONDARY input is labelled SECONDARY **at its point of display**, not only at entry |
 | A4 | A figure derived from an UNVERIFIED input is labelled UNVERIFIED at its point of display |
@@ -1597,6 +1605,62 @@ Two rulings, unrelated to each other, landed in one amendment because both close
 **The Step 1 registrant-refusal outcome has no entry-screen visual treatment yet, on the same F4 precedent above.** UNSUPPORTED INSTRUMENT was specified in §9.3.1 with no entry-screen treatment, and that gap was recorded as a design follow-up rather than resolved in the spec (F4). The same applies here: Screen 1 now needs a fifth outcome rendered, alongside UNSUPPORTED INSTRUMENT's still-outstanding one, and both are DESIGN's to take up, not this amendment's.
 
 **Not in this amendment.** No §9.3 or §9.4 vocabulary count changes — neither ruling adds a suppressing state or a qualifying flag, and the state vocabulary stays at twenty-four. No thresholds, cut-points or position-renderer changes. No design-document or mock changes. No application code.
+
+### 14.8 Amendment M9-1 — the normal-path human requirement, 22 September 2026
+
+**One ruling, one requirement, four places.** Drafted 22 September 2026 against the frozen artefacts, whose SHA-256 hashes were verified byte-exact before any edit:
+
+| File | SHA-256 verified before edit |
+|---|---|
+| `calboard-stock-analyzer-v1-spec.md` | `6a9cf282ce3808d0ebdedb3af71ebd0b3dfdfea3697cdaf9a17bbbd0298caf61` |
+
+The other seven frozen artefacts (`calfinance-methodology-v2.md`, `calboard-valuation-methodology.md`, `calboard-stock-analyzer-v1-design.md`, `mock-screen1-entry.html`, `mock-human-steps.html`, `mock-report-msft.html`, `mock-report-oklo.html`) were verified against the same manifest and are **untouched** by this amendment.
+
+**The authority, verbatim.** Calvin's `CALVIN RULING`, 22 September 2026 04:28:04Z ([PR #216 comment 5771211284](https://github.com/calyeap/Cal-Finance/pull/216#issuecomment-5771211284)), first stated at 04:17:29Z as `CALVIN ACCEPTANCE RESULT — CHANGES REQUIRED`:
+
+> CALVIN RULING — NOT YET, normal Analyzer UX must be ticker → report.
+>
+> The current Analyzer frontend is not accepted for V1 freeze.
+>
+> Normal user contract: ticker in → report out.
+>
+> After I enter/select a ticker and start analysis, I should not be required to manually verify prices, margins, SEC facts, extraction states, provenance, gates, or other routine inputs. Acquisition, validation, calculation and routine verification should execute automatically behind the scenes.
+>
+> Preserve the existing finance engine, evidence/provenance, validation, calculations and auditability. This is a frontend/workflow simplification, not a methodology redesign.
+>
+> If the system cannot reliably complete an analysis, return a clear INCOMPLETE report explaining the reason rather than forcing me through an operator workflow.
+>
+> Technical acquisition/validation detail should remain available optionally under Sources / Details, but must not sit in the normal path.
+>
+> V1 acceptance target: enter ticker → analyze → report. No mandatory human interaction after ticker entry in the normal flow.
+>
+> Fix this as the smallest bounded UX outcome, then return to me for the same live acceptance pass. Do not reopen finance methodology, verdict synthesis, Portfolio Review, or redesign the broader Analyzer.
+
+**What is amended, stated as narrowly as it is meant.** One requirement: **who performs the routine confirmation of a queued material fact in the normal path.** Before this amendment, a human had to. After it, the software does, wherever it can defend the confirmation, and a human still may.
+
+**The four changes:**
+
+| # | Change | Sections touched |
+|---|---|---|
+| M1 | Step 2 no longer requires a human to answer the queue in the normal path. The software takes the decision where the fact's §3.8.2 cross-checks did not fail, it has a value, it carries its §3.2 provenance, it is not AI-extracted and it is PRIMARY; otherwise it records NOT CONFIRMED with its §3.8.4 reason code. The heading loses the word *human* | §2 Step 2, §3.8 heading and note |
+| M2 | The §2 ordering rule strikes "by a human" from its completion condition | §2 ordering rule |
+| M3 | §3.8.1's completion rule records that the decision may be the software's, and that a queued fact with no decision at all still fails the rule | §3.8.1 |
+| M4 | Criterion A1 strikes "human" from its completion condition and adds the requirement that each decision records who took it | §12.1 A1 |
+| M5 | This record | §14.8 |
+
+**What is NOT amended, and is not reopened by this amendment.** Nothing about *what* is verified or *what* is recorded:
+
+- **The Step 2 queue.** §3.8's material-fact list, §3.8.1's exemption and its two guards, and the derived-fact exemption are all unchanged. The same facts are queued as before.
+- **The §3.8.2 cross-checks.** They still run on every input, exempt or queued, and their results are still reported. They are the evidence the automatic confirmation rests on; weakening them would hollow it out.
+- **The decision vocabulary.** §3.8.3's two decisions and §3.8.4's fixed two-option reason code are unchanged, and criterion A24's four verification states are unchanged. **No fifth verification state was invented.** Who took a decision is recorded beside it, on the same *record, do not amend* shape Command Center ruled for §3.2's SPOT-CHECK NOT REQUIRED gloss on 8 September 2026.
+- **§3.2.** Its gloss on CONFIRMED ("A human checked the figure against its source and it matched") describes one route to that state and, after this amendment, not the only one. The state is behaviourally correct for an automatically confirmed fact; its account of how the state is reached is the stale part, and it goes into the amendment cycle with §17.16's Quick Read contents list rather than being re-frozen here. §3.2's own requirement that a state which is not a human confirmation "must never be displayed as one" is what the recorded origin exists to satisfy, and it is untouched.
+- **The refusal-before-calculation chokepoint.** §2's ordering rule still forbids a calculation module before Step 2 is complete, and the software still enforces it.
+- **Provenance and propagation.** Every fact still carries all six §3.2 fields. §5's INCOMPLETE propagation from a NOT CONFIRMED material fact is unchanged, and is the mechanism by which an unverifiable figure reaches the report as INCOMPLETE rather than as a queue.
+- **Step 6 (§6.3).** Its three outcomes remain a human's three outcomes. Where nobody has decided, the run proceeds on the recommended profile as an automatic resolution that is **not** recorded as any of the three and **not** recorded as human-confirmed — so PROFILE NOT CONFIRMED (§9.4), the §9.6 trust consequence and the §10.6.3 position suppression all behave exactly as they did.
+- **Finance semantics.** No calculation module, threshold, band, cut-point or verdict behaviour. Calvin: "a frontend/workflow simplification, not a methodology redesign."
+- **Screens 2 and 3.** Both keep every control and every disclosure they had. They are reached from Sources / Details instead of standing in the path.
+
+**Not in this amendment.** No §9.3 or §9.4 vocabulary changes — the state vocabulary stays at twenty-four. No new acceptance criterion. No thresholds, cut-points or renderer changes. No mock changes. No methodology-document changes. `docs/frozen/calboard-stock-analyzer-v1-design.md` is untouched; the M9 design contract carries the matching route/ordering note in its own §2.3.
 
 ---
 ## APPENDIX — TRACEABILITY

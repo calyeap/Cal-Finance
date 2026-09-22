@@ -28,6 +28,8 @@ function fact(over: Partial<FactRecord> = {}): FactRecord {
     supersedesFactId: null,
     tagMappingVersion: null,
     derivedFrom: null,
+    verificationOrigin: null,
+    verificationReasonCode: null,
     ...over,
   };
 }

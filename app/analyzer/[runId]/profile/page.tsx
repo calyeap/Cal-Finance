@@ -15,6 +15,14 @@ import { gate0Heading, gate0TestRows, gate0ExplanationIfFailed } from "@/lib/ana
 // analyst, NOT the enforcement: the enforcement is that computeAnalysisForRun
 // refuses to compute, so a deep link here cannot produce a number even if this
 // check were removed.
+//
+// CF-ANALYZER-AUTORUN-01 — this screen is now a DETAIL route, reached from
+// Sources / Details rather than stood in front of the analyst (Calvin, 22
+// September 2026 04:28:04Z). Nothing on it is removed, including the redirect
+// below: it is between two detail routes, not a stop in the normal path, and
+// in practice it no longer fires because a run that has been opened is
+// already verification-complete. It is kept rather than deleted because it is
+// still the correct answer to a deep link into a run that is not.
 
 export default async function ProfilePage({ params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;

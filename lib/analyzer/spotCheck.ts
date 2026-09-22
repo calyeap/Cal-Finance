@@ -1,4 +1,4 @@
-import type { FactRecord, VerificationState } from "./types";
+import type { FactRecord, VerificationState, VerificationOrigin, FactReasonCode } from "./types";
 
 // ---------------------------------------------------------------------------
 // §3.8 / §3.8.1 — what Step 2 queues, and when Step 2 is complete.
@@ -379,6 +379,19 @@ export function deriveVerificationState(
 ): VerificationState {
   // A decision, once taken, is the answer. Both count toward completion;
   // NOT CONFIRMED additionally drives §5's INCOMPLETE propagation.
+  //
+  // CF-ANALYZER-AUTORUN-01 (Calvin, 22 September 2026 04:28:04Z) — since that
+  // ruling a decision may have been taken by the software rather than by an
+  // analyst, in the normal path. The STATE is the same either way, because it
+  // describes the same thing about the figure: it is decided, it counts toward
+  // completion, and NOT CONFIRMED still propagates INCOMPLETE. Criterion A24
+  // fixes this field at four values, so who decided is carried on the record's
+  // own verificationOrigin (applyDecisions below), never by a fifth value
+  // here — the same "record, do not amend" shape as the SPOT-CHECK NOT
+  // REQUIRED note further down. §3.2's gloss on CONFIRMED describes the human
+  // route and, after the amendment, not the only one; that wording goes into
+  // the amendment cycle, and no surface may display an automatic confirmation
+  // as a human one in the meantime.
   if (decision !== undefined) return decision;
 
   // Not queued, so there is no decision to wait for.
@@ -423,6 +436,22 @@ export type FactDecisionState = Extract<
 >;
 
 /**
+ * A recorded Step 2 decision as applyDecisions reads it: the decision, who
+ * took it, and the §3.8.4 code where it was a non-confirmation.
+ *
+ * CF-ANALYZER-AUTORUN-01. The origin is carried here rather than derived
+ * anywhere downstream for the same reason the verification state itself is
+ * derived once, in loadGateState: a second derivation is how the screen and
+ * the data came to disagree. Nothing in this module decides the origin — it
+ * reads what the store recorded.
+ */
+export interface AppliedDecision {
+  decision: FactDecisionState;
+  origin: VerificationOrigin;
+  reasonCode: FactReasonCode | null;
+}
+
+/**
  * Rewrites a fact set so every record carries the verification state this run
  * gives it.
  *
@@ -434,7 +463,7 @@ export type FactDecisionState = Extract<
  */
 export function applyDecisions(
   facts: readonly FactRecord[],
-  decisions: ReadonlyMap<string, FactDecisionState>,
+  decisions: ReadonlyMap<string, AppliedDecision>,
   crossCheckFailedFactIds: CrossCheckFailedFactIds = NO_FAILURES,
   evidence?: DerivedExemptionEvidence
 ): FactRecord[] {
@@ -445,11 +474,21 @@ export function applyDecisions(
 
   return facts.map((fact) => {
     // A fact is queued, exempt, or neither (immaterial and unmapped); only the
-    // queued set waits on a human.
+    // queued set waits on a decision.
     const queued = queuedIds.has(fact.id) && !exemptIds.has(fact.id);
+    const recorded = decisions.get(fact.id);
     return {
       ...fact,
-      verificationState: deriveVerificationState(fact, decisions.get(fact.id), queued),
+      verificationState: deriveVerificationState(fact, recorded?.decision, queued),
+      // CF-ANALYZER-AUTORUN-01 — the two fields that keep an automatic
+      // confirmation distinguishable from a human one, set in the same single
+      // place the state itself is set and from the same record.
+      //
+      // undefined (no decision) leaves both null: an exempt fact and an
+      // undecided queued fact were decided by nobody and nothing, and naming
+      // an origin for either would be the fail-open direction.
+      verificationOrigin: recorded === undefined ? null : recorded.origin,
+      verificationReasonCode: recorded === undefined ? null : recorded.reasonCode,
     };
   });
 }

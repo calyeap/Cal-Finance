@@ -6,8 +6,13 @@ export const DEFAULT_BASE_URL = "http://127.0.0.1:3000";
 
 /** Frozen artefacts, byte-exact. A missing file is a STOP, never a hash. */
 export const FROZEN_HASHES: Readonly<Record<string, string>> = {
+  // Re-derived for amendment M9-1 (spec §14.8, 22 September 2026) — the
+  // normal-path human requirement, on Calvin's ruling of 04:28:04Z. Previous
+  // value, as verified byte-exact before that edit:
+  // 6a9cf282ce3808d0ebdedb3af71ebd0b3dfdfea3697cdaf9a17bbbd0298caf61.
+  // No other entry in this table changes: M9-1 touches one frozen file.
   "calboard-stock-analyzer-v1-spec.md":
-    "6a9cf282ce3808d0ebdedb3af71ebd0b3dfdfea3697cdaf9a17bbbd0298caf61",
+    "fdeaf233a32dc8b644b37bde6eba3ddd55d23d65fb81caa92460c31d773359a9",
   "calboard-stock-analyzer-v1-design.md":
     "7535c6b6551b0ebf27ba10417733e5780a1cdc4634f5a5b7e4b91f121425a774",
   "mock-screen1-entry.html":
@@ -39,10 +44,14 @@ export const STATE_MARKERS: Readonly<Record<string, string>> = {
   "s1-resolved": "Listed operating company",
   "s1-unknown": "Unknown — no provider evidence for ZXQY",
   "s1-unsupported": "Unsupported — not an operating company",
-  "s2-facts-msft-undecided": "Fact acquisition and spot-check",
+  // CF-ANALYZER-AUTORUN-01 — the two `-undecided` targets are gone. Calvin's
+  // ruling of 22 September 2026 04:28:04Z means a run that exists has already
+  // been answered by the software, so there is no undecided Screen 2 for the
+  // runner to point a browser at. Not captured, rather than captured by
+  // seeding the database behind the UI, which this runner does not do. See
+  // drive.ts's note at the removed capture.
   "s2-facts-msft": "Fact acquisition and spot-check",
   "s3-profile-msft": "PROFILE CONFIRMATION",
-  "s2-facts-oklo-undecided": "Fact acquisition and spot-check",
   "s2-facts-oklo": "Fact acquisition and spot-check",
   "s3-profile-oklo": "PROFILE CONFIRMATION",
 };
@@ -84,5 +93,11 @@ export const REQUIRED_CHECK_STEPS: readonly string[] = [
   "expected font family declared on .cb-analyzer",
   "no console or page errors",
   "every requested state appeared",
-  "Continue to gates disabled with a reason on the undecided capture",
+  // CF-ANALYZER-AUTORUN-01 — "Continue to gates disabled with a reason on the
+  // undecided capture" is removed with the capture it ran against. It could
+  // only ever run on a `-undecided` target, and that state is no longer
+  // reachable through the product (see STATE_MARKERS above). `checkContinueGated`
+  // itself is untouched and is still proved in both directions by the
+  // fixture-driven self-test, so the check is retired from this run's
+  // inventory rather than deleted from the runner.
 ];

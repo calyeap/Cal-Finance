@@ -59,6 +59,29 @@ Sections, in #118's order: **Overview · Business · Financials · Valuation · 
 
 This is recorded here, with its citation, rather than silently picked, because it is exactly the kind of exact-navigation-mechanism decision issue #151 SCOPE item 2 assigns to this contract.
 
+### 2.3 The normal path, and the detail routes — amended 22 September 2026
+
+**Authority.** Calvin's `CALVIN RULING`, 22 September 2026 04:28:04Z ([PR #216 comment 5771211284](https://github.com/calyeap/Cal-Finance/pull/216#issuecomment-5771211284)): *"Normal user contract: ticker in → report out. ... V1 acceptance target: enter ticker → analyze → report. No mandatory human interaction after ticker entry in the normal flow. ... Technical acquisition/validation detail should remain available optionally under Sources / Details, but must not sit in the normal path."* Implemented by `CF-ANALYZER-AUTORUN-01`; the matching frozen-spec amendment is `calboard-stock-analyzer-v1-spec.md` §14.8 (M9-1).
+
+**The normal path is two routes, and the analyst acts on one of them.**
+
+| Order | Route | Human interaction |
+|---|---|---|
+| 1 | `/analyzer` — Screen 1, ticker entry and identity resolution | Enter or select a ticker; confirm the resolved company. **The only human steps in the normal path.** |
+| 2 | `/analyzer/{runId}` — Overview (§2.1) | None. The run is acquired, cross-checked, verified and computed on the way here. |
+| — | `/analyzer/{runId}/report` — Full Analysis (§2.2) | None. Reached from Overview slot 12. |
+
+**The detail routes are reached, never routed into.**
+
+| Route | What it is | How it is reached |
+|---|---|---|
+| `/analyzer/{runId}/facts` — Screen 2 | The per-fact provenance and its two decisions, the tag-mapped and computed exempt sections, the §3.8.2 cross-check report, and the three §4.4 judgment selectors — **all of it, unchanged** | A `Sources / Details` link on Overview and on Full Analysis |
+| `/analyzer/{runId}/profile` — Screen 3 | Gate 0 and Gate 1 with the values they were evaluated on, the profile recommendation with the facts that drove it, and the §6.3 confirm/override/Cannot-judge controls — **all of it, unchanged** | The same `Sources / Details` block |
+
+**The ordering rule this replaces, recorded so the change is not mistaken for drift.** Before this amendment, Overview and Full Analysis each redirected to Screen 3 while the run carried no profile decision, and to Screen 2 on `SpotCheckIncompleteError`. Both redirects are removed. The refusal they answered is not: `computeAnalysisForRun` still refuses before any calculation module when a queued fact carries no decision, and where that refusal is ever reached from a route the analyst gets an `INCOMPLETE` state naming the outstanding figures — the §4 treatment, applied to the run as a whole — rather than a route into an operator screen.
+
+**`Sources / Details` is a link block, not new navigation chrome.** It adds no rail, no tab and no second primary action; each page's dominant primary action is still the one §2.1 slot 12 and the report's own save control already define. §8 items 2 and 4 stay open and are untouched by this section.
+
 Full Analysis's six sections re-group the frozen artefact's fixed report content (Sections A–J, `calboard-stock-analyzer-v1-design.md` §10.2) thematically rather than sequentially. Nothing in that content is dropped, renamed at the data level, or given new methodology — only its presentation grouping changes, which is exactly what a design contract may decide (SCOPE item 2) and exactly what neither the frozen artefact nor CalFinance v2 forbids reorganising, provided the never-hidden and disclosure rules in §15 (frozen doc) continue to hold, which they do under this grouping (each theme still renders every state, flag and provenance token it inherits, per §7 below).
 
 | Section | For | Must contain | Must never contain |

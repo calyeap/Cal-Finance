@@ -99,7 +99,36 @@ export interface FactRecord {
   // null is the fail-closed value. A computed figure that forgets to declare
   // its components is treated as underived, which keeps it queued.
   derivedFrom: string[] | null;
+  // CF-ANALYZER-AUTORUN-01, on Calvin's ruling of 22 September 2026
+  // 04:28:04Z — WHO set this run's verification state, where a Step 2 decision
+  // set it.
+  //
+  // Not a sixth §3.2 field and not a fifth verification state: criterion A24
+  // still fixes verificationState at exactly four values, and this travels
+  // BESIDE it, on the same "record, do not amend" shape the 8 September 2026
+  // ruling established. It exists so that no surface can present an automatic
+  // confirmation as a human one — §3.2 is explicit that a state which is not a
+  // human confirmation "must never be displayed as one", and that requirement
+  // needs a field to read.
+  //
+  // null wherever no decision set the state: an exempt fact (SPOT-CHECK NOT
+  // REQUIRED) and an undecided queued fact (SPOT-CHECK PENDING) were decided
+  // by nobody and nothing, and saying otherwise would be the fail-open
+  // direction.
+  verificationOrigin: VerificationOrigin | null;
+  // §3.8.4: "The code is recorded on the fact and carried in `facts`." The
+  // reason code of a NOT CONFIRMED decision, human or automatic, so the report
+  // can state WHY a field reads INCOMPLETE at the field itself rather than
+  // only that it does. null on every other state, including CONFIRMED —
+  // §3.8.4 is explicit that a confirmation carries no reason code.
+  verificationReasonCode: FactReasonCode | null;
 }
+
+/** Who took the Step 2 decision behind a verification state. See FactRecord. */
+export type VerificationOrigin = "HUMAN" | "AUTOMATIC";
+
+/** §3.8.4's fixed two-option select, as carried on the fact. */
+export type FactReasonCode = "CONTRADICTED BY SOURCE" | "NOT LOCATED";
 
 // ---------------------------------------------------------------------------
 // §3.2.1 / §9 — provenance and qualification, never collapsed into one score

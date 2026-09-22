@@ -1587,6 +1587,25 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
                       tokens={{ sourceClass: f.sourceClass, extractionType: f.extractionType, verificationState: f.verificationState }}
                       full
                     />
+                    {/* CF-ANALYZER-AUTORUN-01 — who set the verification state,
+                        and, on a non-confirmation, the §3.8.4 code that says
+                        why anything computed from this figure reads INCOMPLETE.
+                        Rendered here because this is the fact set's full
+                        provenance display (contract §2.2) and because §3.2 is
+                        explicit that a state which is not a human confirmation
+                        must never be displayed as one. Absent where no decision
+                        set the state — an exempt or still-pending fact was
+                        decided by nobody, and a "Recorded by" line on one would
+                        claim otherwise. */}
+                    {f.verificationOrigin !== null && (
+                      <div className="sub">
+                        Recorded by{" "}
+                        {f.verificationOrigin === "AUTOMATIC"
+                          ? "AUTOMATIC (software routine verification)"
+                          : "HUMAN (analyst spot-check)"}
+                        {f.verificationReasonCode !== null && ` · ${f.verificationReasonCode}`}
+                      </div>
+                    )}
                     <div className="sub">
                       {f.type} · {f.source}
                     </div>

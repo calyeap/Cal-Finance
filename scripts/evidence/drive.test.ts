@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { getPool } from "@/lib/db";
-import { createRun, recordFactDecision } from "@/lib/analyzer/runStore";
+import { createRun } from "@/lib/analyzer/runStore";
+import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import { loadGateState } from "@/lib/analyzer/gate";
 import { queuedFacts } from "@/lib/analyzer/spotCheck";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
@@ -17,6 +18,12 @@ import { expectedQueueForRun, assertCardsForQueue } from "./drive";
 //
 // These tests pin both halves — that the expectation now comes from the gate,
 // and that the stop still fires when a queued fact really has no card.
+//
+// CF-ANALYZER-AUTORUN-01 — the runs below are advanced automatically before
+// the queue is asked for, because that is the state the runner now meets: the
+// software answers the queue behind "Begin analysis" (Calvin, 22 September
+// 2026 04:28:04Z). The third test's invariant is inverted with the function's
+// own: what must now be refused is a run that is NOT verification-complete.
 // ---------------------------------------------------------------------------
 
 describe("the expected queue comes from the run's gate state", () => {
@@ -32,7 +39,7 @@ describe("the expected queue comes from the run's gate state", () => {
 
   it("matches what the page enforces for this run", async () => {
     const runId = await createRun("MSFT", "Microsoft Corporation");
-    const state = await loadGateState(runId);
+    const state = await advanceRunAutomatically(runId);
 
     const expected = await expectedQueueForRun(runId, "MSFT");
     const enforced = queuedFacts(
@@ -51,6 +58,7 @@ describe("the expected queue comes from the run's gate state", () => {
     // filings. A runner reading the first was checking a different company's
     // paperwork.
     const runId = await createRun("MSFT", "Microsoft Corporation");
+    await advanceRunAutomatically(runId);
 
     const expected = await expectedQueueForRun(runId, "MSFT");
     const fromFixture = queuedFacts(MSFT_FIXTURE.facts).map((f) => f.id);
@@ -62,13 +70,14 @@ describe("the expected queue comes from the run's gate state", () => {
     expect(expected).not.toContain("finance-lease-rou-additions");
   });
 
-  it("refuses a run that already carries decisions rather than checking a short list", async () => {
+  it("refuses a run that is not verification-complete rather than capturing it as though it were", async () => {
+    // The state the ruling says the normal path must never be in when a
+    // report is asked for. If the automatic pass ever stops answering the
+    // queue, the runner stops here instead of photographing a half-run.
     const runId = await createRun("MSFT", "Microsoft Corporation");
-    const [first] = await expectedQueueForRun(runId, "MSFT");
-    await recordFactDecision(runId, first, "CONFIRMED", null);
 
     await expect(expectedQueueForRun(runId, "MSFT")).rejects.toThrow(
-      /already carries decisions/
+      /is not verification-complete/
     );
   });
 });

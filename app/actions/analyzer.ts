@@ -21,6 +21,7 @@ import {
   type JudgmentKey,
 } from "@/lib/analyzer/runStore";
 import { fixtureForTicker } from "@/lib/analyzer/gate";
+import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import type { ResolveState } from "@/lib/analyzer/resolveState";
 import { createDeepSnapshot } from "@/lib/analyzer/snapshotAnalysis";
 
@@ -49,12 +50,20 @@ export async function resolveTickerAction(
 }
 
 /**
- * Commits the run and moves to Step 2.
+ * Commits the run, runs the analysis, and moves to the report.
  *
  * Re-resolves rather than trusting the posted company name: the identity in
  * the form is client-supplied, and a run must not be created for a company the
  * server has not itself resolved. This is the same reasoning as the gate —
  * what the client says happened is not evidence that it did.
+ *
+ * CF-ANALYZER-AUTORUN-01 — this action used to hand the analyst to Screen 2's
+ * per-fact queue. Calvin ruled on 22 September 2026 04:28:04Z that the normal
+ * contract is "ticker in → report out", so acquisition, routine verification
+ * and the profile determination now run here, behind the scenes, and the
+ * analyst lands on the run's Overview. Screen 2 and Screen 3 are unchanged and
+ * still reachable, from the Sources / Details links on Overview and Full
+ * Analysis — they are detail, not steps.
  */
 export async function beginAnalysisAction(formData: FormData): Promise<void> {
   const ticker = String(formData.get("ticker") ?? "");
@@ -73,7 +82,19 @@ export async function beginAnalysisAction(formData: FormData): Promise<void> {
   }
 
   const runId = await createRun(identity.ticker, identity.companyName);
-  redirect(`/analyzer/${runId}/facts`);
+
+  // The only human interaction in the normal path ended at the confirmation
+  // that produced this request. Everything Step 2 and Step 6 used to stop for
+  // happens here instead — and nothing is skipped: every queued fact still
+  // gets a decision, the §3.8.2 cross-checks still run, and a fact the
+  // software cannot confirm is recorded NOT CONFIRMED so §5 carries INCOMPLETE
+  // to whatever depends on it.
+  //
+  // The route pages call this too (it is idempotent), so a run whose creation
+  // was interrupted here still reaches a report rather than stalling.
+  await advanceRunAutomatically(runId);
+
+  redirect(`/analyzer/${runId}`);
 }
 
 function parseReasonCode(raw: FormDataEntryValue | null): ReasonCode | null {

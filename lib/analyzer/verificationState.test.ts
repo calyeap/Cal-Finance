@@ -101,7 +101,7 @@ describe("applyDecisions over the real fixtures", () => {
 
   it("does not mutate the fixture it was given", () => {
     const before = statesOf(MSFT_FIXTURE.facts);
-    applyDecisions(MSFT_FIXTURE.facts, new Map([["capex", "NOT CONFIRMED"]]));
+    applyDecisions(MSFT_FIXTURE.facts, new Map([["capex", { decision: "NOT CONFIRMED" as const, origin: "HUMAN" as const, reasonCode: "NOT LOCATED" as const }]]));
     expect(statesOf(MSFT_FIXTURE.facts)).toEqual(before);
   });
 });

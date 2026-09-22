@@ -158,6 +158,12 @@ export const OKLO_FIXTURE: CompanyFixture = {
       // queued for spot-check (§3.8.1).
       tagMappingVersion: null,
       derivedFrom: null,
+      // CF-ANALYZER-AUTORUN-01 — acquisition takes no Step 2 decision, so
+      // nothing set this fact's verification state yet. null is the honest
+      // value and the fail-closed one: a record that named an origin here
+      // would be claiming a confirmation before the queue has been answered.
+      verificationOrigin: null,
+      verificationReasonCode: null,
     },
     {
       id: "quarterly-burn",
@@ -180,6 +186,12 @@ export const OKLO_FIXTURE: CompanyFixture = {
       // queued for spot-check (§3.8.1).
       tagMappingVersion: null,
       derivedFrom: null,
+      // CF-ANALYZER-AUTORUN-01 — acquisition takes no Step 2 decision, so
+      // nothing set this fact's verification state yet. null is the honest
+      // value and the fail-closed one: a record that named an origin here
+      // would be claiming a confirmation before the queue has been answered.
+      verificationOrigin: null,
+      verificationReasonCode: null,
     },
   // No `as FactRecord[]` assertion here. It used to carry one, and the
   // assertion silently suppressed the missing-property error when

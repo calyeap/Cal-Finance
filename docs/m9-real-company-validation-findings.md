@@ -52,6 +52,46 @@ is fixed by `snapshotComparison.ts`'s own declared field list, not by
 either version's object key enumeration. `deriveVerdict` is not touched;
 `lib/analyzer/verdict.ts` stays byte-identical to `367aae2`.
 
+**Update — CF-ANALYZER-AUTORUN-01, 2026-09-22.** Calvin's `CALVIN RULING`
+of 2026-09-22T04:28:04Z ([PR #216 comment
+5771211284](https://github.com/calyeap/Cal-Finance/pull/216#issuecomment-5771211284))
+made `ticker → analyze → report` the normal contract, so the two human stops
+this file's runs were driven through — Screen 2's per-fact queue and Screen
+3's profile decision — no longer sit in the path. Both real runs were
+re-driven the way the product now drives them, with **no human write of any
+kind** after the run is committed: `lib/analyzer/automaticAnalysisOnRealRun.test.ts`
+and `app/analyzer/analyzerRoutesOnRealRun.test.tsx`.
+
+- **Nothing in §§1–4 below changed.** MSFT's and OKLO's finance state under
+  the automatic path is asserted **identical** to the same run worked by
+  hand — price, company name, profile, Gate 0, leverage, trust,
+  `fairValueRange.kind`, verdict status and verdict reason, and every fact
+  value — by `financeStateOf` in that first test file. Both still read
+  `INCOMPLETE`, for the same upstream causes §§2–3 already record, and
+  `lib/analyzer/verdict.ts` is untouched.
+- **What the software answered, on each run.** MSFT's real queue is two
+  facts — the market quote and the derived operating margin — and OKLO's is
+  one, the market quote. Both runs confirm every one of them automatically,
+  because each is PRIMARY, deterministically acquired, has a value, carries
+  its §3.2 provenance and has no failing §3.8.2 cross-check. Nothing was
+  skipped and nothing was exempted that was not already exempt: the queue is
+  the same queue.
+- **Step 6 is resolved, not confirmed.** Each run records the profile its
+  own inputs recommended (`MATURE_PROFITABLE_STABLE_FCF` / `PRE_REVENUE_UNPROFITABLE`)
+  as an automatic resolution. `profile_human_confirmed` stays `FALSE` on
+  both, so PROFILE NOT CONFIRMED, the §9.6 trust consequence and the §10.6.3
+  suppression are unchanged.
+- **MSFT's §4.4 state is still reachable and still the same.** Recording
+  Calvin's ruled selection on the detail route, on top of an automatically
+  analyzed run, still produces leverage `PASS`, trust `PARTIAL`,
+  `fairValueRange.kind = "range"` and the $36.348B non-operating balance §2
+  records.
+- **The two recorded capture-path limitations in §4 are unchanged and are
+  not claimed fixed** — Business still renders its disclosed empty state on
+  the capture path, and the 52-week range still resolves to `null` offline,
+  so margin history and Section D still read `INCOMPLETE`. Neither is
+  touched by this outcome.
+
 Satisfies the condition #118 item 10 sets. Every M9 surface claim shipped
 before this (items 3, 4, 6, 7, 8, 9) rested on `MSFT_FIXTURE` /
 `OKLO_FIXTURE`, a synthetic reconstruction of the frozen design mocks
@@ -66,7 +106,10 @@ The price, company-name, profile, twelve-slot-order, slot-2-presentation,
 slot-8-suppression and Section/anchor-order claims below are each a test in
 `app/components/analyzerSurfacesOnRealRun.test.tsx`; the `verdict.ts`-hash
 and gate-redirect claims are tests in
-`lib/analyzer/m9RealCompanyValidationGuards.test.ts`. The remaining
+`lib/analyzer/m9RealCompanyValidationGuards.test.ts` (the redirect half of
+which CF-ANALYZER-AUTORUN-01 inverted on Calvin's 2026-09-22T04:28:04Z
+ruling — it now pins that neither route sends the analyst to a human step;
+the `verdict.ts` hash pin is unchanged). The remaining
 per-ticker figures in §§2–3 (Gate 0/1 results, leverage/trust detail,
 `fairValueRange.kind`, the qualifying flags, and every OKLO pre-revenue
 figure) are recorded observation from the runs, per SCOPE item 3 — true,

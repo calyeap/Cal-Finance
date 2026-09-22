@@ -1,10 +1,12 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
 import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import { AnalyzerReport } from "@/app/components/AnalyzerReport";
 import { DominantVerdictSlot } from "@/app/components/DominantVerdictSlot";
 import { FullAnalysisNav } from "@/app/components/FullAnalysisNav";
-import { loadGateState, RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
+import { SourcesAndDetails } from "@/app/components/SourcesAndDetails";
+import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
+import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { trustStatusLine, trustConsequenceLine } from "@/lib/analyzer/trustCopy";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
@@ -14,24 +16,25 @@ import { createDeepSnapshotAction } from "@/app/actions/analyzer";
 //
 // Every path to a number on this page goes through computeAnalysisForRun,
 // which refuses before reaching any calculation module when the spot-check is
-// incomplete. The redirect below is what the analyst sees; the refusal is what
-// enforces §2.
+// incomplete. That refusal is what enforces §2, and it is untouched.
+//
+// CF-ANALYZER-AUTORUN-01 — what changed is what this route does with it.
+// Calvin, 22 September 2026 04:28:04Z: "No mandatory human interaction after
+// ticker entry in the normal flow." So the two redirects that sent the analyst
+// to Screen 3 (undecided profile) and Screen 2 (undecided facts) are gone. The
+// run is advanced automatically instead, and a run the software genuinely
+// cannot complete renders INCOMPLETE naming why, rather than an operator
+// workflow.
 
 export default async function ReportPage({ params }: { params: Promise<{ runId: string }> }) {
   const { runId } = await params;
 
   let state;
   try {
-    state = await loadGateState(runId);
+    state = await advanceRunAutomatically(runId);
   } catch (err) {
     if (err instanceof RunNotFoundError) notFound();
     throw err;
-  }
-
-  // Step 6 precedes Step 8. An undecided profile sends the analyst back rather
-  // than computing on a classification nobody has answered.
-  if (state.run.profileDecision === null) {
-    redirect(`/analyzer/${runId}/profile`);
   }
 
   // M8-b: the same gated computation, followed by the §8.2 interpretation and
@@ -44,14 +47,38 @@ export default async function ReportPage({ params }: { params: Promise<{ runId: 
     report = await analysisForReport(runId);
   } catch (err) {
     if (err instanceof SpotCheckIncompleteError) {
-      redirect(`/analyzer/${runId}/facts`);
+      // Unreachable in the normal path — the pass above decides every queued
+      // fact. Kept, and answered honestly, because the gate is the gate.
+      return (
+        <AnalyzerShell>
+          <AnalyzerTopBar variant="report" />
+          <div className="cb-steps">
+            <div className="wrap">
+              <div className="state">
+                <span className="name">INCOMPLETE</span>
+                <span className="cause">
+                  Automatic verification did not reach a decision on{" "}
+                  {err.outstandingFactIds.length} acquired{" "}
+                  {err.outstandingFactIds.length === 1 ? "figure" : "figures"} —{" "}
+                  {err.outstandingFactIds.join(", ")}. No calculation runs on an undecided figure
+                  (§2), so this run has no report. Nothing here is estimated or filled in.
+                </span>
+              </div>
+            </div>
+          </div>
+          <SourcesAndDetails runId={runId} />
+        </AnalyzerShell>
+      );
     }
     if (err instanceof RunNotFoundError) notFound();
     throw err;
   }
 
   // §6.3 / §10.6.3 — Cannot judge is the one outcome that leaves the profile
-  // not human-confirmed.
+  // not human-confirmed. CF-ANALYZER-AUTORUN-01 adds a second route to the
+  // same honest state: nobody decided at all, and the software resolved Step 6
+  // onto the recommendation. Read off profileHumanConfirmed either way, which
+  // is exactly why the automatic resolution does not write that column.
   const profileNotConfirmed = !state.run.profileHumanConfirmed;
 
   // §9.6, read off the Analysis Result rather than written here. The status
@@ -130,6 +157,11 @@ export default async function ReportPage({ params }: { params: Promise<{ runId: 
         <FullAnalysisNav overviewHref={`/analyzer/${runId}`} />
         <AnalyzerReport result={report.result} aiLayer={report.aiLayer} />
       </div>
+
+      {/* Calvin, 22 September 2026 04:28:04Z — the acquisition/validation
+          detail stays available, under Sources / Details, off the normal
+          path. */}
+      <SourcesAndDetails runId={runId} />
     </AnalyzerShell>
   );
 }

@@ -325,5 +325,11 @@ function factRow(
     // Acquired, not computed. M8-a's derived facts are built by the
     // acquisition layer, never by a fixture.
     derivedFrom: null,
+    // CF-ANALYZER-AUTORUN-01 — acquisition takes no Step 2 decision, so
+    // nothing set this fact's verification state yet. null is the honest
+    // value and the fail-closed one: a record that named an origin here
+    // would be claiming a confirmation before the queue has been answered.
+    verificationOrigin: null,
+    verificationReasonCode: null,
   };
 }

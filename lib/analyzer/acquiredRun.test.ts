@@ -80,7 +80,7 @@ describe("a real MSFT run, from filings to an Analysis Result", () => {
     const decided = new Map(
       queuedFacts(run.fixture.facts, run.acquired.crossCheckFailedFactIds).map((f) => [
         f.id,
-        "CONFIRMED" as const,
+        { decision: "CONFIRMED" as const, origin: "HUMAN" as const, reasonCode: null },
       ])
     );
     const facts = applyDecisions(run.fixture.facts, decided, run.acquired.crossCheckFailedFactIds);
