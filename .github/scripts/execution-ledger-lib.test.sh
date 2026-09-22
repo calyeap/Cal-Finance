@@ -115,16 +115,20 @@ assert_eq "recent_event_ids never grows past 20 entries" "20" "$(jq '.recent_eve
 # fresh_result is the {"status":"applied","ledger":...} envelope from
 # above, not the bare ledger — extract it first.
 base_ledger="$(jq -c '.ledger' <<<"$fresh_result")"
-record="$(ledger_record_intent "$base_ledger" INTENT-1 OWNER_FIRE "https://github.com/x/y/issues/9" 2 "$NOW")"
+record="$(ledger_record_intent "$base_ledger" INTENT-1 OWNER_FIRE "https://github.com/x/y/issues/9" 9 MERGE-100-1 2 "$NOW")"
 assert_eq "ledger_record_intent applies at the correct expected_version" "applied" "$(jq -r '.status' <<<"$record")"
 intent_ledger="$(jq -c '.ledger' <<<"$record")"
 assert_eq "recorded intent is open" "open" "$(jq -r '.pending_intent.status' <<<"$intent_ledger")"
 assert_eq "recorded intent carries the given intent_id" "INTENT-1" "$(jq -r '.pending_intent.intent_id' <<<"$intent_ledger")"
+assert_eq "ledger_record_intent sets state to active (scope item 1's fields must be reachable)" "active" "$(jq -r '.state' <<<"$intent_ledger")"
+assert_eq "ledger_record_intent sets active_outcome_id from the given outcome id" "9" "$(jq -r '.active_outcome_id' <<<"$intent_ledger")"
+assert_eq "ledger_record_intent sets active_attempt_id from the given attempt id" "MERGE-100-1" "$(jq -r '.active_attempt_id' <<<"$intent_ledger")"
 
 complete="$(ledger_complete_intent "$intent_ledger" INTENT-1 dispatched "$LATER")"
 assert_eq "ledger_complete_intent clears a matching pending_intent" "applied" "$(jq -r '.status' <<<"$complete")"
 completed_ledger="$(jq -c '.ledger' <<<"$complete")"
 assert_eq "completed ledger has no pending_intent" "null" "$(jq -r '.pending_intent' <<<"$completed_ledger")"
+assert_eq "ledger_complete_intent leaves active_outcome_id untouched (it persists until the next record-intent, not until the fire resolves)" "9" "$(jq -r '.active_outcome_id' <<<"$completed_ledger")"
 
 # --- ledger_complete_intent fails closed on a mismatched intent_id ----------
 
@@ -134,7 +138,7 @@ assert_eq "a mismatched complete leaves the original pending_intent untouched (v
 
 # --- ledger_record_intent fails closed on a stale expected_version ----------
 
-stale_intent="$(ledger_record_intent "$base_ledger" INTENT-2 OWNER_FIRE "https://github.com/x/y/issues/10" 999 "$NOW")"
+stale_intent="$(ledger_record_intent "$base_ledger" INTENT-2 OWNER_FIRE "https://github.com/x/y/issues/10" 10 MERGE-100-2 999 "$NOW")"
 assert_eq "ledger_record_intent fails closed on a stale expected_version" "stale" "$(jq -r '.status' <<<"$stale_intent")"
 
 # --- ledger_intent_is_stale / ledger_reconcile_intent: crash recovery -------

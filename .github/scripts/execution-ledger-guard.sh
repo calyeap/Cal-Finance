@@ -15,11 +15,14 @@
 # BOUNDS), so a ledger failure must never become an OWNER fire failure.
 #
 # Usage:
-#   execution-ledger-guard.sh record-intent   <kind> <target>
+#   execution-ledger-guard.sh record-intent   <kind> <target> <outcome_id>
 #   execution-ledger-guard.sh complete-intent <outcome>
 #
-# record-intent prints INTENT_ID=<id> on stdout (for the caller to pass to
-# the matching complete-intent call) in addition to its own log lines.
+# outcome_id is the bare issue/PR number this fire's wake target concerns
+# (e.g. the merge/terminal wake's own TARGET_NUMBER) — stall-sweep-guard.sh
+# fires OWNER on it, so it must be a plain integer, not a URL. record-intent
+# prints INTENT_ID=<id> on stdout (for the caller to pass to the matching
+# complete-intent call) in addition to its own log lines.
 #
 # Required env: GH_TOKEN, LEDGER_ISSUE_REPO, LEDGER_ISSUE_NUMBER,
 # EVENT_KIND, EVENT_KEY (used to derive this call's deterministic event
@@ -126,13 +129,13 @@ reconcile_stale_intent_if_any() {
 }
 
 cmd_record_intent() {
-  local kind="$1" target="$2"
+  local kind="$1" target="$2" outcome_id="$3"
   local ledger intent_id result
   ledger="$(current_ledger)"
   ledger="$(reconcile_stale_intent_if_any "$ledger")"
 
   intent_id="$(ledger_event_id "INTENT:${kind}" "${EVENT_KEY}")"
-  result="$(ledger_record_intent "$ledger" "$intent_id" "$kind" "$target" "$(jq -r '.version' <<<"$ledger")" "$(now_iso)")"
+  result="$(ledger_record_intent "$ledger" "$intent_id" "$kind" "$target" "$outcome_id" "$EVENT_KEY" "$(jq -r '.version' <<<"$ledger")" "$(now_iso)")"
   apply_and_publish "$result"
   echo "INTENT_ID=${intent_id}"
 }
@@ -161,12 +164,22 @@ cmd_complete_intent() {
 
   event_id="$(ledger_event_id "${EVENT_KIND}" "${EVENT_KEY}")"
   ledger="$(jq -c '.ledger' <<<"$complete_result")"
+  # Deliberately '{}': state/active_outcome_id/active_attempt_id, set by
+  # ledger_record_intent, are left untouched here rather than cleared back
+  # to idle/null. Clearing them the moment this fire's own HTTP request
+  # resolves would make them non-null for only the few seconds between
+  # record-intent and complete-intent in the same job — the fire
+  # succeeding says nothing about whether the OWNER session it started
+  # later hung or completed, which is exactly the class of stall the sweep
+  # (cf-stall-sweep.yml, every two hours) needs to be able to see. They
+  # persist as "the last outcome this ledger observed OWNER touch" until
+  # the next record-intent call supersedes them with a fresh fire.
   apply_result="$(ledger_apply_transition "$ledger" "$event_id" "$(jq -r '.version' <<<"$ledger")" '{}' "$(now_iso)")"
   apply_and_publish "$apply_result"
 }
 
 main() {
-  local subcommand="${1:-}" kind="${2:-}" arg3="${3:-}"
+  local subcommand="${1:-}" kind="${2:-}" arg3="${3:-}" arg4="${4:-}"
 
   # Deliberately `return 1` here rather than `${VAR:?msg}` — the latter
   # terminates the whole (non-interactive) shell immediately, even inside
@@ -183,11 +196,11 @@ main() {
 
   case "$subcommand" in
     record-intent)
-      if [ -z "$kind" ] || [ -z "$arg3" ]; then
-        echo "::warning::execution-ledger-guard.sh: record-intent requires <kind> <target> — advisory no-op." >&2
+      if [ -z "$kind" ] || [ -z "$arg3" ] || [ -z "$arg4" ]; then
+        echo "::warning::execution-ledger-guard.sh: record-intent requires <kind> <target> <outcome_id> — advisory no-op." >&2
         return 1
       fi
-      cmd_record_intent "$kind" "$arg3"
+      cmd_record_intent "$kind" "$arg3" "$arg4"
       ;;
     complete-intent)
       if [ -z "$kind" ]; then

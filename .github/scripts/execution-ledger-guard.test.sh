@@ -88,7 +88,7 @@ run() {
 
 # --- record-intent seeds a fresh ledger when the tracking issue is empty ---
 
-run cmd_record_intent OWNER_FIRE "https://github.com/x/y/issues/9"
+run cmd_record_intent OWNER_FIRE "https://github.com/x/y/issues/9" 9
 out="$(cat "$OUT_FILE")"
 assert_contains "record-intent on an empty ledger reports it applied" "$out" "execution-ledger: applied"
 intent_id_1="$(sed -n 's/^INTENT_ID=//p' <<<"$out")"
@@ -102,6 +102,9 @@ fi
 ledger_after_record="$(current_ledger)"
 assert_eq "ledger has an open pending_intent after record-intent" "open" "$(jq -r '.pending_intent.status' <<<"$ledger_after_record")"
 assert_eq "pending_intent carries the printed intent_id" "$intent_id_1" "$(jq -r '.pending_intent.intent_id' <<<"$ledger_after_record")"
+assert_eq "record-intent's real writer sets state to active (not left at seed 'idle')" "active" "$(jq -r '.state' <<<"$ledger_after_record")"
+assert_eq "record-intent's real writer sets active_outcome_id from the outcome_id argument" "9" "$(jq -r '.active_outcome_id' <<<"$ledger_after_record")"
+assert_eq "record-intent's real writer sets active_attempt_id from EVENT_KEY" "$EVENT_KEY" "$(jq -r '.active_attempt_id' <<<"$ledger_after_record")"
 
 # --- complete-intent clears it and applies the underlying event ------------
 
@@ -112,6 +115,7 @@ assert_contains "complete-intent reports the intent clear as applied" "$complete
 ledger_after_complete="$(current_ledger)"
 assert_eq "ledger has no pending_intent after complete-intent" "null" "$(jq -r '.pending_intent' <<<"$ledger_after_complete")"
 assert_eq "ledger records the OWNER_FIRE event as last applied" "true" "$(jq -r '.recent_event_ids | length > 0' <<<"$ledger_after_complete")"
+assert_eq "complete-intent leaves active_outcome_id set (persists until the next record-intent, not cleared just because the fire resolved)" "9" "$(jq -r '.active_outcome_id' <<<"$ledger_after_complete")"
 
 # --- complete-intent with nothing pending is a clean no-op ------------------
 
@@ -124,7 +128,7 @@ assert_contains "complete-intent with no pending_intent is a no-op, not an error
 
 echo '[]' >"$LEDGER_STORE"
 export EVENT_KEY=MERGE-2000-1
-run cmd_record_intent OWNER_FIRE "https://github.com/x/y/issues/20"
+run cmd_record_intent OWNER_FIRE "https://github.com/x/y/issues/20" 20
 stuck_ledger="$(current_ledger)"
 old_created_at="2020-01-01T00:00:00Z"
 stuck_ledger="$(jq -c --arg t "$old_created_at" '.pending_intent.created_at = $t' <<<"$stuck_ledger")"
@@ -132,12 +136,29 @@ jq -nc --arg body "$(ledger_comment_body "$stuck_ledger")" --arg now "$old_creat
   '[{body:$body, created_at:$now}]' >"$LEDGER_STORE"
 
 export EVENT_KEY=MERGE-2000-2
-run cmd_record_intent OWNER_FIRE "https://github.com/x/y/issues/21"
+run cmd_record_intent OWNER_FIRE "https://github.com/x/y/issues/21" 21
 record_after_stall="$(cat "$OUT_FILE")"
 assert_contains "record-intent reconciles an old pending_intent as abandoned first" "$record_after_stall" "reconciling as abandoned"
 
 final_ledger="$(current_ledger)"
 assert_eq "after reconciliation, the ledger holds only the new pending_intent" "https://github.com/x/y/issues/21" "$(jq -r '.pending_intent.target' <<<"$final_ledger")"
+
+# --- reviewer-requested coverage: exercise the stall sweep's classifier ----
+# --- against a ledger produced by the REAL production writers above, not --
+# --- a hand-built fixture (PR #214 review) ----------------------------------
+
+# shellcheck source=stall-sweep-lib.sh
+source "${SCRIPT_DIR}/stall-sweep-lib.sh"
+
+echo '[]' >"$LEDGER_STORE"
+export EVENT_KEY=MERGE-3000-1
+run cmd_record_intent OWNER_FIRE "https://github.com/x/y/issues/30" 30
+run cmd_complete_intent dispatched
+real_ledger="$(current_ledger)"
+
+real_status="$(stall_sweep_status "$(jq -r '.state' <<<"$real_ledger")" false false false false "$([ -n "$(jq -r '.active_outcome_id // empty' <<<"$real_ledger")" ] && echo true || echo false)")"
+assert_eq "a ledger produced end-to-end by record-intent+complete-intent is reachable by stall_sweep_status (not stuck at the seed's idle/null forever)" \
+  "stall" "$real_status"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then

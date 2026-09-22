@@ -532,7 +532,7 @@ jobs:
           LEDGER_ISSUE_NUMBER: ${{ steps.ledger_config.outputs.ledger_issue_number }}
           EVENT_KIND: OWNER_FIRE
           EVENT_KEY: ${{ steps.target.outputs.attempt_id }}
-        run: bash .github/scripts/execution-ledger-guard.sh record-intent OWNER_FIRE "https://github.com/${{ github.repository }}/issues/${{ steps.target.outputs.number }}"
+        run: bash .github/scripts/execution-ledger-guard.sh record-intent OWNER_FIRE "https://github.com/${{ github.repository }}/issues/${{ steps.target.outputs.number }}" "${{ steps.target.outputs.number }}"
 
       - name: Fire CALBOARD-OWNER API trigger
         id: fire

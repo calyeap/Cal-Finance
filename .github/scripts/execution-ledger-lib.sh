@@ -196,13 +196,21 @@ ledger_apply_transition() {
     }'
 }
 
-# ledger_record_intent <ledger_json> <intent_id> <kind> <target> <expected_version> <now_iso>
+# ledger_record_intent <ledger_json> <intent_id> <kind> <target> <active_outcome_id> <active_attempt_id> <expected_version> <now_iso>
 # Outbox step 1 ("record intent"): CAS-guarded, sets pending_intent to an
-# open envelope. Prints the same {"status":...} shape as
+# open envelope. Also populates state/active_outcome_id/active_attempt_id
+# — the ledger's own scope-item-1 fields — with this transition's identity,
+# so a production writer actually reaches them (previously only
+# pending_intent/version/updated_at were ever merged, leaving state
+# permanently "idle" and active_outcome_id permanently null in every real
+# fire, which made the stall sweep's continuation_expected check
+# structurally unreachable and the latency report's active_attempt_id
+# lookup always empty). Prints the same {"status":...} shape as
 # ledger_apply_transition (no dedupe check — an intent_id is generated
 # fresh per dispatch attempt by the caller, dedupe is meaningless here).
 ledger_record_intent() {
-  local ledger_json="$1" intent_id="$2" kind="$3" target="$4" expected_version="$5" now_iso="$6"
+  local ledger_json="$1" intent_id="$2" kind="$3" target="$4" \
+    active_outcome_id="$5" active_attempt_id="$6" expected_version="$7" now_iso="$8"
 
   if [ "$(ledger_cas_status "$ledger_json" "$expected_version")" != "ok" ]; then
     jq -nc --argjson current "$(jq '.version' <<<"$ledger_json")" \
@@ -215,6 +223,8 @@ ledger_record_intent() {
     --arg intent_id "$intent_id" \
     --arg kind "$kind" \
     --arg target "$target" \
+    --arg active_outcome_id "$active_outcome_id" \
+    --arg active_attempt_id "$active_attempt_id" \
     --arg now "$now_iso" \
     '{
       status: "applied",
@@ -223,6 +233,9 @@ ledger_record_intent() {
         + {
             version: ($ledger.version + 1),
             updated_at: $now,
+            state: "active",
+            active_outcome_id: $active_outcome_id,
+            active_attempt_id: $active_attempt_id,
             pending_intent: {
               intent_id: $intent_id,
               kind: $kind,
