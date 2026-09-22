@@ -1,0 +1,107 @@
+name: Notify Calvin in Slack
+
+on:
+  issues:
+    types: [labeled]
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: read
+  issues: read
+  pull-requests: read
+
+jobs:
+  notify-calvin:
+    if: github.event.label.name == 'needs-owner-wake'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Resolve latest terminal outcome
+        id: terminal
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${TARGET_NUMBER}/comments" | jq -s 'add // []')
+
+          LATEST=$(printf '%s' "$COMMENTS" | jq -c '
+            [ .[]
+              | {
+                  body: .body,
+                  html_url: .html_url,
+                  first_line: (
+                    .body
+                    | split("\n")
+                    | map(gsub("^[[:space:]]+|[[:space:]]+$"; ""))
+                    | map(select(length > 0))
+                    | .[0] // ""
+                  )
+                }
+              | select(.first_line | test("^(CALVIN REQUIRED:|STOP:|DONE:|BLOCKED:|CORRECT:|ACCEPT:|DISPATCHED:|WAIT:)"))
+            ]
+            | last // {}
+          ')
+
+          FIRST_LINE=$(printf '%s' "$LATEST" | jq -r '.first_line // ""')
+          COMMENT_URL=$(printf '%s' "$LATEST" | jq -r '.html_url // ""')
+
+          if [[ "$FIRST_LINE" != CALVIN\ REQUIRED:* ]]; then
+            echo "notify=false" >> "$GITHUB_OUTPUT"
+            echo "Latest terminal outcome is not CALVIN REQUIRED; no Slack alert."
+            exit 0
+          fi
+
+          ASK=${FIRST_LINE#CALVIN REQUIRED:}
+          ASK=$(printf '%s' "$ASK" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//' | xargs)
+
+          echo "notify=true" >> "$GITHUB_OUTPUT"
+          {
+            echo "ask<<EOF"
+            echo "$ASK"
+            echo "EOF"
+            echo "comment_url=$COMMENT_URL"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Send Calvin Slack alert
+        if: steps.terminal.outputs.notify == 'true'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
+          ASK: ${{ steps.terminal.outputs.ask }}
+          COMMENT_URL: ${{ steps.terminal.outputs.comment_url }}
+          TARGET_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "::error::CALVIN_SLACK_WEBHOOK_URL repository secret is missing."
+            exit 1
+          fi
+
+          ITEM_URL="https://github.com/${{ github.repository }}/issues/${TARGET_NUMBER}"
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ITEM_URL="https://github.com/${{ github.repository }}/pull/${TARGET_NUMBER}"
+          fi
+
+          PAYLOAD=$(jq -n \
+            --arg repo "${{ github.repository }}" \
+            --arg ask "$ASK" \
+            --arg item_url "$ITEM_URL" \
+            --arg comment_url "$COMMENT_URL" \
+            '{
+              text: ("CALVIN REQUIRED — " + $repo + "\n" + (if ($ask | length) > 0 then $ask else "Your decision is needed." end) + "\n" + (if ($comment_url | length) > 0 then $comment_url else $item_url end))
+            }')
+
+          HTTP_CODE=$(curl -sS -o /tmp/slack_response.txt -w '%{http_code}' \
+            --request POST "$SLACK_WEBHOOK_URL" \
+            --header 'Content-Type: application/json' \
+            --data "$PAYLOAD")
+
+          if [ "$HTTP_CODE" -lt 200 ] || [ "$HTTP_CODE" -ge 300 ]; then
+            echo "::error::Slack webhook failed with HTTP $HTTP_CODE"
+            cat /tmp/slack_response.txt
+            exit 1
+          fi
+
+          echo "Slack alert sent."
