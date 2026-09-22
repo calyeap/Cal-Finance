@@ -27,7 +27,7 @@ import { fiftyTwoWeekRangeFrom, type FiftyTwoWeekRange } from "./fiftyTwoWeekRan
 // validation, calculation and routine verification should execute
 // automatically behind the scenes." §2 Step 2, §3.8's completion rule and
 // criterion A1 are amended to match (docs/frozen/calboard-stock-analyzer-
-// v1-spec.md §20). THE GATE BELOW IS NOT AMENDED AND DOES NOT MOVE. It still
+// v1-spec.md §14.8). THE GATE BELOW IS NOT AMENDED AND DOES NOT MOVE. It still
 // refuses before any calculation module when a queued fact carries no
 // decision; what changed is that lib/analyzer/autoRun.ts can now answer the
 // queue without a human, so the normal path reaches verification-complete on
