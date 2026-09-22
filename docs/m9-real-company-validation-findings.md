@@ -13,6 +13,45 @@ prior content changed — the same pipeline, the same MSFT ruling, the same
 OKLO absence — so this update only adds the new observations below and one
 new named gap in §4. No new capture, no new ticker, no product code change.
 
+**Update — CF-LOOP-UPDATE-01, 2026-09-22.** The `UPDATE` / what-changed half
+of the V2 product loop (Calvin's 22 Sep 02:24:07Z ruling, [issue #211
+comment 5770328112](https://github.com/calyeap/Cal-Finance/issues/211#issuecomment-5770328112))
+is now proved on real MSFT and real OKLO, driven through the same
+`recordJudgment` seam CF-S44-RECORD-01 already used, and the same immutable
+snapshots CF-V2-PROOF-01 already proved: `lib/analyzer/snapshotComparison.ts`
+(`diffStoredSnapshots` / `compareSnapshots`), reading only the two stored
+`analyzer_run_snapshots` rows a run's own two versions occupy, never
+`analysisForReport` or `computeAnalysisForRun`. Real-run tests:
+`lib/analyzer/snapshotComparisonOnRealRun.test.ts`.
+
+- **MSFT — the genuine-change case.** Version 1 is taken before Calvin's
+  §4.4 ruling is recorded; version 2, after. Version 1 still reopens exactly
+  as §2 above describes it (leverage `LEVERAGE UNSUPPORTED IN v1`, trust
+  `UNUSABLE`, range `suppressed`) after version 2 exists. The comparison
+  between them reports, with both figures: `fairValueRange` moving from
+  `suppressed` to `range` (a suppression clearing, reported as the real
+  event it is, not skipped as a null), `gates.leverage` moving from
+  `LEVERAGE UNSUPPORTED IN v1` to `PASS`, `trust.status` moving from
+  `UNUSABLE` to `PARTIAL`, and `verdict.reason` moving from the
+  leverage-unsupported cause to the §10.6.2 comparator-unavailable cause —
+  while `verdict.status` (`INCOMPLETE` both versions — deriveVerdict is
+  untouched) and `price.value` are reported unchanged, in the same
+  comparison, alongside the fields that moved.
+- **OKLO — the no-material-change case.** OKLO has zero tagged
+  non-operating-investment candidates (§1), so no §4.4 judgment is ever
+  possible for it — version 2 is an ordinary refresh of the same inputs.
+  The comparison reports zero changed fields and every tracked field
+  unchanged, and OKLO's honest upstream `INCOMPLETE` (leverage
+  `LEVERAGE UNSUPPORTED IN v1`, trust `UNUSABLE`, range `suppressed`) is
+  identical in both versions — the same state §3 already records, now
+  proved stable across a refresh rather than merely observed once.
+
+Comparing the same two versions a second time reproduces the identical
+result in both cases (asserted by `toEqual`), and the output's field order
+is fixed by `snapshotComparison.ts`'s own declared field list, not by
+either version's object key enumeration. `deriveVerdict` is not touched;
+`lib/analyzer/verdict.ts` stays byte-identical to `367aae2`.
+
 Satisfies the condition #118 item 10 sets. Every M9 surface claim shipped
 before this (items 3, 4, 6, 7, 8, 9) rested on `MSFT_FIXTURE` /
 `OKLO_FIXTURE`, a synthetic reconstruction of the frozen design mocks
