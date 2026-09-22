@@ -135,6 +135,19 @@ jobs:
       - name: Run Chief of Staff semantic refresh structural tests
         run: bash .github/scripts/cf-cos-semantic-refresh.test.sh
 
+      # CF-GATE-PUSH-01: deterministic, network-free coverage for the
+      # Calvin Gate immediate-push dedupe/payload contract and the
+      # orchestrator's own control flow (config-absent no-send, push
+      # failure never touching the gate, duplicate suppression).
+      - name: Run Calvin Gate push unit tests
+        run: bash .github/scripts/calvin-gate-push-lib.test.sh
+
+      - name: Run Calvin Gate push control-flow tests
+        run: bash .github/scripts/calvin-gate-push.test.sh
+
+      - name: Run Calvin Gate push reachability tests
+        run: bash .github/scripts/calvin-gate-push-reachability.test.sh
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

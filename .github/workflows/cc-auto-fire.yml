@@ -488,6 +488,62 @@ jobs:
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=TERMINAL-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
+      # CF-GATE-PUSH-01 (issue #221): a genuine CALVIN REQUIRED boundary
+      # (never a STOP, and never the CALVIN RULING/resolution path, which
+      # answers an existing gate rather than opening one) is admitted into
+      # this job exactly once, by the fresh needs-owner-wake label BUILD/
+      # REVIEW apply. That is the earliest deterministic, in-repo signal
+      # available for "the existing Cal Finance workflow reached a genuine
+      # CALVIN REQUIRED boundary" — no code in this repository creates or
+      # reads back the corresponding Notion CALVIN GATES row itself, so
+      # this fires the push from that signal directly rather than waiting
+      # on a write it cannot observe. Independent of, and never gating,
+      # the OWNER fire below: a push failure here must never delay or
+      # alter OWNER's own reconciliation, and OWNER's own fire outcome
+      # must never gate whether this push attempt happens.
+      - name: Resolve Calvin Gate push target
+        id: gate
+        if: steps.target.outputs.skip != 'true' && github.event_name != 'issue_comment'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+        run: |
+          set -uo pipefail
+          # shellcheck source=../scripts/calvin-gate-push-lib.sh
+          source .github/scripts/calvin-gate-push-lib.sh
+
+          COMMENTS=$(gh api --paginate "repos/${TARGET_REPO}/issues/${TARGET_NUMBER}/comments" \
+            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
+          LATEST="$(calvin_gate_push_latest_terminal "$COMMENTS")"
+          ASK="$(calvin_gate_push_ask_from_first_line "$LATEST")"
+
+          if [ -z "$ASK" ]; then
+            echo "is_gate=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_gate=true" >> "$GITHUB_OUTPUT"
+            echo "ask=$ASK" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Deliberately not gated on the OWNER fire steps below succeeding —
+      # see the header comment above. continue-on-error keeps a push
+      # failure (or a misconfigured secret) from ever failing this job or
+      # blocking the OWNER fire that follows; calvin-gate-push.sh already
+      # never alters the Notion gate itself, whatever the outcome.
+      - name: Send Calvin Gate push
+        if: steps.target.outputs.skip != 'true' && steps.gate.outputs.is_gate == 'true'
+        continue-on-error: true
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          GATE_ID: ${{ github.repository }}#${{ steps.target.outputs.number }}
+          PROJECT: Cal Finance
+          ASK: ${{ steps.gate.outputs.ask }}
+          CALVIN_PUSH_WEBHOOK_URL: ${{ secrets.CALVIN_PUSH_WEBHOOK_URL }}
+          CALVIN_PUSH_WEBHOOK_TOKEN: ${{ secrets.CALVIN_PUSH_WEBHOOK_TOKEN }}
+        run: bash .github/scripts/calvin-gate-push.sh
+
       # CF-OWNER-SINGLE-WRITER-01: advisory only — see owner-on-merge.yml's
       # header comment and owner-single-writer-guard.sh. Never blocks; the
       # cf-owner-single-writer concurrency group on this job is what
