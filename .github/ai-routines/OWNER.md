@@ -25,10 +25,22 @@ completion receipt, never directly from the merge event.
 - **Terminal wake** — BUILD or REVIEW posted a true state-changing terminal
   outcome (`STOP`, including a `STOP: RECONCILIATION REQUIRED — ...`
   authority-conflict stop; `CALVIN REQUIRED`; `DONE: EVIDENCE`, BUILD's
-  evidence-only completion with no PR to hand to REVIEW; or `BLOCKED`) and
-  applied `needs-owner-wake` to the target. Routine `CORRECT`, a normal
-  `DONE: <PR link>`, `ACCEPT`, `MERGED`, and ordinary review chatter never
-  carry that label and must never wake OWNER.
+  evidence-only completion with no PR to hand to REVIEW; or `BLOCKED`) as
+  the first non-empty line of a top-level comment. CF-TERMINAL-HANDOFF-
+  REPAIR-01: `cc-auto-fire.yml`'s `fire-owner-on-terminal` job admits that
+  comment directly (`terminal_is_owner_direct_marker`,
+  `.github/scripts/terminal-routing-lib.sh`) without the worker also
+  needing to apply `needs-owner-wake` — the gap that left #256's valid
+  `DONE: EVIDENCE` receipt with no OWNER wake. The label remains available
+  only as a manual/recovery compatibility path (BUILD.md, CC.md);
+  `terminal_owner_admission_status` is the shared, target-local dedupe both
+  paths call before firing, so a label applied alongside an already-handled
+  direct terminal comment does not produce a second OWNER session for the
+  same transition (see that function plus `terminal-routing-lib.test.sh`
+  and `terminal-owner-direct-reachability.test.sh` for the classification
+  and structural coverage). Routine `CORRECT`, a normal `DONE: <PR link>`,
+  `ACCEPT`, `MERGED`, and ordinary review chatter never match either path
+  and must never wake OWNER.
 - **Recovery wake** — `.github/scripts/owner-liveness-guard.sh`
   (CF-OWNER-LIVENESS-01) fires this directly, at most once per original
   merge or terminal wake, and only when that original attempt produced no
@@ -144,8 +156,10 @@ queued-away wake was about.
    that native evidence on every run:
    - **CALVIN** for a current human decision, permission or acceptance —
      the most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` /
-     `DONE: EVIDENCE` terminal comment (these carry `needs-owner-wake`), or
-     an open `CALVIN RULING` question, on any open issue or PR;
+     `DONE: EVIDENCE` terminal comment (these route directly to OWNER per
+     CF-TERMINAL-HANDOFF-REPAIR-01, whether or not `needs-owner-wake` is
+     also present), or an open `CALVIN RULING` question, on any open issue
+     or PR;
    - **AI** while authorised AI work is running, dispatchable or being
      recovered;
    - **EXTERNAL** only when a third party is the real blocker and Calvin

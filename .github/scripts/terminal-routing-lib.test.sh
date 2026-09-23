@@ -193,6 +193,73 @@ assert_eq "derived ask keeps quotes/backticks/brackets intact and strips the att
   'run `npm test` and confirm the "fast" path [details]' \
   "$(derive_ask 'CALVIN REQUIRED: run `npm test` and confirm the "fast" path [details] [OWNER_ATTEMPT_ID: abc123]')"
 
+# --- CF-TERMINAL-HANDOFF-REPAIR-01: terminal_is_owner_direct_marker ------
+#
+# Covers CALBOARD-BUILD test requirements 1-4 for the four terminal markers
+# that must route directly to OWNER without needs-owner-wake. Requirement 5
+# (CALVIN RULING path still works) is already covered end to end by
+# calvin-ruling-lib.test.sh; requirement 6 (direct-comment + compatibility-
+# label dedupe) is covered below by terminal_owner_admission_status.
+
+assert_eq "DONE: EVIDENCE routes directly to OWNER (requirement 1)" "true" \
+  "$(terminal_is_owner_direct_marker "DONE: EVIDENCE — confirmed via audit, no code change required")"
+
+assert_eq "STOP: routes directly to OWNER (requirement 2)" "true" \
+  "$(terminal_is_owner_direct_marker "STOP: MISSING OUTCOME-ID — no stable id on the target")"
+
+assert_eq "BLOCKED: routes directly to OWNER (requirement 2)" "true" \
+  "$(terminal_is_owner_direct_marker "BLOCKED: the linked PR is closed with no replacement")"
+
+assert_eq "CALVIN REQUIRED: routes directly to OWNER (requirement 2)" "true" \
+  "$(terminal_is_owner_direct_marker "CALVIN REQUIRED: approve option A or option B")"
+
+assert_eq "a heading-prefixed ## CALVIN REQUIRED: still routes directly" "true" \
+  "$(terminal_is_owner_direct_marker "## CALVIN REQUIRED: approve option A or option B")"
+
+assert_eq "leading blank lines before STOP: still route directly" "true" \
+  "$(terminal_is_owner_direct_marker "$(printf '\n\n  STOP: no stable OUTCOME-ID\nbody\n')")"
+
+assert_eq "an ordinary DONE: <PR link> does not route directly — stays on the REVIEW path (requirement 3)" "false" \
+  "$(terminal_is_owner_direct_marker "DONE: https://github.com/calyeap/Cal-Finance/pull/42")"
+
+assert_eq "ACCEPT/ordinary chatter does not route directly" "false" \
+  "$(terminal_is_owner_direct_marker "ACCEPT: looks good")"
+
+quoted_stop=$(printf 'DONE: https://github.com/calyeap/Cal-Finance/pull/42\n\nEarlier drafts said "STOP: missing scope" but that was superseded.')
+assert_eq "a quoted/example STOP: later in the comment does not route directly (requirement 4)" "false" \
+  "$(terminal_is_owner_direct_marker "$quoted_stop")"
+
+# --- CF-TERMINAL-HANDOFF-REPAIR-01: terminal_owner_admission_status ------
+
+no_terminal=$(jq -n '[{body: "Sounds good, thanks.", created_at: "2026-09-23T09:00:00Z"}]')
+assert_eq "no terminal marker at all resolves skip" "skip" "$(terminal_owner_admission_status "$no_terminal")"
+
+fresh_evidence=$(jq -n '
+  [
+    {body: "BUILD FIRED: HTTP 200 · session x", created_at: "2026-09-23T09:00:00Z"},
+    {body: "DONE: EVIDENCE — confirmed via audit, no code change required", created_at: "2026-09-23T09:05:00Z"}
+  ]
+')
+assert_eq "a fresh DONE: EVIDENCE with nothing admitted after it resolves admit" "admit" \
+  "$(terminal_owner_admission_status "$fresh_evidence")"
+
+# Requirement 6's exact shape: a direct terminal comment and the
+# needs-owner-wake compatibility label both present for the same
+# transition. Both paths call terminal_owner_admission_status before
+# firing; the first to run posts "OWNER ATTEMPT START: ", so the second —
+# whichever path it is — must resolve skip against comments that already
+# include that receipt.
+already_admitted=$(jq -c '. + [{body: "OWNER ATTEMPT START: TERMINAL-9-1\nwake_class: TERMINAL", created_at: "2026-09-23T09:06:00Z"}]' <<<"$fresh_evidence")
+assert_eq "direct-comment + compatibility-label shape: once one path admits, the other resolves skip (requirement 6)" "skip" \
+  "$(terminal_owner_admission_status "$already_admitted")"
+
+# A later terminal marker superseding an already-admitted one re-opens
+# admission for the new transition (a fresh STOP after an old,
+# already-handled CALVIN REQUIRED, for example).
+superseding=$(jq -c '. + [{body: "STOP: REPEATED CORRECTION FAILURE — same failure class twice", created_at: "2026-09-23T09:10:00Z"}]' <<<"$already_admitted")
+assert_eq "a fresh terminal marker after an already-admitted one resolves admit again" "admit" \
+  "$(terminal_owner_admission_status "$superseding")"
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "terminal-routing-lib.test.sh: all checks passed"

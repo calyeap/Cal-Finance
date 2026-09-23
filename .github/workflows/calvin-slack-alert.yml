@@ -21,6 +21,19 @@ name: Notify Calvin in Slack
 # (OWNER.md); this workflow no longer reads label events at all, so the
 # same `CALVIN REQUIRED:` comment can never notify twice (once on the
 # comment, again when something later applies the label).
+# CF-TERMINAL-HANDOFF-REPAIR-01 (Part B: gate resolution semantics)
+#
+# Invariant, unchanged by this outcome, verified/preserved here: SLACK_SENT
+# != GATE_RESOLVED. This workflow's only job is delivery-attempt evidence —
+# sending, failing to send, or having no CALVIN_SLACK_WEBHOOK_URL configured
+# at all never marks a CALVIN REQUIRED gate resolved. Gate resolution lives
+# entirely in `.github/scripts/calvin-ruling-lib.sh`'s
+# `calvin_ruling_gate_status`, which reads only GitHub comment state (a
+# genuine `CALVIN RULING` admitted into cc-auto-fire.yml's
+# fire-owner-on-terminal job) and has no awareness of this workflow, its
+# HTTP status, or its secret at all. A gate stays live under Calvin's
+# attention regardless of what happens here; only a typed Calvin ruling
+# closes it (OWNER.md's Wake sources, "Ruling wake").
 on:
   issue_comment:
     types: [created]

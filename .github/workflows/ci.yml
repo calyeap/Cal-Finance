@@ -129,6 +129,13 @@ jobs:
       - name: Run terminal routing unit tests
         run: bash .github/scripts/terminal-routing-lib.test.sh
 
+      # CF-TERMINAL-HANDOFF-REPAIR-01: structural coverage that the direct
+      # DONE: EVIDENCE / STOP: / BLOCKED: / CALVIN REQUIRED: -> OWNER
+      # routing is actually wired into fire-owner-on-terminal's job-level
+      # admission and Resolve target step, not only correct in isolation.
+      - name: Run direct terminal-to-OWNER reachability tests
+        run: bash .github/scripts/terminal-owner-direct-reachability.test.sh
+
       - name: Run BUILD duplicate suppression unit tests
         run: bash .github/scripts/build-duplicate-lib.test.sh
 

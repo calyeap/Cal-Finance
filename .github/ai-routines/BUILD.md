@@ -49,7 +49,7 @@ any explanation, summary, or evidence after the marker line, never before it.
 
 A routine crash, stale derived view, missing optional tool, unavailable Notion page, failed wake, or missing orchestration permission is not by itself a Calvin decision.
 
-If the terminal outcome is `STOP` (including a `STOP: RECONCILIATION REQUIRED — ...` authority-conflict stop), `CALVIN REQUIRED`, `DONE: EVIDENCE`, or `BLOCKED`, also apply the `needs-owner-wake` label to the target — each of these is a true state-changing terminal outcome with no downstream PR review to hand it to, and OWNER needs the label to reconcile Project Home. Do not apply it for a normal `DONE: <PR link>`, which routes to REVIEW instead.
+If the terminal outcome is `STOP` (including a `STOP: RECONCILIATION REQUIRED — ...` authority-conflict stop), `CALVIN REQUIRED`, `DONE: EVIDENCE`, or `BLOCKED` — each a true state-changing terminal outcome with no downstream PR review to hand it to — posting that comment with the marker as its first non-empty line is itself now sufficient: `cc-auto-fire.yml`'s `fire-owner-on-terminal` job (CF-TERMINAL-HANDOFF-REPAIR-01) routes it straight to OWNER, and applying `needs-owner-wake` is no longer required to reconcile Project Home for it. The label still exists only as a manual/recovery compatibility path; applying it alongside an already-handled terminal comment is harmless (the target-local admission check dedupes it against the already-fired direct wake). Do not apply it, and do not rely on it, for a normal `DONE: <PR link>`, which routes to REVIEW instead.
 
 ## DONE evidence
 
