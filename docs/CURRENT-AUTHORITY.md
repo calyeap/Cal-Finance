@@ -42,15 +42,16 @@ summarises.
 - **Current implementation contracts** (which frozen artefact/revision under
   `docs/frozen/` is currently approved) →
   [`docs/technical-specs.md`](technical-specs.md).
-- **Current Cal Finance / Analyzer V2 design authority** → external
+- **Current Analyzer V2 implementation-facing design contract** →
+  [`docs/design/analyzer-v2-design-authority.md`](design/analyzer-v2-design-authority.md).
+  Human-readable design rationale and the accepted visual reference pack remain in
   [Cal Finance — UX & Design System Principles](https://app.notion.com/p/3d20ca9a8fd081f08606df9f7dcc489d)
   plus its child
   [Analyzer V2 — Approved Design Artefacts](https://app.notion.com/p/3e40ca9a8fd081358d31cf1f3e1e45a3).
-  Analyzer V2 is the strongest current visual reference/proving
-  implementation. Existing Portfolio/Holdings visuals and the older
-  [`docs/design/m9-analyzer-design-contract.md`](design/m9-analyzer-design-contract.md)
-  remain legacy/surface-scoped implementation references only and must not
-  override newer accepted Analyzer V2 visual authority.
+  Analyzer V2 is the strongest current visual reference / proving implementation.
+  Existing Portfolio/Holdings visuals, [`docs/design/m9-analyzer-design-contract.md`](design/m9-analyzer-design-contract.md),
+  and older frozen Analyzer design artefacts remain legacy/surface-scoped evidence only
+  and cannot override the current Analyzer V2 contract or linked visual pack.
 - **Current Cal Finance brand direction / candidate source assets** → external
   [Cal Finance — Brand Identity & Assets](https://app.notion.com/p/3dd0ca9a8fd081c4acdae46985a07f56).
   It owns the human-readable brand direction and preserved source variants.
