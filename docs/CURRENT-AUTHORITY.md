@@ -8,7 +8,31 @@ summarises.
 
 ## Route by class of truth
 
-- **Current project status / next authorised move** → Cal Finance Project Home.
+- **Current project status / next authorised move** → native GitHub state
+  (open issues, their labels/comments, open PRs, and CI) — **not** Cal
+  Finance Project Home, which is superseded / pointer-only for this fact
+  type as of the Phase 2 cutover (issue #231, `CF-GITHUB-SOT-PHASE2-01`,
+  authorised by Calvin's ruling on #225). Reconstruct the five `/status`
+  fields directly from GitHub:
+  - **ACTIVE** — the open issue(s) or PR(s) representing the current
+    in-flight lane(s) (e.g. an `[AI DESIGN]` / `[AI BUILD]` issue, or an
+    open PR carrying an `OUTCOME-ID`).
+  - **BLOCKED** — any ACTIVE item whose progress is stopped on a concrete,
+    named dependency evidenced on that issue/PR itself (e.g. a merge
+    conflict, a failing check, a documented external blocker).
+  - **NEEDS CALVIN** — the most recent unanswered `CALVIN REQUIRED:` /
+    `STOP:` / `BLOCKED:` / `DONE: EVIDENCE` terminal comment (these carry
+    `needs-owner-wake`), or an open `CALVIN RULING` question, on any open
+    issue or PR.
+  - **RECENTLY DONE** — issues/PRs closed with a `DONE:` /
+    `DONE: EVIDENCE` terminal marker and the evidence it cites (merged PR,
+    or a self-contained no-PR deliverable).
+  - **NEXT** — the runway position implied by the current ACTIVE item, and
+    any open `CALVIN REQUIRED` question that gates it.
+
+  #226 (`CF-GITHUB-SOT-RECONCILE-01`) is the proof pass showing this
+  reconstruction matches a fresh Project Home read field-for-field; `BUILD.md`
+  and `OWNER.md` are where these fields get produced and kept current.
 - **Finance semantics** (what a metric means, how it's computed, what counts
   as correct) → current Cal Finance Methodology.
 - **Settled product semantics / Calvin rulings** → Product Decision Log.
