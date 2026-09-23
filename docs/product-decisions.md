@@ -6,7 +6,7 @@ of settled product decisions only — no finance methodology, no design-token
 or pixel/typography detail, no roadmap sequencing, no workflow/ops rules,
 and no historical/superseded rows. Where a decision borders another
 authority class, the boundary is stated inline; the excluded half lives in
-that class's own authority (Investment Methodology, current design authority,
+that class's own authority (Investment Methodology, the M9 design contract,
 Product Roadmap), not here.
 
 This file supersedes the Notion Product Decision Log as current authority
@@ -18,9 +18,9 @@ authorised on
 
 Currency note: the 23 Sep 2026 Analyzer Shell Contract V1 lock is a
 design-contract item, not a product decision, and is deliberately not
-promoted here. Current design authority is routed through
-[`CURRENT-AUTHORITY.md`](CURRENT-AUTHORITY.md); this file does not duplicate
-that design contract.
+promoted here. It belongs to the M9 design lane and is not yet reflected in
+`docs/design/m9-analyzer-design-contract.md` on `master` — a design-lane
+update, not a semantic conflict.
 
 1. Successful-report verdict is always BUY/HOLD/SELL; `INCOMPLETE` never
    renders as a completed-report verdict. (22 Sep 2026)
@@ -46,14 +46,14 @@ that design contract.
    workload; humans supply real-world context, management/incentive
    judgement, final qualitative decisions; human input is evidence, not
    authority; no MNPI.
-10. Paid research data allowed only when Cal Finance names the exact
+10. Paid research data allowed only when Calboard names the exact
     decision-relevant blind spot, shows public sources insufficient, and
     trials before recurring commitment.
-11. Cal Finance aims for decision readiness, not certainty; Calvin supplies
+11. Calboard aims for decision readiness, not certainty; Calvin supplies
     final judgment.
 12. Do not add analysis once core decision jobs are covered unless it
     materially improves them.
-13. Cross-Cal-Finance UX/design consistency is a hard product requirement —
+13. Cross-Calboard UX/design consistency is a hard product requirement —
     one durable design language, same semantics/tokens across surfaces.
 14. INVESTING (separate project) owns portfolio-policy numbers (target
     weights, caps, rebalance rules); Cal Finance consumes/checks but never
@@ -66,13 +66,12 @@ that design contract.
 18. Market-data posture: EOD-first (not EOD-only forever) — no streaming
     tape, flashing prices, or mover-driven attention loops; price
     freshness ≠ information freshness.
-19. North Star (verbatim historical naming; `Calboard` is retained only
-    inside the quote, while the current product name is **Cal Finance**):
-    *"Calboard exists to compensate for my investing weaknesses and improve
-    the quality and consistency of my investment decisions by giving me an
-    institutional-style research, analysis, challenge and portfolio decision
-    process that I can understand and interrogate."* Caddie = product mental
-    model, not architecture. Calvin is NOT the technical-finance correctness
+19. North Star (verbatim): *"Calboard exists to compensate for my
+    investing weaknesses and improve the quality and consistency of my
+    investment decisions by giving me an institutional-style research,
+    analysis, challenge and portfolio decision process that I can
+    understand and interrogate."* Caddie = product mental model, not
+    architecture. Calvin is NOT the technical-finance correctness
     checker. UNSURE/I-don't-know is a legitimate human outcome and never
     silently counts as agreement. Scenario authorship stays human.
 20. Calvin-friendly default UX is a hard product requirement: Quick Read
