@@ -35,8 +35,8 @@ export function AnalyzerTopBar({ variant }: { variant: "overview" | "report" | "
   const variantClass = variant === "report" ? " fa" : variant === "steps" ? " steps" : "";
   return (
     <header className={`topbar${variantClass}`}>
-      <Link href="/" className="brand" aria-label="Calboard home">
-        Calboard
+      <Link href="/" className="brand" aria-label="Cal Finance home">
+        Cal Finance
       </Link>
       <nav className="nav" aria-label="Primary">
         <Link href="/">Dashboard</Link>
