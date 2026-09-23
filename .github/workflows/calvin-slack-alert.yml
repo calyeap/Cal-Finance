@@ -1,59 +1,74 @@
 name: Notify Calvin in Slack
 
+# CF-CALVIN-ATTENTION-LEAN-01
+#
+# `CALVIN REQUIRED:` is the single attention truth. This used to fire only
+# from a `needs-owner-wake` label event, then separately scan the target's
+# comments for a matching latest terminal outcome. That made a genuine
+# Calvin gate depend on two independent signals landing together: the
+# `CALVIN REQUIRED:` comment itself, and a fresh `needs-owner-wake` label
+# event alongside it. OWNER can post its own `CALVIN REQUIRED:` during
+# terminal-wake reconciliation without that action re-labelling the
+# target (labels never re-fire a workflow when written by the repo's own
+# GITHUB_TOKEN — see cc-auto-fire.yml's fire-owner-on-terminal job for the
+# same class of gap), so a real gate could go unalerted with nothing to
+# reapply the label.
+#
+# Fixed by reacting directly to the comment event that carries the
+# decision: `issue_comment: created` covers both a top-level issue comment
+# and a top-level PR conversation comment. `needs-owner-wake` keeps its
+# existing meaning for OWNER's own internal reconciliation mechanics
+# (OWNER.md); this workflow no longer reads label events at all, so the
+# same `CALVIN REQUIRED:` comment can never notify twice (once on the
+# comment, again when something later applies the label).
 on:
-  issues:
-    types: [labeled]
-  pull_request:
-    types: [labeled]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: read
-  issues: read
-  pull-requests: read
 
 jobs:
   notify-calvin:
-    if: github.event.label.name == 'needs-owner-wake'
+    # Cheap prefilter only — mirrors cc-auto-fire.yml's fire-review job,
+    # which gates the job on a substring `contains(...)` and leaves the
+    # strict first-line contract to the step below. A comment that merely
+    # mentions CALVIN REQUIRED: later in its body (quoted, example, prose)
+    # still reaches this job but is rejected inside "Resolve terminal
+    # outcome" once the marker turns out not to be the first non-blank
+    # line.
+    if: contains(github.event.comment.body, 'CALVIN REQUIRED:')
     runs-on: ubuntu-latest
     steps:
-      - name: Resolve latest terminal outcome
+      # CF-CALVIN-ATTENTION-LEAN-01 correction: classify the marker through
+      # the shared lib instead of a second hand-rolled copy of the
+      # first-line pipeline, so a heading-prefixed "## CALVIN REQUIRED:"
+      # first line still alerts (same reasoning as cc-auto-fire.yml's
+      # fire-build job for the analogous CORRECT marker).
+      - name: Check out default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Resolve terminal outcome
         id: terminal
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # shellcheck source=../scripts/terminal-routing-lib.sh
+          source .github/scripts/terminal-routing-lib.sh
 
-          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${TARGET_NUMBER}/comments" | jq -s 'add // []')
-
-          LATEST=$(printf '%s' "$COMMENTS" | jq -c '
-            [ .[]
-              | {
-                  body: .body,
-                  html_url: .html_url,
-                  first_line: (
-                    .body
-                    | split("\n")
-                    | map(gsub("^[[:space:]]+|[[:space:]]+$"; ""))
-                    | map(select(length > 0))
-                    | .[0] // ""
-                  )
-                }
-              | select(.first_line | test("^(CALVIN REQUIRED:|STOP:|DONE:|BLOCKED:|CORRECT:|ACCEPT:|DISPATCHED:|WAIT:)"))
-            ]
-            | last // {}
-          ')
-
-          FIRST_LINE=$(printf '%s' "$LATEST" | jq -r '.first_line // ""')
-          COMMENT_URL=$(printf '%s' "$LATEST" | jq -r '.html_url // ""')
-
-          if [[ "$FIRST_LINE" != CALVIN\ REQUIRED:* ]]; then
+          if [ "$(terminal_is_calvin_required_marker "$COMMENT_BODY")" != "true" ]; then
             echo "notify=false" >> "$GITHUB_OUTPUT"
-            echo "Latest terminal outcome is not CALVIN REQUIRED; no Slack alert."
+            echo "First non-empty line is not CALVIN REQUIRED:; no Slack alert."
             exit 0
           fi
 
-          ASK=${FIRST_LINE#CALVIN REQUIRED:}
+          FIRST_LINE="$(terminal_first_line "$COMMENT_BODY")"
+          NORMALIZED="$(terminal_strip_markdown_heading "$FIRST_LINE")"
+
+          ASK=${NORMALIZED#CALVIN REQUIRED:}
           ASK=$(printf '%s' "$ASK" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//' | xargs)
 
           echo "notify=true" >> "$GITHUB_OUTPUT"
@@ -61,7 +76,6 @@ jobs:
             echo "ask<<EOF"
             echo "$ASK"
             echo "EOF"
-            echo "comment_url=$COMMENT_URL"
           } >> "$GITHUB_OUTPUT"
 
       - name: Send Calvin Slack alert
@@ -69,8 +83,9 @@ jobs:
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
           ASK: ${{ steps.terminal.outputs.ask }}
-          COMMENT_URL: ${{ steps.terminal.outputs.comment_url }}
-          TARGET_NUMBER: ${{ github.event.issue.number || github.event.pull_request.number }}
+          COMMENT_URL: ${{ github.event.comment.html_url }}
+          ITEM_URL: ${{ github.event.issue.html_url }}
+          REPO: ${{ github.repository }}
         run: |
           set -euo pipefail
 
@@ -79,13 +94,8 @@ jobs:
             exit 1
           fi
 
-          ITEM_URL="https://github.com/${{ github.repository }}/issues/${TARGET_NUMBER}"
-          if [ "${{ github.event_name }}" = "pull_request" ]; then
-            ITEM_URL="https://github.com/${{ github.repository }}/pull/${TARGET_NUMBER}"
-          fi
-
           PAYLOAD=$(jq -n \
-            --arg repo "${{ github.repository }}" \
+            --arg repo "$REPO" \
             --arg ask "$ASK" \
             --arg item_url "$ITEM_URL" \
             --arg comment_url "$COMMENT_URL" \

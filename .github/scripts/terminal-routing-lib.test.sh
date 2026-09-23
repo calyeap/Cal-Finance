@@ -102,6 +102,28 @@ assert_eq "quoted ## CORRECT later in the comment does not match" "false" "$(ter
 assert_eq "CORRECTED (no colon) does not match" "false" "$(terminal_is_correct_marker "CORRECTED")"
 assert_eq "## CORRECTED (no colon) does not match" "false" "$(terminal_is_correct_marker "## CORRECTED")"
 
+# --- terminal_is_calvin_required_marker (CF-CALVIN-ATTENTION-LEAN-01) ----
+
+assert_eq "plain CALVIN REQUIRED: marker matches" "true" "$(terminal_is_calvin_required_marker "CALVIN REQUIRED: approve A or B")"
+
+assert_eq "CALVIN REQUIRED: with [OWNER_ATTEMPT_ID: ...] suffix still matches" "true" \
+  "$(terminal_is_calvin_required_marker "CALVIN REQUIRED: approve A or B [OWNER_ATTEMPT_ID: abc123]")"
+
+assert_eq "leading blank lines before CALVIN REQUIRED: still match" "true" \
+  "$(terminal_is_calvin_required_marker "$(printf '\n\n  CALVIN REQUIRED: approve A or B\nbody\n')")"
+
+# Heading-prefixed marker (the PR #229 correction shape): must still alert.
+assert_eq "## CALVIN REQUIRED: (heading-prefixed) matches" "true" \
+  "$(terminal_is_calvin_required_marker "## CALVIN REQUIRED: approve A or B")"
+
+# Routine terminals and a quoted/later mention must not match.
+assert_eq "DONE: terminal does not match" "false" "$(terminal_is_calvin_required_marker "DONE: https://github.com/x/y/pull/42")"
+assert_eq "WAIT: terminal does not match" "false" "$(terminal_is_calvin_required_marker "WAIT: AI")"
+assert_eq "CORRECT: terminal does not match" "false" "$(terminal_is_calvin_required_marker "CORRECT: fix the parser")"
+
+quoted_calvin=$(printf 'DONE: https://github.com/x/y/pull/42\n\nEarlier drafts said "CALVIN REQUIRED:" but that was superseded.')
+assert_eq "quoted CALVIN REQUIRED: later in the comment does not match" "false" "$(terminal_is_calvin_required_marker "$quoted_calvin")"
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "terminal-routing-lib.test.sh: all checks passed"

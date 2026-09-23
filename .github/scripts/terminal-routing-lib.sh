@@ -77,3 +77,23 @@ terminal_is_correct_marker() {
     *) echo false ;;
   esac
 }
+
+# CF-CALVIN-ATTENTION-LEAN-01
+#
+# terminal_is_calvin_required_marker <comment_body>
+# True ("true") when the comment's first non-blank line — after dropping
+# leading blank lines, trimming whitespace, and stripping a harmless
+# Markdown heading prefix — begins with CALVIN REQUIRED:. Shares the same
+# normalization terminal_is_correct_marker applies, so a heading-prefixed
+# gate (e.g. "## CALVIN REQUIRED: ...") still alerts instead of silently
+# falling through the way PR #218's "## CORRECT" shape once did for the
+# CORRECT marker before that normalization existed.
+terminal_is_calvin_required_marker() {
+  local body="$1" first_line normalized
+  first_line="$(terminal_first_line "$body")"
+  normalized="$(terminal_strip_markdown_heading "$first_line")"
+  case "$normalized" in
+    "CALVIN REQUIRED:"*) echo true ;;
+    *) echo false ;;
+  esac
+}
