@@ -28,8 +28,10 @@ act. Don't pull every linked source for every task.
   product decisions; that authority is now
   [`docs/product-decisions.md`](docs/product-decisions.md) — see
   `docs/CURRENT-AUTHORITY.md` for the current split.
-- **Product Roadmap** (external) owns strategic sequencing — what's next and
-  why, beyond a single bounded task.
+- **Product Roadmap** (external, superseded) previously owned strategic
+  sequencing; that authority is now
+  [`docs/product-roadmap.md`](docs/product-roadmap.md) — see
+  `docs/CURRENT-AUTHORITY.md` for the current split.
 - **Technical Specs Index** (external) identifies which frozen
   artefacts/revisions under `docs/frozen/` are currently *approved*. Neither
   filename age nor mere presence in `docs/frozen/` decides that — check the
