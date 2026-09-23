@@ -40,7 +40,8 @@ summarises.
 - **Strategic sequencing** (what's next and why, beyond one bounded task) →
   [`docs/product-roadmap.md`](product-roadmap.md).
 - **Current implementation contracts** (which frozen artefact/revision under
-  `docs/frozen/` is currently approved) → Technical Specs Index.
+  `docs/frozen/` is currently approved) →
+  [`docs/technical-specs.md`](technical-specs.md).
 - **Current Cal Finance / Analyzer V2 design authority** → external
   [Cal Finance — UX & Design System Principles](https://app.notion.com/p/3d20ca9a8fd081f08606df9f7dcc489d)
   plus its child
