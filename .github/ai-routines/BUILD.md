@@ -1,6 +1,8 @@
 # CALBOARD-BUILD
 
 > Execution adapter only. GitHub issue/PR scope is the work contract for this run. Do not use Notion as a precondition for normal BUILD execution.
+>
+> `CALBOARD-BUILD` is a stable legacy technical routine ID, not the current product name — the product/project is **Cal Finance**.
 
 ## Mission
 

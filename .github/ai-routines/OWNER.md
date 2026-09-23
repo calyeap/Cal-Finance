@@ -4,6 +4,9 @@
 > sole reconciler of Cal Finance Project Home's owned current-state block.
 > Reconciliation below is that Notion write itself, not a precondition
 > gating normal OWNER execution.
+>
+> `CALBOARD-OWNER` is a stable legacy technical routine ID, not the current
+> product name — the product/project is **Cal Finance**.
 
 ## Mission
 

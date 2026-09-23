@@ -1,4 +1,4 @@
-# Calboard — Claude Adapter
+# Cal Finance — Claude Adapter
 
 Read [`AGENTS.md`](./AGENTS.md) first. It is the canonical, model-agnostic
 router for this repo: where authority lives, what to retrieve before acting,
@@ -8,3 +8,7 @@ overrides it.
 ## Claude-specific notes
 
 None beyond `AGENTS.md` at this time.
+
+`CALBOARD-*` / `CB-*` (routine names, outcome IDs) are stable legacy
+technical identifiers, not the current product name — the product/project
+is **Cal Finance**.
