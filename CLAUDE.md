@@ -8,7 +8,3 @@ overrides it.
 ## Claude-specific notes
 
 None beyond `AGENTS.md` at this time.
-
-`CALBOARD-*` / `CB-*` (routine names, outcome IDs) are stable legacy
-technical identifiers, not the current product name — the product/project
-is **Cal Finance**.

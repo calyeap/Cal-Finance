@@ -1,8 +1,6 @@
 # CALBOARD-CC-AUTO / REVIEW
 
 > Independent review adapter only. Review the exact PR against its linked GitHub task contract and current repo evidence. Do not use Notion procedures as hard preconditions for normal review.
->
-> `CALBOARD-CC-AUTO` is a stable legacy technical routine ID, not the current product name — the product/project is **Cal Finance**.
 
 ## Mission
 
