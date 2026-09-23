@@ -69,7 +69,13 @@ jobs:
           NORMALIZED="$(terminal_strip_markdown_heading "$FIRST_LINE")"
 
           ASK=${NORMALIZED#CALVIN REQUIRED:}
-          ASK=$(printf '%s' "$ASK" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//' | xargs)
+          # CF-SLACK-ALERT-RELIABILITY-01: `xargs` parses its input for
+          # shell-like quoting, so an apostrophe in an ordinary ask (e.g.
+          # "Calvin's decision") produced an unmatched-quote failure here.
+          # terminal_trim_whitespace trims via bash parameter expansion
+          # only and treats quotes/backticks/brackets as opaque text.
+          ASK=$(printf '%s' "$ASK" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//')
+          ASK=$(terminal_trim_whitespace "$ASK")
 
           echo "notify=true" >> "$GITHUB_OUTPUT"
           {

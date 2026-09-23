@@ -22,17 +22,50 @@
 
 set -uo pipefail
 
+# CF-SLACK-ALERT-RELIABILITY-01
+#
+# terminal_trim_whitespace <text>
+# Trims leading and trailing ASCII whitespace from a string using pure
+# bash parameter expansion — no external process, no pipeline. Unlike
+# `xargs` (the previous trimming method in calvin-slack-alert.yml), this
+# never treats the text as shell-like input: apostrophes, double quotes,
+# backticks and brackets pass through as opaque text instead of risking
+# an unmatched-quote failure (the second observed CF-SLACK-ALERT-
+# RELIABILITY-01 failure class, e.g. an ask containing "Calvin's
+# decision").
+terminal_trim_whitespace() {
+  local s="$1"
+  s="${s#"${s%%[![:space:]]*}"}"
+  s="${s%"${s##*[![:space:]]}"}"
+  printf '%s' "$s"
+}
+
 # terminal_first_line <comment_body>
 # Drops leading blank/all-whitespace lines, then prints the first
 # remaining line with its own leading/trailing whitespace trimmed. Mirrors
 # the TRIMMED/first-line convention already used for the CORRECT/DONE/
 # OWNER RECONCILED terminal markers elsewhere in this repo's workflows.
+#
+# CF-SLACK-ALERT-RELIABILITY-01: previously implemented as
+# `printf | sed | head -n1 | sed`. Under `set -o pipefail`, `head -n1`
+# can close its input after reading the first line and send SIGPIPE to
+# the upstream `sed` on a long/multi-line body, which then exits 141
+# ("couldn't flush stdout: Broken pipe") and — because pipefail makes
+# that the pipeline's exit status — took down any caller running under
+# `set -e`, even though the first line it produced was perfectly valid.
+# Rewritten as a pure bash loop over a here-string (not a pipe), so there
+# is nothing for an early return to SIGPIPE, and long bodies are handled
+# in O(lines until the first non-blank one) rather than requiring the
+# whole body to be read.
 terminal_first_line() {
-  local body="$1"
-  printf '%s' "$body" \
-    | sed -e '/[^[:space:]]/,$!d' -e 's/^[[:space:]]*//' \
-    | head -n1 \
-    | sed -e 's/[[:space:]]*$//'
+  local body="$1" line
+  while IFS= read -r line || [ -n "$line" ]; do
+    if [[ "$line" =~ [^[:space:]] ]]; then
+      terminal_trim_whitespace "$line"
+      return 0
+    fi
+  done <<< "$body"
+  printf ''
 }
 
 # terminal_pr_number_from_first_line <comment_body>
