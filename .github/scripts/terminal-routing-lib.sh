@@ -148,12 +148,30 @@ terminal_is_calvin_required_marker() {
 # because BUILD.md previously required the worker itself to additionally
 # apply needs-owner-wake, and nothing else consumed the terminal comment on
 # its own.
+#
+# CORRECT (PR #259 review): a CALVIN REQUIRED: line that also carries a
+# same-line `[OWNER_ATTEMPT_ID: ...]` tag is never a fresh gate raise — per
+# OWNER.md's liveness-correlation rule, that tag is mandatory on every fired
+# OWNER run's own terminal receipt, including the case where OWNER restates
+# an unresolved CALVIN REQUIRED gate as its own outcome. Admitting that
+# shape here would (a) re-fire OWNER for the wake it just finished, and
+# (b) let terminal_owner_admission_status treat it as the "latest" gate
+# marker, which posts a fresh "OWNER ATTEMPT START: " receipt that
+# calvin_ruling_gate_status (calvin-ruling-lib.sh) reads as the gate having
+# closed — before Calvin ever ruled on it. BUILD/REVIEW's own
+# CALVIN REQUIRED: comments never carry this tag and keep routing directly.
 terminal_is_owner_direct_marker() {
   local body="$1" first_line normalized
   first_line="$(terminal_first_line "$body")"
   normalized="$(terminal_strip_markdown_heading "$first_line")"
   case "$normalized" in
-    "DONE: EVIDENCE"*|STOP:*|BLOCKED:*|"CALVIN REQUIRED:"*) echo true ;;
+    "DONE: EVIDENCE"*|STOP:*|BLOCKED:*) echo true ;;
+    "CALVIN REQUIRED:"*)
+      case "$normalized" in
+        *"[OWNER_ATTEMPT_ID: "*) echo false ;;
+        *) echo true ;;
+      esac
+      ;;
     *) echo false ;;
   esac
 }
@@ -164,11 +182,24 @@ terminal_is_owner_direct_marker() {
 # order.
 #
 # Finds the most recent comment whose first non-blank line (after Markdown
-# heading stripping) matches terminal_is_owner_direct_marker's marker set.
-# Echoes "admit" only when such a marker exists and no
-# "OWNER ATTEMPT START: " receipt has been posted after it yet — i.e. no
-# OWNER fire has been admitted for this exact terminal transition. Echoes
-# "skip" otherwise, including when no such marker exists at all.
+# heading stripping) matches terminal_is_owner_direct_marker's marker set
+# (the same CALVIN REQUIRED: + same-line [OWNER_ATTEMPT_ID: ...] exclusion
+# applies here — OWNER's own restated-gate receipt is never itself a fresh
+# terminal transition to admit). Echoes "admit" when such a marker exists
+# and no "OWNER ATTEMPT START: " receipt has been posted after it yet —
+# i.e. no OWNER fire has been admitted for this exact terminal transition.
+# Echoes "skip" when a marker exists but has already been admitted (a
+# genuine duplicate — the other path got here first). Echoes "no-marker"
+# when the target carries no such marker at all.
+#
+# CORRECT (PR #259 review): "skip" and "no-marker" used to collapse into a
+# single "skip" result. The needs-owner-wake label branch in
+# cc-auto-fire.yml treated both alike and then unconditionally deleted the
+# label, which made a manually-applied label a silent no-op on any target
+# whose terminal outcome isn't a first-line marker comment (e.g. stated in
+# a PR body) — exactly the manual/recovery case the label exists for. The
+# caller now fires on "no-marker" (nothing to dedupe against) and only
+# skips + cleans up the label on a genuine "skip" duplicate.
 #
 # This is the shared, target-local dedupe between the direct-comment route
 # above and the needs-owner-wake label kept as manual/recovery
@@ -192,15 +223,20 @@ terminal_owner_admission_status() {
       | (.[0] // "")
       | sub("^\\s+"; "")
       | sub("\\s+$"; "");
+    def is_owner_direct_marker:
+      if test("^(DONE: EVIDENCE|STOP:|BLOCKED:)") then true
+      elif test("^CALVIN REQUIRED:") then (test("\\[OWNER_ATTEMPT_ID: ") | not)
+      else false
+      end;
 
     (map(. + {first_line: (.body | first_nonblank_line | strip_heading)})) as $all
     | ($all
-        | map(select(.first_line | test("^(DONE: EVIDENCE|STOP:|BLOCKED:|CALVIN REQUIRED:)")))
+        | map(select(.first_line | is_owner_direct_marker))
         | sort_by(.created_at)
         | (.[-1] // null)
       ) as $latest
     | if $latest == null then
-        "skip"
+        "no-marker"
       else
         (
           $all

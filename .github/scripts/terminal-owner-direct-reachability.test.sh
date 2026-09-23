@@ -98,6 +98,19 @@ else
     sources_terminal_lib="true"
   fi
   assert_true "Resolve target sources terminal-routing-lib.sh" "$sources_terminal_lib"
+
+  # PR #259 review correction: the needs-owner-wake label branch must only
+  # skip on a genuine "skip" (already-admitted duplicate) result, never on
+  # "no-marker" (a manual label with no first-line terminal marker on the
+  # target at all). A bare `!= "admit"` comparison would treat both alike
+  # and make the label a silent no-op in the manual/recovery case it exists
+  # for — the exact regression this guards against.
+  label_branch_checks_skip_not_admit="false"
+  if printf '%s\n' "$terminal_block" | grep -qE '\[\s*"\$LABEL_ADMISSION"\s*=\s*"skip"\s*\]'; then
+    label_branch_checks_skip_not_admit="true"
+  fi
+  assert_true "the needs-owner-wake label branch short-circuits only on a genuine skip, not any non-admit result" \
+    "$label_branch_checks_skip_not_admit"
 fi
 
 echo
