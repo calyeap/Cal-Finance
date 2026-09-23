@@ -40,34 +40,35 @@ jobs:
     if: contains(github.event.comment.body, 'CALVIN REQUIRED:')
     runs-on: ubuntu-latest
     steps:
+      # CF-CALVIN-ATTENTION-LEAN-01 correction: classify the marker through
+      # the shared lib instead of a second hand-rolled copy of the
+      # first-line pipeline, so a heading-prefixed "## CALVIN REQUIRED:"
+      # first line still alerts (same reasoning as cc-auto-fire.yml's
+      # fire-build job for the analogous CORRECT marker).
+      - name: Check out default branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
       - name: Resolve terminal outcome
         id: terminal
         env:
           COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
-          set -euo pipefail
+          set -uo pipefail
+          # shellcheck source=../scripts/terminal-routing-lib.sh
+          source .github/scripts/terminal-routing-lib.sh
 
-          # Drop leading blank/all-whitespace lines, then require the
-          # marker on the first remaining line — the same first-line
-          # terminal-marker convention terminal-routing-lib.sh applies to
-          # CORRECT/DONE elsewhere in this repo's workflows. A quoted or
-          # example "CALVIN REQUIRED:" appearing later in the comment body
-          # can never match this.
-          FIRST_LINE=$(printf '%s' "$COMMENT_BODY" \
-            | sed -e '/[^[:space:]]/,$!d' -e 's/^[[:space:]]*//' \
-            | head -n1 \
-            | sed -e 's/[[:space:]]*$//')
+          if [ "$(terminal_is_calvin_required_marker "$COMMENT_BODY")" != "true" ]; then
+            echo "notify=false" >> "$GITHUB_OUTPUT"
+            echo "First non-empty line is not CALVIN REQUIRED:; no Slack alert."
+            exit 0
+          fi
 
-          case "$FIRST_LINE" in
-            "CALVIN REQUIRED:"*) ;;
-            *)
-              echo "notify=false" >> "$GITHUB_OUTPUT"
-              echo "First non-empty line is not CALVIN REQUIRED:; no Slack alert."
-              exit 0
-              ;;
-          esac
+          FIRST_LINE="$(terminal_first_line "$COMMENT_BODY")"
+          NORMALIZED="$(terminal_strip_markdown_heading "$FIRST_LINE")"
 
-          ASK=${FIRST_LINE#CALVIN REQUIRED:}
+          ASK=${NORMALIZED#CALVIN REQUIRED:}
           ASK=$(printf '%s' "$ASK" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//' | xargs)
 
           echo "notify=true" >> "$GITHUB_OUTPUT"
