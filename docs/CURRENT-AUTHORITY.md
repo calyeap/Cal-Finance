@@ -35,7 +35,8 @@ summarises.
   and `OWNER.md` are where these fields get produced and kept current.
 - **Finance semantics** (what a metric means, how it's computed, what counts
   as correct) → current Cal Finance Methodology.
-- **Settled product semantics / Calvin rulings** → Product Decision Log.
+- **Settled product semantics / Calvin rulings** →
+  [`docs/product-decisions.md`](product-decisions.md).
 - **Strategic sequencing** (what's next and why, beyond one bounded task) →
   Product Roadmap.
 - **Current implementation contracts** (which frozen artefact/revision under
