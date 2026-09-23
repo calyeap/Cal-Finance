@@ -124,6 +124,75 @@ assert_eq "CORRECT: terminal does not match" "false" "$(terminal_is_calvin_requi
 quoted_calvin=$(printf 'DONE: https://github.com/x/y/pull/42\n\nEarlier drafts said "CALVIN REQUIRED:" but that was superseded.')
 assert_eq "quoted CALVIN REQUIRED: later in the comment does not match" "false" "$(terminal_is_calvin_required_marker "$quoted_calvin")"
 
+# Leading blank lines before a heading-prefixed CALVIN REQUIRED: marker
+# (combining both fixups) still resolve.
+assert_eq "leading blank lines before ## CALVIN REQUIRED: still match" "true" \
+  "$(terminal_is_calvin_required_marker "$(printf '\n\n  ## CALVIN REQUIRED: approve A or B\nbody\n')")"
+
+# --- CF-SLACK-ALERT-RELIABILITY-01 ----------------------------------------
+#
+# Root cause A: terminal_first_line used to be `sed | head -n1 | sed`.
+# Under `set -o pipefail`, GitHub Actions' default `run:` shell already
+# wraps steps in `bash -e {0}`, so a long body could make head -n1 close
+# the pipe early, SIGPIPE the upstream sed, and abort the whole step even
+# though the first line was valid. Prove the fixed pipeline-free
+# implementation survives the exact effective flags GitHub Actions uses
+# (-e -u -o pipefail) on a long multi-line body.
+long_body=$(printf 'CALVIN REQUIRED: approve the long rollout plan\n%s\n' "$(printf 'x%.0s' $(seq 1 100000))")
+long_first_line_output=$(bash -c '
+  set -euo pipefail
+  source "'"${SCRIPT_DIR}"'/terminal-routing-lib.sh"
+  terminal_first_line "$1"
+' _ "$long_body")
+long_first_line_status=$?
+assert_eq "terminal_first_line survives a long multi-line body under -euo pipefail" "0" "$long_first_line_status"
+assert_eq "terminal_first_line still extracts the correct first line from a long body" \
+  "CALVIN REQUIRED: approve the long rollout plan" "$long_first_line_output"
+
+long_marker_ok=$(bash -c '
+  set -euo pipefail
+  source "'"${SCRIPT_DIR}"'/terminal-routing-lib.sh"
+  terminal_is_calvin_required_marker "$1"
+' _ "$long_body")
+assert_eq "long multi-line CALVIN REQUIRED: body still classifies as a marker" "true" "$long_marker_ok"
+
+# Root cause B: the Slack ask-normalisation path used `| xargs` to trim
+# whitespace, and xargs parses its input for shell-like quoting, so an
+# apostrophe (or other quote-like punctuation) in an ordinary ask could
+# fail with an unmatched-quote error. terminal_trim_whitespace must treat
+# all of that as opaque text.
+assert_eq "terminal_trim_whitespace leaves an apostrophe untouched" \
+  "approve Calvin's decision" "$(terminal_trim_whitespace "  approve Calvin's decision  ")"
+assert_eq "terminal_trim_whitespace leaves double quotes untouched" \
+  'approve the "fast" rollout' "$(terminal_trim_whitespace '  approve the "fast" rollout  ')"
+assert_eq "terminal_trim_whitespace leaves backticks untouched" \
+  'run `npm test` first' "$(terminal_trim_whitespace '  run `npm test` first  ')"
+assert_eq "terminal_trim_whitespace leaves brackets untouched" \
+  'approve A or B [see thread]' "$(terminal_trim_whitespace '  approve A or B [see thread]  ')"
+assert_eq "terminal_trim_whitespace collapses to empty on an all-whitespace string" \
+  "" "$(terminal_trim_whitespace "   ")"
+
+# End-to-end shape of calvin-slack-alert.yml's ask derivation: strip the
+# CALVIN REQUIRED: marker prefix, strip a trailing [OWNER_ATTEMPT_ID: ...]
+# suffix, then trim — exercised here exactly as the workflow step does it,
+# so the apostrophe/quote/backtick/bracket cases are proven against the
+# real derivation order, not just the trim helper in isolation.
+derive_ask() {
+  local body="$1" first_line normalized ask
+  first_line="$(terminal_first_line "$body")"
+  normalized="$(terminal_strip_markdown_heading "$first_line")"
+  ask=${normalized#CALVIN REQUIRED:}
+  ask=$(printf '%s' "$ask" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//')
+  terminal_trim_whitespace "$ask"
+}
+
+assert_eq "derived ask keeps an apostrophe intact" \
+  "approve Calvin's decision" \
+  "$(derive_ask "CALVIN REQUIRED: approve Calvin's decision")"
+assert_eq "derived ask keeps quotes/backticks/brackets intact and strips the attempt-id suffix" \
+  'run `npm test` and confirm the "fast" path [details]' \
+  "$(derive_ask 'CALVIN REQUIRED: run `npm test` and confirm the "fast" path [details] [OWNER_ATTEMPT_ID: abc123]')"
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "terminal-routing-lib.test.sh: all checks passed"
