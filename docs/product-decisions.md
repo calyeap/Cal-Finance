@@ -16,6 +16,12 @@ authorised on
 [issue #237](https://github.com/calyeap/Cal-Finance/issues/237#issuecomment-5790727600),
 23 Sep 2026).
 
+Currency note: the 23 Sep 2026 Analyzer Shell Contract V1 lock is a
+design-contract item, not a product decision, and is deliberately not
+promoted here. It belongs to the M9 design lane and is not yet reflected in
+`docs/design/m9-analyzer-design-contract.md` on `master` — a design-lane
+update, not a semantic conflict.
+
 1. Successful-report verdict is always BUY/HOLD/SELL; `INCOMPLETE` never
    renders as a completed-report verdict. (22 Sep 2026)
 2. M9 Analyzer identity: premium investment-research product,
