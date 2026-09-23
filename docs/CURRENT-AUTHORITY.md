@@ -50,6 +50,14 @@ summarises.
   [`docs/design/m9-analyzer-design-contract.md`](design/m9-analyzer-design-contract.md)
   remain legacy/surface-scoped implementation references only and must not
   override newer accepted Analyzer V2 visual authority.
+- **Current Cal Finance brand direction / candidate source assets** → external
+  [Cal Finance — Brand Identity & Assets](https://app.notion.com/p/3dd0ca9a8fd081c4acdae46985a07f56).
+  It owns the human-readable brand direction and preserved source variants.
+  The current SVG pack remains a production candidate until the pending
+  Figma/vector and small-size inspection is complete; once promoted, files
+  actually shipped from this repo/app are implementation truth for production
+  assets. Do not treat stale Calboard branding or legacy Portfolio visuals as
+  current brand/design authority.
 - **Current acceptance state** (outcome → implementation proof →
   real-company validation → Calvin acceptance, per acceptance-relevant
   outcome) → [`docs/acceptance-matrix.md`](acceptance-matrix.md).
