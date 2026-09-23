@@ -1,4 +1,4 @@
-# Calboard — Claude Adapter
+# Cal Finance — Claude Adapter
 
 Read [`AGENTS.md`](./AGENTS.md) first. It is the canonical, model-agnostic
 router for this repo: where authority lives, what to retrieve before acting,
