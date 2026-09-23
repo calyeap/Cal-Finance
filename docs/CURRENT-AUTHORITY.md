@@ -21,9 +21,10 @@ summarises.
     named dependency evidenced on that issue/PR itself (e.g. a merge
     conflict, a failing check, a documented external blocker).
   - **NEEDS CALVIN** — the most recent unanswered `CALVIN REQUIRED:` /
-    `STOP:` / `BLOCKED:` / `DONE: EVIDENCE` terminal comment (these carry
-    `needs-owner-wake`), or an open `CALVIN RULING` question, on any open
-    issue or PR.
+    `STOP:` / `BLOCKED:` / `DONE: EVIDENCE` terminal comment (these route
+    directly to OWNER per CF-TERMINAL-HANDOFF-REPAIR-01, whether or not
+    `needs-owner-wake` is also present), or an open `CALVIN RULING`
+    question, on any open issue or PR.
   - **RECENTLY DONE** — issues/PRs closed with a `DONE:` /
     `DONE: EVIDENCE` terminal marker and the evidence it cites (merged PR,
     or a self-contained no-PR deliverable).

@@ -5,9 +5,11 @@ name: Fire Cal Finance OWNER on merged PR
 # directly as a post-merge dispatcher that reconciles Project Home before
 # dispatching (see .github/ai-routines/OWNER.md). This workflow does not
 # depend on dispatch-next or any label for the normal merge path. The
-# terminal-outcome (non-merge) OWNER wake lives in cc-auto-fire.yml, gated on
-# the needs-owner-wake label BUILD/REVIEW apply for a STOP or CALVIN
-# REQUIRED outcome.
+# terminal-outcome (non-merge) OWNER wake lives in cc-auto-fire.yml's
+# fire-owner-on-terminal job, admitted directly from a top-level DONE:
+# EVIDENCE / STOP: / BLOCKED: / CALVIN REQUIRED: comment BUILD or REVIEW
+# posts (CF-TERMINAL-HANDOFF-REPAIR-01); the needs-owner-wake label remains
+# only as a manual/recovery compatibility path, no longer required.
 #
 # CF-OWNER-LIVENESS-01
 # HTTP 2xx from the fire below proves only that an OWNER session was

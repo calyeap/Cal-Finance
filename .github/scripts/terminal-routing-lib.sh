@@ -130,3 +130,121 @@ terminal_is_calvin_required_marker() {
     *) echo false ;;
   esac
 }
+
+# CF-TERMINAL-HANDOFF-REPAIR-01
+#
+# terminal_is_owner_direct_marker <comment_body>
+# True ("true") when the comment's first non-blank line — after dropping
+# leading blank lines, trimming whitespace, and stripping a harmless
+# Markdown heading prefix — begins with one of the four terminal outcomes
+# that must route straight into cc-auto-fire.yml's fire-owner-on-terminal
+# job, without a worker also needing to apply the needs-owner-wake label:
+# DONE: EVIDENCE, STOP:, BLOCKED:, or CALVIN REQUIRED:. An ordinary
+# DONE: <PR link> completion never matches — it keeps routing through
+# fire-review, unchanged.
+#
+# Fixes the exact #256 failure this outcome diagnoses: BUILD posted a valid
+# first-line `DONE: EVIDENCE` terminal receipt, but no OWNER wake followed
+# because BUILD.md previously required the worker itself to additionally
+# apply needs-owner-wake, and nothing else consumed the terminal comment on
+# its own.
+#
+# CORRECT (PR #259 review): a CALVIN REQUIRED: line that also carries a
+# same-line `[OWNER_ATTEMPT_ID: ...]` tag is never a fresh gate raise — per
+# OWNER.md's liveness-correlation rule, that tag is mandatory on every fired
+# OWNER run's own terminal receipt, including the case where OWNER restates
+# an unresolved CALVIN REQUIRED gate as its own outcome. Admitting that
+# shape here would (a) re-fire OWNER for the wake it just finished, and
+# (b) let terminal_owner_admission_status treat it as the "latest" gate
+# marker, which posts a fresh "OWNER ATTEMPT START: " receipt that
+# calvin_ruling_gate_status (calvin-ruling-lib.sh) reads as the gate having
+# closed — before Calvin ever ruled on it. BUILD/REVIEW's own
+# CALVIN REQUIRED: comments never carry this tag and keep routing directly.
+terminal_is_owner_direct_marker() {
+  local body="$1" first_line normalized
+  first_line="$(terminal_first_line "$body")"
+  normalized="$(terminal_strip_markdown_heading "$first_line")"
+  case "$normalized" in
+    "DONE: EVIDENCE"*|STOP:*|BLOCKED:*) echo true ;;
+    "CALVIN REQUIRED:"*)
+      case "$normalized" in
+        *"[OWNER_ATTEMPT_ID: "*) echo false ;;
+        *) echo true ;;
+      esac
+      ;;
+    *) echo false ;;
+  esac
+}
+
+# terminal_owner_admission_status <comments_json>
+# comments_json: a JSON array of {"body":..,"created_at":..} comment
+# objects for one target (issue or PR), already fetched by the caller, any
+# order.
+#
+# Finds the most recent comment whose first non-blank line (after Markdown
+# heading stripping) matches terminal_is_owner_direct_marker's marker set
+# (the same CALVIN REQUIRED: + same-line [OWNER_ATTEMPT_ID: ...] exclusion
+# applies here — OWNER's own restated-gate receipt is never itself a fresh
+# terminal transition to admit). Echoes "admit" when such a marker exists
+# and no "OWNER ATTEMPT START: " receipt has been posted after it yet —
+# i.e. no OWNER fire has been admitted for this exact terminal transition.
+# Echoes "skip" when a marker exists but has already been admitted (a
+# genuine duplicate — the other path got here first). Echoes "no-marker"
+# when the target carries no such marker at all.
+#
+# CORRECT (PR #259 review): "skip" and "no-marker" used to collapse into a
+# single "skip" result. The needs-owner-wake label branch in
+# cc-auto-fire.yml treated both alike and then unconditionally deleted the
+# label, which made a manually-applied label a silent no-op on any target
+# whose terminal outcome isn't a first-line marker comment (e.g. stated in
+# a PR body) — exactly the manual/recovery case the label exists for. The
+# caller now fires on "no-marker" (nothing to dedupe against) and only
+# skips + cleans up the label on a genuine "skip" duplicate.
+#
+# This is the shared, target-local dedupe between the direct-comment route
+# above and the needs-owner-wake label kept as manual/recovery
+# compatibility (BUILD.md, OWNER.md, CC.md): both paths call this before
+# firing, both run inside the same cf-owner-single-writer concurrency group
+# (CF-OWNER-SINGLE-WRITER-01), so whichever one reaches this job first for
+# a given terminal comment posts the "OWNER ATTEMPT START: " admission and
+# the other — reading freshly fetched comments that now include it —
+# resolves "skip" instead of firing a second OWNER session for the same
+# transition. No new queue, lock, or service; this reuses the same
+# admission-receipt convention calvin_ruling_gate_status already applies to
+# the CALVIN RULING wake path (calvin-ruling-lib.sh).
+terminal_owner_admission_status() {
+  local comments_json="$1"
+  jq -r '
+    def strip_heading: sub("^#{1,6}[ \t]+"; "");
+    def first_nonblank_line:
+      (. // "")
+      | split("\n")
+      | map(select(test("[^\\s]")))
+      | (.[0] // "")
+      | sub("^\\s+"; "")
+      | sub("\\s+$"; "");
+    def is_owner_direct_marker:
+      if test("^(DONE: EVIDENCE|STOP:|BLOCKED:)") then true
+      elif test("^CALVIN REQUIRED:") then (test("\\[OWNER_ATTEMPT_ID: ") | not)
+      else false
+      end;
+
+    (map(. + {first_line: (.body | first_nonblank_line | strip_heading)})) as $all
+    | ($all
+        | map(select(.first_line | is_owner_direct_marker))
+        | sort_by(.created_at)
+        | (.[-1] // null)
+      ) as $latest
+    | if $latest == null then
+        "no-marker"
+      else
+        (
+          $all
+          | map(select(.created_at > $latest.created_at))
+          | map(select(.first_line | startswith("OWNER ATTEMPT START: ")))
+          | length
+        ) as $admitted_since
+        | if $admitted_since > 0 then "skip" else "admit" end
+      end
+  ' <<<"$comments_json"
+}

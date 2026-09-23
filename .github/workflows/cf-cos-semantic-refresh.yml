@@ -132,7 +132,7 @@ jobs:
 
           ATTENTION CONTRACT — COPY, DO NOT INTERPRET:
           - Native GitHub state is the sole attention authority for Cal Finance current status/attention (Phase 2 cutover, issue #231/#235; see docs/CURRENT-AUTHORITY.md) — never Cal Finance Project Home's `NEXT MOVE` line, which is superseded/pointer-only for this fact type.
-          - NEEDS CALVIN = the most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` / `DONE: EVIDENCE` terminal comment (these carry `needs-owner-wake`), or an open `CALVIN RULING` question, on any open issue or PR.
+          - NEEDS CALVIN = the most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` / `DONE: EVIDENCE` terminal comment (these route directly to OWNER per CF-TERMINAL-HANDOFF-REPAIR-01, whether or not `needs-owner-wake` is also present), or an open `CALVIN RULING` question, on any open issue or PR.
           - NEEDS CALVIN non-empty -> STATE gets a red prefix and NEED ME? = YES.
           - NEEDS CALVIN empty (authorised AI work running/dispatchable/recovering, a third party is the real blocker, or Calvin explicitly parked the project) -> STATE gets a green prefix and NEED ME? = NO.
           - If native GitHub state cannot be read or is contradictory, write `STALE / RECONCILIATION REQUIRED` rather than inferring GREEN from silence.

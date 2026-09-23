@@ -439,10 +439,26 @@ jobs:
   # authoritative for author/gate-state classification once it does. See
   # calvin-ruling-reachability.test.sh for the regression coverage.
   fire-owner-on-terminal:
+    # CF-TERMINAL-HANDOFF-REPAIR-01: the four direct-marker startsWith
+    # checks below give a top-level DONE: EVIDENCE / STOP: / BLOCKED: /
+    # CALVIN REQUIRED: comment its own admission into this job, without
+    # requiring needs-owner-wake — the exact #256 gap (a valid DONE:
+    # EVIDENCE receipt with no label produced no OWNER wake). Anchored with
+    # startsWith, matching the existing CALVIN RULING admission and for the
+    # same reason calvin-ruling-reachability.test.sh already guards: this
+    # job-level `if:` is what claims the cf-owner-single-writer concurrency
+    # group before any step runs, so a bare substring match would let any
+    # comment merely mentioning one of these words evict a genuinely queued
+    # wake. The precise first-line/heading-normalized classification still
+    # happens in `Resolve target` via terminal_is_owner_direct_marker.
     if: >-
       github.event.label.name == 'needs-owner-wake' ||
       (github.event_name == 'issue_comment' &&
-        startsWith(github.event.comment.body, 'CALVIN RULING'))
+        (startsWith(github.event.comment.body, 'CALVIN RULING') ||
+          startsWith(github.event.comment.body, 'DONE: EVIDENCE') ||
+          startsWith(github.event.comment.body, 'STOP:') ||
+          startsWith(github.event.comment.body, 'BLOCKED:') ||
+          startsWith(github.event.comment.body, 'CALVIN REQUIRED:')))
     runs-on: ubuntu-latest
     timeout-minutes: 50
     concurrency:
@@ -467,21 +483,64 @@ jobs:
           IS_BOT: ${{ github.event.comment.user.type == 'Bot' }}
         run: |
           set -uo pipefail
+          # shellcheck source=../scripts/calvin-ruling-lib.sh
+          source .github/scripts/calvin-ruling-lib.sh
+          # shellcheck source=../scripts/terminal-routing-lib.sh
+          source .github/scripts/terminal-routing-lib.sh
 
           if [ "$EVENT_NAME" = "issue_comment" ]; then
-            # shellcheck source=../scripts/calvin-ruling-lib.sh
-            source .github/scripts/calvin-ruling-lib.sh
-
             NUMBER="${{ github.event.issue.number }}"
-            COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
-              --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
+          else
+            NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+          fi
 
-            if [ "$(calvin_ruling_should_wake "$COMMENTS" "$COMMENT_BODY" "$IS_BOT")" != "wake" ]; then
+          # CF-TERMINAL-HANDOFF-REPAIR-01: fetched once, up front, since
+          # both the ruling-wake gate check below and the new direct-marker/
+          # needs-owner-wake admission dedupe need the target's current
+          # comments.
+          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
+
+          if [ "$EVENT_NAME" = "issue_comment" ]; then
+            if [ "$(calvin_ruling_should_wake "$COMMENTS" "$COMMENT_BODY" "$IS_BOT")" = "wake" ]; then
+              : # CF-OWNER-SINGLE-WRITER-01 addendum ruling wake — unchanged;
+                # calvin_ruling_should_wake already applies its own gate/
+                # admission check via calvin_ruling_gate_status.
+            elif [ "$(terminal_is_owner_direct_marker "$COMMENT_BODY")" = "true" ]; then
+              # CF-TERMINAL-HANDOFF-REPAIR-01: direct terminal -> OWNER
+              # routing. terminal_owner_admission_status is the shared
+              # dedupe with the needs-owner-wake compatibility path below —
+              # whichever path reaches this job first for a given terminal
+              # transition posts the admission receipt, and the other skips.
+              if [ "$(terminal_owner_admission_status "$COMMENTS")" != "admit" ]; then
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+              fi
+            else
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
           else
-            NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+            # needs-owner-wake label: kept as manual/recovery compatibility
+            # only (BUILD.md, CC.md, OWNER.md) — no longer required for the
+            # four terminal markers now routed directly above. The same
+            # admission dedupe applies here, so applying this label
+            # alongside an already-handled direct terminal comment does not
+            # fire a second OWNER session for the same transition.
+            #
+            # CORRECT (PR #259 review): "skip" (a genuine already-admitted
+            # duplicate) and "no-marker" (no first-line terminal marker on
+            # this target at all — e.g. a manual label applied for an
+            # outcome stated only in a PR body) used to be indistinguishable
+            # and both fell through to skip, making the label a silent
+            # no-op exactly in the manual/recovery case it exists for. Only
+            # a genuine "skip" duplicate short-circuits here; "no-marker"
+            # falls through and fires as before.
+            LABEL_ADMISSION="$(terminal_owner_admission_status "$COMMENTS")"
+            if [ "$LABEL_ADMISSION" = "skip" ]; then
+              echo "skip=true" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
           fi
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -557,6 +616,27 @@ jobs:
         run: |
           gh api --method DELETE \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-owner-wake" || true
+
+      # CF-TERMINAL-HANDOFF-REPAIR-01: this label is compatibility-only now
+      # (BUILD.md, CC.md, OWNER.md). If terminal_owner_admission_status
+      # already found an "OWNER ATTEMPT START: " receipt for the current
+      # terminal transition — the direct-comment path got there first —
+      # this event never fires a second OWNER session, but the label
+      # itself must still be cleared so it doesn't linger as a stale
+      # manual marker.
+      #
+      # CORRECT (PR #259 review): this only fires on a genuine "skip"
+      # duplicate now (see the "Resolve target" step above) — a "no-marker"
+      # result no longer reaches here with skip == 'true', so a label
+      # applied where no first-line terminal marker exists still fires
+      # OWNER instead of being silently deleted.
+      - name: Remove already-admitted needs-owner-wake label
+        if: github.event.label.name == 'needs-owner-wake' && steps.target.outputs.skip == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh api --method DELETE \
+            "repos/${{ github.repository }}/issues/${{ github.event.issue.number || github.event.pull_request.number }}/labels/needs-owner-wake" || true
 
       - name: Report OWNER terminal-wake fire failure
         if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok != 'true'
