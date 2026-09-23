@@ -14,10 +14,14 @@ act. Don't pull every linked source for every task.
   implementation facts — what the code currently does, what's tested, what's
   merged. Verify against `git log`, the working tree, and GitHub, not against
   memory or a prior report.
-- **Cal Finance Project Home** (external) owns current semantic project
-  state: accepted milestone, current blocker, authorised next work. Ask or
-  check it rather than inferring current state from filenames, branch names,
-  or doc age in this repo.
+- **Current project status / next authorised move** (ACTIVE / BLOCKED /
+  NEEDS CALVIN / RECENTLY DONE / NEXT) is owned by native GitHub state, not
+  Cal Finance Project Home — see [`docs/CURRENT-AUTHORITY.md`](docs/CURRENT-AUTHORITY.md)
+  for how to reconstruct it. Don't infer current state from filenames,
+  branch names, or doc age in this repo.
+- **Cal Finance Project Home** (external) owns durable semantic authorities
+  not covered by the class above and not yet cut over to GitHub — see
+  `docs/CURRENT-AUTHORITY.md` for the current split.
 - **Cal Finance Methodology** (external) owns finance semantics — what a
   metric means, how it's computed, what counts as correct.
 - **Product Decision Log** (external) owns settled product decisions.
