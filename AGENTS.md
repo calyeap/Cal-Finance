@@ -46,14 +46,18 @@ verbatim historical quote. New/current-facing product prose and UI use
   boundaries to Product Decisions, Methodology and Design. `scripts/evidence/config.ts`
   (`FROZEN_HASHES`) proves byte identity only; neither filename age nor mere
   presence in `docs/frozen/` decides semantic authority.
-- **Current Cal Finance / Analyzer V2 design authority** is external:
+- **Current Analyzer V2 implementation-facing design contract** is repo-owned in
+  [`docs/design/analyzer-v2-design-authority.md`](docs/design/analyzer-v2-design-authority.md).
+  It is the first hop for Analyzer V2 implementation and records the locked shell,
+  seven tabs, responsive modes, shared token/type/spacing foundation, visual-pack
+  manifest/precedence, pre-report boundary and legacy limits. The human-readable
+  design rationale and accepted visual reference pack remain external in
   [Cal Finance — UX & Design System Principles](https://app.notion.com/p/3d20ca9a8fd081f08606df9f7dcc489d)
-  plus its child
+  and its child
   [Analyzer V2 — Approved Design Artefacts](https://app.notion.com/p/3e40ca9a8fd081358d31cf1f3e1e45a3).
-  Analyzer V2 is the strongest current visual reference and proving
-  implementation. Existing Portfolio/Holdings surfaces and older M9/frozen
-  design contracts are legacy or surface-scoped references and must not
-  override newer accepted Analyzer V2 visual authority.
+  Analyzer V2 is the strongest current visual reference / proving implementation.
+  Existing Portfolio/Holdings surfaces and older M9/frozen Analyzer design contracts
+  are legacy or surface-scoped references and cannot override it.
 - **Current Cal Finance brand direction / candidate source assets** → external
   [Cal Finance — Brand Identity & Assets](https://app.notion.com/p/3dd0ca9a8fd081c4acdae46985a07f56).
   That page owns the human-readable brand direction and preserved source
@@ -63,8 +67,8 @@ verbatim historical quote. New/current-facing product prose and UI use
   implementation truth for production assets; do not revive stale Calboard
   branding or legacy Portfolio visuals as current authority.
 - **`DESIGN.md`** is the Portfolio-era routing/index surface over Portfolio
-  design intent. It does not govern Analyzer V2 and cannot override the
-  current Analyzer V2 design authority above.
+  design intent. It does not govern Analyzer V2 and cannot override
+  `docs/design/analyzer-v2-design-authority.md` or its linked current visual sources.
 - **Old specs, plans, and history** (`docs/spec/`, `docs/superpowers/plans/`,
   prior milestone docs, etc.) are historical record. Their existence is not
   authorisation — don't let an old plan steer current work just because it's
