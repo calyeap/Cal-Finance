@@ -41,8 +41,15 @@ summarises.
   [`docs/product-roadmap.md`](product-roadmap.md).
 - **Current implementation contracts** (which frozen artefact/revision under
   `docs/frozen/` is currently approved) → Technical Specs Index.
-- **Current M9 UX contract** →
-  [`docs/design/m9-analyzer-design-contract.md`](design/m9-analyzer-design-contract.md).
+- **Current Cal Finance / Analyzer V2 design authority** → external
+  [Cal Finance — UX & Design System Principles](https://app.notion.com/p/3d20ca9a8fd081f08606df9f7dcc489d)
+  plus its child
+  [Analyzer V2 — Approved Design Artefacts](https://app.notion.com/p/3e40ca9a8fd081358d31cf1f3e1e45a3).
+  Analyzer V2 is the strongest current visual reference/proving
+  implementation. Existing Portfolio/Holdings visuals and the older
+  [`docs/design/m9-analyzer-design-contract.md`](design/m9-analyzer-design-contract.md)
+  remain legacy/surface-scoped implementation references only and must not
+  override newer accepted Analyzer V2 visual authority.
 - **Current acceptance state** (outcome → implementation proof →
   real-company validation → Calvin acceptance, per acceptance-relevant
   outcome) → [`docs/acceptance-matrix.md`](acceptance-matrix.md).
