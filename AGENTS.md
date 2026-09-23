@@ -40,12 +40,12 @@ verbatim historical quote. New/current-facing product prose and UI use
   sequencing; that authority is now
   [`docs/product-roadmap.md`](docs/product-roadmap.md) — see
   `docs/CURRENT-AUTHORITY.md` for the current split.
-- **Technical Specs Index** (external) identifies which frozen
-  artefacts/revisions under `docs/frozen/` are currently *approved*. Neither
-  filename age nor mere presence in `docs/frozen/` decides that — check the
-  index. `scripts/evidence/config.ts` (`FROZEN_HASHES`) proves the bytes in
-  `docs/frozen/` match what was frozen; that's integrity evidence, not
-  semantic authority.
+- **Current Technical / Implementation Contracts** are repo-owned in
+  [`docs/technical-specs.md`](docs/technical-specs.md). It selects the current
+  approved frozen implementation contract/revision and records the semantic
+  boundaries to Product Decisions, Methodology and Design. `scripts/evidence/config.ts`
+  (`FROZEN_HASHES`) proves byte identity only; neither filename age nor mere
+  presence in `docs/frozen/` decides semantic authority.
 - **Current Cal Finance / Analyzer V2 design authority** is external:
   [Cal Finance — UX & Design System Principles](https://app.notion.com/p/3d20ca9a8fd081f08606df9f7dcc489d)
   plus its child
