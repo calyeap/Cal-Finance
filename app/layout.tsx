@@ -10,7 +10,7 @@ const ibmPlexSans = IBM_Plex_Sans({
 });
 
 export const metadata = {
-  title: "Calboard",
+  title: "Cal Finance",
   description: "Private portfolio tracker",
 };
 
