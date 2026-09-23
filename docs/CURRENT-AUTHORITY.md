@@ -38,7 +38,7 @@ summarises.
 - **Settled product semantics / Calvin rulings** →
   [`docs/product-decisions.md`](product-decisions.md).
 - **Strategic sequencing** (what's next and why, beyond one bounded task) →
-  Product Roadmap.
+  [`docs/product-roadmap.md`](product-roadmap.md).
 - **Current implementation contracts** (which frozen artefact/revision under
   `docs/frozen/` is currently approved) → Technical Specs Index.
 - **Current M9 UX contract** →
