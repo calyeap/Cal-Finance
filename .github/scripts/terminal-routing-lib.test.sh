@@ -138,7 +138,7 @@ assert_eq "leading blank lines before ## CALVIN REQUIRED: still match" "true" \
 # though the first line was valid. Prove the fixed pipeline-free
 # implementation survives the exact effective flags GitHub Actions uses
 # (-e -u -o pipefail) on a long multi-line body.
-long_body=$(printf 'CALVIN REQUIRED: approve the long rollout plan\n%s\n' "$(printf 'x%.0s' $(seq 1 20000))")
+long_body=$(printf 'CALVIN REQUIRED: approve the long rollout plan\n%s\n' "$(printf 'x%.0s' $(seq 1 100000))")
 long_first_line_output=$(bash -c '
   set -euo pipefail
   source "'"${SCRIPT_DIR}"'/terminal-routing-lib.sh"
