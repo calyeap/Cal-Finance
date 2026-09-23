@@ -24,7 +24,10 @@ act. Don't pull every linked source for every task.
   `docs/CURRENT-AUTHORITY.md` for the current split.
 - **Cal Finance Methodology** (external) owns finance semantics — what a
   metric means, how it's computed, what counts as correct.
-- **Product Decision Log** (external) owns settled product decisions.
+- **Product Decision Log** (external, superseded) previously owned settled
+  product decisions; that authority is now
+  [`docs/product-decisions.md`](docs/product-decisions.md) — see
+  `docs/CURRENT-AUTHORITY.md` for the current split.
 - **Product Roadmap** (external) owns strategic sequencing — what's next and
   why, beyond a single bounded task.
 - **Technical Specs Index** (external) identifies which frozen
