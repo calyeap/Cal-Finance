@@ -131,12 +131,12 @@ jobs:
           Validation rule: if any assertion fails, shorten/normalize the candidate before writing. Never preserve or recreate the old verbose six-column shape.
 
           ATTENTION CONTRACT — COPY, DO NOT INTERPRET:
-          - Cal Finance Project Home's first current `NEXT MOVE:` line is the sole attention authority.
-          - `NEXT MOVE: CALVIN` -> STATE gets a red prefix and NEED ME? = YES.
-          - `NEXT MOVE: AI`, `EXTERNAL`, or `PARKED` -> STATE gets a green prefix and NEED ME? = NO.
-          - If the line is missing, malformed, or contradictory, write `STALE / RECONCILIATION REQUIRED` rather than inferring GREEN from silence.
-          - Milestone COMPLETE, old NEEDS YOU/YOUR MOVE prose, and GitHub events do not decide human attention.
-          - GitHub/native evidence may refine the descriptive STATE/NOW only; it must not change the attention owner.
+          - Native GitHub state is the sole attention authority for Cal Finance current status/attention (Phase 2 cutover, issue #231/#235; see docs/CURRENT-AUTHORITY.md) — never Cal Finance Project Home's `NEXT MOVE` line, which is superseded/pointer-only for this fact type.
+          - NEEDS CALVIN = the most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` / `DONE: EVIDENCE` terminal comment (these carry `needs-owner-wake`), or an open `CALVIN RULING` question, on any open issue or PR.
+          - NEEDS CALVIN non-empty -> STATE gets a red prefix and NEED ME? = YES.
+          - NEEDS CALVIN empty (authorised AI work running/dispatchable/recovering, a third party is the real blocker, or Calvin explicitly parked the project) -> STATE gets a green prefix and NEED ME? = NO.
+          - If native GitHub state cannot be read or is contradictory, write `STALE / RECONCILIATION REQUIRED` rather than inferring GREEN from silence.
+          - Milestone COMPLETE, old NEEDS YOU/YOUR MOVE prose, and Cal Finance Project Home's `NEXT MOVE` line do not decide human attention.
           - Do not dispatch, recover, rerank, create work, modify project contracts, or change Cal Finance Project Home.
           EOF
           )

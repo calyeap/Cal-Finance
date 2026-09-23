@@ -81,6 +81,15 @@ assert_contains "'STOP:' still recognised" "'STOP:'*"
 assert_contains "'CALVIN REQUIRED:' still recognised" "'CALVIN REQUIRED:'*"
 assert_contains "'OWNER RECONCILED:' ordering note preserved" "'OWNER RECONCILED:'*"
 
+# --- CF-STATUS-PLUMBING-CLEANUP-01: ATTENTION CONTRACT derives attention
+# from native GitHub NEEDS CALVIN semantics, not Cal Finance Project Home's
+# `NEXT MOVE` line (issue #233/#235's stale-reference finding).
+
+assert_not_contains "Project Home NEXT MOVE no longer claimed as sole attention authority" "Project Home's first current"
+assert_contains "native GitHub named as the attention authority" "Native GitHub state is the sole attention authority"
+assert_contains "NEEDS CALVIN derivation present" "NEEDS CALVIN = the most recent unanswered"
+assert_contains "Project Home NEXT MOVE explicitly excluded from deciding attention" "do not decide human attention"
+
 echo
 if [ "$FAILURES" -eq 0 ]; then
   echo "cf-cos-semantic-refresh.test.sh: all checks passed"

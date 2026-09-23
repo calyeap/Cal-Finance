@@ -1,9 +1,10 @@
 # CALBOARD-OWNER
 
 > Execution adapter only. Post-merge and terminal-outcome dispatcher, and the
-> sole reconciler of Cal Finance Project Home's owned current-state block.
-> Reconciliation below is that Notion write itself, not a precondition
-> gating normal OWNER execution.
+> sole reconciler of Cal Finance Project Home's owned current-state block —
+> which excludes current status/`NEXT`/attention (native GitHub authority,
+> see Attention contract below). Reconciliation below is that Notion write
+> itself, not a precondition gating normal OWNER execution.
 
 ## Mission
 
@@ -133,23 +134,33 @@ queued-away wake was about.
    Project Home explicitly says that missing comparator alone does not force
    INCOMPLETE.
 
-   **NEXT MOVE attention contract — mandatory.** Project Home must carry one
-   current owner-written attention line near the top and OWNER must reconcile
-   it on every run. It is the sole attention authority:
-   - `NEXT MOVE: CALVIN — <one closed ask>` for a current human decision,
-     permission or acceptance;
-   - `NEXT MOVE: AI — <current work / recovery>` while authorised AI work is
-     running, dispatchable or being recovered;
-   - `NEXT MOVE: EXTERNAL — <who / what is awaited>` only when a third party
-     is the real blocker and Calvin need not act or chase;
-   - `NEXT MOVE: PARKED — by Calvin, <until / wake condition>` only when an
-     explicit Calvin decision parked the project.
+   **Attention contract — mandatory.** Native GitHub state is the sole
+   attention authority for Cal Finance current status/attention (Phase 2
+   cutover, issue #231/`CF-GITHUB-SOT-PHASE2-01`, closed out by
+   #235/`CF-STATUS-PLUMBING-CLEANUP-01`; see
+   [`docs/CURRENT-AUTHORITY.md`](../../docs/CURRENT-AUTHORITY.md)) — never
+   Cal Finance Project Home's `NEXT MOVE` line, which is superseded/
+   pointer-only for this fact type. Decide the current attention owner from
+   that native evidence on every run:
+   - **CALVIN** for a current human decision, permission or acceptance —
+     the most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` /
+     `DONE: EVIDENCE` terminal comment (these carry `needs-owner-wake`), or
+     an open `CALVIN RULING` question, on any open issue or PR;
+   - **AI** while authorised AI work is running, dispatchable or being
+     recovered;
+   - **EXTERNAL** only when a third party is the real blocker and Calvin
+     need not act or chase;
+   - **PARKED** only when an explicit Calvin decision parked the project.
 
    If the authorised runway is empty and none of AI / EXTERNAL / PARKED
-   applies, do **not** fall through to WAIT/GREEN. Write
-   `NEXT MOVE: CALVIN — pick next scope or park` and return a closed
-   `CALVIN REQUIRED` question. Milestone `COMPLETE`, old `NEEDS YOU`, free-
-   text `YOUR MOVE`, or GitHub activity never override this line.
+   applies, do **not** fall through to WAIT/GREEN: return a closed
+   `CALVIN REQUIRED` question (see Terminal rule below). Milestone
+   `COMPLETE`, old `NEEDS YOU`, free-text `YOUR MOVE`, or a stale Cal
+   Finance Project Home `NEXT MOVE` line never override this native GitHub
+   evidence. Do not write current status, `NEXT`, or attention to Cal
+   Finance Project Home — this run's own typed terminal comment (below) is
+   the attention record; any other still-authorised Project Home field
+   stays out of scope for this contract.
 2. **Emit the completion receipt.** Only once that write has been read back
    and confirmed current, post a comment on the wake target whose first
    non-empty line is exactly `OWNER RECONCILED: <one-line evidence>` (e.g.
@@ -189,15 +200,15 @@ receipt are still mandatory even when no dispatch follows.
 Every run must leave one visible terminal result before ending. Never end
 silently. Return exactly one of:
 
-- `DISPATCHED: <issue link>` — Project Home `NEXT MOVE` must be `AI`.
+- `DISPATCHED: <issue link>` — the current attention owner is `AI`.
 - `WAIT: AI — <one-line reason + concrete future wake>` — AI owns the next
   progress/recovery step.
 - `WAIT: EXTERNAL — <who/what is awaited + wake>` — a third party owns the
   next event and Calvin need not act.
-- `WAIT: PARKED — <Calvin-authorised park + wake/date>` — only when Project
-  Home already records an explicit Calvin park.
-- `CALVIN REQUIRED: <one closed decision>` — Project Home `NEXT MOVE` must
-  be `CALVIN`.
+- `WAIT: PARKED — <Calvin-authorised park + wake/date>` — only when a prior
+  run already recorded an explicit Calvin park on native GitHub.
+- `CALVIN REQUIRED: <one closed decision>` — the current attention owner is
+  `CALVIN`.
 
 Bare/untyped `WAIT` is forbidden. Empty runway is not WAIT unless Calvin
 explicitly parked it.
