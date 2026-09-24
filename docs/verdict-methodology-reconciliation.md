@@ -1317,9 +1317,10 @@ read as adopting one.
    it; it does not, for that reason alone, force the Step 5/6 position to
    INCONCLUSIVE. Applied to the frozen spec's §10.6.2 by
    `CF-VERDICT-1062-APPLY-01`. Ruling B did not rule on §10.6.4's own text,
-   which still assumes the action clause always accompanies a rendered
-   position with both figures present — that residual wording gap is named,
-   not resolved, as §14's second next-action item below.
+   which until this had still assumed the action clause always accompanies
+   a rendered position with both figures present — that residual wording
+   gap is closed by `CALVIN RULING — A` and `CF-VERDICT-1064-APPLY-01`, per
+   §14's second next-action item below.
 
 ---
 
@@ -1449,31 +1450,33 @@ item 8; `CF-VERDICT-1062-APPLY-01` applied both to
 `docs/frozen/calboard-stock-analyzer-v1-spec.md` §10.6.2. §11's remaining
 items (1, 2, 3, 4, 5, 6, 7) are still open and unfilled, exactly as before.
 
-**Second, named by `CF-VERDICT-1062-APPLY-01` and not yet started: a
-second bounded, Calvin-authorised frozen-text amendment to §10.6.4
-alone.** Ruling B's amendment 2 means an unconstructable Step 7 comparator
-no longer forces the Step 5/6 position to INCONCLUSIVE — but §10.6.4's own
-text ("Beneath the position, page one states the required figure against
-the achieved figure…"; "…does not survive a suppressed position") still
-assumes the action clause always accompanies a rendered position with both
-figures present, which is no longer guaranteed. The minimum change:
-§10.6.4 would need an explicit branch stating that where the Step 7
-comparator is INCOMPLETE/UNAVAILABLE, the action clause's
+**Second (delivered): the bounded, Calvin-authorised frozen-text amendment
+to §10.6.4 alone, named by `CF-VERDICT-1062-APPLY-01`.** Ruling B's
+amendment 2 meant an unconstructable Step 7 comparator no longer forced
+the Step 5/6 position to INCONCLUSIVE — but §10.6.4's own text ("Beneath
+the position, page one states the required figure against the achieved
+figure…"; "…does not survive a suppressed position") still assumed the
+action clause always accompanies a rendered position with both figures
+present, which was no longer guaranteed. `CALVIN RULING — A` (PR #277
+comment 5810329157) authorised exactly that one-subsection edit, on the
+same discipline ruling B used for §10.6.2, and `CF-VERDICT-1064-APPLY-01`
+applied it: §10.6.4 now states the explicit branch — where the Step 7
+comparator is INCOMPLETE or UNAVAILABLE, the action clause's
 required-versus-achieved sentences are themselves suppressed or marked
 unavailable, independently of whether §10.6.3's own three conditions let
-the position render. This needs its own Calvin ruling authorising exactly
-that one-subsection edit, on the same discipline ruling B used for
-§10.6.2; it is named here, not made.
+the position render, and a missing comparator does not by itself force the
+position to INCONCLUSIVE.
 
-**Third, dependency-safe under the above and unchanged by ruling B: close
-the §10.6.3/`deriveVerdict` non-policy implementation gap named in §13
-(carried from §6.3 above).** This is the same smallest concrete outcome §7
-above already named: it adds the missing PROFILE NOT CONFIRMED branch to
-`deriveVerdict` (or explains in that outcome's own evidence why it is
-already moot), touches no policy constant, sets no threshold. Blocked
-until Calvin lifts the 24 Sep 2026 04:52:41Z `verdict.ts` freeze ([issue
-#269 comment 5807914821](https://github.com/calyeap/Cal-Finance/issues/269#issuecomment-5807914821)),
-which ruling B does not itself lift. It does not close
+**Third, dependency-safe under the above and unchanged by rulings A and B:
+close the §10.6.3/`deriveVerdict` non-policy implementation gap named in
+§13 (carried from §6.3 above).** This is the same smallest concrete
+outcome §7 above already named: it adds the missing PROFILE NOT CONFIRMED
+branch to `deriveVerdict` (or explains in that outcome's own evidence why
+it is already moot), touches no policy constant, sets no threshold.
+Blocked until Calvin lifts the 24 Sep 2026 04:52:41Z `verdict.ts` freeze
+([issue #269 comment
+5807914821](https://github.com/calyeap/Cal-Finance/issues/269#issuecomment-5807914821)),
+which neither ruling lifts. It does not close
 `docs/acceptance-matrix.md` row 13, and it does not by itself unblock
 MSFT's or OKLO's `INCOMPLETE` verdict — those stay gated on the structural
 facts §12 restates and on §11's still-open items.
