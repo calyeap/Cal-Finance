@@ -921,12 +921,15 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
   // treatment as rateAtWhichBaseEqualsPrice just above.
   const priceLocationWithinRangeState = boundState(states, NOT_COMPUTED_BINDING.priceLocationWithinRange);
   const baseRateCell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
-  // A priceless run's fair-value range is itself suppressed by the same
-  // missing-price cascade through enterprise value / leverage (§9.3 row 3),
-  // so `fairValueRange.kind === "range"` already implies a real price here —
-  // the null branch below is unreachable in practice and exists only so a
-  // priceless run can never render a bogus 0%/NaN marker position if that
-  // invariant ever changes upstream.
+  // `fairValueRange.kind === "range"` does not by itself imply a real price:
+  // `assemble.ts`'s leverage precondition uses `fixture.leverage.
+  // enterpriseValue` when a fixture states one directly, so a priceless run
+  // whose fixture also states its own leverage EV can still reach the
+  // "range" branch with `priceLocationWithinRange` null (no run this
+  // codebase produces today does — see docs/noprice-honesty-
+  // reconciliation.md §2). The null guard below is therefore load-bearing,
+  // not defensive: it is what stops that case from rendering a bogus 0%/NaN
+  // marker position.
   const weightedPositionPct =
     fairValueRange.kind === "range" && scenarioOutputs.priceLocationWithinRange !== null
       ? Math.min(100, Math.max(0, scenarioOutputs.priceLocationWithinRange.mul(100).toNumber()))

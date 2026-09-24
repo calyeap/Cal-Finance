@@ -139,32 +139,66 @@ every other `notComputed` binding already writes for itself.
 | `types.ts` (`ScenarioOutputs`) | `priceLocationWithinRange: Decimal`, no suppression path | No — `Decimal \| null`, identical shape to `rateAtWhichBaseEqualsPrice` two lines below it |
 | `assemble.ts` | Passed `fixture.price.value` (flattened) as `currentPrice`; no suppression entry | No — passes `fixture.enterpriseValue.price?.value ?? null` (the same honest signal defect A now produces) and pushes one `notComputed` entry, mirroring the existing `rateAtWhichBaseEqualsPrice` block immediately above it |
 | `app/components/AnalyzerReport.tsx`, §10 G table row | `<span className="v">{pct(...)}</span>`, unconditional | No — `BoundStateBlock`, the identical pattern the adjacent `rateAtWhichBaseEqualsPrice` row already uses |
-| `app/components/AnalyzerReport.tsx`, `weightedPositionPct` (Section H range-bar marker) | Computed only when `fairValueRange.kind === "range"`, which (post defect-A fix) already implies a real price — the null branch is unreachable, not newly introduced | No — defensive null guard only, so the marker is omitted rather than mis-positioned if that invariant is ever broken upstream; not user-visible on any real run |
+| `app/components/AnalyzerReport.tsx`, `weightedPositionPct` (Section H range-bar marker) | Computed only when `fairValueRange.kind === "range"`, which does **not** by itself imply a real price (see the correction below) | No new pattern, but the existing null guard is **load-bearing**, not defensive — it is what stops a fixture-driven "range" state with no price from rendering a bogus marker |
 | `app/components/ValuationStrip.tsx`, `showLocation` line | Unconditional decorative sentence ("X% of the way from bear to bull") | No — omitted when null, the same "never a placeholder" rule the rest of this component already follows (e.g. `fairValueRange.kind === "range" ? ... : "—"`) |
-| `app/components/QuickRead.tsx`, "Price vs scenarios" item | `fairValueRange.kind === "range" ? (Inside/Outside text) : ("suppressed" text)` | No — and not touched. See below. |
+| `app/components/QuickRead.tsx`, "Price vs scenarios" item | `fairValueRange.kind === "range" ? (Inside/Outside text) : ("suppressed" text)` | **Yes — required, and fixed.** See below. |
 | `lib/analyzer/ai/slots.ts` ([C] catalogue) | `b.value(...)` — silently drops a `null` with **no cause**, which would violate §9.5 | No new pattern, but a **required** change: switched to `b.bound(...)`, the same call `rateAtWhichBaseEqualsPrice` uses two entries below it |
 | `lib/analyzer/ai/challengerPayload.ts` | `priceLocationWithinRange` is already in `FORBIDDEN_KEYS` — never read | No change |
 | `lib/analyzer/snapshotComparison.ts` | Reads the field as `unknown`; `valuesEqual` already compares `Decimal` vs `null` correctly (a real change, not a crash) | No change |
 
-**Why QuickRead's "Price vs scenarios" item needed no change.** This is the
-one consumer worth explaining rather than just tabulating. Its logic is
-`fairValueRange.kind === "range" ? (insideRange ? "Inside" : "Outside") :
-"suppressed"`. A priceless run could in principle reach the `"range"`
-branch with `priceLocationWithinRange` now null, which would print the
-wrong thing ("Outside the authored bear-bull range...") for a fact that is
-actually unknown, not outside. That never happens, and not by coincidence:
-price is now one of enterprise value's seven REQUIRED inputs (defect A), so
-a priceless run always has enterprise value `INCOMPLETE`, which always
-fails the leverage precondition (`gates.ts`'s `evaluateLeverage`,
-`enterpriseValue !== null` gate), which is `"every rate-dependent output"`
-in scope — and §9.3's own table already lists **the fair-value range**
-under that scope (`suppression.ts`'s `SCOPE_REMOVES_FAIR_VALUE_RANGE["every
-rate-dependent output"] === true`). So `fairValueRange.kind === "range"`
-already implies a real price, by construction, once defect A is fixed —
-the two corrections compose correctly with no third change required. This
-is confirmed on the one real priceless run this codebase currently
-exercises: NVDA's `fairValueRange.kind` is `"suppressed"`, not `"range"`,
-both before and after this outcome (`nvdaRealRunObservation.test.ts`).
+**Correction (posted as a REVIEW `CORRECT` on this PR, applied here).** An
+earlier version of this section claimed `fairValueRange.kind === "range"`
+implies a real price "by construction," and that QuickRead's "Price vs
+scenarios" item therefore needed no change. That claim is false, and the
+fix below is required, not optional.
+
+The claimed mechanism was: priceless → EV `INCOMPLETE` (defect A) → leverage
+precondition fails (`gates.ts`'s `evaluateLeverage`, `enterpriseValue !==
+null` gate) → fair-value range suppressed (§9.3's `"every rate-dependent
+output"` scope). The middle step does not hold in general.
+`assemble.ts:303-306` evaluates the leverage precondition as:
+
+```ts
+const leverage = evaluateLeverage({
+  ...fixture.leverage,
+  enterpriseValue: fixture.leverage.enterpriseValue ?? currentEnterpriseValue?.value ?? null,
+});
+```
+
+A fixture that states its own `leverage.enterpriseValue` — `fixtures/
+msft.ts:117-124` and `fixtures/oklo.ts` both do — satisfies the leverage
+precondition from that stated value alone, regardless of whether M1
+(enterprise value, and so the price behind it) is `INCOMPLETE`. Probed
+directly (MSFT fixture, `enterpriseValue.price` set to `null`, nothing else
+changed): `priceLocationWithinRange = null`, EV suppressed, but
+`leverage = PASS` and `fairValueRange.kind = "range"` — the exact state the
+removed claim said could not occur, and in it `QuickRead.tsx` printed
+"Outside the authored bear-bull range" for a position that is actually
+unknown, the manufactured-alternative posture `FINAL OWNER RULING #205`
+forbids.
+
+**Where the cascade does hold, and where it does not.** On the acquired
+path, `acquisition/companyInputs.ts:356` sets `leverage.enterpriseValue:
+null` outright (it does not state one), so a real priceless acquired run
+(NVDA) does fail the leverage precondition and `fairValueRange.kind` is
+`"suppressed"` — confirmed by `nvdaRealRunObservation.test.ts`, unchanged by
+this correction. The cascade breaks only for a hand-authored fixture that
+states both a price-independent `leverage.enterpriseValue` **and** a null
+price — a combination no fixture in this repository exercises today (MSFT
+and OKLO both carry a real price), so the per-company delta in §3 stands
+unchanged. But this document is read as authority by later outcomes (as
+this one cites two predecessors), so the invariant itself had to be stated
+correctly, per SCOPE 3's unavailable-case read of each consumer.
+
+**The fix, applied.** `QuickRead.tsx`'s "Price vs scenarios" item now gates
+the range branch on `priceLocationWithinRange !== null`, not on
+`fairValueRange.kind === "range"` alone — falling through to the same
+"fair-value range is suppressed" text already used for the non-range case
+when the figure is unavailable. No new state, component, or copy pattern:
+the fallback branch already existed. `AnalyzerReport.tsx`'s
+`weightedPositionPct` null guard (§10 G / Section H marker) was already
+correct code — only its comment claimed the branch was unreachable; the
+comment now states that the guard is load-bearing.
 
 ## 3. Per-company delta, stated honestly (SCOPE item 4)
 
@@ -283,6 +317,13 @@ No new parallel harness. Reused, per SCOPE item 5:
   only for the new `Decimal | null` type (optional-chained); their
   expected values (64%) are unchanged, proving a run with a price is
   unaffected.
+- `app/components/QuickRead.test.tsx` — one new test, added by the
+  correction above: MSFT fixture with `enterpriseValue.price: null` (its
+  stated `leverage.enterpriseValue` otherwise unchanged) reaches
+  `fairValueRange.kind === "range"` with `priceLocationWithinRange` null,
+  and "Price vs scenarios" renders the suppressed wording, never
+  Inside/Outside — the exact case the removed "by construction" claim
+  said could not occur.
 
 ## Summary
 
