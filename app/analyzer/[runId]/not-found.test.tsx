@@ -39,7 +39,7 @@ describe("AnalyzerRunNotFound", () => {
     );
     const shell = container.querySelector(".cb-analyzer")!;
     expect(shell).not.toBeNull();
-    expect(shell.querySelector(".topbar")).not.toBeNull();
+    expect(shell.querySelector(".az-topbar")).not.toBeNull();
   });
 
   it("names the state and its cause via the existing .state/.name/.cause mechanism", () => {
@@ -79,9 +79,14 @@ describe("placement covers both M9 routes with no closer override", () => {
     expect(source).toMatch(/notFound\(\)/);
   });
 
-  it("app/analyzer/[runId]/report/page.tsx calls notFound() and the report/ segment has no not-found.tsx of its own", () => {
+  it("app/analyzer/[runId]/report/page.tsx redirects into the unified shell rather than rendering its own not-found — the report/ segment declares no not-found.tsx of its own", () => {
+    // CF-DESIGN-AUTHORITY-CUTOVER-01 — this route no longer renders a
+    // second shell (design authority doc: "do not duplicate the shell per
+    // report"); it redirects to the unified `/analyzer/{runId}` route,
+    // whose own notFound() (asserted above) is what a genuinely missing run
+    // now hits.
     const source = readFileSync(path.resolve(__dirname, "./report/page.tsx"), "utf-8");
-    expect(source).toMatch(/notFound\(\)/);
+    expect(source).toMatch(/redirect\(/);
     expect(() =>
       readFileSync(path.resolve(__dirname, "./report/not-found.tsx"), "utf-8")
     ).toThrow();

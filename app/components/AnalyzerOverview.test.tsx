@@ -1,11 +1,10 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from "vitest";
-import { render, cleanup, screen } from "@testing-library/react";
+import { render, cleanup } from "@testing-library/react";
 import { AnalyzerOverview } from "./AnalyzerOverview";
 import { CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
-import { deriveVerdict } from "@/lib/analyzer/verdict";
 import type { AnalysisResult, InterpretationStatement, PageOneProse } from "@/lib/analyzer/types";
 
 afterEach(cleanup);
@@ -35,57 +34,24 @@ const FILLED_PAGE_ONE: PageOneProse = {
   biggestUncertainty: statement("Which margin level is the right base for the reverse-DCF grid."),
 };
 
-// M9-DESKTOP-SHELL-01 — Overview's fixed slot order, per docs/design/m9-
-// analyzer-design-contract.md §2.1: #118's twelve slots, in that order,
-// unconditionally — no slot reordered, dropped, or rendered only in some
-// states.
+// CF-DESIGN-AUTHORITY-CUTOVER-01 — AnalyzerOverview now renders only the
+// Overview tab's own body (slots 5-11); slots 1-4 and 12 moved to
+// AnalyzerReportFrame, which renders identically on every tab (see
+// AnalyzerReportFrame.test.tsx for that coverage). The fixed-order and
+// per-slot content rules below are otherwise unchanged from M9-DESKTOP-
+// SHELL-01/M9-OVERVIEW-CONTENT-01.
 
-describe("AnalyzerOverview — fixed slot order", () => {
+describe("AnalyzerOverview — fixed slot order (slots 5-11)", () => {
   const result = assembleAnalysisResult(MSFT_FIXTURE);
-  const verdict = deriveVerdict(result);
 
-  it("renders all twelve slots, in order, as direct children of main", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
-    const ids = Array.from(container.querySelectorAll("main > .ovslot")).map((el) => el.id);
-    expect(ids).toEqual([
-      "slot-1",
-      "slot-2",
-      "slot-3",
-      "slot-4",
-      "slot-5",
-      "slot-6",
-      "slot-7",
-      "slot-8",
-      "slot-9",
-      "slot-10",
-      "slot-11",
-      "slot-12",
-    ]);
-  });
-
-  it("slot 1 (company header) carries no verdict, figure or finding-block content", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
-    const slot1 = container.querySelector("#slot-1") as HTMLElement;
-    expect(slot1.textContent).toContain("Microsoft Corporation");
-    expect(slot1.querySelector(".verdictword")).toBeNull();
-    expect(slot1.textContent).not.toMatch(/\$\d/);
-  });
-
-  it("slot 2 renders the INCOMPLETE path, since every current fixture's deriveVerdict returns INCOMPLETE (M8 gap)", () => {
-    render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
-    expect(screen.getByText("INCOMPLETE")).not.toBeNull();
+  it("renders slots 5-11, in order, as direct children of .ovtab", () => {
+    const { container } = render(<AnalyzerOverview result={result} />);
+    const ids = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
+    expect(ids).toEqual(["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11"]);
   });
 
   it("slots 5 and 11 remain honest structural frames — no approved content source (issue #160 SCOPE item 7)", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
+    const { container } = render(<AnalyzerOverview result={result} />);
     for (const id of ["slot-5", "slot-11"]) {
       const slot = container.querySelector(`#${id}`);
       expect(slot).not.toBeNull();
@@ -94,9 +60,7 @@ describe("AnalyzerOverview — fixed slot order", () => {
   });
 
   it("slots 6, 7, 9, 10 render the pageOne === null path honestly, since interpretation has not run in this fixture", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
+    const { container } = render(<AnalyzerOverview result={result} />);
     for (const id of ["slot-6", "slot-7", "slot-9", "slot-10"]) {
       const slot = container.querySelector(`#${id}`);
       expect(slot).not.toBeNull();
@@ -108,9 +72,6 @@ describe("AnalyzerOverview — fixed slot order", () => {
     const { container } = render(
       <AnalyzerOverview
         result={result}
-        verdict={verdict}
-        profileNotConfirmed={false}
-        fullAnalysisHref="/analyzer/x/report"
         aiLayer={{ status: "NOT CONFIGURED", model: null, detail: "No ANTHROPIC_API_KEY is configured." }}
       />
     );
@@ -121,9 +82,7 @@ describe("AnalyzerOverview — fixed slot order", () => {
   });
 
   it("slot 8 restates Section E's steady-state EV, PVGO share and implied growth — the same figures, no second computation", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
+    const { container } = render(<AnalyzerOverview result={result} />);
     const slot8 = container.querySelector("#slot-8") as HTMLElement;
     const baseRateCell = result.priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08)!;
     expect(result.priceImplied.steadyStateEv.suppressed).toBe(false);
@@ -140,30 +99,6 @@ describe("AnalyzerOverview — fixed slot order", () => {
     expect(slot8.textContent).toContain(`${result.priceImplied.pvgoShareOfEv.value.mul(100).toFixed(1)}%`);
     expect(slot8.textContent).toContain(`${baseRateCell.fiveYearGrowth.value.mul(100).toFixed(1)}%`);
   });
-
-  it("slot 12 is a single, clearly primary link into Full Analysis", () => {
-    render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
-    const link = screen.getByRole("link", { name: "View full analysis" });
-    expect(link.getAttribute("href")).toBe("/analyzer/x/report");
-  });
-});
-
-describe("AnalyzerOverview — completed verdict path (first-class, independently exercised)", () => {
-  it("renders the BUY word and no .state markup in slot 2 when the verdict is completed", () => {
-    const result = assembleAnalysisResult(MSFT_FIXTURE);
-    render(
-      <AnalyzerOverview
-        result={result}
-        verdict={{ status: "BUY", reason: "The evidence supports it." }}
-        profileNotConfirmed={false}
-        fullAnalysisHref="/analyzer/x/report"
-      />
-    );
-    expect(screen.getByText("BUY")).not.toBeNull();
-    expect(screen.queryByText("INCOMPLETE")).toBeNull();
-  });
 });
 
 // M9-OVERVIEW-CONTENT-01 — the filled-slot path. `pageOne` never comes
@@ -173,12 +108,9 @@ describe("AnalyzerOverview — completed verdict path (first-class, independentl
 describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => {
   const base = assembleAnalysisResult(MSFT_FIXTURE);
   const result = withPageOne(base, FILLED_PAGE_ONE);
-  const verdict = deriveVerdict(result);
 
   it("renders each filled slot's own sourced content, and nothing else's", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
+    const { container } = render(<AnalyzerOverview result={result} />);
     expect(container.querySelector("#slot-6")!.textContent).toContain(FILLED_PAGE_ONE.whatSupportsTheCase.statement);
     expect(container.querySelector("#slot-7")!.textContent).toContain(FILLED_PAGE_ONE.whatWorriesCalboard.statement);
     expect(container.querySelector("#slot-9")!.textContent).toContain(FILLED_PAGE_ONE.mainFinding.statement);
@@ -188,41 +120,22 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
   });
 
   it("slot 9's finding never renders as a ranked list — one point, restating already-computed material", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
+    const { container } = render(<AnalyzerOverview result={result} />);
     const slot9 = container.querySelector("#slot-9") as HTMLElement;
     expect(slot9.querySelectorAll("li, ol, ul").length).toBe(0);
   });
 
   it("slots 5 and 11 still render as structural frames when pageOne is filled — they have no content source regardless", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
+    const { container } = render(<AnalyzerOverview result={result} />);
     for (const id of ["slot-5", "slot-11"]) {
       expect(container.querySelector(`#${id}`)!.textContent).toMatch(/Not yet available/);
     }
   });
 
-  it("the twelve-slot fixed order holds unchanged with pageOne filled", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
-    const ids = Array.from(container.querySelectorAll("main > .ovslot")).map((el) => el.id);
-    expect(ids).toEqual([
-      "slot-1",
-      "slot-2",
-      "slot-3",
-      "slot-4",
-      "slot-5",
-      "slot-6",
-      "slot-7",
-      "slot-8",
-      "slot-9",
-      "slot-10",
-      "slot-11",
-      "slot-12",
-    ]);
+  it("the slot-5-through-11 fixed order holds unchanged with pageOne filled", () => {
+    const { container } = render(<AnalyzerOverview result={result} />);
+    const ids = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
+    expect(ids).toEqual(["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11"]);
   });
 
   it("slot 7 surfaces the selected challenger point via the same selectChallengerPoint selection Section I/I2 share", () => {
@@ -240,14 +153,7 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
         completedAt: "2026-09-19T00:00:00.000Z",
       },
     };
-    const { container } = render(
-      <AnalyzerOverview
-        result={withChallenger}
-        verdict={verdict}
-        profileNotConfirmed={false}
-        fullAnalysisHref="/analyzer/x/report"
-      />
-    );
+    const { container } = render(<AnalyzerOverview result={withChallenger} />);
     expect(container.querySelector("#slot-7")!.textContent).toContain(
       "The margin expansion assumed in the base case has no precedent in the company's own history."
     );
@@ -258,9 +164,7 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
   });
 
   it("slot 7 surfaces nothing challenger-related when the challenger call has not completed", () => {
-    const { container } = render(
-      <AnalyzerOverview result={result} verdict={verdict} profileNotConfirmed={false} fullAnalysisHref="/analyzer/x/report" />
-    );
+    const { container } = render(<AnalyzerOverview result={result} />);
     expect(container.querySelector("#slot-7")!.textContent).not.toMatch(/Challenger point/);
     expect(container.querySelector("#slot-7")!.textContent).not.toContain(CHALLENGER_SELECTION_RULE_NOTE);
   });
@@ -270,14 +174,7 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
       ...result,
       challenger: { findings: [], completedAt: "2026-09-19T00:00:00.000Z" },
     };
-    const { container } = render(
-      <AnalyzerOverview
-        result={withEmptyChallenger}
-        verdict={verdict}
-        profileNotConfirmed={false}
-        fullAnalysisHref="/analyzer/x/report"
-      />
-    );
+    const { container } = render(<AnalyzerOverview result={withEmptyChallenger} />);
     expect(container.querySelector("#slot-7")!.textContent).not.toMatch(/Challenger point/);
     expect(container.querySelector("#slot-7")!.textContent).not.toContain(CHALLENGER_SELECTION_RULE_NOTE);
   });

@@ -191,12 +191,20 @@ describe("globals.css — M9 Compact (§17.15 tiers 4-5, item 6, M9-RESPONSIVE-C
     );
   });
 
-  it("no second breakpoint below Compact was introduced for the M9 routes — every max-width query touching .cb-analyzer content is 720px (the project's pre-existing shared breakpoint) or 1024px (this outcome's new Compact ceiling)", () => {
+  it("only the M9-era breakpoints (720px, 1024px) plus the CF-DESIGN-AUTHORITY-CUTOVER-01 Analyzer V2 shell tiers (599px, 767px, 1279px) appear under .cb-analyzer — no other max-width query was introduced", () => {
+    // CF-DESIGN-AUTHORITY-CUTOVER-01 (docs/design/analyzer-v2-design-
+    // authority.md) supersedes the M9 3-tier Standard/Compact/Wide system
+    // this guard originally pinned: it explicitly requires five named
+    // acceptance targets (32-inch desktop / half-window / iPad landscape /
+    // iPad portrait / iPhone), which the old 720/1024px pair cannot
+    // express. The three new values are the Analyzer V2 shell's own tiers
+    // (globals.css, "Analyzer V2 shell" section) — 599/1279px bound the
+    // compact-icon-rail range, 767px is the phone/tablet-portrait split.
     const cbAnalyzerCss = css.slice(css.indexOf(".cb-analyzer {"));
     const maxWidths = new Set(
       [...cbAnalyzerCss.matchAll(/@media \(max-width:\s*(\d+)px\)/g)].map((m) => m[1])
     );
-    expect([...maxWidths].sort()).toEqual(["1024", "720"]);
+    expect([...maxWidths].sort()).toEqual(["1024", "1279", "599", "720", "767"]);
   });
 
   it("nothing at or above 1024px changed: the Standard/Wide grid, gap, sticky rail and 72ch prose cap from PR #165 are untouched", () => {
@@ -313,12 +321,14 @@ describe("globals.css — M9 shared Calboard chrome (M9-THEME-COMPLETION-01)", (
     expect(css.match(/\.cb-analyzer\[data-theme="dark"\]\s*\{/g)).toHaveLength(1);
   });
 
-  it("no second breakpoint below Compact and no new max-width value were introduced by the chrome — still only 720px and 1024px", () => {
+  it("only the M9-era breakpoints plus the Analyzer V2 shell tiers were introduced by the chrome — same set app/globalsCss.test.ts's Compact describe block above pins", () => {
+    // CF-DESIGN-AUTHORITY-CUTOVER-01 — see the sibling assertion above for
+    // why this set grew from the M9-era {720, 1024} pair.
     const cbAnalyzerCss = css.slice(css.indexOf(".cb-analyzer {"));
     const maxWidths = new Set(
       [...cbAnalyzerCss.matchAll(/@media \(max-width:\s*(\d+)px\)/g)].map((m) => m[1])
     );
-    expect([...maxWidths].sort()).toEqual(["1024", "720"]);
+    expect([...maxWidths].sort()).toEqual(["1024", "1279", "599", "720", "767"]);
   });
 });
 
@@ -410,6 +420,28 @@ describe("globals.css — M9 accessibility pass (M9-ACCESSIBILITY-01, runway ite
     expect(tbodyThRule).toMatch(/padding:\s*12px 0 12px 20px\s*;/);
     expect(tbodyThRule).toMatch(/text-align:\s*right\s*;/);
     expect(css).toMatch(/\.cb-analyzer table\.t td:first-child,\s*\n\s*\.cb-analyzer table\.t tbody th:first-child \{/);
+  });
+});
+
+describe("globals.css — Analyzer V2 compact report header order (design authority doc, 'Compact report header')", () => {
+  // Regression guard for the CALBOARD-BUILD correction on PR #266: below
+  // wide desktop the hero's grid-template-areas reordered the row sequence
+  // to identity -> verdict -> price, contradicting both authorities' fixed
+  // "company identity -> current price -> verdict + uncertainty -> tab
+  // rail" sequence. jsdom has no layout engine, so — same technique as the
+  // rest of this file — the CSS source is asserted directly rather than a
+  // rendered layout.
+  it("wide-desktop hero keeps verdict/price side-by-side, scenarios full-width below", () => {
+    expect(ruleBody(".cb-analyzer .az-hero")).toMatch(
+      /grid-template-areas:\s*"verdict price"\s*"scenarios scenarios"\s*;/
+    );
+  });
+
+  it("the compact header (<=1279px) stacks price before verdict, per the required orientation sequence", () => {
+    const compactShell = collectMediaBodies("@media (max-width: 1279px)");
+    expect(ruleBodyIn(compactShell, ".cb-analyzer .az-hero")).toMatch(
+      /grid-template-areas:\s*"price"\s*"verdict"\s*"scenarios"\s*;/
+    );
   });
 });
 

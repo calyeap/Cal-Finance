@@ -1,32 +1,83 @@
 import { notFound } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
 import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
+import {
+  AnalyzerReportFrame,
+  DEFAULT_ANALYZER_TAB,
+  isAnalyzerTabSlug,
+  type AnalyzerTabSlug,
+} from "@/app/components/AnalyzerReportFrame";
 import { AnalyzerOverview } from "@/app/components/AnalyzerOverview";
+import {
+  BusinessSection,
+  FinancialsSections,
+  ValuationSections,
+  RisksThesisSections,
+  MarketContextSection,
+  EvidenceSections,
+  HeaderAndStatesSection,
+} from "@/app/components/AnalyzerReport";
+import { QuickRead } from "@/app/components/QuickRead";
 import { SourcesAndDetails } from "@/app/components/SourcesAndDetails";
 import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
-import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
+import { analysisForReport, type AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
+import type { AnalysisResult } from "@/lib/analyzer/types";
 
-// M9-DESKTOP-SHELL-01 — the Overview route, per docs/design/m9-analyzer-
-// design-contract.md §2.1: "a new top-level destination, not a subsection
-// of Full Analysis." Loads the same gated computation the Full Analysis
-// route (report/page.tsx) reads, for the same reason — every number either
-// page shows is settled by the same refusal-before-calculation path
-// (lib/analyzer/gate.ts, §2), and this route reads it independently rather
-// than through report/page.tsx so Overview stands on its own as a
-// destination, per the contract, not as a wrapper around Full Analysis.
+// CF-DESIGN-AUTHORITY-CUTOVER-01 — docs/design/analyzer-v2-design-authority.md
+// "One shell, seven tabs": this one route now renders every report tab
+// (Overview, and the six themes AnalyzerReport's own sections already
+// group), selected by `?tab=`, inside the single AnalyzerReportFrame shell
+// — not a route per tab, and not the old separate `/report` route's own
+// second shell (design authority doc: "do not duplicate the shell per
+// report"). `/analyzer/{runId}/report` now redirects here (report/page.tsx).
 //
-// CF-ANALYZER-AUTORUN-01 — this route used to redirect to Screen 3 while the
-// profile was undecided, and to Screen 2 on SpotCheckIncompleteError. Calvin
-// ruled on 22 September 2026 04:28:04Z that no human interaction is required
-// after ticker entry in the normal flow, so both redirects are gone: the run
-// is advanced automatically here (idempotent, and a no-op for a run the
-// action already advanced), and where it still cannot be completed the
-// analyst gets an INCOMPLETE report saying why — never a queue.
+// CF-ANALYZER-AUTORUN-01 — the automatic-advance and INCOMPLETE-run
+// handling below is unchanged from the route this replaces: every number
+// any tab shows is settled by the same refusal-before-calculation path
+// (lib/analyzer/gate.ts §2) before any tab renders.
 
-export default async function OverviewPage({ params }: { params: Promise<{ runId: string }> }) {
+function TabBody({ tab, result, aiLayer }: { tab: AnalyzerTabSlug; result: AnalysisResult; aiLayer?: AiLayerReport }) {
+  switch (tab) {
+    case "overview":
+      return <AnalyzerOverview result={result} aiLayer={aiLayer} />;
+    case "business":
+      return <BusinessSection result={result} />;
+    case "financials":
+      return <FinancialsSections result={result} />;
+    case "valuation":
+      return <ValuationSections result={result} />;
+    case "risks":
+      return <RisksThesisSections result={result} aiLayer={aiLayer} />;
+    case "market":
+      return <MarketContextSection result={result} />;
+    case "evidence":
+      // Section A and Quick Read have no other route in the unified shell
+      // (AnalyzerReport, the only other renderer of either, now backs only
+      // the snapshot page) — rendered here so EvidenceSections' own "See
+      // Section A for what and why" cross-reference points at content that
+      // actually exists on this tab.
+      return (
+        <>
+          <QuickRead result={result} />
+          <HeaderAndStatesSection result={result} />
+          <EvidenceSections result={result} />
+        </>
+      );
+  }
+}
+
+export default async function ReportPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ runId: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) {
   const { runId } = await params;
+  const { tab: tabParam } = await searchParams;
+  const activeTab = tabParam !== undefined && isAnalyzerTabSlug(tabParam) ? tabParam : DEFAULT_ANALYZER_TAB;
 
   let state;
   try {
@@ -62,13 +113,15 @@ export default async function OverviewPage({ params }: { params: Promise<{ runId
   return (
     <AnalyzerShell>
       <AnalyzerTopBar variant="overview" />
-      <AnalyzerOverview
+      <AnalyzerReportFrame
+        runId={runId}
         result={report.result}
         verdict={verdict}
         profileNotConfirmed={profileNotConfirmed}
-        fullAnalysisHref={`/analyzer/${runId}/report`}
-        aiLayer={report.aiLayer}
-      />
+        activeTab={activeTab}
+      >
+        <TabBody tab={activeTab} result={report.result} aiLayer={report.aiLayer} />
+      </AnalyzerReportFrame>
       <SourcesAndDetails runId={runId} />
     </AnalyzerShell>
   );

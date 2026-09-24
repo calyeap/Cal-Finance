@@ -75,3 +75,28 @@ export function evidenceStatusLabel(status: TrustStatus): string {
       return "Evidence behind this analysis: unusable — a statement about this run, not the company.";
   }
 }
+
+// ---------------------------------------------------------------------------
+// CF-DESIGN-AUTHORITY-CUTOVER-01 (docs/design/analyzer-v2-design-authority.md
+// §"Compact report header") — Analyzer V2's verdict-row and compact-header
+// uncertainty badge use the words "Low / Medium / High uncertainty", never
+// "confidence". This is a second pure copy mapping onto the same already-
+// computed TrustStatus evidenceStatusLabel reads from — no new computation,
+// threshold or company-quality claim; UNUSABLE remains a statement about
+// this run, not the company (§9.6), same as every other TrustStatus copy in
+// this file.
+// ---------------------------------------------------------------------------
+
+export type UncertaintyLevel = "Low" | "Medium" | "High";
+
+/** The Low / Medium / High uncertainty label — a pure mapping, no computation. */
+export function uncertaintyLevel(status: TrustStatus): UncertaintyLevel {
+  switch (status) {
+    case "CLEAN":
+      return "Low";
+    case "PARTIAL":
+      return "Medium";
+    case "UNUSABLE":
+      return "High";
+  }
+}

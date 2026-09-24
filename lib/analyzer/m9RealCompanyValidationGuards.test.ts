@@ -47,42 +47,51 @@ describe("verdict.ts is untouched by this validation pass", () => {
 // caught by both routes — they answer it with an INCOMPLETE state instead of a
 // redirect to an operator screen, which is the whole of the change.
 // ---------------------------------------------------------------------------
-describe("the two M9 routes never send the analyst to a human step (CF-ANALYZER-AUTORUN-01)", () => {
-  const routes = ["app/analyzer/[runId]/page.tsx", "app/analyzer/[runId]/report/page.tsx"];
+// CF-DESIGN-AUTHORITY-CUTOVER-01 — the "two M9 routes" this block guarded
+// are now one route. `app/analyzer/[runId]/report/page.tsx` no longer
+// renders a report at all: it redirects into the unified
+// `/analyzer/{runId}` shell's tab rail (design authority doc, "one shell,
+// seven tabs"; "do not duplicate the shell per report"), so it has none of
+// the gate/redirect/SourcesAndDetails properties this block pins — those
+// all now live once, in `page.tsx`.
+describe("the unified Analyzer report route never sends the analyst to a human step (CF-ANALYZER-AUTORUN-01)", () => {
+  const route = "app/analyzer/[runId]/page.tsx";
 
-  it("neither redirects to Screen 3 on an undecided profile", () => {
-    for (const route of routes) {
-      expect(readRepoFile(route)).not.toContain("redirect(`/analyzer/${runId}/profile`);");
-    }
+  it("does not redirect to Screen 3 on an undecided profile", () => {
+    expect(readRepoFile(route)).not.toContain("redirect(`/analyzer/${runId}/profile`);");
   });
 
-  it("neither redirects to Screen 2 on SpotCheckIncompleteError", () => {
-    for (const route of routes) {
-      const src = readRepoFile(route);
-      // Still caught — the gate is untouched and a refusal is still handled.
-      expect(src).toContain("if (err instanceof SpotCheckIncompleteError) {");
-      // Answered with an honest state at the run, never a route into Screen 2.
-      expect(src).not.toContain("redirect(`/analyzer/${runId}/facts`);");
-      expect(src).toContain("INCOMPLETE");
-    }
+  it("does not redirect to Screen 2 on SpotCheckIncompleteError", () => {
+    const src = readRepoFile(route);
+    // Still caught — the gate is untouched and a refusal is still handled.
+    expect(src).toContain("if (err instanceof SpotCheckIncompleteError) {");
+    // Answered with an honest state at the run, never a route into Screen 2.
+    expect(src).not.toContain("redirect(`/analyzer/${runId}/facts`);");
+    expect(src).toContain("INCOMPLETE");
   });
 
-  it("both reach verification-complete by running the automatic pass, not by relaxing the gate", () => {
-    for (const route of routes) {
-      expect(readRepoFile(route)).toContain("advanceRunAutomatically(runId)");
-    }
+  it("reaches verification-complete by running the automatic pass, not by relaxing the gate", () => {
+    expect(readRepoFile(route)).toContain("advanceRunAutomatically(runId)");
     // The chokepoint itself still checks before it computes, in that order.
     const gate = readRepoFile("lib/analyzer/gate.ts");
     expect(gate).toContain("if (!state.spotCheckComplete) {");
     expect(gate).toContain("throw new SpotCheckIncompleteError(runId, state.outstandingFactIds);");
   });
 
-  it("both offer Screens 2 and 3 as optional detail instead", () => {
-    for (const route of routes) {
-      expect(readRepoFile(route)).toContain("SourcesAndDetails");
-    }
+  it("offers Screens 2 and 3 as optional detail instead", () => {
+    expect(readRepoFile(route)).toContain("SourcesAndDetails");
     const detail = readRepoFile("app/components/SourcesAndDetails.tsx");
     expect(detail).toContain("/facts");
     expect(detail).toContain("/profile");
+  });
+});
+
+describe("the legacy /report route redirects into the unified shell rather than rendering a second one (CF-DESIGN-AUTHORITY-CUTOVER-01)", () => {
+  it("app/analyzer/[runId]/report/page.tsx contains no gate/redirect/SourcesAndDetails logic of its own — it is a redirect only", () => {
+    const src = readRepoFile("app/analyzer/[runId]/report/page.tsx");
+    expect(src).toContain("redirect(`/analyzer/${runId}?tab=business`);");
+    expect(src).not.toContain("SpotCheckIncompleteError");
+    expect(src).not.toContain("advanceRunAutomatically");
+    expect(src).not.toContain("SourcesAndDetails");
   });
 });

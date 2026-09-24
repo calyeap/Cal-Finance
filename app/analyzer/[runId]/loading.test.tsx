@@ -38,7 +38,7 @@ describe("AnalyzerRouteLoading", () => {
     );
     const shell = container.querySelector(".cb-analyzer")!;
     expect(shell).not.toBeNull();
-    expect(shell.querySelector(".topbar")).not.toBeNull();
+    expect(shell.querySelector(".az-topbar")).not.toBeNull();
   });
 
   it("names what is happening as in-place text", () => {

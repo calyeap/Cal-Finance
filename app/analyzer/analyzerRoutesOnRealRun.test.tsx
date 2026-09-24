@@ -61,15 +61,34 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-const { default: OverviewPage } = await import("./[runId]/page");
-const { default: ReportPage } = await import("./[runId]/report/page");
+const { default: AnalyzerPage } = await import("./[runId]/page");
+const { default: LegacyReportRedirect } = await import("./[runId]/report/page");
 const { default: FactsPage } = await import("./[runId]/facts/page");
 const { default: ProfilePage } = await import("./[runId]/profile/page");
 
 type Page = (props: { params: Promise<{ runId: string }> }) => Promise<React.JSX.Element>;
+type TabbedPage = (props: {
+  params: Promise<{ runId: string }>;
+  searchParams: Promise<{ tab?: string }>;
+}) => Promise<React.JSX.Element>;
 
 async function renderRoute(page: Page, runId: string) {
   return render(await page({ params: Promise.resolve({ runId }) }));
+}
+
+/**
+ * CF-DESIGN-AUTHORITY-CUTOVER-01 — the unified `/analyzer/{runId}` shell
+ * renders every report tab off `?tab=`, replacing the old separate Overview
+ * and Full Analysis routes (design authority doc: "one shell, seven tabs").
+ * `tab` omitted renders Overview, the route's own default.
+ */
+async function renderTab(runId: string, tab?: string) {
+  return render(
+    await (AnalyzerPage as unknown as TabbedPage)({
+      params: Promise.resolve({ runId }),
+      searchParams: Promise.resolve(tab === undefined ? {} : { tab }),
+    })
+  );
 }
 
 /** createRun + advanceRunAutomatically — what beginAnalysisAction does. */
@@ -98,31 +117,48 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
   ])("$ticker", ({ ticker, companyName, queuedFactName }) => {
     it("Overview renders a report from the run alone, with no redirect to Screen 2 or Screen 3", async () => {
       const runId = await analyze(ticker, companyName);
-      const { container } = await renderRoute(OverviewPage as Page, runId);
+      const { container } = await renderTab(runId);
 
-      // Slot 2 is #118's most prominent element, and both real runs land on
-      // INCOMPLETE — the honest, unchanged upstream state.
-      const slot2 = container.querySelector("#slot-2") as HTMLElement;
-      expect(slot2.textContent).toContain("INCOMPLETE");
-      // All twelve slots, in the fixed §2.1 order — the route still renders
-      // the whole Overview, not a reduced one.
-      const slots = Array.from(container.querySelectorAll("main > .ovslot")).map((el) => el.id);
-      expect(slots).toHaveLength(12);
+      // The shared hero is #118's most prominent element, and both real
+      // runs land on INCOMPLETE — the honest, unchanged upstream state.
+      const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
+      expect(hero.textContent).toContain("INCOMPLETE");
+      // All seven Overview tab slots, in the fixed §2.1 order — the route
+      // still renders the whole Overview tab body, not a reduced one.
+      const slots = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
+      expect(slots).toHaveLength(7);
     });
 
-    it("Full Analysis renders from the run alone, with no redirect", async () => {
+    it("the Evidence tab renders Sections B and J from the run alone, with no redirect", async () => {
       const runId = await analyze(ticker, companyName);
-      const { container } = await renderRoute(ReportPage as Page, runId);
+      const { container } = await renderTab(runId, "evidence");
 
       expect(container.querySelector("#B")).not.toBeNull();
       expect(container.querySelector("#J")).not.toBeNull();
     });
 
-    it("both report routes offer Screens 2 and 3 under Sources / Details, off the normal path", async () => {
+    // Regression: Section A (and Quick Read) had no route anywhere in the
+    // unified shell — EvidenceSections' own "See Section A for what and
+    // why" cross-reference pointed at content no tab rendered.
+    it("the Evidence tab also renders Section A, which has no route of its own", async () => {
+      const runId = await analyze(ticker, companyName);
+      const { container } = await renderTab(runId, "evidence");
+
+      expect(container.querySelector("#A")).not.toBeNull();
+    });
+
+    it("the legacy /report route redirects into the unified shell rather than rendering a second one", async () => {
+      const runId = await analyze(ticker, companyName);
+      await expect(LegacyReportRedirect({ params: Promise.resolve({ runId }) })).rejects.toThrow(
+        `/analyzer/${runId}?tab=business`
+      );
+    });
+
+    it("both the default tab and a report tab offer Screens 2 and 3 under Sources / Details, off the normal path", async () => {
       const runId = await analyze(ticker, companyName);
 
-      for (const page of [OverviewPage, ReportPage] as Page[]) {
-        const { container } = await renderRoute(page, runId);
+      for (const tab of [undefined, "evidence"]) {
+        const { container } = await renderTab(runId, tab);
         expect(container.textContent).toContain("Sources / Details");
         const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
         expect(hrefs).toContain(`/analyzer/${runId}/facts`);
@@ -133,7 +169,7 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
 
     it("the rendered provenance says the software recorded the confirmation, not a person", async () => {
       const runId = await analyze(ticker, companyName);
-      const { container } = await renderRoute(ReportPage as Page, runId);
+      const { container } = await renderTab(runId, "evidence");
 
       // Section B — the fact set's full provenance display (contract §2.2).
       const sectionB = container.querySelector("#B") as HTMLElement;
@@ -213,8 +249,8 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
       expect(await getFactDecisions(runId)).toEqual([]);
       expect((await loadGateState(runId)).spotCheckComplete).toBe(false);
 
-      const { container } = await renderRoute(OverviewPage as Page, runId);
-      expect(container.querySelector("#slot-2")).not.toBeNull();
+      const { container } = await renderTab(runId);
+      expect(container.querySelector(".az-hero-verdict")).not.toBeNull();
       expect((await getFactDecisions(runId)).every((d) => d.origin === "AUTOMATIC")).toBe(true);
     });
   });

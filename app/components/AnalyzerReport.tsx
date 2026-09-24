@@ -312,7 +312,7 @@ function Flags({ flags }: { flags: ComputedValue<unknown>["qualification"]["anal
 
 // A single figure, formatted, with its qualification shown at the point
 // of use — never separated from the value (§10.0.2 rule 1).
-function FigureValue({ figure, format }: { figure: Figure<Decimal>; format: (v: Decimal) => string }) {
+export function FigureValue({ figure, format }: { figure: Figure<Decimal>; format: (v: Decimal) => string }) {
   if (figure.suppressed) return <StateBlock figure={figure} />;
   return (
     <>
@@ -509,104 +509,23 @@ export function AiLayerNote({ aiLayer }: { aiLayer: AiLayerReport | undefined })
   );
 }
 
-export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; aiLayer?: AiLayerReport }) {
-  const { gates, states, diagnostics, priceImplied, scenarios, scenarioOutputs, fairValueRange, preRevenue } = result;
 
-  // §17.7.1 — computed once, [S], shared by Section I's "Challenger point"
-  // line and Section I2's headline so the two never disagree about which
-  // finding was selected.
-  const challengerSelection = result.challenger === null ? null : selectChallengerPoint(result.challenger.findings);
+// ---------------------------------------------------------------------------
+// CF-DESIGN-AUTHORITY-CUTOVER-01 — Analyzer V2 tab-body extraction.
+//
+// Each function below renders exactly the JSX AnalyzerReport already
+// rendered for its theme group (moved, not rewritten — same section ids,
+// classes and content), so the Analyzer V2 shell's seven-tab rail
+// (AnalyzerReportFrame) can render one tab's body at a time without
+// duplicating this file's already-approved figures or computations.
+// AnalyzerReport itself is unchanged in output: it now composes these same
+// functions in the original A-J order, so every existing test against its
+// full rendered document keeps passing unmodified.
+// ---------------------------------------------------------------------------
 
-  const rateSensitivityState = boundState(states, NOT_COMPUTED_BINDING.rateSensitivity);
-  const rateAtWhichBaseEqualsPriceState = boundState(states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice);
-  const cashPerShareState = boundState(states, NOT_COMPUTED_BINDING.cashPerShare);
-  const quarterlyBurnState = boundState(states, NOT_COMPUTED_BINDING.quarterlyBurn);
-  const runwayState = boundState(states, NOT_COMPUTED_BINDING.runway);
-
-  // Section H's right column restates the r = 8%, current-margin cell —
-  // the same cell Section E's own base case reads from.
-  const baseRateCell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
-  // Purely a marker position on the range bar, clamped to the bar's own
-  // 0-100 extent — priceLocationWithinRange itself is the already-computed
-  // field (confirmed correct; B1 is isolated to weightedDistribution).
-  const weightedPositionPct =
-    fairValueRange.kind === "range"
-      ? Math.min(100, Math.max(0, scenarioOutputs.priceLocationWithinRange.mul(100).toNumber()))
-      : 0;
-
+export function BusinessSection({ result }: { result: AnalysisResult }) {
   return (
-    <div className="layout">
-      <main>
-        <QuickRead result={result} />
-
-        {/* ============ A ============ */}
-        <section id="A">
-          <div className="sechead">
-            <h2>A — Header and states</h2>
-            <span className="k">Before any number</span>
-          </div>
-          <hr />
-          <div className="head">
-            <h1>{result.companyName}</h1>
-            <p className="tick">{result.ticker}</p>
-          </div>
-          <div className="pricerow">
-            <span className="p">${num(result.price.value)}</span>
-            <span className="ts">{result.price.timestamp}</span>
-          </div>
-          <p className="profileline">
-            Profile: {PROFILE_LABELS[result.profile.confirmedOrOverridden]}
-            {result.profile.recommended !== result.profile.confirmedOrOverridden &&
-              ` (software recommended ${PROFILE_LABELS[result.profile.recommended]})`}
-          </p>
-
-          <div className="manifest">
-            <div>
-              <h3>Suppressed — no number is produced</h3>
-              {states.suppressing.length === 0 ? (
-                <p className="what">Nothing suppressed.</p>
-              ) : (
-                states.suppressing.map((s, i) => (
-                  <div className="row" key={i}>
-                    <div className="state">
-                      <span className="name">{s.state}</span>
-                      <span className="cause">{s.appliesTo}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <div>
-              <h3>Qualified — the number stands, with its qualification</h3>
-              {states.qualifying.length === 0 ? (
-                <p className="what">Nothing qualified.</p>
-              ) : (
-                states.qualifying.map((q, i) => (
-                  <div className="row" key={i}>
-                    <div className="qual">{q.flag}</div>
-                    <p className="what">{q.appliesTo}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          {/* Placement judgment call (report-back, B7): the mock nests this
-              disclosure inside Section A's own interpretive "why it
-              matters" narrative, which does not exist in this build yet
-              (that prose requires Milestone 8's interpretation layer, per
-              this file's own top-of-file note). Its text is fully generic
-              policy configuration, not company-specific, so it is placed
-              here at the end of Section A rather than skipped — the
-              concept it explains (the fixed 8/10/12% rate grid) is read by
-              Section D's RONIC ladder and Section E's grid alike. */}
-          <Disclosure label="What is a discount rate?">
-            The rate used to convert future cash into today&apos;s money. A higher rate means future cash is worth
-            less today, so it produces a lower valuation and demands more growth to justify a given price. Calboard
-            runs every company at 8%, 10% and 12% from policy configuration — the rate is never chosen per company
-            and never chosen by the interpretation layer.
-          </Disclosure>
-        </section>
-
+    <>
         {/* ============ Business (M9-ITEM5-CONTENT-01 — the filer's own
             10-K Item 1, via the fixed extraction rule; EditorialProseBlock
             role, spec.md §8.3 limits: the excerpt is rendered verbatim, with
@@ -632,7 +551,17 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </p>
           </>
         )}
+    </>
+  );
+}
 
+export function FinancialsSections({ result }: { result: AnalysisResult }) {
+  const { gates, diagnostics, preRevenue, states } = result;
+  const cashPerShareState = boundState(states, NOT_COMPUTED_BINDING.cashPerShare);
+  const quarterlyBurnState = boundState(states, NOT_COMPUTED_BINDING.quarterlyBurn);
+  const runwayState = boundState(states, NOT_COMPUTED_BINDING.runway);
+  return (
+    <>
         {/* ============ Financials (M9 — theme anchor; regroups Sections
             C-D, presentation grouping only) ============ */}
         <div className="sechead theme" id="financials">
@@ -687,7 +616,6 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </tbody>
           </table>
         </section>
-
         {/* ============ D ============ */}
         <section id="D">
           <div className="sechead">
@@ -980,7 +908,21 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </>
           )}
         </section>
+    </>
+  );
+}
 
+export function ValuationSections({ result }: { result: AnalysisResult }) {
+  const { states, diagnostics, priceImplied, scenarios, scenarioOutputs, fairValueRange, preRevenue } = result;
+  const rateSensitivityState = boundState(states, NOT_COMPUTED_BINDING.rateSensitivity);
+  const rateAtWhichBaseEqualsPriceState = boundState(states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice);
+  const baseRateCell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
+  const weightedPositionPct =
+    fairValueRange.kind === "range"
+      ? Math.min(100, Math.max(0, scenarioOutputs.priceLocationWithinRange.mul(100).toNumber()))
+      : 0;
+  return (
+    <>
         {/* ============ Valuation (M9 — theme anchor; regroups the frozen
             artefact's Sections E-H per docs/design/m9-analyzer-design-
             contract.md §2.2, presentation grouping only, no content
@@ -990,7 +932,6 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           <span className="k">Price-implied, analyst scenarios and the fair-value range</span>
         </div>
         <hr />
-
         {/* ============ E ============ */}
         <section id="E">
           <div className="sechead">
@@ -1113,7 +1054,6 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </tbody>
           </table>
         </section>
-
         {/* ============ F ============ */}
         <section id="F">
           <div className="sechead">
@@ -1172,7 +1112,6 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </tbody>
           </table>
         </section>
-
         {/* ============ G ============ */}
         <section id="G">
           <div className="sechead">
@@ -1233,7 +1172,6 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </tbody>
           </table>
         </section>
-
         {/* ============ H ============ */}
         <section id="H">
           <div className="sechead">
@@ -1391,7 +1329,15 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </div>
           )}
         </section>
+    </>
+  );
+}
 
+export function RisksThesisSections({ result, aiLayer }: { result: AnalysisResult; aiLayer?: AiLayerReport }) {
+  const { states } = result;
+  const challengerSelection = result.challenger === null ? null : selectChallengerPoint(result.challenger.findings);
+  return (
+    <>
         {/* ============ Risks & Thesis (M9 — theme anchor; regroups
             Sections I/I2, presentation grouping only) ============ */}
         <div className="sechead theme" id="risks-thesis">
@@ -1461,7 +1407,6 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
           )}
           <AiLayerNote aiLayer={aiLayer} />
         </section>
-
         <section id="I2">
           <div className="sechead">
             <h2>I2 — Challenger findings</h2>
@@ -1524,7 +1469,13 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </div>
           )}
         </section>
+    </>
+  );
+}
 
+export function MarketContextSection({ result }: { result: AnalysisResult }) {
+  return (
+    <>
         {/* ============ Market Context (M9-ITEM5-CONTENT-01 — the
             already-acquired SEC SIC classification, rendered as category
             framing only; Calvin's 21 Sep 2026 ruling, issue #195, does not
@@ -1546,7 +1497,14 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             SEC classification (SIC {result.marketContext.sic}): {result.marketContext.sicDescription}
           </p>
         )}
+    </>
+  );
+}
 
+export function EvidenceSections({ result }: { result: AnalysisResult }) {
+  const { states } = result;
+  return (
+    <>
         {/* ============ Evidence (M9 — theme anchor; regroups Section B's
             fact-set provenance display alongside Section J's register, per
             m9-analyzer-design-contract.md §2.2: "the fact set's full
@@ -1619,7 +1577,6 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </tbody>
           </table>
         </section>
-
         {/* ============ J ============ */}
         <section id="J">
           <div className="sechead">
@@ -1641,8 +1598,6 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
             </tbody>
           </table>
         </section>
-
-
         {/* ============ Investment case at a glance ============ */}
         <section id="atglance">
           <div className="sechead">
@@ -1657,6 +1612,102 @@ export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; ai
               : "No suppressing state or qualifying flag is active for this analysis."}
           </p>
         </section>
+    </>
+  );
+}
+
+// Section A — extracted the same way BusinessSection/FinancialsSections/etc.
+// were (exact existing JSX, moved rather than rewritten), so it can also be
+// rendered on the Evidence tab: the unified route's tabbed shell otherwise
+// has no route for it, leaving EvidenceSections' own "See Section A for what
+// and why" cross-reference (below) pointing at nothing.
+export function HeaderAndStatesSection({ result }: { result: AnalysisResult }) {
+  const { states } = result;
+
+  return (
+    <section id="A">
+      <div className="sechead">
+        <h2>A — Header and states</h2>
+        <span className="k">Before any number</span>
+      </div>
+      <hr />
+      <div className="head">
+        <h1>{result.companyName}</h1>
+        <p className="tick">{result.ticker}</p>
+      </div>
+      <div className="pricerow">
+        <span className="p">${num(result.price.value)}</span>
+        <span className="ts">{result.price.timestamp}</span>
+      </div>
+      <p className="profileline">
+        Profile: {PROFILE_LABELS[result.profile.confirmedOrOverridden]}
+        {result.profile.recommended !== result.profile.confirmedOrOverridden &&
+          ` (software recommended ${PROFILE_LABELS[result.profile.recommended]})`}
+      </p>
+
+      <div className="manifest">
+        <div>
+          <h3>Suppressed — no number is produced</h3>
+          {states.suppressing.length === 0 ? (
+            <p className="what">Nothing suppressed.</p>
+          ) : (
+            states.suppressing.map((s, i) => (
+              <div className="row" key={i}>
+                <div className="state">
+                  <span className="name">{s.state}</span>
+                  <span className="cause">{s.appliesTo}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div>
+          <h3>Qualified — the number stands, with its qualification</h3>
+          {states.qualifying.length === 0 ? (
+            <p className="what">Nothing qualified.</p>
+          ) : (
+            states.qualifying.map((q, i) => (
+              <div className="row" key={i}>
+                <div className="qual">{q.flag}</div>
+                <p className="what">{q.appliesTo}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      {/* Placement judgment call (report-back, B7): the mock nests this
+          disclosure inside Section A's own interpretive "why it
+          matters" narrative, which does not exist in this build yet
+          (that prose requires Milestone 8's interpretation layer, per
+          this file's own top-of-file note). Its text is fully generic
+          policy configuration, not company-specific, so it is placed
+          here at the end of Section A rather than skipped — the
+          concept it explains (the fixed 8/10/12% rate grid) is read by
+          Section D's RONIC ladder and Section E's grid alike. */}
+      <Disclosure label="What is a discount rate?">
+        The rate used to convert future cash into today&apos;s money. A higher rate means future cash is worth
+        less today, so it produces a lower valuation and demands more growth to justify a given price. Calboard
+        runs every company at 8%, 10% and 12% from policy configuration — the rate is never chosen per company
+        and never chosen by the interpretation layer.
+      </Disclosure>
+    </section>
+  );
+}
+
+export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; aiLayer?: AiLayerReport }) {
+  return (
+    <div className="layout">
+      <main>
+        <QuickRead result={result} />
+
+        <HeaderAndStatesSection result={result} />
+
+        <BusinessSection result={result} />
+        <FinancialsSections result={result} />
+        <ValuationSections result={result} />
+        <RisksThesisSections result={result} aiLayer={aiLayer} />
+        <MarketContextSection result={result} />
+        <EvidenceSections result={result} />
       </main>
     </div>
   );
