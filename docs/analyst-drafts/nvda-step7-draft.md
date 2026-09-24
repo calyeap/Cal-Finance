@@ -106,33 +106,113 @@ OKLO's committed bundles both use.
 
 ### Scenario values
 
-**These three dollar figures are the least-supported numbers in this
-draft and are flagged as such deliberately.** This draft does not run the
-app's reverse-DCF engine or any other solver (HARD BOUNDS: "Do not run the
-report"), so these are not, and cannot honestly be presented as, that
-engine's output. They are the analyst's own transparent, fully-shown
-single-stage estimate — exactly the arithmetic a human analyst would do by
-hand before typing a number into this entry form — computed as:
+**Evidence gap — named, not hand-estimated.** `CALVIN RULING — C` (24 Sep
+2026 13:00:02Z, PR #289 comment 5814600108) refused this draft's prior
+single-stage hand estimate — an assumed 9.5% required return and a
+per-scenario 3% / 4% / 5% terminal growth rate, neither authorised by the
+methodology — and required either a re-derivation strictly from the
+current approved methodology and the already-drafted scenario assumptions,
+or a named gap stating exactly which authorised input is missing.
+Reconciling the retrieved authority: two of the three inputs a scenario
+DCF needs are already authorised; the third is not, and cannot be
+authored inside this outcome's scope.
 
-```
-NOPAT(FY2026) = OperatingIncomeLoss(FY2026) x (1 - nopatTaxRate)
-              = $130,387M x (1 - 0.21) = $103.01B      [OBSERVED operating income; AI-INFERRED tax rate]
-NOPAT/share   = $103.01B / 24.1B shares = $4.27
+**Authorised, not invented:**
 
-per-scenario value = [NOPAT(FY2026) x (1+growth) x (1 - reinvestmentCapitalIntensity)] / (r - terminalGrowth) / shares
-  where r (assumed required return) = 9.5%, held constant across scenarios (AI INFERENCE, not one of
-  the four §7.1 constants — no discount-rate field exists on this entry form), and terminalGrowth is a
-  long-run perpetual rate distinct from the scenario's own (near-term) revenueGrowthOrPath driver.
-```
+- **Discount rate — r = 10%.** `docs/frozen/calboard-valuation-methodology.md`
+  §3.4 safeguard 1 requires "the same rate ... used in the DCF, the
+  reverse DCF and the steady-state value for a given company — never
+  change the rate to move the answer." `lib/analyzer/policy.ts`'s
+  `rateGrid` fixes that rate's three possible cells at `[0.08, 0.10,
+  0.12]`, and `lib/analyzer/assemble.ts:368` is the one place the app's
+  own assembly already commits to a single cell — `rateGrid[1]`, **10%**
+  — as *the* company-level rate for this purpose, for every company,
+  never chosen per company. **OBSERVED FACT**, cited to `policy.ts`'s
+  `rateGrid[1]` and its one existing use at `assemble.ts:368` — not
+  chosen for NVDA specifically.
+- **Terminal growth — g = 3%, one figure, not per-scenario.** Methodology
+  §3.5: "Policy default: 3.0%." `policy.ts`'s `terminalGrowth` is `0.03`
+  and carries no `POLICY_THRESHOLD_PROVENANCE` entry — fixed by policy,
+  not PROVISIONAL, and not one of the four undefined §7.1 constants. This
+  replaces the prior draft's unauthorised per-scenario 3% / 4% / 5%
+  invention with the single policy figure. **OBSERVED FACT**, cited to
+  `policy.ts:11`.
 
-| Scenario | growth | reinvestment | terminal growth (AI INFERENCE) | Value/share |
+**Not authorised, and not draftable here: terminal ROIC.** A DCF's
+terminal value must still be built consistently — methodology §3.5,
+stated as a mandatory, software-deterministic [S] rule: *"terminal FCF =
+terminal NOPAT × (1 − g ÷ terminal ROIC). Do not take final-year FCF ×
+(1+g)."* That rule needs a terminal ROIC, and nothing already authorised
+or already drafted supplies one:
+
+- The one terminal-ROIC shortcut this methodology fixes by rule — rate +
+  3 points (`terminalRoicPremium`, `policy.ts:14`) — is scoped, in both
+  frozen documents, to the **diagnostic reverse DCF only**. Methodology
+  §3.5: "In the diagnostic reverse DCF (§6.2) it is not an input at all:
+  it is fixed by rule at r + 3 percentage points (PROVISIONAL)." Spec
+  §7.1's own constants table, row "Terminal ROIC **(diagnostic reverse
+  DCF only)**." For the **scenario** DCF, both documents instead require:
+  "terminal ROIC is an **analyst input with a written anchor** and must
+  fade toward the cost of capital unless a durable moat is argued
+  explicitly" (methodology §3.5) — a new required scenario driver, not a
+  fact recoverable from the filings or from `policy.ts`.
+
+  (`lib/analyzer/modules/scenarioOutputs.ts`'s `computeScenarioEnterpriseValue`
+  does compute an internal `rate + terminalRoicPremium` for every caller,
+  including the scenario-DCF formula it implements — but that is the kind
+  of disagreement between the frozen contract and the build the spec's
+  own preface calls "a defect to be raised, not drift for a later session
+  to correct on its own judgment" [spec.md:1], not authority to borrow the
+  reverse-DCF-only premium here. It is also not, in practice, how any
+  committed scenario value in this codebase is produced: that function is
+  wired only into the M14 sensitivity tables
+  [`lib/analyzer/modules/sensitivity.ts`], never into the path that
+  produces a company's committed `scenarioValues`. MSFT's own committed
+  bundle supplies its three dollar figures directly, with
+  `revalueBaseCaseAtRate: null`, because — per that fixture's own comment
+  — "No real revaluation-at-rate solver exists for this fixture"
+  (CB-AUDIT-01 H2). This draft is naming the same absence for NVDA, not a
+  gap specific to it.)
+- The already-drafted scenario assumptions (`revenueGrowthOrPath`,
+  `operatingMargin`, `reinvestmentCapitalIntensity`, `writtenAnchor` per
+  scenario, above) supply no terminal ROIC and no ingredients to compute
+  one. Methodology §3.3's computed RONIC (trailing five-year ΔNOPAT ÷
+  Δinvested capital) is a company-level, historical, diagnostic-reverse-
+  DCF quantity: it needs invested-capital inputs (capex, acquisitions,
+  finance-lease ROU additions, ΔNWC) this draft's classification section
+  does not carry, and even if computed, is not what §3.5 defines a
+  *scenario's* terminal ROIC to be — an authored, forward, per-scenario
+  judgment about margin durability, not a trailing historical ratio.
+
+Authoring a terminal ROIC now — a number, a fade path, or a durable-moat
+argument, per scenario — would itself be exactly the kind of new,
+standalone methodology input `CALVIN RULING — C` forbids ("do not
+introduce ... a terminal-growth assumption, valuation shortcut, or other
+methodology input unless it is already authorised") and would reopen a
+scenario driver Calvin has already reviewed and preserved (HARD BOUNDS:
+"No re-opening of anything Calvin preserved: ... scenario drivers and
+their written anchors").
+
+**Named gap:** the three scenario dollar values cannot be re-derived from
+the current approved methodology and the already-drafted scenario
+assumptions alone. **What would close it:** a Calvin-authored terminal
+ROIC — a value, a fade rule, or an explicit durable-moat argument — for
+each of the three scenarios, entered as its own new analyst input with
+its own written anchor (methodology §3.5), which is outside this
+outcome's scope to author. Until that input exists, the three values are
+left blank — not zero, not a placeholder, not the prior hand estimate —
+per `CALVIN RULING — C`'s own named fallback, a success outcome and not a
+defect.
+
+| Scenario | growth | reinvestment | terminal ROIC | Value/share |
 |---|---|---|---|---|
-| Bear | 5% | 2% | 3% | **$67.66** |
-| Base | 20% | 4% | 4% | **$89.52** |
-| Bull | 35% | 5% | 5% | **$121.81** |
+| Bear | 5% | 2% | *(evidence gap — see above)* | *(evidence gap)* |
+| Base | 20% | 4% | *(evidence gap — see above)* | *(evidence gap)* |
+| Bull | 35% | 5% | *(evidence gap — see above)* | *(evidence gap)* |
 
-Calvin should treat these three figures as proposals to be recomputed or
-overridden directly, not as a methodology output.
+Calvin's decision on this gap — authoring the missing terminal-ROIC input,
+or ruling some other basis into scope — is the next step; this draft does
+not anticipate it.
 
 ### §7.1 constants
 
@@ -169,9 +249,17 @@ overridden directly, not as a methodology output.
   `CALVIN RULING — A` and issue #188's MSFT precedent. This is a run-time
   judgment outside the recorded-bundle shape this draft covers, named here
   for completeness rather than left implicit.
-- **The three scenario dollar values are the least-supported fields in this
-  draft** (see "Scenario values" above) — named explicitly, not disguised
-  as a methodology output.
+- **The three scenario dollar values (bear / base / bull) are a named
+  evidence gap, not a hand estimate** (see "Scenario values" above): the
+  discount rate and terminal growth are authorised (`policy.ts`'s
+  `rateGrid[1]` = 10%, `terminalGrowth` = 3%), but the methodology's
+  terminal-consistency rule (§3.5) also needs a terminal ROIC, and both
+  frozen documents scope the one policy-fixed terminal-ROIC rule (rate + 3
+  points) to the diagnostic reverse DCF only — for the scenario DCF they
+  require a new per-scenario analyst input with its own written anchor,
+  which `CALVIN RULING — C` does not authorise this outcome to add.
+  Closing this gap is Calvin's decision, not a derivation this draft can
+  complete from what is already authorised and already drafted.
 
 ## What approving and running this draft would, and would not, unlock (SCOPE item 7)
 
