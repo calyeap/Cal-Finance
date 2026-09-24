@@ -1,4 +1,6 @@
 import Decimal from "decimal.js";
+import { BoundStateBlock } from "./AnalyzerReport";
+import type { BoundState } from "@/lib/analyzer/notComputed";
 
 // M9-DESKTOP-SHELL-01 — Overview slot 3, per docs/design/m9-analyzer-design-
 // contract.md §2.1 row 3, §3: current price, as-of timestamp and a chart,
@@ -19,12 +21,36 @@ import Decimal from "decimal.js";
 // simulated history — rather than inventing or silently omitting it. No
 // target line, no annotation, no portfolio framing (contract's "must never
 // contain" column): describes, never prescribes.
+//
+// CF-PRICE-DISPLAY-HONESTY-RECON-01 — CONTEXT item 5. `price` above is
+// literally true ("carries its timestamp always"), but on a priceless run
+// it is §3.4's own $0/blank-timestamp sentinel, not a real quote — this
+// panel restated it as one, the identical defect CONTEXT items 1-4 name
+// elsewhere. `priceState`, where bound (assemble.ts, the same
+// `fixture.enterpriseValue.price === null` signal every other consumer in
+// this class reads), replaces the whole panel body — chart and caption
+// included — with the existing BoundStateBlock this report already uses
+// for the same figure in Section A (AnalyzerReport.tsx): there is no real
+// point to plot and no history sentence to restate when there is no price.
 
 function num(value: Decimal, dp = 2): string {
   return value.toFixed(dp);
 }
 
-export function PriceChartPanel({ price }: { price: { value: Decimal; timestamp: string } }) {
+export function PriceChartPanel({
+  price,
+  priceState,
+}: {
+  price: { value: Decimal; timestamp: string };
+  priceState: BoundState | null;
+}) {
+  if (priceState !== null) {
+    return (
+      <div className="pricechart">
+        <BoundStateBlock bound={priceState} />
+      </div>
+    );
+  }
   return (
     <div className="pricechart">
       <div className="pricerow">

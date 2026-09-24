@@ -442,6 +442,101 @@ describe("assembleAnalysisResult — pre-revenue fair-value range with no price 
 });
 
 // ---------------------------------------------------------------------------
+// CF-PRICE-DISPLAY-HONESTY-RECON-01 (issue #306) — the presentation and
+// narration reads of AnalysisResult.price. §3.4's own sentinel (always a
+// value and a timestamp) stays exactly as it is; a presentation consumer
+// now reads NOT_COMPUTED_BINDING.price off `states.suppressing` instead,
+// the same mechanism CF-NOPRICE-HONESTY-RECON-01 already established for
+// priceLocationWithinRange, bound from the identical `currentPrice`
+// (`fixture.enterpriseValue.price?.value ?? null`) signal.
+// ---------------------------------------------------------------------------
+
+describe("assembleAnalysisResult — the current price, bound rather than flattened (CF-PRICE-DISPLAY-HONESTY-RECON-01)", () => {
+  it("binds NOT_COMPUTED_BINDING.price with INCOMPLETE, naming the missing price, when this run has none", () => {
+    const priceless = { ...MSFT_FIXTURE, enterpriseValue: { ...MSFT_FIXTURE.enterpriseValue, price: null } };
+    const result = assembleAnalysisResult(priceless);
+    const bound = boundState(result.states, NOT_COMPUTED_BINDING.price);
+    expect(bound?.state).toBe("INCOMPLETE");
+    expect(bound?.cause).toMatch(/missing REQUIRED input/);
+    expect(bound?.cause).toMatch(/price/);
+    // HARD BOUNDS: AnalysisResult.price stays a value and a timestamp always
+    // — §3.4's own sentinel, untouched by this override. `fixture.price` is
+    // set at acquisition, independently of `enterpriseValue.price`
+    // (companyInputs.ts), so forcing only the latter null here does not
+    // flatten the former: it stays MSFT_FIXTURE's real, unmodified quote.
+    // The real priceless case (both fields flattened together) is NVDA's
+    // own real acquired run (nvdaRealRunObservation.test.ts).
+    expect(result.price.value.toString()).toBe(MSFT_FIXTURE.price.value.toString());
+    expect(result.price.timestamp).toBe(MSFT_FIXTURE.price.timestamp);
+  });
+
+  it("REGRESSION — a run that has a price binds nothing: AnalysisResult.price is unaffected", () => {
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+    expect(boundState(result.states, NOT_COMPUTED_BINDING.price)).toBeNull();
+    expect(result.price.value.toString()).toBe(MSFT_FIXTURE.price.value.toString());
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CF-PRICE-DISPLAY-HONESTY-RECON-01, CONTEXT item 6 — the one remaining
+// engine read of this same $0-flattening class, reported "not fixed" by
+// CF-NOPRICE-HONESTY-RECON-01's own committed comment:
+// scenarioOutputs.ts's rateAtWhichBaseEqualsPrice, previously solved
+// against `currentPrice ?? new Decimal(0)`. OKLO_FIXTURE is the one
+// fixture in this codebase with a real (if fixture-illustrative, CB-AUDIT-01
+// H2) revalueBaseCaseAtRate function — every real acquired run
+// (recordedBundles.ts) and MSFT_FIXTURE both supply null, so this hazard
+// was latent everywhere else; isolated here the same way the sibling
+// describe block above does, via OKLO_FIXTURE's own stated
+// leverage.enterpriseValue bypassing the leverage cascade.
+// ---------------------------------------------------------------------------
+
+describe("assembleAnalysisResult — rateAtWhichBaseEqualsPrice no longer solves against the flattened $0 (CONTEXT item 6)", () => {
+  const priceless = { ...OKLO_FIXTURE, enterpriseValue: { ...OKLO_FIXTURE.enterpriseValue, price: null } };
+  const result = assembleAnalysisResult(priceless);
+
+  it("returns null instead of a rate solved toward a manufactured $0 target, with the missing-price cause bound to it", () => {
+    expect(result.scenarioOutputs.rateAtWhichBaseEqualsPrice).toBeNull();
+    const bound = boundState(result.states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice);
+    expect(bound?.state).toBe("INCOMPLETE");
+    expect(bound?.cause).toMatch(/missing REQUIRED input: a price for this run/);
+  });
+
+  it("REGRESSION — the unmodified OKLO_FIXTURE (has a price) is unaffected: still NO SOLUTION IN RANGE, the same pre-existing, price-independent reason (its constant $31 revaluation never equals its real $14.50 price)", () => {
+    // Confirms this fix changes nothing for OKLO_FIXTURE itself: its null
+    // was never the $0-flattening defect (see "assembleAnalysisResult — the
+    // rate at which the base case equals the price (G)" above, an existing,
+    // pre-CF-PRICE-DISPLAY-HONESTY-RECON-01 pin of this exact behaviour).
+    const withPrice = assembleAnalysisResult(OKLO_FIXTURE);
+    expect(withPrice.scenarioOutputs.rateAtWhichBaseEqualsPrice).toBeNull();
+    expect(boundState(withPrice.states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice)?.state).toBe("NO SOLUTION IN RANGE");
+  });
+
+  it("REGRESSION — a run with a real price AND a real, solvable revaluation function is unaffected: still solves a real rate", () => {
+    // The same construction "binds nothing when the rate was solved"
+    // (above) uses — a revaluation function that genuinely equals MSFT's
+    // real price at a real rate — proving the non-null branch of this
+    // fix's own `|| currentPrice === null` check is untouched.
+    const result = assembleAnalysisResult({
+      ...MSFT_FIXTURE,
+      revalueBaseCaseAtRate: (rate: Decimal) => MSFT_FIXTURE.price.value.mul(new Decimal("0.1").dividedBy(rate)),
+    });
+    expect(result.scenarioOutputs.rateAtWhichBaseEqualsPrice).not.toBeNull();
+    expect(boundState(result.states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice)).toBeNull();
+  });
+
+  it("REGRESSION — a run with no revaluation function supplied keeps its existing cause, unaffected by price", () => {
+    // MSFT_FIXTURE.revalueBaseCaseAtRate is null; its cause must stay "no
+    // revaluation function supplied", never flip to "no price", even though
+    // MSFT does have one — the price check is reached only after the
+    // revaluation-function check, so this run's own cause is unchanged.
+    const withMsft = assembleAnalysisResult(MSFT_FIXTURE);
+    const bound = boundState(withMsft.states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice);
+    expect(bound?.cause).toMatch(/none was supplied for this run/);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CF-VERDICT-NONPOLICY-GAPS-01 SCOPE 2 — achievedRevenueCagr is carried onto
 // AnalysisResult unchanged from the fixture (real acquisition, not assembly
 // itself, computes it — see companyInputs.ts and acquiredRun.test.ts for the

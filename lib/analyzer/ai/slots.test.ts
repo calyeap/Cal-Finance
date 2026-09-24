@@ -36,6 +36,21 @@ describe("buildSlotCatalogue", () => {
     const catalogue = buildSlotCatalogue(msft);
 
     expect(catalogue.get("price")?.formatted).toBe(`$${msft.price.value.toFixed(2)}`);
+    expect(catalogue.get("price")?.suppressed).toBe(false);
+    expect(catalogue.get("price.timestamp")?.formatted).toBe(msft.price.timestamp);
+  });
+
+  // CF-PRICE-DISPLAY-HONESTY-RECON-01 — a priceless run's [C] slot must not
+  // hand the narrator the flattened $0/blank timestamp as if it were a real
+  // quote; it gets the bound state name instead, the same treatment
+  // priceLocationWithinRange's own slot already has two entries below it.
+  it("holds INCOMPLETE, not $0, for a priceless run's price slot, and omits the timestamp slot entirely", () => {
+    const priceless = assembleAnalysisResult({ ...MSFT_FIXTURE, enterpriseValue: { ...MSFT_FIXTURE.enterpriseValue, price: null } });
+    const catalogue = buildSlotCatalogue(priceless);
+
+    expect(catalogue.get("price")?.formatted).toBe("INCOMPLETE");
+    expect(catalogue.get("price")?.suppressed).toBe(true);
+    expect(catalogue.has("price.timestamp")).toBe(false);
   });
 
   it("holds every acquired fact that has a value, keyed by its fact id", () => {

@@ -137,14 +137,15 @@ describe("computeScenarioOutputs", () => {
     expect(result.priceLocationWithinRange?.toString()).toBe("0.5");
   });
 
-  it("returns priceLocationWithinRange: null when this run has no price, without changing rateAtWhichBaseEqualsPrice's existing $0-target behaviour", () => {
-    // CF-NOPRICE-HONESTY-RECON-01 — defect B. Before this outcome, a
-    // priceless run's position was computed off the caller's flattened $0
-    // sentinel and reported as a real number. Now it is null, gated the
-    // same way rateAtWhichBaseEqualsPrice already is (H2's own precedent) —
-    // and rateAtWhichBaseEqualsPrice itself is untouched: still solved
-    // against $0, the same target a priceless run's revaluation solve
-    // already used before this outcome (out of this defect's SCOPE).
+  it("returns priceLocationWithinRange: null AND rateAtWhichBaseEqualsPrice: null when this run has no price — neither solved against a flattened $0 (CF-PRICE-DISPLAY-HONESTY-RECON-01, CONTEXT item 6)", () => {
+    // CF-NOPRICE-HONESTY-RECON-01 — defect B — closed priceLocationWithinRange.
+    // Until CF-PRICE-DISPLAY-HONESTY-RECON-01, rateAtWhichBaseEqualsPrice was
+    // left solving against `currentPrice ?? new Decimal(0)` — the identical
+    // $0-flattening class, reported "not fixed" in this same module's own
+    // committed comment. This test used to pin that gap as correct
+    // ("without changing rateAtWhichBaseEqualsPrice's existing $0-target
+    // behaviour"); CF-PRICE-DISPLAY-HONESTY-RECON-01 corrects it, so the
+    // pin is updated here, per that outcome's own SCOPE item 7.
     const revalue = (rate: Decimal) => new Decimal(1000).minus(rate.mul(5000));
     const withNoPrice = computeScenarioOutputs({
       bearValue: new Decimal(50),
@@ -154,6 +155,17 @@ describe("computeScenarioOutputs", () => {
       currentPrice: null,
       revalueBaseCaseAtRate: revalue,
     });
+
+    expect(withNoPrice.priceLocationWithinRange).toBeNull();
+    expect(withNoPrice.rateAtWhichBaseEqualsPrice).toBeNull();
+  });
+
+  it("REGRESSION — a real $0 price (not the same as no price) still solves rateAtWhichBaseEqualsPrice for real", () => {
+    // A literal $0 quote is an unusual but real price, never to be conflated
+    // with "no price was available" — null and Decimal(0) take different
+    // branches throughout this defect class, and this is the one place both
+    // are exercised side by side.
+    const revalue = (rate: Decimal) => new Decimal(1000).minus(rate.mul(5000));
     const withZeroPrice = computeScenarioOutputs({
       bearValue: new Decimal(50),
       baseValue: new Decimal(100),
@@ -162,10 +174,8 @@ describe("computeScenarioOutputs", () => {
       currentPrice: new Decimal(0),
       revalueBaseCaseAtRate: revalue,
     });
-
-    expect(withNoPrice.priceLocationWithinRange).toBeNull();
-    expect(withNoPrice.rateAtWhichBaseEqualsPrice).not.toBeNull();
-    expect(withNoPrice.rateAtWhichBaseEqualsPrice?.toString()).toBe(withZeroPrice.rateAtWhichBaseEqualsPrice?.toString());
+    expect(withZeroPrice.rateAtWhichBaseEqualsPrice).not.toBeNull();
+    expect(withZeroPrice.rateAtWhichBaseEqualsPrice?.toDecimalPlaces(3).toString()).toBe("0.2");
   });
 
   it("carries the three scenario values through unchanged", () => {

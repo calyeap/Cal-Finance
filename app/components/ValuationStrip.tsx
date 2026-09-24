@@ -62,6 +62,10 @@ export function ValuationStrip({ result, showLocation = false }: { result: Analy
   const locationPct =
     scenarioOutputs.priceLocationWithinRange !== null ? scenarioOutputs.priceLocationWithinRange.mul(100).toFixed(0) : null;
   const cashPerShareState = boundState(states, NOT_COMPUTED_BINDING.cashPerShare);
+  // CF-PRICE-DISPLAY-HONESTY-RECON-01 — the same "bound state string in
+  // place of a figure" treatment cashPerShareState already has, two lines
+  // above, for this same tile shape.
+  const priceState = boundState(states, NOT_COMPUTED_BINDING.price);
 
   if (preRevenue) {
     return (
@@ -80,7 +84,7 @@ export function ValuationStrip({ result, showLocation = false }: { result: Analy
           </div>
           <div className="cur">
             <span className="lb">Current price</span>
-            <span className="fig">${num(result.price.value)}</span>
+            <span className="fig">{priceState !== null ? priceState.state : `$${num(result.price.value)}`}</span>
           </div>
         </div>
         {showLocation && locationPct !== null && <p className="striploc">{locationPct}% of the way from failure to success</p>}
@@ -105,7 +109,7 @@ export function ValuationStrip({ result, showLocation = false }: { result: Analy
         </div>
         <div className="cur">
           <span className="lb">Current price</span>
-          <span className="fig">${num(result.price.value)}</span>
+          <span className="fig">{priceState !== null ? priceState.state : `$${num(result.price.value)}`}</span>
         </div>
       </div>
       {showLocation && locationPct !== null && <p className="striploc">{locationPct}% of the way from bear to bull</p>}

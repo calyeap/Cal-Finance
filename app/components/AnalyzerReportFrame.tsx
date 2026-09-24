@@ -8,6 +8,7 @@ import { ScenarioRangeStrip } from "./ScenarioRangeStrip";
 import { AnalyzerRightRail } from "./AnalyzerRightRail";
 import { trustStatusLine, trustConsequenceLine, uncertaintyLevel } from "@/lib/analyzer/trustCopy";
 import { createDeepSnapshotAction } from "@/app/actions/analyzer";
+import { boundState, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — docs/design/analyzer-v2-design-authority.md
 // "One shell, seven tabs" and "Compact report header". One frame, reused by
@@ -71,6 +72,8 @@ export function AnalyzerReportFrame({
   children: ReactNode;
 }) {
   const trust = result.trust;
+  // CF-PRICE-DISPLAY-HONESTY-RECON-01 — CONTEXT item 5.
+  const priceState = boundState(result.states, NOT_COMPUTED_BINDING.price);
   const positionSuppressedBy =
     trust.status === "UNUSABLE"
       ? `TRUST STATUS UNUSABLE · ${trust.determinedBy[0]?.detail ?? ""}`
@@ -106,7 +109,7 @@ export function AnalyzerReportFrame({
             <UncertaintyBadge status={trust.status} />
           </div>
           <div className="az-hero-price">
-            <PriceChartPanel price={result.price} />
+            <PriceChartPanel price={result.price} priceState={priceState} />
           </div>
           <div className="az-hero-scenarios">
             <ScenarioRangeStrip result={result} profileNotConfirmed={profileNotConfirmed} />

@@ -442,6 +442,17 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   const sensitivity = buildSensitivityResult();
 
   // --- M15 — scenario outputs ------------------------------------------------
+  //
+  // CF-NOPRICE-HONESTY-RECON-01 / CF-PRICE-DISPLAY-HONESTY-RECON-01.
+  // `fixture.price.value` is §3.4's own always-present display sentinel
+  // ($0 on a priceless run — unchanged); `fixture.enterpriseValue.price` is
+  // the honest signal, already null exactly when this run has no price
+  // (modules/enterpriseValue.ts's own REQUIRED input, wired in
+  // acquisition/companyInputs.ts). Extracted once here so every consumer of
+  // "does this run have a real price" — computeScenarioOutputs and the two
+  // presentation bindings below — reads the identical value, never a second
+  // signal invented for the same fact.
+  const currentPrice = fixture.enterpriseValue.price?.value ?? null;
   const scenarioOutputs = computeScenarioOutputs({
     bearValue: fixture.scenarioValues.bear,
     baseValue: fixture.scenarioValues.base,
@@ -450,14 +461,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     // {1,1,1}, which sums to 3 and turned the weighted average into a
     // plain sum (B1, third-pass fix; authorised for this one line only).
     weights: { bear: new Decimal("1").dividedBy(3), base: new Decimal("1").dividedBy(3), bull: new Decimal("1").dividedBy(3) },
-    // CF-NOPRICE-HONESTY-RECON-01. `fixture.price.value` is §3.4's own
-    // always-present display sentinel ($0 on a priceless run — unchanged);
-    // `fixture.enterpriseValue.price` is the honest signal, already null
-    // exactly when this run has no price (modules/enterpriseValue.ts's own
-    // REQUIRED input, wired in acquisition/companyInputs.ts). Reusing it
-    // here is one absence carried through, not a second signal invented for
-    // the same fact.
-    currentPrice: fixture.enterpriseValue.price?.value ?? null,
+    currentPrice,
     revalueBaseCaseAtRate: fixture.revalueBaseCaseAtRate,
   });
 
@@ -548,15 +552,30 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   if (rateSensitivityMissing !== null) {
     suppressing.push(notComputed(NOT_COMPUTED_BINDING.rateSensitivity, "INCOMPLETE", rateSensitivityMissing));
   }
-  // G. Two different outcomes both arrive as a null rate, and they are two
-  // different statements: no revaluation function was supplied, so nothing
-  // ran — or one was, the solver searched, and the bracket held no root.
+  // G. Three different outcomes all arrive as a null rate, and they are
+  // three different statements: no revaluation function was supplied, so
+  // nothing ran — a function was supplied but this run has no price to
+  // solve toward (CF-PRICE-DISPLAY-HONESTY-RECON-01, CONTEXT item 6: the
+  // module no longer solves against the flattened $0 `rateSolveTargetPrice`
+  // used to substitute here) — or a function and a real price were both
+  // present, the solver searched, and the bracket held no root. Checked in
+  // that order so a run that already had no revaluation function supplied
+  // (every real acquired run and MSFT_FIXTURE, today) keeps its existing
+  // cause unchanged regardless of price.
   if (fixture.revalueBaseCaseAtRate === null) {
     suppressing.push(
       notComputed(
         NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice,
         "INCOMPLETE",
         "missing REQUIRED input: a revaluation of the base case at other discount rates — none was supplied for this run, so no rate was solved for"
+      )
+    );
+  } else if (currentPrice === null) {
+    suppressing.push(
+      notComputed(
+        NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice,
+        "INCOMPLETE",
+        "missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day"
       )
     );
   } else if (scenarioOutputs.rateAtWhichBaseEqualsPrice === null) {
@@ -587,6 +606,23 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         NOT_COMPUTED_BINDING.priceLocationWithinRange,
         "INCOMPLETE",
         "missing REQUIRED input: a price for this run — none was available, so today's price has no position to report within the scenario range"
+      )
+    );
+  }
+  // CF-PRICE-DISPLAY-HONESTY-RECON-01 — §3.4's own AnalysisResult.price
+  // stays a value and a timestamp always (never nullable, per HARD BOUNDS);
+  // this is the state a presentation consumer binds to instead, so the
+  // "Current price" tile, Section A's price row, the price chart panel and
+  // the [C] price slot each show INCOMPLETE — never the flattened $0/blank
+  // timestamp — on exactly the run this same `currentPrice` signal already
+  // suppresses `priceLocationWithinRange` for, above. Not a second,
+  // differently-derived signal: the identical `currentPrice` read.
+  if (currentPrice === null) {
+    suppressing.push(
+      notComputed(
+        NOT_COMPUTED_BINDING.price,
+        "INCOMPLETE",
+        "missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day"
       )
     );
   }

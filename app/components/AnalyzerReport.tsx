@@ -292,7 +292,11 @@ function StateBlock({ figure }: { figure: SuppressedValue }) {
 // The state bound to an output the schema types as a bare Decimal
 // (lib/analyzer/notComputed.ts), in the same slot a suppressed Figure uses.
 // Where one is bound, it IS the output — the field behind it holds no figure.
-function BoundStateBlock({ bound }: { bound: BoundState }) {
+// Exported for PriceChartPanel.tsx (CF-PRICE-DISPLAY-HONESTY-RECON-01):
+// the hero's price panel shares this component's exact `.pricerow`/`.p`/
+// `.ts` markup for the same figure (result.price), so it reuses this literal
+// mechanism rather than a second copy of it.
+export function BoundStateBlock({ bound }: { bound: BoundState }) {
   return <StateBlock figure={{ suppressed: true, state: bound.state, cause: bound.cause }} />;
 }
 
@@ -1644,6 +1648,10 @@ export function EvidenceSections({ result }: { result: AnalysisResult }) {
 // and why" cross-reference (below) pointing at nothing.
 export function HeaderAndStatesSection({ result }: { result: AnalysisResult }) {
   const { states } = result;
+  // CF-PRICE-DISPLAY-HONESTY-RECON-01 — the same BoundStateBlock treatment
+  // priceLocationWithinRange already has below in this file, swapped in for
+  // the price figure on exactly this condition.
+  const priceState = boundState(states, NOT_COMPUTED_BINDING.price);
 
   return (
     <section id="A">
@@ -1657,8 +1665,14 @@ export function HeaderAndStatesSection({ result }: { result: AnalysisResult }) {
         <p className="tick">{result.ticker}</p>
       </div>
       <div className="pricerow">
-        <span className="p">${num(result.price.value)}</span>
-        <span className="ts">{result.price.timestamp}</span>
+        {priceState !== null ? (
+          <BoundStateBlock bound={priceState} />
+        ) : (
+          <>
+            <span className="p">${num(result.price.value)}</span>
+            <span className="ts">{result.price.timestamp}</span>
+          </>
+        )}
       </div>
       <p className="profileline">
         Profile: {PROFILE_LABELS[result.profile.confirmedOrOverridden]}

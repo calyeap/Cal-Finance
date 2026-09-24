@@ -352,3 +352,14 @@ output, for any company. No `INCOMPLETE` is removed. `docs/noprice-honesty-
 reconciliation.md` §4 is updated with a one-line pointer to this document,
 and its §5 stale test count is corrected to this document's own merged
 figure.
+
+**Update (CF-PRICE-DISPLAY-HONESTY-RECON-01, issue #306).** This document's
+own §2 fix left one adjacent read of `scenarioOutputs.ts` untouched:
+`rateAtWhichBaseEqualsPrice`, which still solved a supplied revaluation
+function against `currentPrice ?? new Decimal(0)` — the identical
+$0-flattening class this document closes above for `successAsPriceRequires`
+and `computeImpliedProbability`, just not named as CONTEXT there. That gap
+is now closed — see `docs/price-display-honesty-reconciliation.md` for the
+fix, its isolating probe (via `OKLO_FIXTURE`'s own real, if
+fixture-illustrative, `revalueBaseCaseAtRate`) and its per-company delta
+(latent for NVDA, MSFT and OKLO alike).

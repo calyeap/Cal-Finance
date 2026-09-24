@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Decimal from "decimal.js";
 import type { AnalysisResult, Profile, SuppressingState } from "@/lib/analyzer/types";
 import { ValuationStrip } from "./ValuationStrip";
-import { isBoundTo, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
+import { boundState, isBoundTo, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
 import { trustStatusLine } from "@/lib/analyzer/trustCopy";
 
 // IA-audit restoration (2026-09-05) — Quick Read's eight items are the
@@ -639,13 +639,19 @@ function applyInterpretedPageOne(items: QuickReadItem[], result: AnalysisResult)
 export function QuickRead({ result }: { result: AnalysisResult }) {
   const items = applyInterpretedPageOne(buildQuickRead(result), result);
   const profileLabel = PROFILE_LABELS[result.profile.confirmedOrOverridden];
+  // CF-PRICE-DISPLAY-HONESTY-RECON-01 — result.price.timestamp is "" on a
+  // priceless run (§3.4's own always-present sentinel); the clause is
+  // omitted rather than printed blank, the same "never a placeholder" rule
+  // ValuationStrip's own showLocation line already follows.
+  const priceState = boundState(result.states, NOT_COMPUTED_BINDING.price);
 
   return (
     <section id="quickread" aria-label="Quick read">
       <div className="sechead">
         <h2>Quick read</h2>
         <span className="k">
-          {result.companyName} · {profileLabel} · price as of {result.price.timestamp}
+          {result.companyName} · {profileLabel}
+          {priceState === null && ` · price as of ${result.price.timestamp}`}
         </span>
       </div>
       <hr />
