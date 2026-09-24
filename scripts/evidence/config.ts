@@ -6,13 +6,19 @@ export const DEFAULT_BASE_URL = "http://127.0.0.1:3000";
 
 /** Frozen artefacts, byte-exact. A missing file is a STOP, never a hash. */
 export const FROZEN_HASHES: Readonly<Record<string, string>> = {
-  // Re-derived for amendment M9-1 (spec §14.8, 22 September 2026) — the
-  // normal-path human requirement, on Calvin's ruling of 04:28:04Z. Previous
-  // value, as verified byte-exact before that edit:
-  // 6a9cf282ce3808d0ebdedb3af71ebd0b3dfdfea3697cdaf9a17bbbd0298caf61.
-  // No other entry in this table changes: M9-1 touches one frozen file.
+  // Re-derived for amendment CF-VERDICT-1062-APPLY-01 (spec §10.6.2, 24
+  // September 2026) — the ruled seven-step derivation (UNDERWRITABILITY →
+  // GROWTH LICENCE → VALUE → UNCERTAINTY / MARGIN OF SAFETY → VERDICT →
+  // FLIP TEST → REVERSE DCF) adopted as the amendment of record under
+  // CALVIN RULING — B (PR #275 comment 5809629191, 07:18:42Z), with ruling
+  // B's three named amendments applied. Previous value, as verified
+  // byte-exact before this edit (itself the M9-1 amendment, spec §14.8, 22
+  // September 2026):
+  // fdeaf233a32dc8b644b37bde6eba3ddd55d23d65fb81caa92460c31d773359a9.
+  // No other entry in this table changes: this amendment touches one
+  // frozen file.
   "calboard-stock-analyzer-v1-spec.md":
-    "fdeaf233a32dc8b644b37bde6eba3ddd55d23d65fb81caa92460c31d773359a9",
+    "ed9042ef953b80c9976c53cede3dc21d8cf02fca70f834a9e571b7b68c2a6e74",
   "calboard-stock-analyzer-v1-design.md":
     "7535c6b6551b0ebf27ba10417733e5780a1cdc4634f5a5b7e4b91f121425a774",
   "mock-screen1-entry.html":

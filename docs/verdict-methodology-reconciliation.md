@@ -870,7 +870,24 @@ substitution §6.5 already records as settled, applied consistently.
 
 ---
 
-## 10. Proposed §10.6.2 replacement text (ruling C — supersedes §3.3; not applied)
+## 10. §10.6.2 replacement text (ruling C) — applied as the amendment of record under CALVIN RULING — B
+
+**Applied.** Adopted as the amendment of record by `CALVIN RULING — B`
+([PR #275 comment 5809629191](https://github.com/calyeap/Cal-Finance/pull/275#issuecomment-5809629191),
+24 Sep 2026 07:18:42Z), with the three amendments that ruling names, applied
+to `docs/frozen/calboard-stock-analyzer-v1-spec.md` §10.6.2 by
+`CF-VERDICT-1062-APPLY-01`. The quoted block below is retained exactly as
+originally merged, for the historical record of the text ruling B ruled on;
+it does **not** reflect the three amendments — §10.6.2 in the frozen spec is
+the current, amended text and is authoritative. The three amendments,
+verbatim from ruling B: (1) Step 4's economic/forecast uncertainty is a
+separate input from Step 1's evidence confidence, never described as that
+confidence "read a second time"; (2) an unconstructable Step 7
+achieved-versus-required comparator suppresses or marks unavailable the
+Step 7 explanation and the related §10.6.4 action-clause content, and does
+not by itself force the Step 5/6 position to INCONCLUSIVE; (3)
+`achievedRevenueCagr` serves Step 7's explanatory comparator, not Step 2's
+growth licence.
 
 **Smallest-footprint statement.** The text below replaces §10.6.2 alone.
 It restates §10.6.3's three render conditions and §7.2 M5's RONIC ladder by
@@ -1182,7 +1199,12 @@ read as adopting one.
 
 1. **What is "economic / forecast uncertainty" for Step 4's margin of
    safety, and what fair-value-zone shape does it produce?** Newly opened
-   by ruling C's own "exact policy remains open." Options: a measure of the
+   by ruling C's own "exact policy remains open." **`CALVIN RULING — B`
+   (amendment 1) confirms this item's premise and does not resolve it:**
+   Step 4 is a separate input from Step 1's evidence / estimation
+   confidence, never the same object read a second time under a different
+   name — the framing this item's own options already assumed. Its exact
+   measurement and numeric policy remain open, exactly as below. Options: a measure of the
    dispersion across the bear/base/bull scenario range itself (reusing
    machinery already computed, but risking the same double-counting concern
    Finding 3 raised about reverse DCF, one layer down, since the range
@@ -1281,6 +1303,18 @@ read as adopting one.
    position. **For MSFT and OKLO today this choice does not change the
    outcome** — see §12 below; both are already INCONCLUSIVE upstream of
    Step 7 under either branch, so it is not resolved here.
+
+   **CLOSED — `CALVIN RULING — B` (amendment 2), 24 Sep 2026 07:18:42Z.**
+   The second option above is the answer: the REQUIRED-comparator gate
+   narrows to §10.6.4's action clause (and the Step 7 explanation) only. An
+   unconstructable comparator suppresses or marks unavailable the Step 7
+   explanation and the related §10.6.4 action-clause content that depend on
+   it; it does not, for that reason alone, force the Step 5/6 position to
+   INCONCLUSIVE. Applied to the frozen spec's §10.6.2 by
+   `CF-VERDICT-1062-APPLY-01`. Ruling B did not rule on §10.6.4's own text,
+   which still assumes the action clause always accompanies a rendered
+   position with both figures present — that residual wording gap is named,
+   not resolved, in §14's next action below.
 
 ---
 
@@ -1381,11 +1415,15 @@ which ruling C does not lift.
   inherits the same standing implementation gap this addendum does not
   resolve.
 - **§6.4 — `achievedRevenueCagr` remains unwired into `AnalysisResult`.**
-  **Still needed, unchanged.** Step 2 as proposed reads the achieved side
-  (this figure) against the required side (M7's grid via RONIC), so wiring
-  this figure into `AnalysisResult` remains exactly as necessary under the
-  ruled structure as it was under either KEEP or the superseded §3.3
-  AMEND candidate.
+  **Still needed, unchanged — description corrected under
+  `CALVIN RULING — B` (amendment 3).** This figure may still be required,
+  but for **Step 7's** achieved-versus-required explanatory comparator, not
+  for Step 2's growth licence: Step 2 is the going-forward /
+  incremental-return-on-new-capital-versus-cost-of-capital test and does
+  not read this figure. Wiring `achievedRevenueCagr` into `AnalysisResult`
+  remains exactly as necessary as before this correction — only the
+  function it serves is corrected here, not the wiring gap itself, which
+  stays carried, not fixed.
 - **`lib/analyzer/verdict.ts` and `lib/analyzer/policy.ts` re-verified
   byte-identical to `ed81500`** at this head — the same four unconditional
   `INCOMPLETE` branches (`verdict.ts:53-59,63-68,70-75,77-80`) and the same
