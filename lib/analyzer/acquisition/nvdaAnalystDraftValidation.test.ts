@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { readdirSync, readFileSync, statSync } from "node:fs";
+import { join, relative } from "node:path";
 import { getPool } from "../../db";
 import {
   recordAnalystBundle,
@@ -119,6 +121,43 @@ describe("CF-ANALYST-DRAFT-NVDA-01 — draft values validate against the store's
     await recordAnalystBundle(DRAFT_TICKER, nvdaDraftInput());
     expect(await hasRecordedAnalystBundle("NVDA")).toBe(false);
     expect(await recordedAnalystInputBundle("NVDA")).toBeNull();
+  });
+});
+
+const REPO_ROOT = join(__dirname, "..", "..", "..");
+const THIS_FILE = relative(REPO_ROOT, __filename).replace(/\.js$/, ".ts");
+const SCAN_ROOTS = ["lib", "app", "scripts", "migrations", ".github"];
+const DRAFT_REFERENCE = /nvda-step7-draft|analyst-drafts/;
+const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", ".next"]);
+
+function findDraftReferences(dir: string, results: string[]): void {
+  for (const entry of readdirSync(dir)) {
+    const fullPath = join(dir, entry);
+    if (SKIP_DIRS.has(entry)) continue;
+    const stat = statSync(fullPath);
+    if (stat.isDirectory()) {
+      findDraftReferences(fullPath, results);
+      continue;
+    }
+    let contents: string;
+    try {
+      contents = readFileSync(fullPath, "utf8");
+    } catch {
+      continue; // binary or unreadable file — cannot contain a source-level import
+    }
+    if (DRAFT_REFERENCE.test(contents)) {
+      results.push(relative(REPO_ROOT, fullPath));
+    }
+  }
+}
+
+describe("CF-ANALYST-DRAFT-NVDA-01 — the draft artefact is not imported by any runtime module (SCOPE item 6)", () => {
+  it("no file under lib/, app/, scripts/, migrations/ or .github/ (other than this test) references the draft artefact", () => {
+    const results: string[] = [];
+    for (const root of SCAN_ROOTS) {
+      findDraftReferences(join(REPO_ROOT, root), results);
+    }
+    expect(results.filter((path) => path !== THIS_FILE)).toEqual([]);
   });
 });
 
