@@ -3732,7 +3732,7 @@ h6 {
 @media (max-width: 1279px) {
   .cb-analyzer .az-hero {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: "verdict" "price" "scenarios";
+    grid-template-areas: "price" "verdict" "scenarios";
     gap: 12px;
     padding: 12px 0;
   }

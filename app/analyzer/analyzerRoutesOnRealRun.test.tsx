@@ -137,6 +137,16 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
       expect(container.querySelector("#J")).not.toBeNull();
     });
 
+    // Regression: Section A (and Quick Read) had no route anywhere in the
+    // unified shell — EvidenceSections' own "See Section A for what and
+    // why" cross-reference pointed at content no tab rendered.
+    it("the Evidence tab also renders Section A, which has no route of its own", async () => {
+      const runId = await analyze(ticker, companyName);
+      const { container } = await renderTab(runId, "evidence");
+
+      expect(container.querySelector("#A")).not.toBeNull();
+    });
+
     it("the legacy /report route redirects into the unified shell rather than rendering a second one", async () => {
       const runId = await analyze(ticker, companyName);
       await expect(LegacyReportRedirect({ params: Promise.resolve({ runId }) })).rejects.toThrow(
@@ -152,6 +162,7 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
         expect(container.textContent).toContain("Sources / Details");
         const hrefs = Array.from(container.querySelectorAll("a")).map((a) => a.getAttribute("href"));
         expect(hrefs).toContain(`/analyzer/${runId}/facts`);
+        expect(hrefs).toContain(`/analyzer/${runId}/profile`);
         cleanup();
       }
     });

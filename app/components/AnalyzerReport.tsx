@@ -1616,80 +1616,91 @@ export function EvidenceSections({ result }: { result: AnalysisResult }) {
   );
 }
 
-export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; aiLayer?: AiLayerReport }) {
+// Section A — extracted the same way BusinessSection/FinancialsSections/etc.
+// were (exact existing JSX, moved rather than rewritten), so it can also be
+// rendered on the Evidence tab: the unified route's tabbed shell otherwise
+// has no route for it, leaving EvidenceSections' own "See Section A for what
+// and why" cross-reference (below) pointing at nothing.
+export function HeaderAndStatesSection({ result }: { result: AnalysisResult }) {
   const { states } = result;
 
+  return (
+    <section id="A">
+      <div className="sechead">
+        <h2>A — Header and states</h2>
+        <span className="k">Before any number</span>
+      </div>
+      <hr />
+      <div className="head">
+        <h1>{result.companyName}</h1>
+        <p className="tick">{result.ticker}</p>
+      </div>
+      <div className="pricerow">
+        <span className="p">${num(result.price.value)}</span>
+        <span className="ts">{result.price.timestamp}</span>
+      </div>
+      <p className="profileline">
+        Profile: {PROFILE_LABELS[result.profile.confirmedOrOverridden]}
+        {result.profile.recommended !== result.profile.confirmedOrOverridden &&
+          ` (software recommended ${PROFILE_LABELS[result.profile.recommended]})`}
+      </p>
+
+      <div className="manifest">
+        <div>
+          <h3>Suppressed — no number is produced</h3>
+          {states.suppressing.length === 0 ? (
+            <p className="what">Nothing suppressed.</p>
+          ) : (
+            states.suppressing.map((s, i) => (
+              <div className="row" key={i}>
+                <div className="state">
+                  <span className="name">{s.state}</span>
+                  <span className="cause">{s.appliesTo}</span>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+        <div>
+          <h3>Qualified — the number stands, with its qualification</h3>
+          {states.qualifying.length === 0 ? (
+            <p className="what">Nothing qualified.</p>
+          ) : (
+            states.qualifying.map((q, i) => (
+              <div className="row" key={i}>
+                <div className="qual">{q.flag}</div>
+                <p className="what">{q.appliesTo}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+      {/* Placement judgment call (report-back, B7): the mock nests this
+          disclosure inside Section A's own interpretive "why it
+          matters" narrative, which does not exist in this build yet
+          (that prose requires Milestone 8's interpretation layer, per
+          this file's own top-of-file note). Its text is fully generic
+          policy configuration, not company-specific, so it is placed
+          here at the end of Section A rather than skipped — the
+          concept it explains (the fixed 8/10/12% rate grid) is read by
+          Section D's RONIC ladder and Section E's grid alike. */}
+      <Disclosure label="What is a discount rate?">
+        The rate used to convert future cash into today&apos;s money. A higher rate means future cash is worth
+        less today, so it produces a lower valuation and demands more growth to justify a given price. Calboard
+        runs every company at 8%, 10% and 12% from policy configuration — the rate is never chosen per company
+        and never chosen by the interpretation layer.
+      </Disclosure>
+    </section>
+  );
+}
+
+export function AnalyzerReport({ result, aiLayer }: { result: AnalysisResult; aiLayer?: AiLayerReport }) {
   return (
     <div className="layout">
       <main>
         <QuickRead result={result} />
 
-        <section id="A">
-          <div className="sechead">
-            <h2>A — Header and states</h2>
-            <span className="k">Before any number</span>
-          </div>
-          <hr />
-          <div className="head">
-            <h1>{result.companyName}</h1>
-            <p className="tick">{result.ticker}</p>
-          </div>
-          <div className="pricerow">
-            <span className="p">${num(result.price.value)}</span>
-            <span className="ts">{result.price.timestamp}</span>
-          </div>
-          <p className="profileline">
-            Profile: {PROFILE_LABELS[result.profile.confirmedOrOverridden]}
-            {result.profile.recommended !== result.profile.confirmedOrOverridden &&
-              ` (software recommended ${PROFILE_LABELS[result.profile.recommended]})`}
-          </p>
-
-          <div className="manifest">
-            <div>
-              <h3>Suppressed — no number is produced</h3>
-              {states.suppressing.length === 0 ? (
-                <p className="what">Nothing suppressed.</p>
-              ) : (
-                states.suppressing.map((s, i) => (
-                  <div className="row" key={i}>
-                    <div className="state">
-                      <span className="name">{s.state}</span>
-                      <span className="cause">{s.appliesTo}</span>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-            <div>
-              <h3>Qualified — the number stands, with its qualification</h3>
-              {states.qualifying.length === 0 ? (
-                <p className="what">Nothing qualified.</p>
-              ) : (
-                states.qualifying.map((q, i) => (
-                  <div className="row" key={i}>
-                    <div className="qual">{q.flag}</div>
-                    <p className="what">{q.appliesTo}</p>
-                  </div>
-                ))
-              )}
-            </div>
-          </div>
-          {/* Placement judgment call (report-back, B7): the mock nests this
-              disclosure inside Section A's own interpretive "why it
-              matters" narrative, which does not exist in this build yet
-              (that prose requires Milestone 8's interpretation layer, per
-              this file's own top-of-file note). Its text is fully generic
-              policy configuration, not company-specific, so it is placed
-              here at the end of Section A rather than skipped — the
-              concept it explains (the fixed 8/10/12% rate grid) is read by
-              Section D's RONIC ladder and Section E's grid alike. */}
-          <Disclosure label="What is a discount rate?">
-            The rate used to convert future cash into today&apos;s money. A higher rate means future cash is worth
-            less today, so it produces a lower valuation and demands more growth to justify a given price. Calboard
-            runs every company at 8%, 10% and 12% from policy configuration — the rate is never chosen per company
-            and never chosen by the interpretation layer.
-          </Disclosure>
-        </section>
+        <HeaderAndStatesSection result={result} />
 
         <BusinessSection result={result} />
         <FinancialsSections result={result} />

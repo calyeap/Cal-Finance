@@ -15,7 +15,9 @@ import {
   RisksThesisSections,
   MarketContextSection,
   EvidenceSections,
+  HeaderAndStatesSection,
 } from "@/app/components/AnalyzerReport";
+import { QuickRead } from "@/app/components/QuickRead";
 import { SourcesAndDetails } from "@/app/components/SourcesAndDetails";
 import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
@@ -51,7 +53,18 @@ function TabBody({ tab, result, aiLayer }: { tab: AnalyzerTabSlug; result: Analy
     case "market":
       return <MarketContextSection result={result} />;
     case "evidence":
-      return <EvidenceSections result={result} />;
+      // Section A and Quick Read have no other route in the unified shell
+      // (AnalyzerReport, the only other renderer of either, now backs only
+      // the snapshot page) — rendered here so EvidenceSections' own "See
+      // Section A for what and why" cross-reference points at content that
+      // actually exists on this tab.
+      return (
+        <>
+          <QuickRead result={result} />
+          <HeaderAndStatesSection result={result} />
+          <EvidenceSections result={result} />
+        </>
+      );
   }
 }
 

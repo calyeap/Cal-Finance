@@ -1,4 +1,5 @@
 import type { AnalysisResult } from "@/lib/analyzer/types";
+import { formatUsd } from "@/lib/formatUsd";
 import { FigureValue } from "./AnalyzerReport";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — the wide-desktop persistent right rail
@@ -17,8 +18,8 @@ import { FigureValue } from "./AnalyzerReport";
 function pct(v: import("decimal.js").default, dp = 1): string {
   return `${v.mul(100).toFixed(dp)}%`;
 }
-function usd0(v: import("decimal.js").default): string {
-  return `$${v.toFixed(0)}`;
+function usd(v: import("decimal.js").default): string {
+  return `$${formatUsd(v)}`;
 }
 
 export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
@@ -35,7 +36,7 @@ export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
               {diagnostics.enterpriseValue.suppressed ? (
                 <span className="name">{diagnostics.enterpriseValue.state}</span>
               ) : (
-                usd0(diagnostics.enterpriseValue.value.marketCap)
+                usd(diagnostics.enterpriseValue.value.marketCap)
               )}
             </dd>
           </div>
@@ -57,7 +58,7 @@ export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
               {diagnostics.marginHistory.suppressed ? (
                 <span className="name">{diagnostics.marginHistory.state}</span>
               ) : (
-                `${usd0(diagnostics.marginHistory.value.fiftyTwoWeekRange[0])} – ${usd0(diagnostics.marginHistory.value.fiftyTwoWeekRange[1])}`
+                `${usd(diagnostics.marginHistory.value.fiftyTwoWeekRange[0])} – ${usd(diagnostics.marginHistory.value.fiftyTwoWeekRange[1])}`
               )}
             </dd>
           </div>

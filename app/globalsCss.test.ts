@@ -423,6 +423,28 @@ describe("globals.css — M9 accessibility pass (M9-ACCESSIBILITY-01, runway ite
   });
 });
 
+describe("globals.css — Analyzer V2 compact report header order (design authority doc, 'Compact report header')", () => {
+  // Regression guard for the CALBOARD-BUILD correction on PR #266: below
+  // wide desktop the hero's grid-template-areas reordered the row sequence
+  // to identity -> verdict -> price, contradicting both authorities' fixed
+  // "company identity -> current price -> verdict + uncertainty -> tab
+  // rail" sequence. jsdom has no layout engine, so — same technique as the
+  // rest of this file — the CSS source is asserted directly rather than a
+  // rendered layout.
+  it("wide-desktop hero keeps verdict/price side-by-side, scenarios full-width below", () => {
+    expect(ruleBody(".cb-analyzer .az-hero")).toMatch(
+      /grid-template-areas:\s*"verdict price"\s*"scenarios scenarios"\s*;/
+    );
+  });
+
+  it("the compact header (<=1279px) stacks price before verdict, per the required orientation sequence", () => {
+    const compactShell = collectMediaBodies("@media (max-width: 1279px)");
+    expect(ruleBodyIn(compactShell, ".cb-analyzer .az-hero")).toMatch(
+      /grid-template-areas:\s*"price"\s*"verdict"\s*"scenarios"\s*;/
+    );
+  });
+});
+
 describe("globals.css — .cb-dash regressions", () => {
   it(".toggle sizes to its own content (inline-flex), not the full section width", () => {
     // display: flex on a plain block <div> still stretches to 100% of its

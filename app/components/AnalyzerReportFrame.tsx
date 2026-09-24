@@ -133,17 +133,13 @@ export function AnalyzerReportFrame({
           </div>
         )}
 
-        <form action={createDeepSnapshotAction} className="az-save">
-          <input type="hidden" name="runId" value={runId} />
-          <button className="act" type="submit">
-            Save this version
-          </button>
-        </form>
-
         {/* Seven-tab rail — same order, placement and selected-state
             treatment on every screen this run has (design authority doc,
             "One shell, seven tabs"). Plain links, not client tab state, so
-            each tab is its own bookmarkable/shareable URL. */}
+            each tab is its own bookmarkable/shareable URL. Sits directly
+            below verdict + uncertainty, per the compact header's required
+            "…verdict + uncertainty → seven-tab rail" sequence — nothing may
+            interrupt that clause. */}
         <nav className="az-tabs" aria-label="Report sections">
           {ANALYZER_TABS.map((tab) => (
             <Link
@@ -156,6 +152,13 @@ export function AnalyzerReportFrame({
             </Link>
           ))}
         </nav>
+
+        <form action={createDeepSnapshotAction} className="az-save">
+          <input type="hidden" name="runId" value={runId} />
+          <button className="act" type="submit">
+            Save this version
+          </button>
+        </form>
 
         <div className="az-tabbody">{children}</div>
       </div>
