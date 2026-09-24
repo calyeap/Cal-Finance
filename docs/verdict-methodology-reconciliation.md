@@ -884,13 +884,23 @@ amendment to coexist with this text.
 this replacement does not restate in the seven steps, stated here so
 nothing is dropped by silence.** The heading, the two-input table, fixed
 rule 1 and fixed rule 2 are restructured into the seven steps and the
-paragraph replacing fixed rule 2 below. Six further paragraphs — the
-achieved-versus-required comparator rules (spec `:1077`, `:1079`, `:1081`,
-`:1083`, `:1085`, `:1087`) — are orthogonal to the two-vote structure
-ruling C drops: they govern the achieved-history comparator Step 7 and
-§10.6.4's action clause still read, not the dropped second vote, so they
-are carried forward **verbatim** inside the quoted block below rather than
-silently lost to a whole-subsection replacement. Spec `:1089`'s
+paragraph replacing fixed rule 2 below. Four of the six achieved-versus-
+required comparator paragraphs — spec `:1079`, `:1081`, `:1083`, `:1087`
+(the horizon and calibration rules) — are orthogonal to the two-vote
+structure ruling C drops: they govern the achieved-history comparator
+Step 7 reads and cast no vote of their own, so they are carried forward
+**verbatim** inside the quoted block below rather than silently lost to a
+whole-subsection replacement. The other two — spec `:1077` and `:1085` —
+are carried forward verbatim as well, but they are not orthogonal in the
+same sense: their consequence clauses name the *position* itself, not
+only the comparator, by way of a term ("the gap" / "the growth input")
+that only the two-input table this replacement removes used to define.
+The quoted block below binds each to Step 7's comparator with a bracketed
+gloss so neither sentence refers to a deleted antecedent, and §11 item 8
+below opens, without resolving, whether that REQUIRED-comparator gate
+still reaches the position under the ruled structure or narrows to
+§10.6.4's action clause only — ruling C is silent on this interaction, so
+it is named rather than assumed either way. Spec `:1089`'s
 bands-are-policy-constants/PROVISIONAL recording requirement is carried
 the same way, with its now-dead "and the disagreement rule" clause struck
 — that rule does not survive Step 6's flip test above, but the
@@ -987,8 +997,8 @@ call" is the heading this replacement keeps.
 > implied-growth figure it is read against. A ten-year implied CAGR is
 > compared to a ten-year achieved CAGR of the same series, on the same
 > accounting basis, or it is not compared at all. Where no such fact
-> exists, the gap is **INCOMPLETE**, and the position and its action
-> clause do not render.
+> exists, the gap [the achieved-versus-required comparator of Step 7] is
+> **INCOMPLETE**, and the position and its action clause do not render.
 >
 > **Two horizons are valid, and the horizon travels with the result**
 > (CalFinance Methodology v2, ruled 8 September 2026). Ten years is
@@ -1008,8 +1018,9 @@ call" is the heading this replacement keeps.
 > **No cross-series stitching.** §3.7's refusal stands, and a five-year
 > window that spans a tag change is not a valid five-year comparator.
 >
-> **Where neither horizon can be constructed, the growth input is
-> UNAVAILABLE and the position is INCONCLUSIVE.** It does not degrade to a
+> **Where neither horizon can be constructed, the growth input [the
+> achieved-versus-required comparator of Step 7] is UNAVAILABLE and the
+> position is INCONCLUSIVE.** It does not degrade to a
 > weaker reading, and it does not fall back to FAIR — FAIR is a positive
 > claim, not the absence of one. [Unchanged from current text; consistent
 > with Step 1/Step 6 above, neither of which falls back to FAIR either.]
@@ -1249,6 +1260,28 @@ read as adopting one.
    §10.6.2's own text on this point, carried forward **verbatim** into the
    quoted replacement at §10 above.
 
+8. **Does the REQUIRED-comparator gate (spec `:1077`, `:1085`, carried
+   forward into Step 7's paragraphs at §10 above) still reach the position
+   itself, or does it narrow to §10.6.4's action clause only, now that no
+   step between 2 and 6 reads the comparator?** Newly opened by carrying
+   these two paragraphs forward under the ruled structure: their
+   consequence clauses ("the position and its action clause do not
+   render"; "the position is INCONCLUSIVE") were written for the two-vote
+   structure, where the comparator sat inside the vote itself; Step 7
+   states the same comparator "cast[s] no independent vote at Step 5, Step
+   6, or anywhere else in this derivation," which is in tension with a
+   clause that still routes the *position*. Options: keep the
+   REQUIRED-comparator gate reaching the position, as a Step 1
+   underwritability input "this derivation depends on" (consistent with
+   Step 1's own language, but re-admits an explanation-only check as
+   position-determining — the shape #274 says reverse DCF must not have);
+   or narrow its consequence to §10.6.4's action clause only, so a missing
+   or unconstructable comparator suppresses the reverse-DCF explanation
+   and action clause without touching Step 5/6's CHEAP/FAIR/EXPENSIVE
+   position. **For MSFT and OKLO today this choice does not change the
+   outcome** — see §12 below; both are already INCONCLUSIVE upstream of
+   Step 7 under either branch, so it is not resolved here.
+
 ---
 
 ## 12. The minimum evidence required to set them
@@ -1407,7 +1440,10 @@ stopping; gave the close/change/open disposition of each of §4's seven
 house-policy items above and re-derived the surviving and newly-opened
 list under the ruled structure, including the two items ruling C itself
 newly opens (the margin-of-safety input, and what makes the growth licence
-UNKNOWN — including the RONIC-NOT-MEANINGFUL boundary case); restated the
+UNKNOWN — including the RONIC-NOT-MEANINGFUL boundary case) and the one
+item newly opened by carrying two comparator paragraphs forward verbatim
+(whether the REQUIRED-comparator gate still reaches the position or
+narrows to §10.6.4's action clause only); restated the
 minimum evidence as the same composition requirement, named against the
 ruled structure's own steps, and stated explicitly that MSFT and OKLO
 produce the same outcome today as they did under the superseded §3.3
