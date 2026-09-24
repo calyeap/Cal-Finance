@@ -157,6 +157,13 @@ const THIS_FILE = relative(REPO_ROOT, __filename).replace(/\.js$/, ".ts");
 const SCAN_ROOTS = ["lib", "app", "scripts", "migrations", ".github"];
 const DRAFT_REFERENCE = /nvda-step7-draft|analyst-drafts/;
 const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", ".next"]);
+// CF-NVDA-RUN-OBSERVE-01 (issue #296) transcribes the now-approved draft
+// byte-faithful into the recorded store and cites the draft's own path in
+// its provenance comment, exactly as this test's own docstring above does —
+// a prose citation, never an import of the artefact itself (it hand-copies
+// the field values as string literals). Allowed here for the same reason
+// THIS_FILE is.
+const ALLOWED_DRAFT_REFERENCES = new Set([THIS_FILE, "lib/analyzer/nvdaRealRunObservation.test.ts"]);
 
 function findDraftReferences(dir: string, results: string[]): void {
   for (const entry of readdirSync(dir)) {
@@ -180,12 +187,12 @@ function findDraftReferences(dir: string, results: string[]): void {
 }
 
 describe("CF-ANALYST-DRAFT-NVDA-01 — the draft artefact is not imported by any runtime module (SCOPE item 6)", () => {
-  it("no file under lib/, app/, scripts/, migrations/ or .github/ (other than this test) references the draft artefact", () => {
+  it("no file under lib/, app/, scripts/, migrations/ or .github/ (other than the allowed provenance citations) references the draft artefact", () => {
     const results: string[] = [];
     for (const root of SCAN_ROOTS) {
       findDraftReferences(join(REPO_ROOT, root), results);
     }
-    expect(results.filter((path) => path !== THIS_FILE)).toEqual([]);
+    expect(results.filter((path) => !ALLOWED_DRAFT_REFERENCES.has(path))).toEqual([]);
   });
 });
 
