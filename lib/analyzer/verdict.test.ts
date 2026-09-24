@@ -112,6 +112,37 @@ describe("deriveVerdict", () => {
     expect(verdict.status).toBe("INCOMPLETE");
   });
 
+  it("is INCOMPLETE, naming PROFILE NOT CONFIRMED as the cause, when that flag is active on an otherwise-usable range — §10.6.3's third condition, checked explicitly rather than reached only via the comparator-unavailable fallback", () => {
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+    const profileNotConfirmed: AnalysisResult = withRange(result, baseRange(), new Decimal(265));
+    const withFlag: AnalysisResult = {
+      ...profileNotConfirmed,
+      trust: {
+        status: "PARTIAL",
+        determinedBy: [{ kind: "qualifying flag", detail: "PROFILE NOT CONFIRMED on the valuation path" }],
+      },
+    };
+
+    const verdict = deriveVerdict(withFlag);
+
+    expect(verdict.status).toBe("INCOMPLETE");
+    expect(verdict.reason).toContain("PROFILE NOT CONFIRMED");
+    expect(verdict.reason).not.toContain("comparator");
+  });
+
+  it("does not raise PROFILE NOT CONFIRMED for an unrelated qualifying flag — this branch fails if the check ever removed", () => {
+    // Regression guard for the branch itself: an MSFT-style qualifying flag
+    // (e.g. MARGIN AT HISTORICAL HIGH) must not be mistaken for PROFILE NOT
+    // CONFIRMED, and removing the new branch would fall through to the
+    // comparator-unavailable reason instead of the profile-specific one.
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+    const verdict = deriveVerdict(withRange(result, baseRange(), new Decimal(265)));
+
+    expect(verdict.status).toBe("INCOMPLETE");
+    expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
+    expect(verdict.reason).toContain("comparator");
+  });
+
   it("is INCOMPLETE for the pre-revenue distribution shape, honestly rather than reusing the range rule", () => {
     const result = assembleAnalysisResult(OKLO_FIXTURE);
     expect(result.fairValueRange.kind).toBe("pre-revenue-distribution");

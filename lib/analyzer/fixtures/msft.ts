@@ -290,6 +290,20 @@ export const MSFT_FIXTURE: CompanyFixture = {
     projectDebtCost: null,
   },
 
+  // §10.6.2/§13 (CF-VERDICT-NONPOLICY-GAPS-01) — honestly blocked, not
+  // computed. This fixture is Phase 1's synthetic reconstruction of the
+  // mock's own disclosed OUTPUTS (see the header note above); it carries no
+  // multi-year single-tag annual revenue series — the RAW SOURCE evidence
+  // achievedRevenueCagr requires — because Phase 2 (SEC acquisition) does
+  // not exist for this fixture. Real acquired runs compute this in
+  // companyInputs.ts, from the filer's own filings.
+  achievedRevenueCagr: {
+    value: null,
+    blockedBy: [
+      "no single-tag annual revenue series - this fixture is a synthetic reconstruction of the mock's disclosed outputs and carries no multi-year filing history to compute a CAGR from",
+    ],
+  },
+
   preRevenue: null,
 };
 

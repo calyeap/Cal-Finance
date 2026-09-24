@@ -1,4 +1,5 @@
 import type { AnalysisResult } from "./types";
+import { PROFILE_NOT_CONFIRMED_DETAIL } from "./trust";
 
 // ---------------------------------------------------------------------------
 // CF-V2-PROOF-01's verdict boundary — bounded correction on PR #140 per
@@ -71,6 +72,25 @@ export function deriveVerdict(result: AnalysisResult): VerdictResult {
     return {
       status: "INCOMPLETE",
       reason: "The pre-revenue valuation model does not yet define a BUY / HOLD / SELL boundary.",
+    };
+  }
+
+  // §10.6.3's third render condition, checked explicitly rather than being
+  // reached only incidentally through the COMPARATOR_NOT_YET_AVAILABLE
+  // fallback below. AnalysisResult carries no dedicated PROFILE NOT CONFIRMED
+  // field of its own (§6.3's *Cannot judge* input lives on TrustInput, one
+  // level upstream of this function) — trust.ts's own qualifying-flag entry,
+  // written with this exact detail string whenever profileHumanConfirmed is
+  // false, is the state this function reads instead.
+  const profileNotConfirmed = result.trust.determinedBy.some(
+    (d) => d.kind === "qualifying flag" && d.detail === PROFILE_NOT_CONFIRMED_DETAIL
+  );
+  if (profileNotConfirmed) {
+    return {
+      status: "INCOMPLETE",
+      reason:
+        "Decision-critical analysis is incomplete — PROFILE NOT CONFIRMED is active on the valuation path " +
+        "(spec §10.6.3): the position does not render until a human confirms the profile.",
     };
   }
 

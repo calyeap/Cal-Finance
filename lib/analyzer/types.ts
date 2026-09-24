@@ -894,6 +894,81 @@ export interface TrustResult {
 }
 
 // ---------------------------------------------------------------------------
+// §10.6.2 — the achieved-history comparator fact, Step 7's explanatory input
+// (CF-VERDICT-NONPOLICY-GAPS-01). Defined here, the schema layer, because
+// AnalysisResult carries a RawInput<AchievedGrowth> directly;
+// lib/analyzer/calibration/inputs.ts (`achievedRevenueCagr`, M8-c) computes
+// against these same shapes rather than defining its own.
+// ---------------------------------------------------------------------------
+
+/** One input's outcome: a raw value, or the reasons there is none. */
+export interface RawInput<T> {
+  value: T | null;
+  /** Ordered, most upstream first. Empty exactly when `value` is non-null. */
+  blockedBy: string[];
+}
+
+/**
+ * The window a comparator figure was measured over, travelling WITH the figure.
+ *
+ * §10.6.2 asks for a comparator on the same series and the same horizon as the
+ * implied-growth figure. It has a third requirement the wording leaves
+ * implicit and defect D made explicit: the window must be RECENT. NVDA came
+ * back at a 31.25% five-year CAGR measured FY2017→FY2022, four years before
+ * the price it would have been read against, and nothing in the output said
+ * so — not INCOMPLETE, not suppressed, not flagged, just a plausible number
+ * answering a different question. §3 exists for exactly that.
+ *
+ * THIS RECORD IS THE MECHANISM THE HORIZON RULING EXTENDS, not one it
+ * replaces. CalFinance ruled on 8 September that a five-year same-series
+ * comparator is permitted where a ten-year one cannot be constructed, that the
+ * two are related but NOT semantically identical, and that the horizon must
+ * travel with the result. `horizonYears` already sits here beside the window
+ * for that reason: when §10.6.2's one-horizon rule is amended, the amendment
+ * adds a horizon CHOICE to a record that already carries and reports the
+ * horizon, rather than needing a second travelling record beside this one.
+ * No five-year fallback is implemented here — the amendment has not run.
+ */
+export interface ComparatorWindow {
+  /** The single tag every observation came from. Never mixed (§3.7). */
+  tag: string;
+  horizonYears: number;
+  fromFiscalYear: number;
+  toFiscalYear: number;
+  /** The latest fiscal year the FILER has reported, under any tag. */
+  currentFiscalYear: number;
+  /** `currentFiscalYear − toFiscalYear`. Zero exactly when the window is current. */
+  yearsStale: number;
+}
+
+/**
+ * The achieved side. §10.6.2's comparator rule is strict and is enforced in
+ * `achievedRevenueCagr` rather than described: the achieved figure must be on
+ * the SAME SERIES and the SAME HORIZON as the implied-growth figure it is
+ * read against, on one accounting basis (§3.7).
+ */
+export interface AchievedGrowth {
+  /** The single tag every observation came from. Never mixed (§3.7). */
+  tag: string;
+  horizonYears: number;
+  fromValue: Decimal;
+  toValue: Decimal;
+  cagr: Decimal;
+  /** Never absent. The figure does not travel without the window it covers. */
+  window: ComparatorWindow;
+  /**
+   * The sentence any surface showing `cagr` must show beside it. Non-null
+   * EXACTLY when `window.yearsStale > 0`.
+   *
+   * A stale window is not always a refusal: §3.7 permits a shortened window
+   * where the standard changed inside it, "and record which was done, because
+   * the two give different answers". This string is that record. What §3.7
+   * does not permit is the window going unsaid.
+   */
+  staleWindowDisclosure: string | null;
+}
+
+// ---------------------------------------------------------------------------
 // Full Analysis's Business and Market Context sections. M9-ITEM5-CONTENT-01,
 // implementing Calvin's 21 Sep 2026 10:39:55Z ruling (issue #195, Option B).
 // ---------------------------------------------------------------------------
@@ -955,6 +1030,13 @@ export interface AnalysisResult {
   // object already carries — never measured separately, and never worked out
   // by the renderer (§10.0.2 rule 3).
   trust: TrustResult;
+  // §10.6.2/§13 (CF-VERDICT-NONPOLICY-GAPS-01) — the achieved-history
+  // comparator fact Step 7's explanatory action-clause text reads (§10.6.4).
+  // Serves Step 7's explanation only, never Step 2's growth licence (§13,
+  // corrected under the 04:52:41Z ruling's amendment 3). Always present as a
+  // real RawInput: a value, or the stated reason there is none — never a
+  // silent gap and never fabricated.
+  achievedRevenueCagr: RawInput<AchievedGrowth>;
   // Populated only for the pre-revenue profile.
   preRevenue: PreRevenueModule | null;
   // Populated only after the independent blind-challenger call completes

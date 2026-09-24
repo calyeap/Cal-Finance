@@ -388,6 +388,50 @@ describe("assembleAnalysisResult — OKLO fixture", () => {
 });
 
 // ---------------------------------------------------------------------------
+// CF-VERDICT-NONPOLICY-GAPS-01 SCOPE 2 — achievedRevenueCagr is carried onto
+// AnalysisResult unchanged from the fixture (real acquisition, not assembly
+// itself, computes it — see companyInputs.ts and acquiredRun.test.ts for the
+// real-run value/blocked coverage). These tests are for the pass-through
+// wiring alone: assembleAnalysisResult must neither invent a value nor drop
+// one, in either direction.
+// ---------------------------------------------------------------------------
+
+describe("assembleAnalysisResult — achievedRevenueCagr pass-through", () => {
+  it("carries the fixture's honest blocked reason through for MSFT and OKLO — neither hand-authored fixture has a multi-year series to compute one from", () => {
+    for (const fixture of [MSFT_FIXTURE, OKLO_FIXTURE]) {
+      const result = assembleAnalysisResult(fixture);
+      expect(result.achievedRevenueCagr).toBe(fixture.achievedRevenueCagr);
+      expect(result.achievedRevenueCagr.value).toBeNull();
+      expect(result.achievedRevenueCagr.blockedBy.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("carries a real value through unchanged, never re-deriving or discarding it", () => {
+    const achievedRevenueCagr = {
+      value: {
+        tag: "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
+        horizonYears: 10,
+        fromValue: new Decimal("91154000000"),
+        toValue: new Decimal("331839000000"),
+        cagr: new Decimal("0.1379290104313901146"),
+        window: {
+          tag: "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
+          horizonYears: 10,
+          fromFiscalYear: 2016,
+          toFiscalYear: 2026,
+          currentFiscalYear: 2026,
+          yearsStale: 0,
+        },
+        staleWindowDisclosure: null,
+      },
+      blockedBy: [],
+    };
+    const result = assembleAnalysisResult({ ...MSFT_FIXTURE, achievedRevenueCagr });
+    expect(result.achievedRevenueCagr).toBe(achievedRevenueCagr);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CB-H3-IMPLEMENT-01 — CalFinance Methodology v2's acquired-run cash basis
 // and success-weight date-consistency ruling. Synthetic variants of the
 // OKLO fixture, isolating each acceptance case at the assembly layer —

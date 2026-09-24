@@ -2,7 +2,7 @@ import Decimal from "decimal.js";
 import { annualSeries, latestAnnualFiscalYear, type AnnualSeries } from "../acquisition/history";
 import { TAG_MAP } from "../acquisition/tagMap";
 import type { CompanyFactsDocument } from "../acquisition/secClient";
-import type { ReverseDcfCell } from "../types";
+import type { AchievedGrowth, ComparatorWindow, RawInput, ReverseDcfCell } from "../types";
 
 // ---------------------------------------------------------------------------
 // M8-c — the two deterministic inputs behind the valuation position, computed
@@ -26,13 +26,6 @@ import type { ReverseDcfCell } from "../types";
 // in the set is worth less than an honest gap, because the gap can be fixed
 // and a fabricated observation silently cannot.
 // ---------------------------------------------------------------------------
-
-/** One input's outcome: a raw value, or the reasons there is none. */
-export interface RawInput<T> {
-  value: T | null;
-  /** Ordered, most upstream first. Empty exactly when `value` is non-null. */
-  blockedBy: string[];
-}
 
 function blocked<T>(...reasons: string[]): RawInput<T> {
   return { value: null, blockedBy: reasons };
@@ -88,39 +81,6 @@ export function priceLocationWithinRange(input: PriceLocationInputs): RawInput<D
 // --- Input B — the required-versus-achieved growth gap ---------------------
 
 /**
- * The window a comparator figure was measured over, travelling WITH the figure.
- *
- * §10.6.2 asks for a comparator on the same series and the same horizon as the
- * implied-growth figure. It has a third requirement the wording leaves
- * implicit and defect D made explicit: the window must be RECENT. NVDA came
- * back at a 31.25% five-year CAGR measured FY2017→FY2022, four years before
- * the price it would have been read against, and nothing in the output said
- * so — not INCOMPLETE, not suppressed, not flagged, just a plausible number
- * answering a different question. §3 exists for exactly that.
- *
- * THIS RECORD IS THE MECHANISM THE HORIZON RULING EXTENDS, not one it
- * replaces. CalFinance ruled on 8 September that a five-year same-series
- * comparator is permitted where a ten-year one cannot be constructed, that the
- * two are related but NOT semantically identical, and that the horizon must
- * travel with the result. `horizonYears` already sits here beside the window
- * for that reason: when §10.6.2's one-horizon rule is amended, the amendment
- * adds a horizon CHOICE to a record that already carries and reports the
- * horizon, rather than needing a second travelling record beside this one.
- * No five-year fallback is implemented here — the amendment has not run.
- */
-export interface ComparatorWindow {
-  /** The single tag every observation came from. Never mixed (§3.7). */
-  tag: string;
-  horizonYears: number;
-  fromFiscalYear: number;
-  toFiscalYear: number;
-  /** The latest fiscal year the FILER has reported, under any tag. */
-  currentFiscalYear: number;
-  /** `currentFiscalYear − toFiscalYear`. Zero exactly when the window is current. */
-  yearsStale: number;
-}
-
-/**
  * How far this filer has actually reported, and whether the mapping already
  * holds a live series the chosen one was picked over.
  *
@@ -137,34 +97,6 @@ export interface WindowRecency {
    * question about the mapping, not a change to it.
    */
   reachedBy: { tag: string; throughFiscalYear: number; observations: number } | null;
-}
-
-/**
- * The achieved side. §10.6.2's comparator rule is strict and is enforced here
- * rather than described: the achieved figure must be on the SAME SERIES and
- * the SAME HORIZON as the implied-growth figure it is read against, on one
- * accounting basis (§3.7). `annualSeries` already guarantees the single tag;
- * this function enforces the horizon and refuses to shorten it.
- */
-export interface AchievedGrowth {
-  /** The single tag every observation came from. Never mixed (§3.7). */
-  tag: string;
-  horizonYears: number;
-  fromValue: Decimal;
-  toValue: Decimal;
-  cagr: Decimal;
-  /** Never absent. The figure does not travel without the window it covers. */
-  window: ComparatorWindow;
-  /**
-   * The sentence any surface showing `cagr` must show beside it. Non-null
-   * EXACTLY when `window.yearsStale > 0`.
-   *
-   * A stale window is not always a refusal: §3.7 permits a shortened window
-   * where the standard changed inside it, "and record which was done, because
-   * the two give different answers". This string is that record. What §3.7
-   * does not permit is the window going unsaid.
-   */
-  staleWindowDisclosure: string | null;
 }
 
 /**

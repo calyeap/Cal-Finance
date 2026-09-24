@@ -707,6 +707,16 @@ CONFIRMED, so whichever future outcome implements either KEEP or AMEND
 inherits the same standing implementation gap this document does not
 resolve. Named here so that outcome does not discover it cold.
 
+**[Delivered by `CF-VERDICT-NONPOLICY-GAPS-01`, no longer true at the current
+head — see §13.]** `deriveVerdict` now checks the PROFILE NOT CONFIRMED
+condition explicitly (reading `trust.determinedBy`, the state
+`AnalysisResult` already carries) and names it as the cause when active,
+rather than reaching `INCOMPLETE` only incidentally through a different
+branch. The §3 full seven-step structure this section otherwise discusses
+remains unimplemented — only the standing §10.6.3 branch gap this bullet
+named is closed, and MSFT and OKLO both still read `INCOMPLETE` (§13, HARD
+BOUNDS 2).
+
 ### 6.4 `achievedRevenueCagr` remains unwired into `AnalysisResult`
 
 Restated from `docs/verdict-synthesis-research.md` §6 (gap table): confirmed
@@ -717,6 +727,15 @@ both the achieved side (this function) and the required side (M7's grid via
 RONIC), so wiring this figure into `AnalysisResult` remains exactly as
 necessary under AMEND as it was under KEEP. This is a non-policy engineering
 gap, not a methodology question, and is not touched by this document.
+
+**[Delivered by `CF-VERDICT-NONPOLICY-GAPS-01`, no longer true at the current
+head — see §13.]** `lib/analyzer/assemble.ts`, `lib/analyzer/types.ts` and
+`lib/analyzer/acquisition/companyInputs.ts` now reference `achievedRevenueCagr`
+directly: `AnalysisResult.achievedRevenueCagr` carries the
+`RawInput<AchievedGrowth>` outcome, computed from the acquired filer's own
+filings on a real run. The §3 full seven-step structure this section
+otherwise discusses remains unimplemented — only the non-policy wiring gap
+this bullet named is closed.
 
 ### 6.5 The `CHEAP`/`FAIR`/`EXPENSIVE` ↔ `BUY`/`HOLD`/`SELL` mapping is settled and not reopened
 
@@ -1410,34 +1429,60 @@ from §5's answer.**
 ## 13. Carried forward, still unresolved
 
 Both non-policy gaps §6 above named are re-checked against the ruled
-structure, per issue #274 SCOPE 4. **Neither is fixed here** — both remain
-frozen under the 24 Sep 2026 04:52:41Z ruling ([#269 comment 5807914821](https://github.com/calyeap/Cal-Finance/issues/269#issuecomment-5807914821)),
-which ruling C does not lift.
+structure, per issue #274 SCOPE 4. **Neither is fixed by this addendum
+(§§9–14)** — both remained frozen under the 24 Sep 2026 04:52:41Z ruling
+([#269 comment 5807914821](https://github.com/calyeap/Cal-Finance/issues/269#issuecomment-5807914821)),
+which ruling C did not lift.
+
+**Both delivered since, by `CF-VERDICT-NONPOLICY-GAPS-01` ([issue #280](https://github.com/calyeap/Cal-Finance/issues/280)),
+under `CALVIN RULING — B`, 24 Sep 2026 08:33:56Z ([PR #279 comment 5810709453](https://github.com/calyeap/Cal-Finance/pull/279#issuecomment-5810709453)),
+which narrowly lifted the 04:52:41Z freeze for exactly these two gaps.** The
+two bullets below are kept for the historical record of what stood
+unresolved through this addendum; each now carries what changed.
 
 - **§6.3 — §10.6.3's PROFILE NOT CONFIRMED condition has no `deriveVerdict`
-  branch.** **Still needed, unchanged.** Step 1 above restates §10.6.3's
-  three conditions including PROFILE NOT CONFIRMED as this derivation's
-  first step, so whichever future outcome implements the ruled structure
-  inherits the same standing implementation gap this addendum does not
-  resolve.
+  branch.** Was still needed, unchanged, through this addendum. Step 1 above
+  restates §10.6.3's three conditions including PROFILE NOT CONFIRMED as this
+  derivation's first step, so whichever future outcome implements the ruled
+  structure inherits the same standing implementation gap this addendum does
+  not resolve. **Delivered by `CF-VERDICT-NONPOLICY-GAPS-01`:** `deriveVerdict`
+  (`lib/analyzer/verdict.ts`) now checks the condition explicitly, naming
+  PROFILE NOT CONFIRMED as the cause when active, reading the state
+  `AnalysisResult` already carries (`trust.determinedBy`) rather than adding a
+  new field. The §3/§10 full seven-step structure remains unimplemented; only
+  this one standing branch gap is closed, and MSFT and OKLO both still read
+  `INCOMPLETE` before and after (§12 above; issue #280's PR states the exact
+  mechanism for each).
 - **§6.4 — `achievedRevenueCagr` remains unwired into `AnalysisResult`.**
-  **Still needed, unchanged — description corrected under
-  `CALVIN RULING — B` (amendment 3).** This figure may still be required,
-  but for **Step 7's** achieved-versus-required explanatory comparator, not
-  for Step 2's growth licence: Step 2 is the going-forward /
-  incremental-return-on-new-capital-versus-cost-of-capital test and does
-  not read this figure. Wiring `achievedRevenueCagr` into `AnalysisResult`
-  remains exactly as necessary as before this correction — only the
-  function it serves is corrected here, not the wiring gap itself, which
-  stays carried, not fixed.
-- **`lib/analyzer/verdict.ts` and `lib/analyzer/policy.ts` re-verified
-  byte-identical to `ed81500`** at this head — the same four unconditional
-  `INCOMPLETE` branches (`verdict.ts:53-59,63-68,70-75,77-80`) and the same
-  absence of any §10.6.2 entry in `PolicyConstants` or
-  `POLICY_THRESHOLD_PROVENANCE` (`policy.ts:10-61,102-144`) as §6.1/§6.2
-  above recorded at `c99712f`. This addendum's structural proposal in §10
-  is not implemented by this diff and could not be without violating HARD
-  BOUNDS.
+  Was still needed, unchanged — description corrected under
+  `CALVIN RULING — B` (amendment 3) — through this addendum. This figure is
+  required for **Step 7's** achieved-versus-required explanatory comparator,
+  not for Step 2's growth licence: Step 2 is the going-forward /
+  incremental-return-on-new-capital-versus-cost-of-capital test and does not
+  read this figure. **Delivered by `CF-VERDICT-NONPOLICY-GAPS-01`:**
+  `AnalysisResult.achievedRevenueCagr` (`lib/analyzer/types.ts`) now carries
+  the `RawInput<AchievedGrowth>` outcome, populated in
+  `lib/analyzer/acquisition/companyInputs.ts` from the acquired filer's own
+  multi-year revenue series on a real run (never a new acquisition — the
+  filer's `CompanyFactsDocument` this seam already holds), and honestly
+  blocked, with cause, on the two hand-authored M5 fixtures
+  (`fixtures/msft.ts`, `fixtures/oklo.ts`), which carry no such series. The
+  §3/§10 full structure's Dimension 2 / Step 2 growth licence remains
+  unimplemented; only the wiring gap this bullet named is closed.
+- **`lib/analyzer/verdict.ts` re-verified byte-identical to `ed81500`
+  through this addendum and every outcome before `CF-VERDICT-NONPOLICY-GAPS-01`**
+  — the same four unconditional `INCOMPLETE` branches
+  (`verdict.ts:53-59,63-68,70-75,77-80`) as §6.1 above recorded at `c99712f`.
+  **No longer byte-identical as of `CF-VERDICT-NONPOLICY-GAPS-01`**, which
+  added exactly the one PROFILE NOT CONFIRMED branch its own HARD BOUNDS
+  authorise — no cut-point, band, threshold or comparator; verdict.ts's four
+  original branches are otherwise untouched.
+  **`lib/analyzer/policy.ts` remains byte-identical** to `c99712f`/`ed81500`
+  — the same absence of any §10.6.2 entry in `PolicyConstants` or
+  `POLICY_THRESHOLD_PROVENANCE` (`policy.ts:10-61,102-144`) — confirmed again
+  by `CF-VERDICT-NONPOLICY-GAPS-01`, whose HARD BOUNDS forbid touching it.
+  The §3/§10 full structural proposal remains unimplemented in either file
+  and could not be implemented without violating HARD BOUNDS.
 
 ---
 
@@ -1467,19 +1512,19 @@ unavailable, independently of whether §10.6.3's own three conditions let
 the position render, and a missing comparator does not by itself force the
 position to INCONCLUSIVE.
 
-**Third, dependency-safe under the above and unchanged by rulings A and B:
-close the §10.6.3/`deriveVerdict` non-policy implementation gap named in
-§13 (carried from §6.3 above).** This is the same smallest concrete
-outcome §7 above already named: it adds the missing PROFILE NOT CONFIRMED
-branch to `deriveVerdict` (or explains in that outcome's own evidence why
-it is already moot), touches no policy constant, sets no threshold.
-Blocked until Calvin lifts the 24 Sep 2026 04:52:41Z `verdict.ts` freeze
-([issue #269 comment
-5807914821](https://github.com/calyeap/Cal-Finance/issues/269#issuecomment-5807914821)),
-which neither ruling lifts. It does not close
-`docs/acceptance-matrix.md` row 13, and it does not by itself unblock
-MSFT's or OKLO's `INCOMPLETE` verdict — those stay gated on the structural
-facts §12 restates and on §11's still-open items.
+**Third (delivered by `CF-VERDICT-NONPOLICY-GAPS-01`): the §10.6.3/`deriveVerdict`
+non-policy implementation gap named in §13 (carried from §6.3 above), and its
+§6.4 sibling.** This was blocked, as originally written below, until Calvin
+lifted the 24 Sep 2026 04:52:41Z `verdict.ts` freeze
+([issue #269 comment 5807914821](https://github.com/calyeap/Cal-Finance/issues/269#issuecomment-5807914821)) —
+`CALVIN RULING — B`, 24 Sep 2026 08:33:56Z ([PR #279 comment 5810709453](https://github.com/calyeap/Cal-Finance/pull/279#issuecomment-5810709453)),
+did so, narrowly, for exactly these two gaps, and issue #280 delivered both:
+`deriveVerdict` gained the missing PROFILE NOT CONFIRMED branch, and
+`achievedRevenueCagr` is wired into `AnalysisResult` for Step 7's explanatory
+comparator (§13 above has the detail on each). Neither closes
+`docs/acceptance-matrix.md` row 13, and neither by itself unblocks MSFT's or
+OKLO's `INCOMPLETE` verdict — those stay gated on the structural facts §12
+restates and on §11's still-open items, exactly as §13 anticipated.
 
 No other outcome is named or started here. Analyzer final acceptance
 remains withheld until the verdict-methodology dependency this addendum

@@ -44,6 +44,7 @@ import {
   type ActiveSuppression,
 } from "./suppression";
 import type {
+  AchievedGrowth,
   AnalysisResult,
   BusinessSectionContent,
   FactRecord,
@@ -54,6 +55,7 @@ import type {
   ProfileClassificationInputs,
   ProvenanceTokens,
   QualifyingFlag,
+  RawInput,
   ScenarioDriverSet,
   ScenarioSet,
   SourcedValue,
@@ -175,6 +177,18 @@ export interface CompanyFixture {
     profileHumanConfirmed: boolean;
     crossCheckFailedFactIds: readonly string[];
   };
+
+  // §10.6.2/§13 (CF-VERDICT-NONPOLICY-GAPS-01) — Step 7's achieved-history
+  // comparator fact. This is already the RawInput<AchievedGrowth> outcome
+  // (lib/analyzer/calibration/inputs.ts's `achievedRevenueCagr`), not raw
+  // ingredients: computing it needs the filer's multi-year annual revenue
+  // series and how current the filer's own filings run (comparatorRecency),
+  // neither of which a fixture built by hand — or assembleAnalysisResult
+  // itself, which never sees a CompanyFactsDocument — can derive. The
+  // acquisition seam (companyInputs.ts) has that evidence and computes this
+  // before the fixture reaches here; a hand-authored fixture states its own
+  // honest blocked reason instead of inventing a series it never acquired.
+  achievedRevenueCagr: RawInput<AchievedGrowth>;
 
   // Populated only for the pre-revenue profile.
   preRevenue: PreRevenueFixture | null;
@@ -795,6 +809,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       profileHumanConfirmed: fixture.trustInputs.profileHumanConfirmed,
       crossCheckFailedFactIds: fixture.trustInputs.crossCheckFailedFactIds,
     }),
+    achievedRevenueCagr: fixture.achievedRevenueCagr,
     preRevenue,
     // Both members are the AI layer's, and the AI layer runs AFTER this
     // function: §8.1 puts calculation on one side of the boundary and
