@@ -19,6 +19,13 @@ import path from "node:path";
 // for verdict.ts, and still no cut-point, band, threshold, or comparator:
 // the new branch reads an existing qualifying flag already carried on
 // AnalysisResult (trust.determinedBy), nothing numeric or policy-bearing.
+//
+// PIN UPDATED again by CF-M9-BLOCKER14-RECON-01, 24 Sep 2026 — a
+// comment-only correction to the file's header prose (the `achievedRevenueCagr`
+// field the 24 Sep 09:13:21Z merge added), authorised by that outcome's own
+// SCOPE 3 and DONE WHEN ("comment-only prose SCOPE 3 authorises in
+// verdict.ts"). No executable line changed; the hash below moves only
+// because the comment text it covers did.
 // ---------------------------------------------------------------------------
 
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -30,7 +37,7 @@ function readRepoFile(relPath: string): string {
 describe("verdict.ts is untouched by this validation pass", () => {
   it("hashes to the content this outcome started from — no cut-point, band, threshold or comparator added", () => {
     const hash = createHash("sha256").update(readRepoFile("lib/analyzer/verdict.ts")).digest("hex");
-    expect(hash).toBe("13545b4c10c09f31cac0496647ebb1be297d996621d675d6dfd2c12a6928b1be");
+    expect(hash).toBe("4c0fe5f6f53da77d7d5c23727cf80ba1a883bb73a70990dc452ea3bb51a1b73a");
   });
 });
 

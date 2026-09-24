@@ -20,15 +20,28 @@ import { humanizeCause } from "./AnalyzerReport";
 // Two items named in the contract's slot-4 "must contain" column are not
 // rendered here, honestly, because no computation for them exists anywhere
 // in this codebase for any run: the CHEAP/FAIR/EXPENSIVE/INCONCLUSIVE
-// position and its §10.6.4 action clause both require the same §10.6.2
-// growth comparator that leaves deriveVerdict returning INCOMPLETE on
-// every run today (spec.md §10.6.5, "acquiring it is milestone M8 work" —
-// no AnalysisResult field exists for it). Building either would be
-// inventing a threshold or a computation, which this outcome's HARD BOUNDS
-// forbids. What IS built is the §10.6.3 suppression path itself — reusing
-// the exact same guard report/page.tsx already ships (trust UNUSABLE, or
-// the profile not human-confirmed) — since that suppression is real,
-// already-computed state, not a new computation.
+// position and its §10.6.4 action clause both require the full §10.6.2
+// growth comparator — required side and achieved side, matched on the same
+// series and horizon — and that comparator still does not exist as a whole
+// (spec.md §10.6.5, "acquiring it is milestone M8 work").
+//
+// CORRECTED, CF-M9-BLOCKER14-RECON-01, 24 Sep 2026: `achievedRevenueCagr`
+// (CF-VERDICT-NONPOLICY-GAPS-01) now carries the achieved side on
+// AnalysisResult, but only as Step 7's explanatory input (§13) — the
+// required side (one of the nine M7 reverse-DCF cells, §10.6.2) is still
+// not assembled onto AnalysisResult for any run, so there is still no
+// complete comparator to read a position or an action clause from here.
+// The frozen spec's amended §10.6.4 (:1138) also now suppresses the action
+// clause independently of §10.6.3 whenever this comparator is INCOMPLETE
+// or UNAVAILABLE, and, per that same amendment, the comparator's absence
+// does not by itself force the Step 5/6 position to INCONCLUSIVE.
+//
+// Building either item would still be inventing a threshold or a
+// computation, which this outcome's HARD BOUNDS forbids. What IS built is
+// the §10.6.3 suppression path itself — reusing the exact same guard
+// report/page.tsx already ships (trust UNUSABLE, or the profile not
+// human-confirmed) — since that suppression is real, already-computed
+// state, not a new computation.
 
 function num(value: Decimal, dp = 2): string {
   return value.toFixed(dp);
