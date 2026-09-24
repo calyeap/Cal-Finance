@@ -493,3 +493,34 @@ describe("globals.css — .holdings-chrome control-direction regressions", () =>
     expect(cellinput).not.toMatch(/#1a1a1a/i);
   });
 });
+
+describe("globals.css — Analyzer Home (pre-report) tracks the V2 shell width, not the legacy steps container", () => {
+  it("matches az-topbar/az-report/layout's shell width at both breakpoints (1160 base, 1360 wide) — ANALYZER-V2-PREREPORT-01", () => {
+    const base = ruleBody(".cb-analyzer .az-home");
+    expect(base).toMatch(/max-width:\s*1160px\s*;/);
+
+    const wideScope = collectMediaBodies("@media (min-width: 1600px)");
+    const wide = ruleBodyIn(wideScope, ".cb-analyzer .az-home");
+    expect(wide).toMatch(/max-width:\s*1360px\s*;/);
+  });
+
+  it("stacks the ticker field and its result action under the phone breakpoint AnalyzerShell's own nav already uses (599px)", () => {
+    const scope = collectMediaBodies("@media (max-width: 599px)");
+    const row = ruleBodyIn(scope, ".cb-analyzer .az-home-entryrow");
+    expect(row).toMatch(/flex-direction:\s*column\s*;/);
+  });
+});
+
+describe("globals.css — Analyzing (pre-report) renders no fake progress", () => {
+  it("defines no animation, transition or percentage width on the stage marks — a static dot, not a progress bar", () => {
+    const mark = ruleBody(".cb-analyzer .az-analyzing-mark");
+    expect(mark).not.toMatch(/animation/);
+    expect(mark).not.toMatch(/transition/);
+    // border-radius: 50% is the round dot's shape, not a progress fill —
+    // only a width/height percentage would signal a bar-style fill.
+    expect(mark).not.toMatch(/(width|height):\s*\d+%/);
+
+    const stage = ruleBody(".cb-analyzer .az-analyzing-stage");
+    expect(stage).not.toMatch(/animation/);
+  });
+});

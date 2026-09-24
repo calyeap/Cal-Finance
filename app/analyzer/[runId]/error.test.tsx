@@ -91,6 +91,20 @@ describe("AnalyzerRouteError", () => {
       "/analyzer"
     );
   });
+
+  // ANALYZER-V2-PREREPORT-01 — True Failure renders no report-only chrome
+  // (design authority doc, "Pre-report states").
+  it("renders no report-tab, verdict-slot, scenario-tile or right-rail chrome", () => {
+    const error = Object.assign(new Error(SECRET_MESSAGE), { digest: undefined });
+    const { container } = render(
+      <Providers>
+        <AnalyzerRouteError error={error} reset={vi.fn()} />
+      </Providers>
+    );
+    expect(container.querySelector(".az-tabs")).toBeNull();
+    expect(container.querySelector(".az-hero")).toBeNull();
+    expect(container.querySelector(".az-rightrail")).toBeNull();
+  });
 });
 
 describe("this file is a Client Component and the nearest error boundary for both M9 routes", () => {

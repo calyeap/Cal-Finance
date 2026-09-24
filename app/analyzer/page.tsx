@@ -2,11 +2,16 @@ import { AnalyzerShell } from "@/app/components/AnalyzerShell";
 import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import { AnalyzerEntry } from "@/app/components/AnalyzerEntry";
 
-// Screen 1 — the analyzer's entry point (§2 Step 1, design route table).
+// Analyzer Home (§2 Step 1's entry point) — ANALYZER-V2-PREREPORT-01.
 //
 // This route holds no [runId] because no run exists yet: the run is created
-// when the analyst confirms the resolved company, which is what makes Screen 1
-// a step rather than a form field (design:121).
+// when the analyst confirms the resolved company, which is what makes this
+// screen a step rather than a form field (design:121).
+//
+// variant="overview", not "steps": the design authority doc's pre-report
+// states use "the same responsive shell modes" as the report, not the
+// legacy flat-1100px steps container Screens 2/3 (facts/profile) still use
+// unchanged below.
 export default async function AnalyzerEntryPage({
   searchParams,
 }: {
@@ -16,7 +21,7 @@ export default async function AnalyzerEntryPage({
 
   return (
     <AnalyzerShell>
-      <AnalyzerTopBar variant="steps" />
+      <AnalyzerTopBar variant="overview" />
       <AnalyzerEntry fixtureMissing={unavailablefixture} />
     </AnalyzerShell>
   );
