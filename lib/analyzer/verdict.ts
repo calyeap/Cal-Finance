@@ -21,11 +21,19 @@ import { PROFILE_NOT_CONFIRMED_DETAIL } from "./trust";
 // The only second input named anywhere in this outcome's methodology is
 // §10.6.2's required-versus-achieved growth comparator, and §10.6.5 already
 // rules that this fact "may not exist in the current fact set. Acquiring it
-// is milestone M8 work" — sequencing, not deferral. AnalysisResult carries
-// no such field today, for any run. Inventing a different second signal, or
-// building the M8 comparator here, would both be exactly what this
-// outcome's HARD BOUNDS forbid (manufacturing new finance policy; no M9
-// implementation before this proof passes).
+// is milestone M8 work" — sequencing, not deferral.
+//
+// CORRECTED, CF-M9-BLOCKER14-RECON-01, 24 Sep 2026: `achievedRevenueCagr`
+// (CF-VERDICT-NONPOLICY-GAPS-01) now carries the achieved half of that
+// comparator on AnalysisResult, but only as Step 7's explanatory input
+// (§13) — the required half (one of the nine M7 reverse-DCF cells,
+// §10.6.2) is still not assembled onto AnalysisResult for any run, so the
+// full required-versus-achieved comparator this function would need to
+// synthesize past INCOMPLETE still does not exist. Inventing a different
+// second signal, or picking a grid cell and building the M8 comparator
+// here, would both be exactly what this outcome's HARD BOUNDS forbid
+// (manufacturing new finance policy; no M9 implementation before this
+// proof passes).
 //
 // So today, for every run, the evidence needed to synthesize a verdict
 // beyond a single diagnostic is incomplete — not because any one run's
