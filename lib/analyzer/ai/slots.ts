@@ -360,9 +360,14 @@ export function buildSlotCatalogue(result: AnalysisResult): SlotCatalogue {
     scenarioOutputs.weightedDistribution,
     bigMoney
   );
-  b.value(
+  // CF-NOPRICE-HONESTY-RECON-01 — null exactly where this run has no price
+  // (modules/scenarioOutputs.ts); .bound() is required rather than .value()
+  // here because .value() silently drops a null with no cause, and §9.5
+  // forbids a suppressed output shown without one.
+  b.bound(
     "scenarioOutputs.priceLocationWithinRange",
     "where today's price sits within the scenario range",
+    boundState(result.states, NOT_COMPUTED_BINDING.priceLocationWithinRange),
     scenarioOutputs.priceLocationWithinRange,
     (v) => pct(v, 0)
   );

@@ -569,7 +569,12 @@ export interface ScenarioOutputs {
   values: { bear: Decimal; base: Decimal; bull: Decimal };
   // Display only, never a headline (§10.3, §10.5).
   weightedDistribution: Decimal;
-  priceLocationWithinRange: Decimal;
+  // CF-NOPRICE-HONESTY-RECON-01. Null exactly where this run has no price —
+  // the schema already carries `states.suppressing` for exactly this (an
+  // output typed as a bare Decimal that needs a way to say "not computed",
+  // notComputed.ts), the same treatment rateAtWhichBaseEqualsPrice below
+  // already has.
+  priceLocationWithinRange: Decimal | null;
   rateAtWhichBaseEqualsPrice: Decimal | null;
   sensitivity: SensitivityResult;
 }

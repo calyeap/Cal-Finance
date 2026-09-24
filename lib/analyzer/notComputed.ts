@@ -34,6 +34,10 @@ type ScenarioKey = "bear" | "base" | "bull";
 
 export const NOT_COMPUTED_BINDING = {
   rateAtWhichBaseEqualsPrice: "the discount rate at which the base case equals the price",
+  // CF-NOPRICE-HONESTY-RECON-01 — the same treatment, for the same reason:
+  // a bare Decimal in the schema (§10 G) with a real "not computed" case
+  // (no price) it had no way to say until now.
+  priceLocationWithinRange: "the current price's location within the scenario range",
   rateSensitivity: "±1% rate sensitivity",
   scenarioDrivers: (scenario: ScenarioKey) => `${scenario} scenario drivers`,
   // §7.2 M16 / CalFinance Methodology v2's acquired-run cash basis — see

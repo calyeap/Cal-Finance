@@ -185,7 +185,14 @@ export function buildCompanyInputs(
   acquisition: AcquisitionResult,
   companyFacts: CompanyFactsDocument,
   analyst: AnalystInputs,
-  price: { value: Decimal; timestamp: string }
+  // CF-NOPRICE-HONESTY-RECON-01. Null exactly where this run has no price
+  // (acquiredRun.ts's own options.price). CompanyFixture.price (§3.4 —
+  // "always a value and a timestamp") and multiplesInput.price keep the
+  // flattened $0 sentinel below, unchanged from before this outcome; only
+  // enterpriseValue.price carries the honest absence through, since that is
+  // the one REQUIRED input computeEnterpriseValue already knows how to read
+  // as missing (modules/enterpriseValue.ts).
+  price: { value: Decimal; timestamp: string } | null
 ): CompanyInputsResult {
   const byId = new Map(acquisition.facts.map((f) => [f.id, f]));
   const get = (id: string) => sourcedFrom(byId.get(id));
@@ -334,7 +341,7 @@ export function buildCompanyInputs(
     runId: `acquired-${acquisition.ticker.toLowerCase()}`,
     ticker: acquisition.ticker,
     companyName: acquisition.companyName,
-    price: { value: price.value, timestamp: price.timestamp },
+    price: { value: price?.value ?? new Decimal(0), timestamp: price?.timestamp ?? "" },
     facts: acquisition.facts,
 
     gate0: analyst.gate0,
@@ -357,7 +364,12 @@ export function buildCompanyInputs(
     enterpriseValue: {
       sharesOutstanding: track("sharesOutstanding", get("shares-outstanding")),
       treasuryMethodDilution: track("treasuryMethodDilution", get("treasury-method-dilution")),
-      price: { value: price.value, provenance: CLEAN_PROVENANCE },
+      // CF-NOPRICE-HONESTY-RECON-01. The only one of these seven REQUIRED
+      // inputs that used to reach computeEnterpriseValue as a flattened $0
+      // instead of the missing input it actually was — EnterpriseValueInput
+      // already typed this field nullable (modules/enterpriseValue.ts);
+      // nothing here previously supplied the null the type already allowed.
+      price: track("price", price === null ? null : { value: price.value, provenance: CLEAN_PROVENANCE }),
       totalDebt: track("totalDebt", get("total-debt")),
       financeLeaseLiabilities: track("financeLeaseLiabilities", get("finance-lease-liabilities")),
       cashAndMarketableDebtSecurities: track(
@@ -372,7 +384,12 @@ export function buildCompanyInputs(
     },
 
     multiplesInput: {
-      price: { value: price.value, provenance: CLEAN_PROVENANCE },
+      // Unchanged by CF-NOPRICE-HONESTY-RECON-01 — out of that outcome's
+      // SCOPE (defect A names only computeEnterpriseValue's REQUIRED price
+      // input). MultiplesInput.price is already nullable
+      // (modules/multiples.ts), but this still supplies the flattened $0
+      // sentinel on a priceless run, exactly as it did before this outcome.
+      price: { value: price?.value ?? new Decimal(0), provenance: CLEAN_PROVENANCE },
       // EPS is not in this mapping version: the tagged element exists but the
       // §3.5 basis question (GAAP vs the I5 non-operating-items adjustment) is
       // a per-company decision this milestone does not make. Null, so P/E is

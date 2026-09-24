@@ -143,7 +143,7 @@ describe("QuickRead — valuation strip (defect E1)", () => {
   it("MSFT: shows the price-location line beneath the strip, restated from priceLocationWithinRange (64%)", () => {
     const result = assembleAnalysisResult(MSFT_FIXTURE);
     render(<QuickRead result={result} />);
-    expect(result.scenarioOutputs.priceLocationWithinRange.mul(100).toFixed(0)).toBe("64");
+    expect(result.scenarioOutputs.priceLocationWithinRange?.mul(100).toFixed(0)).toBe("64");
     expect(screen.getByText(/64% of the way from bear to bull/)).not.toBeNull();
   });
 
@@ -166,7 +166,7 @@ describe("QuickRead — valuation strip (defect E1)", () => {
   it("OKLO: shows the price-location line in failure/success wording, never bear/bull", () => {
     const result = assembleAnalysisResult(OKLO_FIXTURE);
     render(<QuickRead result={result} />);
-    const pct = result.scenarioOutputs.priceLocationWithinRange.mul(100).toFixed(0);
+    const pct = result.scenarioOutputs.priceLocationWithinRange?.mul(100).toFixed(0);
     expect(screen.getByText(new RegExp(`${pct}% of the way from failure to success`))).not.toBeNull();
   });
 });

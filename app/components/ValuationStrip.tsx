@@ -55,7 +55,12 @@ function ProvenanceQualifier({ provenance }: { provenance: ProvenanceTokens | nu
 
 export function ValuationStrip({ result, showLocation = false }: { result: AnalysisResult; showLocation?: boolean }) {
   const { preRevenue, fairValueRange, scenarioOutputs, states } = result;
-  const locationPct = scenarioOutputs.priceLocationWithinRange.mul(100).toFixed(0);
+  // CF-NOPRICE-HONESTY-RECON-01 — null exactly where this run has no price
+  // (modules/scenarioOutputs.ts). This decorative line is omitted rather
+  // than shown on a fabricated position, the same "never a placeholder"
+  // rule the rest of this catalogue already follows.
+  const locationPct =
+    scenarioOutputs.priceLocationWithinRange !== null ? scenarioOutputs.priceLocationWithinRange.mul(100).toFixed(0) : null;
   const cashPerShareState = boundState(states, NOT_COMPUTED_BINDING.cashPerShare);
 
   if (preRevenue) {
@@ -78,7 +83,7 @@ export function ValuationStrip({ result, showLocation = false }: { result: Analy
             <span className="fig">${num(result.price.value)}</span>
           </div>
         </div>
-        {showLocation && <p className="striploc">{locationPct}% of the way from failure to success</p>}
+        {showLocation && locationPct !== null && <p className="striploc">{locationPct}% of the way from failure to success</p>}
       </>
     );
   }
@@ -103,7 +108,7 @@ export function ValuationStrip({ result, showLocation = false }: { result: Analy
           <span className="fig">${num(result.price.value)}</span>
         </div>
       </div>
-      {showLocation && <p className="striploc">{locationPct}% of the way from bear to bull</p>}
+      {showLocation && locationPct !== null && <p className="striploc">{locationPct}% of the way from bear to bull</p>}
     </>
   );
 }

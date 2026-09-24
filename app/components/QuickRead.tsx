@@ -41,6 +41,7 @@ function sectionRefFor(appliesTo: string): string | null {
   // ("operating margin") the looser matches below would misplace.
   if (isBoundTo(appliesTo, NOT_COMPUTED_BINDING.rateSensitivity)) return "E";
   if (isBoundTo(appliesTo, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice)) return "G";
+  if (isBoundTo(appliesTo, NOT_COMPUTED_BINDING.priceLocationWithinRange)) return "G";
   if ((["bear", "base", "bull"] as const).some((s) => isBoundTo(appliesTo, NOT_COMPUTED_BINDING.scenarioDrivers(s)))) {
     return "F";
   }
