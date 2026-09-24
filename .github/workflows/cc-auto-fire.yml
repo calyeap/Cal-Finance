@@ -1,4 +1,4 @@
-name: Fire Cal Finance BUILD, REVIEW, and Chief of Staff refresh
+name: Fire Cal Finance BUILD, REVIEW, and OWNER
 
 on:
   issues:
@@ -303,76 +303,6 @@ jobs:
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="REVIEW FIRE FAILED: HTTP ${{ steps.fire.outputs.http_code }}"
           exit 1
-
-  # CF-OWNER-WATCH-SERIALIZE-01
-  # WATCH used to fire in parallel from the raw merge event
-  # (refresh-watch-on-merge), which could race OWNER's own Project Home
-  # reconciliation and project stale state as "current". WATCH now fires
-  # only from OWNER's own post-reconciliation receipt — a comment whose
-  # first non-empty line is `OWNER RECONCILED:` — so it is always causally
-  # downstream of a completed, read-back Project Home write. This fires for
-  # both merge wakes and terminal (STOP / CALVIN REQUIRED) OWNER wakes,
-  # since OWNER posts the same receipt on either path. The hourly WATCH
-  # fallback is unaffected.
-  fire-watch-on-owner-reconciled:
-    if: >-
-      github.event_name == 'issue_comment' &&
-      contains(github.event.comment.body, 'OWNER RECONCILED:')
-    runs-on: ubuntu-latest
-    steps:
-      - name: Resolve target
-        id: target
-        env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
-        run: |
-          set -uo pipefail
-
-          # Require OWNER RECONCILED: on the first non-blank line so a
-          # quoted/example mention elsewhere in a comment can't fire this.
-          TRIMMED=$(printf '%s' "$COMMENT_BODY" | sed -e '/[^[:space:]]/,$!d' -e 's/^[[:space:]]*//')
-          case "$TRIMMED" in
-            "OWNER RECONCILED:"*) ;;
-            *)
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-              ;;
-          esac
-
-          echo "skip=false" >> "$GITHUB_OUTPUT"
-          echo "number=${{ github.event.issue.number }}" >> "$GITHUB_OUTPUT"
-          echo "url=${{ github.event.issue.html_url }}" >> "$GITHUB_OUTPUT"
-
-      - name: Fire CHIEF-OF-STAFF-WATCH once for OWNER reconciliation receipt
-        if: steps.target.outputs.skip != 'true'
-        env:
-          WATCH_FIRE_URL: ${{ secrets.WATCH_FIRE_URL }}
-          WATCH_FIRE_TOKEN: ${{ secrets.WATCH_FIRE_TOKEN }}
-          TARGET_REPO: ${{ github.repository }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-          TARGET_URL: ${{ steps.target.outputs.url }}
-        run: |
-          set -uo pipefail
-
-          if [ -z "${WATCH_FIRE_URL:-}" ] || [ -z "${WATCH_FIRE_TOKEN:-}" ]; then
-            echo "WATCH reconciliation refresh skipped: WATCH_FIRE_URL or WATCH_FIRE_TOKEN missing."
-            exit 0
-          fi
-
-          PROMPT="Projection refresh only. Repository ${TARGET_REPO} item #${TARGET_NUMBER} (${TARGET_URL}) posted an OWNER RECONCILED receipt: Project Home has been freshly reconciled and read back by OWNER. Refresh only the affected Chief of Staff row using current owner/native evidence. Do not dispatch, recover, rerank, or set ON=YOU unless the owner source currently records a Calvin-owned NEEDS YOU item."
-          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
-
-          HTTP_CODE=$(curl -sS -o /tmp/watch_response.json -w '%{http_code}' \
-            --request POST "$WATCH_FIRE_URL" \
-            --header "Authorization: Bearer $WATCH_FIRE_TOKEN" \
-            --header "anthropic-version: 2023-06-01" \
-            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
-            --header "Content-Type: application/json" \
-            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
-
-          if [ "$HTTP_CODE" = "curl_error" ] || [ "$HTTP_CODE" -lt 200 ] 2>/dev/null || [ "$HTTP_CODE" -ge 300 ] 2>/dev/null; then
-            echo "WATCH reconciliation refresh failed: HTTP ${HTTP_CODE}."
-            exit 1
-          fi
 
   # CF-OWNER-RECONCILE-01
   # Terminal non-merge OWNER wake: BUILD/REVIEW apply needs-owner-wake only
