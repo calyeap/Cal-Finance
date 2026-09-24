@@ -10,9 +10,32 @@ captures carry for whichever term is determined.
 **This document reconciles and reports. It rules nothing.** It does not
 answer §11 items 2 or 4 of `docs/verdict-methodology-reconciliation.md`, marks
 no acceptance-matrix row satisfied, and does not construct an invested-capital
-composition. Both a full acquisition and a closed `CALVIN REQUIRED:` are
-success under this outcome's contract; the reconciliation below finds the
-second.
+composition.
+
+**Update, same OUTCOME-ID, second pass.** The section below (§1b, as
+originally committed) found the denominator's *composition* undetermined and
+ended on a closed `CALVIN REQUIRED:`. Calvin answered it —
+**`CALVIN RULING — FINANCING-SIDE INVESTED CAPITAL`**, issue #298,
+2026-09-24T17:24:14Z:
+
+> For RONIC, define invested capital as: **total equity + interest-bearing
+> debt + lease liabilities not already included in debt − cash − marketable
+> securities**. Lease liabilities are counted exactly once… Goodwill remains
+> included… Apply this definition consistently to both endpoints of the
+> trailing five-year invested-capital change.
+
+§2 below (rewritten) checks the already-committed captures against that now
+-settled composition, per SCOPE item 2. It finds a **second, independent**
+blocker: total equity is not present in any of the three captures at all —
+not a composition question this time, but a data-availability one — and ends
+on a second closed `CALVIN REQUIRED:` (§5, rewritten), the exact condition
+this outcome's own CALVIN REQUIRED clause names ("the committed captures
+genuinely lack the facts, so that only lifting the no-new-capture/EDGAR bound
+could supply them"). The numerator, found determined below and unaffected by
+either blocker, **is now acquired** (§3). Both an acquisition and a closed
+`CALVIN REQUIRED:` remain success under this outcome's contract; this pass
+delivers one of each — the numerator acquired, the denominator still blocked,
+now for a data reason rather than a methodology one.
 
 ## 1. Step 1 — what current approved authority determines, per input
 
@@ -112,117 +135,189 @@ exactly as `tag-mapping-version-review.md` already noted. No artefact in
 this repository — frozen, mapping, or fixture — has ever expressed
 "invested capital" as an assembly of specific tagged facts.
 
-**Verdict: not determined.** Current approved authority fixes one property
-of this term (leases must be included) and nothing else. Which facts sum to
-"invested capital" — debt, equity, cash, working capital, net PP&E,
-ROU assets, goodwill treatment, and how a lease liability that is already
-nested inside an existing debt tag (§`lease-once-measurement.md`, the UNP
-case) is counted without double-counting — is a methodology decision no
-frozen artefact, ruling, or prior CalFinance pass has made.
+**Verdict, as originally reconciled: not determined.** Current approved
+authority fixed one property of this term (leases must be included) and
+nothing else — which facts sum to "invested capital" was a methodology
+decision no frozen artefact, ruling, or prior CalFinance pass had made.
 
-## 2. Step 2 — what the already-committed captures carry, for the determined term
+**Superseded by `CALVIN RULING — FINANCING-SIDE INVESTED CAPITAL`** (issue
+#298, 2026-09-24T17:24:14Z, quoted in full above). Composition **is now
+determined**: total equity + interest-bearing debt + lease liabilities not
+already included in debt − cash − marketable securities, goodwill included,
+lease liabilities counted exactly once, applied identically to both
+endpoints of the trailing five-year change. §2 below checks the
+already-committed captures against this ruled composition.
+
+## 2. Step 2 — what the already-committed captures carry, for both now-determined terms
 
 Read directly off the already-committed `CompanyFactsDocument` files
 (`lib/analyzer/acquisition/captures/{nvda,msft,oklo}-companyfacts.json`) the
 same way `calibration/inputs.ts` already does — no EDGAR fetch, no
-`TAG_MAPPING_VERSION` bump, no re-acquisition:
+`TAG_MAPPING_VERSION` bump, no re-acquisition.
+
+### 2a. `fiveYearDeltaNopat` (unchanged from the first pass)
 
 | Ticker | `operating-income` tag | Filed annual years | FY(current) | FY(current − 5) present? | Trailing 5-yr Δ NOPAT window |
 |---|---|---|---|---|---|
 | NVDA | `us-gaap:OperatingIncomeLoss` | 2014–2026 (13) | 2026 | **Yes** (FY2021) | FY2021 $4,532M → FY2026 $130,387M op. income (both endpoints present, `comparatorRecency` reports no live series skipped: `{ currentFiscalYear: 2026, reachedBy: null }`) |
-| MSFT (contrast only) | `us-gaap:OperatingIncomeLoss` | 2014–2026 (13) | 2026 | Yes (FY2021) | FY2021 $69,916M → FY2026 $155,237M — for contrast only; MSFT's own M5 figures come from its hand-authored fixture, not acquisition |
+| MSFT (contrast only) | `us-gaap:OperatingIncomeLoss` | 2014–2026 (13) | 2026 | Yes (FY2021) | FY2021 $69,916M → FY2026 $155,237M — acquired on MSFT's own real acquired run too (`reverseDcfOnRealRun.test.ts`); MSFT's hand-authored M5 fixture (`fixtures/msft.ts`) is a separate, untouched object and carries its own placeholder figures regardless |
 | OKLO (contrast only) | `us-gaap:OperatingIncomeLoss` | 2021–2025 (5) | 2025 | **No** — FY2020 is not a filed year for this registrant | blocked; consistent with OKLO's existing Gate 1 `HISTORY INSUFFICIENT` state |
 
 **On NVDA's own committed capture, both endpoints of `fiveYearDeltaNopat`'s
 trailing five-year window exist**, on the single-tag, non-stale
 `us-gaap:OperatingIncomeLoss` series, with the same `configuredConstants.
-nopatTaxRate = 0.21` NVDA's approved bundle already carries.
+nopatTaxRate = 0.21` NVDA's approved bundle already carries. **Acquired this
+pass** (§3).
 
-Step 2 is not run for `fiveYearDeltaInvestedCapital`: step 1 found its
-composition undetermined, so there is no defined set of facts to check the
-capture for yet (checking for "debt, equity, cash, working capital, net
-PP&E, ROU assets, goodwill" *as a composition* would itself be choosing one).
+### 2b. `fiveYearDeltaInvestedCapital` — the ruled composition against the captures
 
-## 3. Why this does not become a half-acquired ladder
+Each committed capture is a **trimmed** `CompanyFactsDocument` — not the full
+SEC company-facts response, but exactly the `us-gaap` tags `TAG_MAP` (plus a
+handful of footing/cross-check/candidate-investment companions) ever reads,
+confirmed by listing every `us-gaap` key each file actually carries:
 
-SCOPE item 3 gates acquisition on **both** step 1 and step 2 coming back
-fully determined, and the OUTCOME's own text is explicit: *"if [current
-approved authority] does not [determine those two inputs well enough],
-stop."* Step 1 found one of the two terms — the denominator — undetermined
-at the definition level, not merely short a data endpoint. That is a
-different condition from SCOPE item 3's "half-acquired ladder" allowance,
-which covers a term whose **composition is already settled** but whose
-**data** turns out to be short an endpoint on a particular capture (the
-shape OKLO's operating-income window above shows). Writing a real
-`fiveYearDeltaNopat` derivation into `companyInputs.ts:403` while leaving
-`fiveYearDeltaInvestedCapital` null would still require picking *some*
-invested-capital composition to decide the denominator is null "for the
-right reason" rather than merely unimplemented — and picking one is exactly
-the invented methodology `tag-mapping-version-review.md` already refused,
-and this outcome's HARD BOUNDS refuse again. `companyInputs.ts:403-404` is
-therefore left unchanged by this outcome.
+| Ticker | tags captured | `StockholdersEquity` / `…IncludingPortionAttributableToNoncontrollingInterest` | `LongTermDebt` (debt) | `FinanceLeaseLiability` (lease) | `CashAndCashEquivalentsAtCarryingValue` + `ShortTermInvestments` (cash) |
+|---|---|---|---|---|---|
+| NVDA | 24 | **absent** | present, FY2021 & FY2026 both covered | absent | cash present FY2021 & FY2026 both covered; `ShortTermInvestments` absent |
+| MSFT | 26 | **absent** | present | present | both present |
+| OKLO | 21 | **absent** | absent (only `LongTermDebtNoncurrent`) | present | cash present; `ShortTermInvestments` absent |
+
+**Total equity is not present in any of the three captures — checked
+directly against the JSON files, not inferred.** Neither
+`us-gaap:StockholdersEquity` nor
+`us-gaap:StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest`
+appears anywhere in `nvda-companyfacts.json`, `msft-companyfacts.json` or
+`oklo-companyfacts.json`. Nor does `us-gaap:Assets` or `us-gaap:Liabilities`
+(the identity the ruling's own financing-side construction balances against)
+— there is no already-captured route to total equity at all, by any name, on
+any of the three filers. Debt and cash, by contrast, both carry FY(current)
+and FY(current − 5) instant observations on NVDA's own capture (confirmed
+directly against the same file: `LongTermDebt` and
+`CashAndCashEquivalentsAtCarryingValue` both report 10-K-form instant rows
+for FY2014 through FY2026, both endpoints included); NVDA's capture has no
+separately tagged `FinanceLeaseLiability` at all, consistent with the ruling's
+own "not already included in debt" carve-out reducing that term to nothing
+additional where no separate tag exists.
+
+**Why this is a capture question, not a mapping-governance one.** Debt,
+lease liabilities and cash are each already `TAG_MAP` entries
+(`total-debt`, `finance-lease-liabilities`,
+`cash-and-marketable-debt-securities`) — reusing their existing
+`.candidates` against the raw document, the way `calibration/inputs.ts`
+already reuses `current-revenue`'s, needs no new tag and no version bump.
+Total equity has never been a `TAG_MAP` entry, and the trimmed captures show
+why an ad hoc unmapped tag read would not even have data behind it: the
+figure was never captured, under any of its usual names, for any of the
+three filers this milestone has ever acquired. Only a **new capture** — a
+wider EDGAR pull carrying `StockholdersEquity` (or an equivalent identity
+via `Assets`/`Liabilities`) — could supply it, and that is exactly what this
+outcome's HARD BOUNDS forbid ("No new capture, EDGAR fetch or price fetch…
+no re-acquisition… Only the already-committed captures").
+
+## 3. What this pass acquires, and why it is a half-acquired ladder, honestly
+
+SCOPE item 3: *"Acquire — only if steps 1 and 2 both come back fully
+determined… Where an endpoint or a required term is genuinely missing, the
+input stays null with its cause… If only one of the two is determined,
+acquire that one and leave the other honestly null with its stated cause; a
+half-acquired ladder that still reports INCOMPLETE is a truthful result, not
+a failure."*
+
+`fiveYearDeltaNopat` is now fully determined at both step 1 (formula) and
+step 2 (data): `companyInputs.ts:403` (was `track("fiveYearDeltaNopat",
+null)`) now calls a new `fiveYearNopatDelta` helper — `nopatFrom`'s existing
+one-period derivation applied to both endpoints of the operating-income
+annual series already read for `margins` (`companyInputs.ts:195`), refusing
+with a null endpoint the same way `achievedRevenueCagr` does (RETRIEVE FIRST
+item 5) rather than a second series harness. **Acquired**, for NVDA and MSFT
+alike; still correctly blocked for OKLO, whose capture lacks the FY(−5)
+endpoint.
+
+`fiveYearDeltaInvestedCapital` (`companyInputs.ts:404`) is **left
+unchanged, still `null`** — composition is no longer the blocker, but total
+equity is genuinely absent from every already-committed capture (§2b), and
+supplying it needs exactly the new-capture step this outcome's HARD BOUNDS
+forbid. This is the SAME cascade discipline as before (spec `:455`, "correct
+and must not be softened") for a DIFFERENT, now-precise reason: not an
+undefined methodology choice, but a fact this milestone has never captured
+for any filer. The ladder is therefore **half-acquired** exactly as SCOPE
+item 3 anticipates — one real input, one honest null — and still reports
+`INCOMPLETE`, a truthful result.
 
 ## 4. §12 evidence gap — status after this observation
 
 `docs/verdict-methodology-reconciliation.md` §12's first evidence-gap
 bullet — "at least one company whose RONIC ladder is not uniformly NOT
-MEANINGFUL" — **stays open.** NVDA's RONIC ladder remains
-`INCOMPLETE`/`missing REQUIRED input(s): fiveYearDeltaNopat,
-fiveYearDeltaInvestedCapital` on the real run
-(`lib/analyzer/nvdaRealRunObservation.test.ts:143-191`, unchanged and still
-green), and MSFT's remains `RONIC NOT MEANINGFUL` off its hand-authored
-placeholder (`lib/analyzer/reverseDcfOnRealRun.test.ts:57-69`, unchanged).
-Nothing regressed for either company; nothing was acquired for either
-company. This is not a new finding about NVDA's fundamentals — it is the
-same pipeline-wide gap `docs/nvda-realrun-observation.md` §(a) already
-named, now reconciled one level deeper: one half of the gap
-(`fiveYearDeltaNopat`) is closable with no new authority, and the other half
-(`fiveYearDeltaInvestedCapital`) is not closable without one.
+MEANINGFUL" — **stays open.** NVDA's RONIC ladder remains `INCOMPLETE`, now
+`missing REQUIRED input(s): fiveYearDeltaInvestedCapital` alone (previously
+both inputs), on the real run
+(`lib/analyzer/nvdaRealRunObservation.test.ts`, updated this pass and still
+green). MSFT's real acquired run (`reverseDcfOnRealRun.test.ts`, unchanged
+and still green) also now acquires `fiveYearDeltaNopat`, but every cell
+stays suppressed for the same reason — the ladder needs both inputs, and the
+denominator is still null for MSFT too — so the visible cause string ("RONIC
+not meaningful for this company (§7.2 M5 ladder)", `reverseDcf.ts`'s own
+generic fallback for "no usable RONIC cell") is unchanged. Nothing
+regressed for either company. This is genuine, verifiable progress on one
+half of the gap (`fiveYearDeltaNopat`, now acquired and CI-asserted for
+real filings) without closing the gap itself, which needs the other half.
 
 ## 5. CALVIN REQUIRED
 
-**Term:** the composition of "invested capital" in RONIC's denominator —
-`docs/frozen/calboard-valuation-methodology.md:313` and
-`docs/frozen/calboard-stock-analyzer-v1-spec.md:646` both fix only that it
-must include lease-funded assets; neither, nor any other frozen artefact,
-names which captured facts sum to "invested capital" itself.
+**Term:** total equity (or an equivalent already-captured route to it, such
+as `us-gaap:Assets` − `us-gaap:Liabilities`) for RONIC's denominator, under
+the now-ruled financing-side composition.
 
-**What is already on record about it:** `docs/tag-mapping-version-review.md`
-§5.4 (`:254-263`) already reconciled this and stopped, naming the construct
-as "some assembly of debt, equity, cash, working capital, net PP&E, ROU
-assets and goodwill" with the choice among them undetermined;
-`docs/lease-once-measurement.md` independently stopped on the
-lease-inclusion half of the same term (whether a lease liability already
-nested inside an existing debt tag, as UNP's is, can be added on top without
-double-counting). Neither stop has been lifted by a ruling since
-(2026-09-09 is the most recent edit to either file; the one ruling that
-document records, "what `total-debt` means," settles a different question
-than invested-capital composition itself).
+**Why this is not a restatement of the answered question.** `CALVIN RULING
+— FINANCING-SIDE INVESTED CAPITAL` settled *what the denominator is made
+of*. This is a different, downstream question: *whether the already
+-committed captures carry the data that composition needs.* They do not —
+checked directly against the three capture files (§2b), not inferred from
+the tag mapping. `docs/tag-mapping-version-review.md` and
+`docs/lease-once-measurement.md` (the two prior stops the first CALVIN
+REQUIRED cited) were both about composition, and neither reached this data
+question, because neither had a ruled composition to check captures against
+yet.
 
-**The smallest closed set of options**, none adopted here:
+**Why this is the condition this outcome's own CALVIN REQUIRED clause
+names:** *"the committed captures genuinely lack the facts, so that only
+lifting the no-new-capture/EDGAR bound could supply them."* Total debt,
+lease liabilities and cash are each already `TAG_MAP` entries with data
+present on NVDA's own capture through both trailing-five-year endpoints
+(§2b) — reusing them needs no new capture. Total equity is not a `TAG_MAP`
+entry, was never captured under any of its usual names
+(`StockholdersEquity`, the noncontrolling-interest variant, or the
+`Assets`/`Liabilities` identity) for NVDA, MSFT or OKLO, and no code change
+inside this outcome's bounds can produce it from what is already committed.
 
-1. **Financing-side / capital-employed:** total debt (incl. finance-lease
-   liabilities, counted once per the UNP nesting rule already ruled at
-   `lease-once-measurement.md` §6) + total equity − cash and marketable
-   securities.
-2. **Operating-asset side:** net working capital + net PP&E + finance-lease
-   (and, if in scope, operating-lease) ROU assets + other long-term
-   operating assets, with goodwill included or excluded as a named
-   sub-choice — the methodology's own text flags this exact sub-choice
-   without resolving it (`calboard-valuation-methodology.md:303-319`: "22.0%
-   excluding ~$69B of Activision goodwill" read *alongside*, not in place
-   of, the 17.8% figure that keeps goodwill in).
-3. **Capital-employed variant:** total assets − non-interest-bearing
-   current liabilities.
+**The smallest closed set of options:**
 
-Any of the three (and their goodwill in/out sub-variants) is a defensible
-textbook construction; none is implied by the frozen text over the others,
-and choosing one here — for every company this mapping version acquires, at
-once — is the invented-methodology risk `tag-mapping-version-review.md`
-already declined to take.
+1. **Lift the no-new-capture/EDGAR-fetch bound**, scoped narrowly to adding
+   `us-gaap:StockholdersEquity` (with
+   `StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest`
+   as the usual fallback candidate) to `TAG_MAP` as a new `total-equity`
+   entry, and re-running the existing capture step for NVDA, MSFT and OKLO
+   to pull the additional tag alongside what is already committed — a
+   `TAG_MAPPING_VERSION` bump and a mapping-version review
+   (`docs/tag-mapping-version-review.md`'s own established process), not a
+   new methodology.
+2. **Leave the denominator permanently unacquired** under the current
+   capture set, and let §12's first evidence gap stay open until a future,
+   separately-authorised capture pass supplies total equity.
+3. **Approve a different, already-derivable proxy for equity from what IS
+   captured** (e.g., `sharesOutstanding × price`, both already-acquired
+   facts) — flagged here only as an option Calvin could pick, explicitly
+   **not recommended** by this reconciliation: market value of equity paired
+   with book debt is not the book-for-book financing identity the ruling's
+   own wording ("total equity" alongside "total debt", "cash and marketable
+   securities") implies, and substituting it would be exactly the kind of
+   un-ruled methodology choice `tag-mapping-version-review.md` and the
+   ruling both mean to foreclose.
 
 **Ending.** Per this outcome's TERMINAL CONTRACT, this is the reconciliation
-ending: `companyInputs.ts:403-404` stays unchanged, no second document is
-created beyond this one, and the run ends on a closed `CALVIN REQUIRED:`
-naming the composition of invested capital, not a PR implementing an
-acquisition.
+ending on the denominator: `companyInputs.ts:404` stays `null`, this document
+is corrected in place rather than duplicated, and the run ends on a closed
+`CALVIN REQUIRED:` naming total equity's absence from the already-committed
+captures — alongside a real, committed, CI-tested acquisition of
+`fiveYearDeltaNopat` (`companyInputs.ts:403`), which is not blocked by this
+question and is not withheld pending its answer.

@@ -1,7 +1,13 @@
 import Decimal from "decimal.js";
 import { CLEAN_PROVENANCE, MARKET_DATA_PROVENANCE, combineProvenance } from "../provenance";
 import { TAG_MAP } from "./tagMap";
-import { annualSeries, operatingMarginSeries, filedAnnualYearsCount, quarterlySeries } from "./history";
+import {
+  annualSeries,
+  operatingMarginSeries,
+  filedAnnualYearsCount,
+  quarterlySeries,
+  type AnnualSeries,
+} from "./history";
 import { computeAcquiredCashBasis, type AcquiredCashBasisResult } from "../modules/preRevenue";
 import { achievedRevenueCagr, comparatorRecency, type WindowRecency } from "../calibration/inputs";
 import type { AcquisitionResult } from "./acquire";
@@ -192,7 +198,8 @@ export function buildCompanyInputs(
   const operatingIncomeTags = TAG_MAP.find((e) => e.factId === "operating-income")!.candidates;
 
   const revenueAnnualSeries = annualSeries(companyFacts, revenueTags);
-  const margins = operatingMarginSeries(revenueAnnualSeries, annualSeries(companyFacts, operatingIncomeTags));
+  const operatingIncomeAnnualSeries = annualSeries(companyFacts, operatingIncomeTags);
+  const margins = operatingMarginSeries(revenueAnnualSeries, operatingIncomeAnnualSeries);
 
   // §10.6.2/§13 (CF-VERDICT-NONPOLICY-GAPS-01) — Step 7's achieved-history
   // comparator, ten years preferred (§10.6.2). Computed from the SAME
@@ -399,8 +406,38 @@ export function buildCompanyInputs(
       deltaNwc: null,
       deltaRevenue: null,
     },
+    // CF-RONIC-DELTAS-RECON-01 — the numerator is acquired; the denominator
+    // stays null. `fiveYearDeltaNopat` needs a trailing five-year change in
+    // NOPAT, computed from the SAME operating-income tag and the SAME
+    // configured nopatTaxRate the single-period `nopat` field above already
+    // uses (`nopatFrom`, defined below) — `fiveYearNopatDelta` applies that
+    // identical per-year derivation to both endpoints of the operating-income
+    // series already read for `margins` above (:202) rather than a second
+    // acquisition, per RETRIEVE FIRST item 5.
+    //
+    // `fiveYearDeltaInvestedCapital` stays null. CALVIN RULING — FINANCING-
+    // SIDE INVESTED CAPITAL (issue #298, 2026-09-24T17:24:14Z) settles the
+    // composition — total equity + interest-bearing debt + lease liabilities
+    // not already in debt − cash − marketable securities — but total equity
+    // (`us-gaap:StockholdersEquity` or equivalent) is not present in ANY of
+    // the three already-committed captures (verified directly against
+    // lib/analyzer/acquisition/captures/{nvda,msft,oklo}-companyfacts.json,
+    // each trimmed at capture time to exactly TAG_MAP's needs — no equity
+    // tag was ever captured for any filer). Acquiring it would need a new
+    // capture/EDGAR fetch this outcome's HARD BOUNDS forbid, so the term
+    // stays honestly null with this cause rather than a proxy, an estimate,
+    // or a different, un-ruled composition (docs/ronic-deltas-composition-
+    // reconciliation.md §2b). A half-acquired ladder that still reports
+    // INCOMPLETE is a truthful result (SCOPE item 3), not a failure.
     ronic: {
-      fiveYearDeltaNopat: track("fiveYearDeltaNopat", null),
+      fiveYearDeltaNopat: track(
+        "fiveYearDeltaNopat",
+        fiveYearNopatDelta(
+          operatingIncomeAnnualSeries,
+          analyst.configuredConstants.nopatTaxRate,
+          get("operating-income")?.provenance ?? null
+        )
+      ),
       fiveYearDeltaInvestedCapital: track("fiveYearDeltaInvestedCapital", null),
       lagBiasDirection: "conservative",
     },
@@ -464,6 +501,40 @@ function nopatFrom(
     value: operatingIncome.value.mul(new Decimal(1).minus(taxRate)),
     provenance: operatingIncome.provenance,
   };
+}
+
+/**
+ * NOPAT's own trailing five-year change: `nopatFrom` applied to both
+ * endpoints of the operating-income annual series, five fiscal years apart.
+ *
+ * Mirrors `calibration/inputs.ts`'s `achievedRevenueCagr` endpoint-existence
+ * refusal (RETRIEVE FIRST item 5) rather than inventing a second series
+ * harness: the LATEST observation is the "to" endpoint (a single-candidate
+ * tag, so there is no live-alternative-series recency check to make — see
+ * docs/ronic-deltas-composition-reconciliation.md §1a), and the "from"
+ * endpoint is the exact fiscal year five years earlier. Null unless BOTH
+ * exist — no interpolation, no nearest-year substitute (§3.7).
+ */
+function fiveYearNopatDelta(
+  series: AnnualSeries | null,
+  nopatTaxRate: Decimal | null,
+  operatingIncomeProvenance: ProvenanceTokens | null
+): SourcedValue<Decimal> | null {
+  if (series === null || nopatTaxRate === null || operatingIncomeProvenance === null) return null;
+
+  const observations = series.observations;
+  const to = observations[observations.length - 1];
+  if (to === undefined) return null;
+
+  const fromFiscalYear = to.fiscalYear - 5;
+  const from = observations.find((o) => o.fiscalYear === fromFiscalYear);
+  if (from === undefined) return null;
+
+  const oneMinusTaxRate = new Decimal(1).minus(nopatTaxRate);
+  const toNopat = new Decimal(to.value).mul(oneMinusTaxRate);
+  const fromNopat = new Decimal(from.value).mul(oneMinusTaxRate);
+
+  return { value: toNopat.minus(fromNopat), provenance: operatingIncomeProvenance };
 }
 
 function medianOf(values: Decimal[]): SourcedValue<Decimal> | null {
