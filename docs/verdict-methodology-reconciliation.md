@@ -913,11 +913,16 @@ same sense: their consequence clauses name the *position* itself, not
 only the comparator, by way of a term ("the gap" / "the growth input")
 that only the two-input table this replacement removes used to define.
 The quoted block below binds each to Step 7's comparator with a bracketed
-gloss so neither sentence refers to a deleted antecedent, and §11 item 8
-below opens, without resolving, whether that REQUIRED-comparator gate
-still reaches the position under the ruled structure or narrows to
-§10.6.4's action clause only — ruling C is silent on this interaction, so
-it is named rather than assumed either way. Spec `:1089`'s
+gloss so neither sentence refers to a deleted antecedent. At the time this
+addendum was written, §11 item 8 below opened, without resolving, whether
+that REQUIRED-comparator gate still reaches the position under the ruled
+structure or narrows to §10.6.4's action clause only — ruling C was silent
+on this interaction, so it was named rather than assumed either way.
+**`CALVIN RULING — B` has since closed item 8**: the gate narrows to
+§10.6.4's action clause (and the Step 7 explanation) only, and does not by
+itself reach the Step 5/6 position — see item 8's CLOSED note below, and
+the applied text at `docs/frozen/calboard-stock-analyzer-v1-spec.md`
+§10.6.2. Spec `:1089`'s
 bands-are-policy-constants/PROVISIONAL recording requirement is carried
 the same way, with its now-dead "and the disagreement rule" clause struck
 — that rule does not survive Step 6's flip test above, but the
@@ -1314,7 +1319,7 @@ read as adopting one.
    `CF-VERDICT-1062-APPLY-01`. Ruling B did not rule on §10.6.4's own text,
    which still assumes the action clause always accompanies a rendered
    position with both figures present — that residual wording gap is named,
-   not resolved, in §14's next action below.
+   not resolved, as §14's second next-action item below.
 
 ---
 
@@ -1437,24 +1442,41 @@ which ruling C does not lift.
 
 ## 14. The smallest next action
 
-**First: this addendum is itself the immediate target of the next action —
-Calvin's ruling on §10's exact text and §11's re-derived house-policy
-list.** Per issue #274's own CALVIN REQUIRED section, that ruling is not
-expected as part of this outcome's terminal comment; §11's list is the
-material for it, delivered here rather than as a terminal gate.
+**First (delivered): this addendum's own immediate target — Calvin's
+ruling on §10's exact text and §11's re-derived house-policy list — is no
+longer pending.** `CALVIN RULING — B` ruled on §10's text and closed §11
+item 8; `CF-VERDICT-1062-APPLY-01` applied both to
+`docs/frozen/calboard-stock-analyzer-v1-spec.md` §10.6.2. §11's remaining
+items (1, 2, 3, 4, 5, 6, 7) are still open and unfilled, exactly as before.
 
-**Second, and dependency-safe under whatever Calvin rules on this text:
-close the §10.6.3/`deriveVerdict` non-policy implementation gap named in
-§13 (carried from §6.3 above).** This is the same smallest concrete
-outcome §7 above already named, restated because it does not change under
-ruling C: it adds the missing PROFILE NOT CONFIRMED branch to
+**Second, named by `CF-VERDICT-1062-APPLY-01` and not yet started: a
+second bounded, Calvin-authorised frozen-text amendment to §10.6.4
+alone.** Ruling B's amendment 2 means an unconstructable Step 7 comparator
+no longer forces the Step 5/6 position to INCONCLUSIVE — but §10.6.4's own
+text ("Beneath the position, page one states the required figure against
+the achieved figure…"; "…does not survive a suppressed position") still
+assumes the action clause always accompanies a rendered position with both
+figures present, which is no longer guaranteed. The minimum change:
+§10.6.4 would need an explicit branch stating that where the Step 7
+comparator is INCOMPLETE/UNAVAILABLE, the action clause's
+required-versus-achieved sentences are themselves suppressed or marked
+unavailable, independently of whether §10.6.3's own three conditions let
+the position render. This needs its own Calvin ruling authorising exactly
+that one-subsection edit, on the same discipline ruling B used for
+§10.6.2; it is named here, not made.
+
+**Third, dependency-safe under the above and unchanged by ruling B: close
+the §10.6.3/`deriveVerdict` non-policy implementation gap named in §13
+(carried from §6.3 above).** This is the same smallest concrete outcome §7
+above already named: it adds the missing PROFILE NOT CONFIRMED branch to
 `deriveVerdict` (or explains in that outcome's own evidence why it is
-already moot), touches no policy constant, sets no threshold, and is
-required identically under the superseded §3.3 candidate or the ruled
-structure this addendum proposes instead. It does not close
+already moot), touches no policy constant, sets no threshold. Blocked
+until Calvin lifts the 24 Sep 2026 04:52:41Z `verdict.ts` freeze ([issue
+#269 comment 5807914821](https://github.com/calyeap/Cal-Finance/issues/269#issuecomment-5807914821)),
+which ruling B does not itself lift. It does not close
 `docs/acceptance-matrix.md` row 13, and it does not by itself unblock
 MSFT's or OKLO's `INCOMPLETE` verdict — those stay gated on the structural
-facts §12 restates and on Calvin's ruling on §10.
+facts §12 restates and on §11's still-open items.
 
 No other outcome is named or started here. Analyzer final acceptance
 remains withheld until the verdict-methodology dependency this addendum
