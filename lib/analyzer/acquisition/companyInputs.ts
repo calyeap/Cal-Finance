@@ -3,6 +3,7 @@ import { CLEAN_PROVENANCE, MARKET_DATA_PROVENANCE, combineProvenance } from "../
 import { TAG_MAP } from "./tagMap";
 import { annualSeries, operatingMarginSeries, filedAnnualYearsCount, quarterlySeries } from "./history";
 import { computeAcquiredCashBasis, type AcquiredCashBasisResult } from "../modules/preRevenue";
+import { achievedRevenueCagr, comparatorRecency, type WindowRecency } from "../calibration/inputs";
 import type { AcquisitionResult } from "./acquire";
 import type { CompanyFactsDocument } from "./secClient";
 import type { CompanyFixture } from "../assemble";
@@ -190,10 +191,24 @@ export function buildCompanyInputs(
   const revenueTags = TAG_MAP.find((e) => e.factId === "current-revenue")!.candidates;
   const operatingIncomeTags = TAG_MAP.find((e) => e.factId === "operating-income")!.candidates;
 
-  const margins = operatingMarginSeries(
-    annualSeries(companyFacts, revenueTags),
-    annualSeries(companyFacts, operatingIncomeTags)
-  );
+  const revenueAnnualSeries = annualSeries(companyFacts, revenueTags);
+  const margins = operatingMarginSeries(revenueAnnualSeries, annualSeries(companyFacts, operatingIncomeTags));
+
+  // §10.6.2/§13 (CF-VERDICT-NONPOLICY-GAPS-01) — Step 7's achieved-history
+  // comparator, ten years preferred (§10.6.2). Computed from the SAME
+  // single-tag revenue series `margins` above already reads, and from
+  // `companyFacts` directly (comparatorRecency), so this needs no
+  // acquisition this seam does not already have. A ten-year figure is
+  // reported blocked, with the function's own honest cause, on the (common,
+  // per §10.6.2) filer whose single-tag series does not reach back that far
+  // — no acquisition-time fallback horizon is chosen here, matching M8-c's
+  // own calibration script, which reports both horizons separately rather
+  // than substituting one for the other.
+  const revenueRecency: WindowRecency =
+    revenueAnnualSeries === null
+      ? { currentFiscalYear: 0, reachedBy: null }
+      : comparatorRecency(companyFacts, revenueAnnualSeries);
+  const achievedRevenueCagrResult = achievedRevenueCagr(revenueAnnualSeries, 10, revenueRecency);
   const marginDecimals = (margins?.years ?? []).map((y) => new Decimal(y.margin));
   const quarters = quarterlySeries(companyFacts, revenueTags);
 
@@ -433,6 +448,7 @@ export function buildCompanyInputs(
     scenarioValues: analyst.scenarioValues,
     revalueBaseCaseAtRate: analyst.revalueBaseCaseAtRate,
     configuredConstants: analyst.configuredConstants,
+    achievedRevenueCagr: achievedRevenueCagrResult,
     preRevenue,
   };
 

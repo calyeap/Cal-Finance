@@ -42,6 +42,15 @@ import type {
 // bad, and no copy may let it be read that way."
 // ---------------------------------------------------------------------------
 
+/**
+ * The exact `TrustDeterminant.detail` this module writes for the §6.3/§9.4
+ * PROFILE NOT CONFIRMED qualifier. Exported so a reader of `AnalysisResult`
+ * — verdict.ts's §10.6.3 branch, in particular — can recognise the same fact
+ * this module already computed rather than re-deriving it from
+ * `profileHumanConfirmed`, which `AnalysisResult` does not itself carry.
+ */
+export const PROFILE_NOT_CONFIRMED_DETAIL = "PROFILE NOT CONFIRMED on the valuation path";
+
 export interface TrustInput {
   /** The §10.3 outcome. Suppressed here IS rule 1. */
   fairValueRange: FairValueRange;
@@ -116,7 +125,7 @@ export function computeTrustStatus(input: TrustInput): TrustResult {
   if (!input.profileHumanConfirmed) {
     determinedBy.push({
       kind: "qualifying flag",
-      detail: "PROFILE NOT CONFIRMED on the valuation path",
+      detail: PROFILE_NOT_CONFIRMED_DETAIL,
     });
   }
 

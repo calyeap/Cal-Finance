@@ -11,6 +11,14 @@ import path from "node:path";
 // frozen-artefact check — docs/frozen/ and FROZEN_HASHES are a separate
 // mechanism this outcome's HARD BOUNDS forbid touching — a narrow regression
 // pin scoped to exactly the files this validation pass must leave alone.
+//
+// PIN UPDATED by CF-VERDICT-NONPOLICY-GAPS-01, under the 24 Sep 2026
+// 08:33:56Z CALVIN RULING — B (PR #279 comment 5810709453) that narrowly
+// lifted the 04:52:41Z verdict.ts freeze for exactly the §10.6.3 PROFILE NOT
+// CONFIRMED branch — the one change this outcome's own HARD BOUNDS authorise
+// for verdict.ts, and still no cut-point, band, threshold, or comparator:
+// the new branch reads an existing qualifying flag already carried on
+// AnalysisResult (trust.determinedBy), nothing numeric or policy-bearing.
 // ---------------------------------------------------------------------------
 
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -22,7 +30,7 @@ function readRepoFile(relPath: string): string {
 describe("verdict.ts is untouched by this validation pass", () => {
   it("hashes to the content this outcome started from — no cut-point, band, threshold or comparator added", () => {
     const hash = createHash("sha256").update(readRepoFile("lib/analyzer/verdict.ts")).digest("hex");
-    expect(hash).toBe("02ce2d490ada12eb739b9556f28c4d6a1a9f83ecf1aea9ff4d240351059791a7");
+    expect(hash).toBe("13545b4c10c09f31cac0496647ebb1be297d996621d675d6dfd2c12a6928b1be");
   });
 });
 

@@ -184,6 +184,23 @@ describe("a real MSFT run, from filings to an Analysis Result", () => {
     expect(joined).toMatch(/SEC filings/);
   });
 
+  // CF-VERDICT-NONPOLICY-GAPS-01 SCOPE 2 — Step 7's achieved-history
+  // comparator, computed from the real acquired filings rather than the M5
+  // fixture (which carries no multi-year series at all, see fixtures/msft.ts).
+  it("computes a real ten-year achieved-revenue CAGR from the acquired filings, matching the mock's own disclosed 13.7% ten-year figure", async () => {
+    const run = await msftRun();
+    const achieved = run.fixture.achievedRevenueCagr;
+    expect(achieved.value).not.toBeNull();
+    if (achieved.value === null) return;
+    expect(achieved.blockedBy).toEqual([]);
+    expect(achieved.value.horizonYears).toBe(10);
+    expect(achieved.value.window.yearsStale).toBe(0);
+    expect(achieved.value.cagr.toDecimalPlaces(3).toNumber()).toBeCloseTo(0.138, 2);
+
+    const result = assembleAnalysisResult(run.fixture);
+    expect(result.achievedRevenueCagr).toEqual(achieved);
+  });
+
   it("puts no section reference in front of the analyst", async () => {
     // Gate-2's fix, undone by M8-a's new copy and restored here. Section
     // numbers address the contract, not the reader — the report layer already
@@ -325,6 +342,21 @@ describe("a real OKLO run — pre-revenue, thinner filings", () => {
     expect(boundState(result.states, NOT_COMPUTED_BINDING.scenarioDrivers("base"))?.state).toBe("INCOMPLETE");
     expect(boundState(result.states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice)?.state).toBe("INCOMPLETE");
     expect(run.disclosures.join(" ")).toMatch(/OKLO/);
+  });
+
+  // CF-VERDICT-NONPOLICY-GAPS-01 SCOPE 2 — the honest blocked direction on a
+  // real run: OKLO's filings carry no tagged revenue series at all (a
+  // pre-revenue company), so the comparator reports blocked with cause,
+  // never a fabricated figure and never a silent gap.
+  it("reports achievedRevenueCagr blocked, with an honest cause, rather than a fabricated figure — no tagged revenue series on this pre-revenue filer", async () => {
+    const run = await oklo();
+    const achieved = run.fixture.achievedRevenueCagr;
+    expect(achieved.value).toBeNull();
+    expect(achieved.blockedBy.length).toBeGreaterThan(0);
+    expect(achieved.blockedBy.join(" ")).toMatch(/revenue series/);
+
+    const result = assembleAnalysisResult(run.fixture);
+    expect(result.achievedRevenueCagr).toEqual(achieved);
   });
 
   it("reports more absent inputs than Microsoft, and names each", async () => {

@@ -364,5 +364,18 @@ export const OKLO_FIXTURE: CompanyFixture = {
     projectDebtCost: new Decimal("0.08"),
   },
 
+  // §10.6.2/§13 (CF-VERDICT-NONPOLICY-GAPS-01) — honestly blocked, not
+  // computed. This fixture is Phase 1's synthetic reconstruction of the
+  // mock's own disclosed outputs and carries no multi-year single-tag annual
+  // revenue series to compute a CAGR from — doubly so for a pre-revenue
+  // company. Real acquired runs compute this in companyInputs.ts, from the
+  // filer's own filings.
+  achievedRevenueCagr: {
+    value: null,
+    blockedBy: [
+      "no single-tag annual revenue series - this fixture is a synthetic reconstruction of the mock's disclosed outputs and carries no multi-year filing history to compute a CAGR from",
+    ],
+  },
+
   preRevenue,
 };
