@@ -1067,14 +1067,27 @@ The four values are **CHEAP · FAIR · EXPENSIVE · INCONCLUSIVE**, per CalFinan
 
 #### 10.6.2 Derivation — deterministic, never a [C] call
 
-Both inputs are fields the analyzer already computes. Nothing new is measured and no model is called.
+The position is derived from a single underwritten-value-versus-price comparison, produced in the seven steps below, in order. Every step reads a field the analyzer already computes, or a load-bearing reading of one; no step calls a model.
 
-| Input | Source |
-|---|---|
-| **Price location within the scenario range** | §10.2 section G, already computed and already displayed |
-| **The required-versus-achieved gap** | M7's implied growth — the five-year figure, the ten-year CAGR and year-10 revenue — read against the company's own achieved history on a consistent accounting basis (§3.7) |
+**1 — Underwritability.** The fundamental valuation must be usable before anything else runs. This is §10.6.3's three existing conditions (a valuation range exists; trust status is CLEAN or PARTIAL; PROFILE NOT CONFIRMED is not active), restated here as this derivation's first step, not a second gate. Where they do not all hold, or a REQUIRED input this derivation depends on is missing or not evidenced to the standard §3.7 and §3.8 already require, this step fails and the position is **INCONCLUSIVE**.
 
-**The comparator fact is REQUIRED.** The achieved figure must be a section B fact **on the same series and the same horizon** as the implied-growth figure it is read against. A ten-year implied CAGR is compared to a ten-year achieved CAGR of the same series, on the same accounting basis, or it is not compared at all. Where no such fact exists, the gap is **INCOMPLETE**, and the position and its action clause do not render.
+**2 — Growth licence.** Whether the growth the scenario range and the M7 reverse-DCF grid describe earns a return on incremental invested capital in excess of the discount rate used for the same range — RONIC (§7.2 M5), read against the rate grid, now load-bearing on the position rather than only a qualifying flag on the diagnostic. The reading is:
+
+- **YES** — [the RONIC-vs-rate reading that licenses growth, and how §7.2 M5's existing ladder states (RONIC NOT MEANINGFUL · LOW RONIC — VALUE-DESTROYING GROWTH · computed · RONIC CAPPED AT 200%) map onto YES / NO / UNKNOWN below — house-policy decision, §11 item 2] — the growth-inclusive value (Step 3) may be underwritten.
+- **NO** — growth is not licensed; only the conservative / no-growth value (Step 3) may be underwritten.
+- **UNKNOWN** — [what makes the reading genuinely unresolved rather than YES or NO, including whether a ladder state the RONIC computation itself cannot resolve (e.g. RONIC NOT MEANINGFUL) is read as UNKNOWN here or as a Step 1 failure — house-policy decision, §11 item 2] — both values are computed at Step 3, and Step 6 governs which verdict, if any, may issue.
+
+**3 — Value.** Exactly one underwritten fundamental value is produced under Step 2's licence — the growth-inclusive value where YES, the conservative / no-growth value where NO, or both where UNKNOWN. [Whether the conservative / no-growth value is a fixed floor or a company-specific bound (e.g. the bear scenario's own growth path) — house-policy decision, §11 item 3.] The M7 reverse-DCF grid's required-growth figures are not a third input to this step: they are read at Step 7 as a consistency check on this value and on the range, per §10.1's ordering principle, and cast no vote of their own here or anywhere else in this derivation.
+
+**4 — Uncertainty / margin of safety.** Economic / forecast uncertainty on the Step 3 value — [what this uncertainty is measured from, and how it sets the required fair-value zone — house-policy decision, §11 item 1; exact policy remains open] — determines the fair-value zone the Step 5 comparison reads. This is a separate input from Step 1's evidence / estimation confidence, not the same object under a different name: Step 1 asks whether the valuation is usable at all and, where it is not, returns INCONCLUSIVE; Step 4 asks, given that it is usable, how wide the required cushion around it is, and only ever widens or narrows the zone Step 5 reads. The two are not collapsed into one gate.
+
+**5 — Verdict.** Compare the current price against the Step 3 value (or, where Step 2 was UNKNOWN, both values within Step 4's zone) to derive CHEAP / FAIR / EXPENSIVE. This is one comparison, not two independent votes: Step 2 has already determined which value is being compared before this step runs, so this step never reads price location alone (§10.2 below). Where Step 2 was UNKNOWN, this step's result is provisional on Step 6.
+
+**6 — Flip test.** Applies only where Step 2's growth licence is UNKNOWN. Compute Step 5 once against the growth-inclusive value and once against the conservative value. Where both agree on the resulting position, issue it. Where they disagree, the position is **INCONCLUSIVE**. This test, and not Step 4's margin-of-safety zone, is what fires here — the two are never one another: the flip test resolves unresolved growth licensing; the margin of safety widens or narrows an already-licensed value's zone.
+
+**7 — Reverse DCF.** The M7 grid's required-growth figures, read at Step 3, are reported alongside the position (§10.6.4) solely as explanation and a consistency check on the same underlying DCF relationship the range already reflects, per §10.1's ordering principle. They cast no independent vote at Step 5, Step 6, or anywhere else in this derivation.
+
+**The comparator fact is REQUIRED.** The achieved figure must be a section B fact **on the same series and the same horizon** as the implied-growth figure it is read against. A ten-year implied CAGR is compared to a ten-year achieved CAGR of the same series, on the same accounting basis, or it is not compared at all. Where no such fact exists, the comparator is **INCOMPLETE**: the Step 7 explanation and the related §10.6.4 action-clause content that depend on it are suppressed or marked unavailable. This does not, by itself, affect the Step 5/6 position.
 
 **Two horizons are valid, and the horizon travels with the result** (CalFinance Methodology v2, ruled 8 September 2026). Ten years is preferred. **A five-year comparator is permitted where a valid ten-year one cannot be constructed** — which is the common case rather than the exception: ASC 606 split most filers' revenue across two tagged elements partway through the decade, and §3.7 refuses to join two series into one comparator, so only a minority of companies can produce a ten-year figure at all.
 
@@ -1082,18 +1095,17 @@ Both inputs are fields the analyzer already computes. Nothing new is measured an
 
 **No cross-series stitching.** §3.7's refusal stands, and a five-year window that spans a tag change is not a valid five-year comparator.
 
-**Where neither horizon can be constructed, the growth input is UNAVAILABLE and the position is INCONCLUSIVE.** It does not degrade to a weaker reading, and it does not fall back to FAIR — FAIR is a positive claim, not the absence of one.
+**Where neither horizon can be constructed, the comparator is UNAVAILABLE:** the Step 7 explanation and the related §10.6.4 action-clause content that depend on it are suppressed or marked unavailable. This does not, by itself, affect the Step 5/6 position — the position is governed only by Steps 1 through 6, never by Step 7's comparator. Suppression is not a weaker reading, and it is not a fallback to FAIR — FAIR is a positive claim, not the absence of one.
 
 **For calibration:** observations from the two horizons are not pooled without evidence that common thresholds hold across them. Whether they do is a testable question and must be answered from observations rather than assumed. Where they do not, thresholds are calibrated per horizon.
 
-**Bands and the disagreement rule are policy constants**, recorded in `policy` (§10.0.1) and marked **PROVISIONAL** with what they were calibrated on. Two rules are fixed here and are not configuration:
+**What replaces the earlier rule that "every position requires positive agreement from both inputs."** That rule does not survive this structure: there are no longer two independent votes for a second vote to agree with. In its place: **a position issues only where Step 1 clears, Step 3 produces a value under Step 2's licence, and — where Step 2 was UNKNOWN — Step 6's flip test agrees.** Anything else — Step 1 failing, Step 3 unable to produce a value, or Step 6 disagreeing — is **INCONCLUSIVE**. Determinism does not depend on the dropped rule: every test above (Step 1's gate, Step 2's licence reading, Step 4's uncertainty reading, Step 6's flip test) is a uniform rule applied identically to every company, exactly as fixed rule 1 below already requires and exactly as Gate 0 and Gate 1 already operate.
+
+**Bands are policy constants**, recorded in `policy` (§10.0.1) and marked **PROVISIONAL** with what they were calibrated on.
+
+One rule is fixed here and is not configuration:
 
 1. **The same inputs always produce the same position.** No per-company adjustment, no override, no model in the path.
-2. **Every position requires positive agreement from both inputs.** CHEAP requires both to read cheap, FAIR requires both to read fair, EXPENSIVE requires both to read expensive. **Anything else is INCONCLUSIVE** — whether the two point in opposite directions or one is simply not enough to support a finding.
-
-   This corrects an earlier rule that sent disagreement to FAIR. FAIR is a claim that a company is roughly fairly valued; making it the fallback meant asserting that claim on the strength of two inputs that agreed about nothing — a finding produced by silence. Under CalFinance Methodology v2, INCONCLUSIVE carries that case and says what is true: the evidence does not support a position.
-
-   It still fails toward saying less. It now does so without saying something else instead.
 
 **Why deterministic and not an AI call, recorded because it will be asked again:** an AI-authored headline verdict would be unreproducible and unauditable. Two runs on identical inputs could differ, and neither could be traced. That is the failure §3 exists to prevent, applied to the loudest sentence in the report.
 
