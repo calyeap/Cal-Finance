@@ -41,7 +41,7 @@ describe("AnalyzerEntryError", () => {
     );
     const shell = container.querySelector(".cb-analyzer")!;
     expect(shell).not.toBeNull();
-    expect(shell.querySelector(".topbar")).not.toBeNull();
+    expect(shell.querySelector(".az-topbar")).not.toBeNull();
   });
 
   it('carries role="alert" and names the problem at the level the boundary knows it', () => {

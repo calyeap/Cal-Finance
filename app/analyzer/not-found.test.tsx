@@ -38,7 +38,7 @@ describe("AnalyzerEntryNotFound", () => {
     );
     const shell = container.querySelector(".cb-analyzer")!;
     expect(shell).not.toBeNull();
-    expect(shell.querySelector(".topbar")).not.toBeNull();
+    expect(shell.querySelector(".az-topbar")).not.toBeNull();
   });
 
   it("names the state and its cause via the existing .state/.name/.cause mechanism", () => {

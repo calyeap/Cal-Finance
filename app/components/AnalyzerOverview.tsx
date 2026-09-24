@@ -1,25 +1,21 @@
 import type { ReactNode } from "react";
 import Decimal from "decimal.js";
 import type { AnalysisResult, InterpretationStatement } from "@/lib/analyzer/types";
-import type { VerdictResult } from "@/lib/analyzer/verdict";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
-import { DominantVerdictSlot } from "./DominantVerdictSlot";
-import { PriceChartPanel } from "./PriceChartPanel";
-import { ScenarioRangeStrip } from "./ScenarioRangeStrip";
 import { AiLayerNote, humanizeCause, CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 
-// M9-DESKTOP-SHELL-01 — the Overview page's twelve-slot frame, per
-// docs/design/m9-analyzer-design-contract.md §2.1, §3.
-//
-// #118's APPROVED OVERVIEW HIERARCHY, items 1-12, in fixed order,
-// unconditionally (§2.1: "no slot is reordered, dropped, or rendered only
-// in some states"). Slots 1-4 and 12 are M9-DESKTOP-SHELL-01's real
-// content. Slots 6, 7, 9 and 10 render the interpretation call's page-one
-// prose (M9-OVERVIEW-CONTENT-01); slot 8 restates Section E's price-implied
-// figures in full. Slots 5 and 11 have no approved content source yet
-// (issue #160 SCOPE item 7) and remain honest structural frames, exactly as
-// runway item 3 left them.
+// CF-DESIGN-AUTHORITY-CUTOVER-01 — the Overview tab's own body, below the
+// shared AnalyzerReportFrame hero. Slots 1 (company header), 2 (dominant
+// verdict), 3 (current price/chart), 4 (Bear/Base/Bull/Uncertainty) and 12
+// (view full analysis) moved into AnalyzerReportFrame, which now renders
+// them identically on every tab (design authority doc, "one shell, seven
+// tabs") rather than once here as an Overview-only frame; slot 12's "View
+// full analysis" link is superseded by the tab rail itself, which already
+// reaches every one of those six destinations. What remains here (slots 5-
+// 11) is exactly M9-DESKTOP-SHELL-01's own content for those slots,
+// unchanged — this file still adds no prose of its own (EditorialProseBlock
+// boundary, m9-analyzer-design-contract.md §3).
 
 const STRUCTURAL_SLOTS: { id: string; label: string }[] = [
   { id: "slot-5", label: "What the business does" },
@@ -88,11 +84,11 @@ function pct(value: Decimal, dp = 1): string {
 
 // Slot 8 — the complete standalone treatment of Section E's price-implied
 // content (issue #160 SCOPE item 5): steady-state EV and PVGO share of EV
-// are the same figures ScenarioRangeStrip (slot 4) already restates
-// condensed; implied growth is the same r = 8%, current-margin cell
-// AnalyzerReport's Section H right column restates. "One figure, one
-// computation" — nothing here is computed, only read from the
-// AnalysisResult and formatted.
+// are the same figures ScenarioRangeStrip (AnalyzerReportFrame's hero)
+// already restates condensed; implied growth is the same r = 8%,
+// current-margin cell AnalyzerReport's Section H right column restates.
+// "One figure, one computation" — nothing here is computed, only read from
+// the AnalysisResult and formatted.
 function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
   const { priceImplied } = result;
   const baseRateCell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
@@ -139,19 +135,7 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
   );
 }
 
-export function AnalyzerOverview({
-  result,
-  verdict,
-  profileNotConfirmed,
-  fullAnalysisHref,
-  aiLayer,
-}: {
-  result: AnalysisResult;
-  verdict: VerdictResult;
-  profileNotConfirmed: boolean;
-  fullAnalysisHref: string;
-  aiLayer?: AiLayerReport;
-}) {
+export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; aiLayer?: AiLayerReport }) {
   const pageOne = result.interpretation.pageOne;
 
   // §17.7.1 — the same deterministic selection Section I's "Challenger
@@ -161,91 +145,58 @@ export function AnalyzerOverview({
   const challengerSelection = result.challenger === null ? null : selectChallengerPoint(result.challenger.findings);
 
   return (
-    <div className="layout overview">
-      <main>
-        {/* Slot 1 — company header. Identity only (design.md:906): no
-            verdict, figure or finding-block content, so no price value
-            here — the price itself is slot 3's. */}
-        <div className="ovslot head" id="slot-1">
-          <h1>{result.companyName}</h1>
-          <p className="tick">{result.ticker}</p>
-          <p className="tick">as of {result.price.timestamp}</p>
-        </div>
+    <div className="ovtab overview">
+      {/* Slot 5 — no approved content source (issue #160 SCOPE item 7). */}
+      <StructuralSlot {...STRUCTURAL_SLOTS[0]} />
 
-        {/* Slot 2 — the dominant verdict. */}
-        <div className="ovslot" id="slot-2">
-          <DominantVerdictSlot verdict={verdict} trustStatus={result.trust.status} />
-        </div>
+      {/* Slot 6 — "Why invest." */}
+      <EditorialProseSlot
+        id="slot-6"
+        label="Why invest"
+        statement={pageOne === null ? null : pageOne.whatSupportsTheCase}
+        aiLayer={aiLayer}
+      />
 
-        {/* Slot 3 — current price and its chart. */}
-        <div className="ovslot" id="slot-3">
-          <PriceChartPanel price={result.price} />
-        </div>
+      {/* Slot 7 — "Why be cautious," symmetric to slot 6. May surface the
+          selected challenger point (§2.1 row 7, §17.7.1); the full
+          challenger finding set is the Risks & Thesis tab's Section I2, so
+          this never surfaces a state only here. */}
+      <EditorialProseSlot
+        id="slot-7"
+        label="Why be cautious"
+        statement={pageOne === null ? null : pageOne.whatWorriesCalboard}
+        aiLayer={aiLayer}
+        extra={
+          challengerSelection === null ? null : (
+            <>
+              <p className="note">Challenger point — {challengerSelection.selected.evidence}</p>
+              <span className="selrule">{CHALLENGER_SELECTION_RULE_NOTE}</span>
+            </>
+          )
+        }
+      />
 
-        {/* Slot 4 — the valuation-evidence layer. */}
-        <div className="ovslot" id="slot-4">
-          <ScenarioRangeStrip result={result} profileNotConfirmed={profileNotConfirmed} />
-        </div>
+      {/* Slot 8 — the price-implied read, restated in full. */}
+      <PriceAssumptionSlot result={result} />
 
-        {/* Slot 5 — no approved content source (issue #160 SCOPE item 7). */}
-        <StructuralSlot {...STRUCTURAL_SLOTS[0]} />
+      {/* Slot 9 — "What matters most." */}
+      <EditorialProseSlot
+        id="slot-9"
+        label="What matters most"
+        statement={pageOne === null ? null : pageOne.mainFinding}
+        aiLayer={aiLayer}
+      />
 
-        {/* Slot 6 — "Why invest." */}
-        <EditorialProseSlot
-          id="slot-6"
-          label="Why invest"
-          statement={pageOne === null ? null : pageOne.whatSupportsTheCase}
-          aiLayer={aiLayer}
-        />
+      {/* Slot 10 — "Biggest risk." */}
+      <EditorialProseSlot
+        id="slot-10"
+        label="Biggest risk"
+        statement={pageOne === null ? null : pageOne.biggestUncertainty}
+        aiLayer={aiLayer}
+      />
 
-        {/* Slot 7 — "Why be cautious," symmetric to slot 6. May surface the
-            selected challenger point (§2.1 row 7, §17.7.1); the full
-            challenger finding set is Full Analysis → Risks & Thesis'
-            Section I2, so this never surfaces a state only here. */}
-        <EditorialProseSlot
-          id="slot-7"
-          label="Why be cautious"
-          statement={pageOne === null ? null : pageOne.whatWorriesCalboard}
-          aiLayer={aiLayer}
-          extra={
-            challengerSelection === null ? null : (
-              <>
-                <p className="note">Challenger point — {challengerSelection.selected.evidence}</p>
-                <span className="selrule">{CHALLENGER_SELECTION_RULE_NOTE}</span>
-              </>
-            )
-          }
-        />
-
-        {/* Slot 8 — the price-implied read, restated in full. */}
-        <PriceAssumptionSlot result={result} />
-
-        {/* Slot 9 — "What matters most." */}
-        <EditorialProseSlot
-          id="slot-9"
-          label="What matters most"
-          statement={pageOne === null ? null : pageOne.mainFinding}
-          aiLayer={aiLayer}
-        />
-
-        {/* Slot 10 — "Biggest risk." */}
-        <EditorialProseSlot
-          id="slot-10"
-          label="Biggest risk"
-          statement={pageOne === null ? null : pageOne.biggestUncertainty}
-          aiLayer={aiLayer}
-        />
-
-        {/* Slot 11 — no approved content source (issue #160 SCOPE item 7). */}
-        <StructuralSlot {...STRUCTURAL_SLOTS[1]} />
-
-        {/* Slot 12 — the single, clearly primary link into Full Analysis. */}
-        <div className="ovslot" id="slot-12">
-          <a className="act" href={fullAnalysisHref}>
-            View full analysis
-          </a>
-        </div>
-      </main>
+      {/* Slot 11 — no approved content source (issue #160 SCOPE item 7). */}
+      <StructuralSlot {...STRUCTURAL_SLOTS[1]} />
     </div>
   );
 }

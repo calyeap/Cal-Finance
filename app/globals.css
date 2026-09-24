@@ -3334,3 +3334,409 @@ h6 {
   text-decoration: none;
   cursor: pointer;
 }
+
+/* =====================================================================
+   Analyzer V2 shell — CF-DESIGN-AUTHORITY-CUTOVER-01
+   docs/design/analyzer-v2-design-authority.md
+
+   One shell (AnalyzerShell's sidebar/icon-rail/mobile-header nav + topbar),
+   reused by every Analyzer route. One report frame (AnalyzerReportFrame's
+   identity row, verdict/price/Bear-Base-Bull-Uncertainty hero, seven-tab
+   rail and right rail), reused by every report tab — only the tab body
+   below it changes.
+
+   Breakpoints below approximate the five required acceptance targets (32-
+   inch full desktop / half-window / iPad landscape / iPad portrait /
+   iPhone) by CSS viewport width, the only signal a stylesheet has:
+     >=1280px  "wide desktop"           labelled sidebar, right rail
+     768-1279px "half-window / tablet   compact icon rail, no right rail,
+                 landscape"             up to two body columns (existing
+                                        .hframe/table rules already do this)
+     600-767px "tablet portrait"        compact icon rail, single column
+     <600px    "phone"                  horizontal icon strip, single column
+   ===================================================================== */
+
+/* ---------- Shell: sidebar / icon-rail / mobile header + content ---------- */
+.cb-analyzer.az-shell {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+}
+.cb-analyzer .az-nav {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  width: 220px;
+  padding: 24px 16px;
+  border-right: 1px solid var(--hairline);
+}
+.cb-analyzer .az-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+  text-decoration: none;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+/* Premium hierarchy (design authority doc): the mark supports identity, it
+   does not dominate it — a small subordinate glyph beside the wordmark,
+   never enlarged on its own. */
+.cb-analyzer .az-brand-mark {
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 6px;
+  border: 1px solid var(--line-strong);
+  background: var(--field);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+.cb-analyzer .az-navlinks {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.cb-analyzer .az-navitem {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 10px;
+  border-radius: 6px;
+  color: var(--muted);
+  text-decoration: none;
+  font-size: 14px;
+}
+.cb-analyzer .az-navitem svg {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  stroke: currentColor;
+  fill: none;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.cb-analyzer .az-navitem:hover {
+  color: var(--ink);
+}
+.cb-analyzer .az-navitem.on {
+  color: var(--ink);
+  background: var(--field);
+  font-weight: 600;
+}
+.cb-analyzer .az-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Half-window / tablet (landscape and portrait alike): compact icon rail,
+   labels hidden — design authority doc, "Half-window"/"Tablet". */
+@media (max-width: 1279px) and (min-width: 600px) {
+  .cb-analyzer .az-nav {
+    width: 64px;
+    padding: 20px 10px;
+    align-items: center;
+  }
+  .cb-analyzer .az-brand-word {
+    display: none;
+  }
+  .cb-analyzer .az-navitem {
+    width: 44px;
+    justify-content: center;
+    padding: 10px 0;
+  }
+  .cb-analyzer .az-navlabel {
+    display: none;
+  }
+}
+
+/* Phone: a mobile header instead of a sidebar/icon rail (design authority
+   doc, "Phone") — the same nav markup reflowed into a horizontal strip
+   rather than a second hand-built nav. */
+@media (max-width: 599px) {
+  .cb-analyzer.az-shell {
+    flex-direction: column;
+  }
+  .cb-analyzer .az-nav {
+    width: auto;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 12px 16px;
+    border-right: 0;
+    border-bottom: 1px solid var(--hairline);
+  }
+  .cb-analyzer .az-navlinks {
+    flex-direction: row;
+    gap: 4px;
+  }
+  .cb-analyzer .az-brand-word {
+    display: none;
+  }
+  .cb-analyzer .az-navitem {
+    width: 40px;
+    justify-content: center;
+    padding: 8px 0;
+  }
+  .cb-analyzer .az-navlabel {
+    display: none;
+  }
+}
+
+/* ---------- Topbar utility strip (AnalyzerTopBar) ---------- */
+.cb-analyzer .az-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 20px 24px 0;
+}
+.cb-analyzer .az-topbar.steps {
+  max-width: 1100px;
+}
+.cb-analyzer .az-topbar-context {
+  font-size: 13px;
+  color: var(--muted);
+}
+.cb-analyzer .az-topbar-controls {
+  display: flex;
+  gap: 8px;
+}
+@media (min-width: 1600px) {
+  .cb-analyzer .az-topbar {
+    max-width: 1360px;
+  }
+}
+
+/* ---------- Report frame: identity / hero / tabs / body + right rail
+   (AnalyzerReportFrame) ---------- */
+.cb-analyzer .az-report {
+  display: flex;
+  align-items: flex-start;
+  gap: 40px;
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 20px 24px 96px;
+}
+.cb-analyzer .az-report-main {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+@media (min-width: 1600px) {
+  .cb-analyzer .az-report {
+    max-width: 1600px;
+  }
+}
+@media (max-width: 767px) {
+  .cb-analyzer .az-report {
+    flex-direction: column;
+    /* The base rule's align-items: flex-start sizes a row's cross axis
+       (height); reused unchanged in column mode it sizes the cross axis
+       instead (width) to content, so .az-report-main stops being
+       constrained to the viewport and every min-content child inside it
+       (the price chart SVG, the four-column scenario grid) pushes the
+       whole page wider than the screen. Overridden back to stretch, the
+       one cross-axis behaviour every other breakpoint gets for free from
+       flex-direction: row's own default. */
+    align-items: stretch;
+    gap: 24px;
+    padding: 16px 16px 64px;
+  }
+}
+
+.cb-analyzer .az-identity {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+.cb-analyzer .az-identity-name {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.cb-analyzer .az-identity-name h1 {
+  margin: 0;
+  font-size: 22px;
+  font-weight: 600;
+}
+.cb-analyzer .az-ticker {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Locked shell invariant: the same verdict/price/Bear-Base-Bull-Uncertainty
+   hero renders on every desktop tab (design authority doc, "Locked shell
+   invariants ... identical across every desktop tab") — never a second,
+   bigger hero for Overview at this width. */
+.cb-analyzer .az-hero {
+  display: grid;
+  grid-template-columns: minmax(180px, 260px) minmax(0, 1fr);
+  grid-template-areas: "verdict price" "scenarios scenarios";
+  gap: 20px 32px;
+  padding: 20px 0;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 24px;
+}
+/* Grid items default to min-width: auto, so without this a wide
+   intrinsic-size child (the price chart's SVG) refuses to shrink below its
+   own content size and forces the whole shell wider than the viewport. */
+.cb-analyzer .az-hero > div {
+  min-width: 0;
+}
+.cb-analyzer .az-hero-verdict {
+  grid-area: verdict;
+}
+.cb-analyzer .az-hero-price {
+  grid-area: price;
+}
+.cb-analyzer .az-hero-scenarios {
+  grid-area: scenarios;
+}
+.cb-analyzer .az-uncertainty {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+/* Never colour-only (design authority doc, colour-independent state
+   encoding carried over from design.md:742): the word itself already says
+   "Low/Medium/High uncertainty" — colour here is a reinforcing accent on
+   the HIGH case only, never the sole distinguishing signal. */
+.cb-analyzer .az-uncertainty[data-level="High"] {
+  color: var(--stale);
+}
+
+.cb-analyzer .az-trustnote {
+  margin-bottom: 20px;
+}
+.cb-analyzer .az-save {
+  margin-bottom: 24px;
+}
+.cb-analyzer .az-save .act {
+  display: inline-block;
+  font: inherit;
+  font-size: 14px;
+  padding: 10px 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--field);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+/* Seven-tab rail — same order, placement and selected-state treatment on
+   every screen (design authority doc, "One shell, seven tabs"). */
+.cb-analyzer .az-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--hairline);
+  margin-bottom: 28px;
+}
+.cb-analyzer .az-tab {
+  flex: 0 0 auto;
+  padding: 10px 14px;
+  font-size: 14px;
+  color: var(--muted);
+  text-decoration: none;
+  border-bottom: 2px solid transparent;
+  white-space: nowrap;
+}
+.cb-analyzer .az-tab:hover {
+  color: var(--ink);
+}
+.cb-analyzer .az-tab.on {
+  color: var(--ink);
+  font-weight: 600;
+  border-bottom-color: var(--ink);
+}
+
+/* ---------- Right rail: Key Stats (TTM) / Market Context / Upcoming
+   Events (AnalyzerRightRail) — wide-desktop only, per the design authority
+   doc's locked shell invariant; CSS-hidden rather than omitted from the
+   DOM below that width (m9-analyzer-design-contract.md §6, "relocate or
+   stack, never crush the core reading flow"). ---------- */
+.cb-analyzer .az-rightrail {
+  display: none;
+  flex: 0 0 280px;
+}
+.cb-analyzer .az-rail-block {
+  margin-bottom: 28px;
+}
+.cb-analyzer .az-rail-block h3 {
+  margin: 0 0 10px;
+  font-size: 13px;
+  font-weight: 600;
+}
+.cb-analyzer .az-keystats {
+  margin: 0;
+}
+.cb-analyzer .az-keystats > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 7px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+/* A suppressed figure (FigureValue's own .state block, e.g. P/E or FCF
+   yield with a missing required input) needs the full-width, left-aligned
+   treatment .state uses everywhere else — cramming it into the narrow
+   right-aligned value column it shares with a plain figure overlaps text. */
+.cb-analyzer .az-keystats > div:has(.state) {
+  flex-direction: column;
+  align-items: stretch;
+}
+.cb-analyzer .az-keystats dd .state {
+  text-align: left;
+}
+.cb-analyzer .az-keystats dt {
+  font-size: 13px;
+  color: var(--muted);
+}
+.cb-analyzer .az-keystats dd {
+  margin: 0;
+  font-size: 13px;
+  text-align: right;
+  font-feature-settings: "tnum" 1;
+}
+.cb-analyzer .az-rail-note {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+@media (min-width: 1280px) {
+  .cb-analyzer .az-rightrail {
+    display: block;
+  }
+}
+
+/* ---------- Compact report header (half-window / tablet / phone) ----------
+   design authority doc, "Compact report header": below wide desktop, every
+   tab OTHER than Overview collapses the full Bear/Base/Bull/Uncertainty
+   hero to identity -> current price -> verdict + uncertainty -> tab rail;
+   Overview keeps the richer summary. Pure CSS, keyed off .az-hero's own
+   data-tab attribute (AnalyzerReportFrame) — there is no second render
+   path for the two to drift out of sync with. */
+@media (max-width: 1279px) {
+  .cb-analyzer .az-hero {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: "verdict" "price" "scenarios";
+    gap: 12px;
+    padding: 12px 0;
+  }
+  .cb-analyzer .az-hero[data-tab]:not([data-tab="overview"]) .az-hero-scenarios {
+    display: none;
+  }
+}

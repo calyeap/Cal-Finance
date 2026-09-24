@@ -191,12 +191,20 @@ describe("globals.css — M9 Compact (§17.15 tiers 4-5, item 6, M9-RESPONSIVE-C
     );
   });
 
-  it("no second breakpoint below Compact was introduced for the M9 routes — every max-width query touching .cb-analyzer content is 720px (the project's pre-existing shared breakpoint) or 1024px (this outcome's new Compact ceiling)", () => {
+  it("only the M9-era breakpoints (720px, 1024px) plus the CF-DESIGN-AUTHORITY-CUTOVER-01 Analyzer V2 shell tiers (599px, 767px, 1279px) appear under .cb-analyzer — no other max-width query was introduced", () => {
+    // CF-DESIGN-AUTHORITY-CUTOVER-01 (docs/design/analyzer-v2-design-
+    // authority.md) supersedes the M9 3-tier Standard/Compact/Wide system
+    // this guard originally pinned: it explicitly requires five named
+    // acceptance targets (32-inch desktop / half-window / iPad landscape /
+    // iPad portrait / iPhone), which the old 720/1024px pair cannot
+    // express. The three new values are the Analyzer V2 shell's own tiers
+    // (globals.css, "Analyzer V2 shell" section) — 599/1279px bound the
+    // compact-icon-rail range, 767px is the phone/tablet-portrait split.
     const cbAnalyzerCss = css.slice(css.indexOf(".cb-analyzer {"));
     const maxWidths = new Set(
       [...cbAnalyzerCss.matchAll(/@media \(max-width:\s*(\d+)px\)/g)].map((m) => m[1])
     );
-    expect([...maxWidths].sort()).toEqual(["1024", "720"]);
+    expect([...maxWidths].sort()).toEqual(["1024", "1279", "599", "720", "767"]);
   });
 
   it("nothing at or above 1024px changed: the Standard/Wide grid, gap, sticky rail and 72ch prose cap from PR #165 are untouched", () => {
@@ -313,12 +321,14 @@ describe("globals.css — M9 shared Calboard chrome (M9-THEME-COMPLETION-01)", (
     expect(css.match(/\.cb-analyzer\[data-theme="dark"\]\s*\{/g)).toHaveLength(1);
   });
 
-  it("no second breakpoint below Compact and no new max-width value were introduced by the chrome — still only 720px and 1024px", () => {
+  it("only the M9-era breakpoints plus the Analyzer V2 shell tiers were introduced by the chrome — same set app/globalsCss.test.ts's Compact describe block above pins", () => {
+    // CF-DESIGN-AUTHORITY-CUTOVER-01 — see the sibling assertion above for
+    // why this set grew from the M9-era {720, 1024} pair.
     const cbAnalyzerCss = css.slice(css.indexOf(".cb-analyzer {"));
     const maxWidths = new Set(
       [...cbAnalyzerCss.matchAll(/@media \(max-width:\s*(\d+)px\)/g)].map((m) => m[1])
     );
-    expect([...maxWidths].sort()).toEqual(["1024", "720"]);
+    expect([...maxWidths].sort()).toEqual(["1024", "1279", "599", "720", "767"]);
   });
 });
 

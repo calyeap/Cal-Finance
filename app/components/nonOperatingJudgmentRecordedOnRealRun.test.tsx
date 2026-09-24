@@ -7,6 +7,7 @@ import { computeAnalysisForRun, loadGateState } from "@/lib/analyzer/gate";
 import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
 import { AnalyzerOverview } from "./AnalyzerOverview";
+import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
 
 // ---------------------------------------------------------------------------
 // CF-S44-RECORD-01 — the rendering half of MSFT's recorded §4.4 ruling: the
@@ -22,20 +23,10 @@ import { AnalyzerOverview } from "./AnalyzerOverview";
 
 const MSFT_TAG = "us-gaap:LongTermInvestments";
 
-const OVERVIEW_SLOT_ORDER = [
-  "slot-1",
-  "slot-2",
-  "slot-3",
-  "slot-4",
-  "slot-5",
-  "slot-6",
-  "slot-7",
-  "slot-8",
-  "slot-9",
-  "slot-10",
-  "slot-11",
-  "slot-12",
-];
+// CF-DESIGN-AUTHORITY-CUTOVER-01 — AnalyzerOverview now renders only the
+// Overview tab's own body (slots 5-11); slots 1-4 and 12 moved to
+// AnalyzerReportFrame.
+const OVERVIEW_TAB_SLOT_ORDER = ["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11"];
 
 async function completeSpotCheck(runId: string): Promise<void> {
   const state = await loadGateState(runId);
@@ -76,41 +67,28 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     await getPool().end();
   });
 
-  it("all twelve Overview slots are still present, in the fixed §2.1 order, none absent", async () => {
+  it("all seven Overview tab slots are still present, in the fixed §2.1 order, none absent", async () => {
     const { result, aiLayer } = await openMsftRunWithRuling();
-    const verdict = deriveVerdict(result);
 
-    const { container } = render(
-      <AnalyzerOverview
-        result={result}
-        verdict={verdict}
-        profileNotConfirmed={false}
-        fullAnalysisHref="/analyzer/x/report"
-        aiLayer={aiLayer}
-      />
-    );
-    const ids = Array.from(container.querySelectorAll("main > .ovslot")).map((el) => el.id);
-    expect(ids).toEqual(OVERVIEW_SLOT_ORDER);
+    const { container } = render(<AnalyzerOverview result={result} aiLayer={aiLayer} />);
+    const ids = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
+    expect(ids).toEqual(OVERVIEW_TAB_SLOT_ORDER);
   });
 
-  it("slot 2 still renders INCOMPLETE — verdict.reason verbatim as the cause line, no confidence figure", async () => {
-    const { result, aiLayer } = await openMsftRunWithRuling();
+  it("the shared hero still renders INCOMPLETE — verdict.reason verbatim as the cause line, no confidence figure", async () => {
+    const { result } = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
     expect(verdict.status).toBe("INCOMPLETE");
 
     const { container } = render(
-      <AnalyzerOverview
-        result={result}
-        verdict={verdict}
-        profileNotConfirmed={false}
-        fullAnalysisHref="/analyzer/x/report"
-        aiLayer={aiLayer}
-      />
+      <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="overview">
+        <div />
+      </AnalyzerReportFrame>
     );
-    const slot2 = container.querySelector("#slot-2") as HTMLElement;
-    expect(slot2.textContent).toContain("INCOMPLETE");
-    expect(slot2.textContent).toContain(verdict.reason);
+    const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
+    expect(hero.textContent).toContain("INCOMPLETE");
+    expect(hero.textContent).toContain(verdict.reason);
     // §2.1 slot 2 — confidence only when the analysis is not INCOMPLETE.
-    expect(slot2.querySelector(".confidence")).toBeNull();
+    expect(hero.querySelector(".confidence")).toBeNull();
   });
 });

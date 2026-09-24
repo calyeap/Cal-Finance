@@ -13,9 +13,16 @@ import { useTheme } from "./ThemeContext";
 export function TopBarControls({
   privacyClassName = "iconbare",
   themeClassName = "iconbare",
+  showThemeToggle = true,
 }: {
   privacyClassName?: string;
   themeClassName?: string;
+  // CF-DESIGN-AUTHORITY-CUTOVER-01 — Analyzer V2 is dark-only and ships with
+  // no theme control at all (design authority doc: "no theme control in
+  // Analyzer V2"; "Remove the theme toggle entirely from the shipped V2
+  // UI"). false only for the Analyzer's own bar; Dashboard and Holdings keep
+  // the toggle by leaving this at its default.
+  showThemeToggle?: boolean;
 }) {
   const { hidden, toggle: togglePrivacy } = usePrivacy();
   const { theme, toggle: toggleTheme } = useTheme();
@@ -41,24 +48,26 @@ export function TopBarControls({
           </svg>
         )}
       </button>
-      <button
-        type="button"
-        className={themeClassName}
-        aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        onClick={toggleTheme}
-      >
-        {theme === "dark" ? (
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <circle cx="12" cy="12" r="4" />
-            <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
-          </svg>
-        ) : (
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" />
-          </svg>
-        )}
-      </button>
+      {showThemeToggle && (
+        <button
+          type="button"
+          className={themeClassName}
+          aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+          onClick={toggleTheme}
+        >
+          {theme === "dark" ? (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z" />
+            </svg>
+          )}
+        </button>
+      )}
     </>
   );
 }
