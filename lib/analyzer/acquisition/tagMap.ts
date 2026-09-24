@@ -42,8 +42,18 @@
  * sides. That second finding is the one that mattered: it is what kept the
  * bump inside an acquisition pass rather than making it a Command Center
  * decision.
+ *
+ * -09-3 (24 September 2026) — CF-RONIC-DELTAS-RECON-01 (issue #298), under
+ * `CALVIN RULING — AUTHORISE NARROW TOTAL-EQUITY CAPTURE`. One change, no
+ * selection-rule touch: `total-equity`, below, added to supply RONIC's
+ * invested-capital denominator per `CALVIN RULING — FINANCING-SIDE INVESTED
+ * CAPITAL` (issue #298, both 2026-09-24). Review
+ * (docs/tag-mapping-version-review.md §9): a brand-new factId cannot change
+ * which candidate any EXISTING entry resolves to, so this bump moves zero
+ * previously-acquired facts across the §3.8.1 exempt/queued boundary — it
+ * only ever adds a new one, present or absent per filer like any other entry.
  */
-export const TAG_MAPPING_VERSION = "calboard-secmap-2026-09-2";
+export const TAG_MAPPING_VERSION = "calboard-secmap-2026-09-3";
 
 export interface TagRef {
   ns: "us-gaap" | "dei";
@@ -189,6 +199,27 @@ export const TAG_MAP: readonly TagMapEntry[] = [
     ],
     basis:
       "§3.5's EV bridge takes 'total debt' separately from finance leases. us-gaap:LongTermDebt carries the full long-term carrying amount including the current portion; commercial paper and other short-term borrowings sit outside it and are added where tagged. Verified against the frozen mock-report-msft.html: 40.294 + 66.594 finance leases - 76.843 cash = 30.045, the mock's stated $30.0B net debt. Where a filer reports no debt total at all, the same quantity is reconstructed from LongTermDebtNoncurrent + LongTermDebtCurrent — the two halves us-gaap:LongTermDebt is defined to foot to, which is why the footing cross-check can be run against it unchanged.",
+  },
+  {
+    factId: "total-equity",
+    name: "Total equity",
+    period: "instant",
+    unit: "USD",
+    // CALVIN RULING — FINANCING-SIDE INVESTED CAPITAL (issue #298,
+    // 2026-09-24T17:24:14Z): RONIC's invested-capital denominator is "total
+    // equity + interest-bearing debt + lease liabilities not already
+    // included in debt − cash − marketable securities," goodwill included.
+    // This entry supplies the first term. us-gaap:StockholdersEquity is
+    // parent-company-only equity; the noncontrolling-interest-inclusive
+    // variant is the fallback for a filer that reports consolidated equity
+    // under that element instead. Neither candidate excludes goodwill, so
+    // no ex-goodwill adjustment is introduced by taking either.
+    candidates: [
+      only(usGaap("StockholdersEquity")),
+      only(usGaap("StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest")),
+    ],
+    basis:
+      "CALVIN RULING — FINANCING-SIDE INVESTED CAPITAL (issue #298, 2026-09-24T17:24:14Z) names total equity as one term of RONIC's ruled invested-capital denominator. us-gaap:StockholdersEquity is the standard total-equity element; the noncontrolling-interest-inclusive variant is the fallback where a filer tags consolidated equity that way instead — same composition question the ruling settles, applied consistently to whichever tag a given filer uses.",
   },
   {
     factId: "finance-lease-liabilities",

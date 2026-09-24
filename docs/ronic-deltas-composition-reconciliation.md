@@ -379,3 +379,117 @@ blocker: the authorised capture needs outbound EDGAR access and a configured
 ends `BLOCKED`, naming exactly that, so a future BUILD pass with EDGAR
 network access can carry out the already-authorised capture and finish the
 acquisition without re-litigating either ruling.
+
+## 7. Update, fourth pass — capture performed, both inputs acquired, §12 closed
+
+`CALVIN RULING — CAPABILITY LIVE` (issue #298, 2026-09-24T18:28:04Z)
+confirmed this run's own environment now has outbound EDGAR access and a
+configured `SEC_USER_AGENT`, removing the third pass's blocker. Verified
+directly before acquiring anything: `curl -sS https://data.sec.gov/
+submissions/CIK0001045810.json` returns HTTP 200, and `SEC_USER_AGENT` is
+set.
+
+### 7a. The authorised capture, performed
+
+Per `CALVIN RULING — AUTHORISE NARROW TOTAL-EQUITY CAPTURE` (§6 above):
+`total-equity` added to `TAG_MAP` (`lib/analyzer/acquisition/tagMap.ts`) —
+`us-gaap:StockholdersEquity`, with
+`StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest` as
+the fallback candidate no filer in this set needed — `TAG_MAPPING_VERSION`
+bumped `calboard-secmap-2026-09-2` → `-09-3` (review:
+`docs/tag-mapping-version-review.md` §9), and the existing capture path
+re-run for NVDA, MSFT and OKLO (`lib/analyzer/acquisition/captures/
+{nvda,msft,oklo}-companyfacts.json` refreshed, every previously-captured tag
+retained, nothing removed). `StockholdersEquity` resolved for all three:
+NVDA FY2014–FY2026, MSFT FY2014–FY2026, OKLO FY2021–FY2025 — checked
+directly against the refreshed files, not inferred.
+
+### 7b. A second, unrelated gap this pass also had to fix: `plus` components missing from the historical series
+
+Building the two invested-capital endpoints exposed a real bug, not a
+methodology question: `history.annualSeries` deliberately reads only a
+candidate's PRIMARY tag, never its `plus` components (its own doc comment
+explains why, for a multi-year series whose composition could otherwise
+drift). `total-debt` and `cash-and-marketable-debt-securities` are both
+`withPlus` entries, and the current-period fact (`resolveEntry`) already
+sums the `plus` components at the current period — so a NEW instant series
+function that copied the same "primary only" rule would read a narrower,
+DIFFERENT quantity at the historical endpoint than the one the current-period
+fact already reports for the same factId. Caught by cross-checking MSFT's
+computed invested-capital figures by hand against the raw capture
+(`ShortTermInvestments` alone is $116,110M at FY2021 and $55,908M at
+FY2026 — dropping it understated FY2021 cash by 89% and FY2026 cash by
+73%). Fixed in the same commit: the new `history.instantAnnualSeries` sums
+each winning candidate's `plus` components at every observation (not only
+the current one), mirroring `resolveEntry`'s own arithmetic exactly — an
+absent `plus` component at one instant contributes zero to that instant only,
+never blocking the whole series. `history.annualSeries` (revenue,
+operating-income — neither of which has ever carried a `plus`) is
+unchanged in behaviour; this is not a second acquisition harness, it is the
+existing one's own composition rule applied to one more point in time.
+
+### 7c. Both companies' RONIC ladders, from the run's own output
+
+| Ticker | ΔNOPAT (FY2021→FY2026) | ΔInvested capital (FY2021→FY2026) | RONIC | Ladder state (8/10/12%) |
+|---|---|---|---|---|
+| NVDA | $99,425,450,000 | $132,147,000,000 | **75.2385%** | **CLEAN** at every rate |
+| MSFT | $68,256,800,000 | $390,091,000,000 | **17.4977%** | **CLEAN** at every rate |
+| OKLO | not acquired | not acquired | — | `INCOMPLETE` — `fiveYearDeltaNopat` alone; OKLO's own capture has no FY2020 (its earliest filed annual year is FY2021), so the trailing-five-year window has no "from" endpoint regardless of the invested-capital work here — unchanged from every prior pass, and consistent with OKLO's own Gate 1 `HISTORY INSUFFICIENT` state. |
+
+NVDA's invested-capital component values, verified directly against the
+refreshed capture (`$M`): equity $16,893 → $157,293; total debt $6,963 →
+$8,468 (`us-gaap:LongTermDebt`, no separately tagged finance-lease
+liability on this filer — the ruling's own carve-out reduces that term to
+zero, not a missing REQUIRED input); cash $847 → $10,605
+(`CashAndCashEquivalentsAtCarryingValue` alone; NVDA tags no
+`ShortTermInvestments`). MSFT's, for contrast: equity $141,988 → $442,387;
+debt $58,146 → $40,294; finance-lease liabilities $12,541 → $66,594 (MSFT
+DOES separately tag `FinanceLeaseLiability`, added once, not double-counted
+with debt); cash (`CashAndCashEquivalentsAtCarryingValue` +
+`ShortTermInvestments`) $130,334 → $76,843.
+
+### 7d. §12's first evidence gap — closed
+
+`docs/verdict-methodology-reconciliation.md` §12's first evidence-gap
+bullet — "at least one company whose RONIC ladder is not uniformly NOT
+MEANINGFUL across the 8/10/12% × three-margin-level grid" — **is closed**.
+NVDA's ladder is CLEAN at every rate, real evidence from a real acquired
+run, reproduced in CI by `lib/analyzer/nvdaRealRunObservation.test.ts`
+(updated this pass, still green). MSFT's real run (`reverseDcfOnRealRun.
+test.ts`, updated this pass) reaches the same CLEAN state once its own test
+separately answers §4.4 to get past the unrelated enterprise-value gate —
+corroborating, not duplicating, NVDA's own reading, since it is a second,
+independent company whose ladder moved from "not meaningful" to CLEAN the
+moment the SAME pipeline-wide denominator gap closed. `docs/nvda-realrun-
+observation.md` is corrected in place (its own §6 SCOPE item) to carry this
+result — the RONIC ladder and §12 summary sections, and nothing else. This
+outcome draws no conclusion from either CLEAN figure beyond that the gap is
+closed: it does not compute a verdict, does not answer §11 items 2 or 4, and
+does not mark any acceptance-matrix row satisfied (`docs/product-
+decisions.md` items 3 and 9) — those stay Calvin's, unchanged by this
+pass.
+
+### 7e. Verification
+
+- `npx tsc --noEmit` — clean.
+- `npm test` — 2037 passed, 1 failed at the documented CI baseline
+  (`scripts/evidence/selfTest.test.ts`, missing Playwright
+  `chrome-headless-shell` in this sandbox — the environmental exception
+  `.github/workflows/ci.yml`'s header names; not reproduced by CI itself).
+- `lib/analyzer/nvdaRealRunObservation.test.ts`,
+  `lib/analyzer/reverseDcfOnRealRun.test.ts`,
+  `lib/analyzer/acquisition/history.test.ts`,
+  `lib/analyzer/acquisition/acquire.test.ts`,
+  `lib/analyzer/modules/reinvestmentRonic.test.ts` — all green; the first
+  two updated to assert the newly-computed CLEAN states in place of the
+  prior `INCOMPLETE`/"RONIC not meaningful" ones, the rest unchanged.
+- `lib/analyzer/verdict.ts` and `lib/analyzer/policy.ts` byte-unchanged; no
+  `docs/frozen/` byte changed and no `FROZEN_HASHES` entry touched;
+  `lib/analyzer/modules/scenarioOutputs.ts` untouched;
+  `lib/analyzer/fixtures/msft.ts`'s and `fixtures/oklo.ts`'s hand-authored
+  M5 values unchanged — confirmed by `git diff --stat` against this pass's
+  own commit.
+
+**Ending, fourth pass.** `DONE:` — one PR, this reconciliation and the
+accompanying real-run tests are the evidence. §12's first evidence gap is
+closed; nothing here answers §11, sets policy, or produces a verdict.

@@ -147,23 +147,24 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     expect(cells).toHaveLength(9);
 
     const ronic = result.diagnostics.reinvestmentRonic.ronic;
-    // The RONIC ladder itself: INCOMPLETE, but only for ONE REQUIRED input
-    // now — CF-RONIC-DELTAS-RECON-01 acquires fiveYearDeltaNopat (the same
-    // operating-income tag and configured nopatTaxRate the single-period
-    // nopat field already uses, both trailing-five-year endpoints present
-    // on NVDA's own capture). fiveYearDeltaInvestedCapital stays null: CALVIN
-    // RULING — FINANCING-SIDE INVESTED CAPITAL (issue #298) settles the
-    // composition, but total equity is not present in any of the three
-    // already-committed captures (docs/ronic-deltas-composition-
-    // reconciliation.md §2b) and acquiring it needs a new capture this
-    // outcome's HARD BOUNDS forbid. A half-acquired ladder that still
-    // reports INCOMPLETE is a truthful result (SCOPE item 3), not a failure.
-    expect(ronic.suppressed).toBe(true);
-    if (ronic.suppressed) {
-      expect(ronic.state).toBe("INCOMPLETE");
-      expect(ronic.cause).not.toContain("fiveYearDeltaNopat");
-      expect(ronic.cause).toContain("fiveYearDeltaInvestedCapital");
-      expect(ronic.cause).toBe("missing REQUIRED input(s): fiveYearDeltaInvestedCapital");
+    // The RONIC ladder itself: BOTH REQUIRED inputs are now acquired.
+    // CF-RONIC-DELTAS-RECON-01's fourth pass captured `total-equity`
+    // (CALVIN RULING — AUTHORISE NARROW TOTAL-EQUITY CAPTURE, issue #298)
+    // and applied CALVIN RULING — FINANCING-SIDE INVESTED CAPITAL to both
+    // trailing-five-year endpoints on NVDA's own re-captured document
+    // (docs/ronic-deltas-composition-reconciliation.md §7). NVDA's ladder is
+    // no longer INCOMPLETE: ΔNOPAT $99,425,450,000 ÷ ΔInvestedCapital
+    // $132,147,000,000 = 75.2385%, CLEAN at every rate in the grid — well
+    // above 8/10/12% and the 200% cap alike. This is §12's first evidence
+    // gap closing: NVDA is a real company whose RONIC ladder is NOT
+    // uniformly NOT MEANINGFUL.
+    expect(ronic.suppressed).toBe(false);
+    if (!ronic.suppressed) {
+      expect(ronic.value.cells).toHaveLength(3);
+      for (const cell of ronic.value.cells) {
+        expect(cell.state).toBe("CLEAN");
+        expect(cell.value?.toDecimalPlaces(4).toString()).toBe("0.7524");
+      }
     }
 
     // On THIS observation run, §4.4 is deliberately left unmade (SCOPE item
@@ -171,9 +172,9 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     // own missing-base check (baseYearRevenue, targetEnterpriseValue,
     // currentMargin, nopatTaxRate) fires before any per-cell RONIC check is
     // ever reached — every cell reports the more upstream cause, not the
-    // RONIC-specific one MSFT's own real run reaches only once its own test
-    // separately answers §4.4 (reverseDcfOnRealRun.test.ts, which this
-    // outcome's HARD BOUNDS forbid doing for NVDA).
+    // RONIC ladder's own (now CLEAN) state confirmed directly above. §4.4
+    // remains out of this outcome's SCOPE (reverseDcfOnRealRun.test.ts
+    // answers it for MSFT separately, not here).
     for (const cell of cells) {
       expect(cell.fiveYearGrowth.suppressed).toBe(true);
       if (cell.fiveYearGrowth.suppressed) {
@@ -182,25 +183,6 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
       expect(cell.tenYearCagr.suppressed).toBe(true);
       expect(cell.ronic.suppressed).toBe(true);
     }
-
-    // The RONIC ladder's OWN state — read directly, independent of the EV
-    // gate above — is the direct answer to §12's question: still INCOMPLETE,
-    // not a computed "not meaningful" reading of NVDA's own returns, but now
-    // for ONE REQUIRED input, not two (confirmed above) — this acquisition
-    // pipeline now acquires fiveYearDeltaNopat for every company whose
-    // capture carries both trailing-five-year operating-income endpoints
-    // (NVDA and MSFT do; OKLO's capture does not, docs/ronic-deltas-
-    // composition-reconciliation.md §2). fiveYearDeltaInvestedCapital stays
-    // unacquired for every company, pipeline-wide, because total equity is
-    // absent from every committed capture, not from anything NVDA-specific.
-    // NVDA's ladder is therefore in the SAME unresolved state as MSFT's own
-    // real run (which ALSO now acquires fiveYearDeltaNopat but still
-    // suppresses every cell — verified unchanged by this outcome at
-    // reverseDcfOnRealRun.test.ts, surfacing as "RONIC not meaningful for
-    // this company (§7.2 M5 ladder)" once its own test separately answers
-    // §4.4 to get past the EV gate) — §12's "not uniformly NOT MEANINGFUL"
-    // evidence gap is NOT closed by this run, for a pipeline-wide reason (the
-    // denominator), not an NVDA-specific one.
   });
 
   it("(b) the achieved-comparator: ten-year from the run's own output, five-year from the same acquired document and recency evidence", async () => {

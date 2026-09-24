@@ -3,6 +3,7 @@ import { CLEAN_PROVENANCE, MARKET_DATA_PROVENANCE, combineProvenance } from "../
 import { TAG_MAP } from "./tagMap";
 import {
   annualSeries,
+  instantAnnualSeries,
   operatingMarginSeries,
   filedAnnualYearsCount,
   quarterlySeries,
@@ -200,6 +201,48 @@ export function buildCompanyInputs(
   const revenueAnnualSeries = annualSeries(companyFacts, revenueTags);
   const operatingIncomeAnnualSeries = annualSeries(companyFacts, operatingIncomeTags);
   const margins = operatingMarginSeries(revenueAnnualSeries, operatingIncomeAnnualSeries);
+
+  // RONIC's invested-capital denominator (CALVIN RULING — FINANCING-SIDE
+  // INVESTED CAPITAL, issue #298): total equity + interest-bearing debt +
+  // lease liabilities not already in debt − cash and marketable securities,
+  // each an instant (balance-sheet) quantity read across fiscal year-ends via
+  // `instantAnnualSeries` — the instant counterpart of the `annualSeries`
+  // calls just above, reusing the SAME candidate lists the current-period
+  // `total-debt`/`finance-lease-liabilities`/`cash-and-marketable-debt-
+  // securities` facts already resolve through (`get(...)` below), per
+  // RETRIEVE FIRST item 3.
+  const totalEquityAnnualSeries = instantAnnualSeries(
+    companyFacts,
+    TAG_MAP.find((e) => e.factId === "total-equity")!.candidates
+  );
+  const totalDebtAnnualSeries = instantAnnualSeries(
+    companyFacts,
+    TAG_MAP.find((e) => e.factId === "total-debt")!.candidates
+  );
+  const financeLeaseLiabilitiesAnnualSeries = instantAnnualSeries(
+    companyFacts,
+    TAG_MAP.find((e) => e.factId === "finance-lease-liabilities")!.candidates
+  );
+  const cashAndMarketableDebtSecuritiesAnnualSeries = instantAnnualSeries(
+    companyFacts,
+    TAG_MAP.find((e) => e.factId === "cash-and-marketable-debt-securities")!.candidates
+  );
+  // Weakest-input provenance behind the three genuinely REQUIRED terms
+  // (§3.3) — null, and so blocking the whole delta, unless all three
+  // resolved this fiscal year. Finance-lease liabilities are folded in only
+  // when present: their absence is a reading (already in debt, per the
+  // ruling's own carve-out), not a missing input, so it must not gate
+  // provenance either.
+  const investedCapitalProvenance: ProvenanceTokens | null = (() => {
+    const equity = get("total-equity");
+    const debt = get("total-debt");
+    const cash = get("cash-and-marketable-debt-securities");
+    if (equity === null || debt === null || cash === null) return null;
+    const lease = get("finance-lease-liabilities");
+    return lease === null
+      ? combineProvenance(equity.provenance, debt.provenance, cash.provenance)
+      : combineProvenance(equity.provenance, debt.provenance, cash.provenance, lease.provenance);
+  })();
 
   // §10.6.2/§13 (CF-VERDICT-NONPOLICY-GAPS-01) — Step 7's achieved-history
   // comparator, ten years preferred (§10.6.2). Computed from the SAME
@@ -406,36 +449,35 @@ export function buildCompanyInputs(
       deltaNwc: null,
       deltaRevenue: null,
     },
-    // CF-RONIC-DELTAS-RECON-01 — the numerator is acquired; the denominator
-    // stays null. `fiveYearDeltaNopat` needs a trailing five-year change in
-    // NOPAT, computed from the SAME operating-income tag and the SAME
-    // configured nopatTaxRate the single-period `nopat` field above already
-    // uses (`nopatFrom`, defined below) — `fiveYearNopatDelta` applies that
+    // CF-RONIC-DELTAS-RECON-01 — both inputs are now acquired.
+    //
+    // `fiveYearDeltaNopat` needs a trailing five-year change in NOPAT,
+    // computed from the SAME operating-income tag and the SAME configured
+    // nopatTaxRate the single-period `nopat` field above already uses
+    // (`nopatFrom`, defined below) — `fiveYearNopatDelta` applies that
     // identical per-year derivation to both endpoints of the operating-income
     // series already read for `margins` above (:202) rather than a second
     // acquisition, per RETRIEVE FIRST item 5.
     //
-    // `fiveYearDeltaInvestedCapital` stays null. CALVIN RULING — FINANCING-
-    // SIDE INVESTED CAPITAL (issue #298, 2026-09-24T17:24:14Z) settles the
-    // composition — total equity + interest-bearing debt + lease liabilities
-    // not already in debt − cash − marketable securities — but total equity
-    // (`us-gaap:StockholdersEquity` or equivalent) is not present in ANY of
-    // the three already-committed captures (verified directly against
-    // lib/analyzer/acquisition/captures/{nvda,msft,oklo}-companyfacts.json,
-    // each trimmed at capture time to exactly TAG_MAP's needs — no equity
-    // tag was ever captured for any filer). A second ruling, CALVIN RULING —
-    // AUTHORISE NARROW TOTAL-EQUITY CAPTURE (issue #298, 2026-09-24T17:47:12Z),
-    // has since lifted this outcome's own no-new-capture/EDGAR bound narrowly
-    // enough to supply it (a `total-equity` TAG_MAP entry, a
-    // TAG_MAPPING_VERSION bump, a re-run of the existing capture path for
-    // NVDA/MSFT/OKLO) — but that capture step is not yet done: the run
-    // authorised to perform it needs outbound EDGAR access this run's own
-    // execution environment does not have (docs/ronic-deltas-composition-
-    // reconciliation.md §6). So the term stays honestly null with this cause
-    // — an unperformed, already-authorised capture, not a proxy, an
-    // estimate, or a different, un-ruled composition. A half-acquired ladder
-    // that still reports INCOMPLETE is a truthful result (SCOPE item 3), not
-    // a failure.
+    // `fiveYearDeltaInvestedCapital` applies CALVIN RULING — FINANCING-SIDE
+    // INVESTED CAPITAL (issue #298, 2026-09-24T17:24:14Z) — total equity +
+    // interest-bearing debt + lease liabilities not already in debt − cash −
+    // marketable securities — to both endpoints of the SAME trailing
+    // five-year window `fiveYearDeltaNopat` uses, per `fiveYearInvestedCapital
+    // Delta` below. Total equity was absent from every already-committed
+    // capture at the time of the prior two passes; CALVIN RULING — AUTHORISE
+    // NARROW TOTAL-EQUITY CAPTURE (issue #298, 2026-09-24T17:47:12Z) lifted
+    // this outcome's own no-new-capture/EDGAR bound narrowly enough to supply
+    // it, and that capture is now done (a `total-equity` TAG_MAP entry,
+    // TAG_MAPPING_VERSION bumped to -09-3, NVDA/MSFT/OKLO re-captured — see
+    // docs/ronic-deltas-composition-reconciliation.md §7). Finance-lease
+    // liabilities stay governed by the ruling's own carve-out: where a filer
+    // carries no separately captured lease-liability observation for a given
+    // fiscal year, that is read as the lease already sitting inside the debt
+    // figure — nothing additional to add — not a missing REQUIRED term
+    // (`investedCapitalAt` below). Total equity, total debt and cash remain
+    // genuinely REQUIRED: either endpoint missing leaves the whole delta null
+    // with its cause, per spec `:455`'s cascade.
     ronic: {
       fiveYearDeltaNopat: track(
         "fiveYearDeltaNopat",
@@ -445,7 +487,17 @@ export function buildCompanyInputs(
           get("operating-income")?.provenance ?? null
         )
       ),
-      fiveYearDeltaInvestedCapital: track("fiveYearDeltaInvestedCapital", null),
+      fiveYearDeltaInvestedCapital: track(
+        "fiveYearDeltaInvestedCapital",
+        fiveYearInvestedCapitalDelta(
+          operatingIncomeAnnualSeries,
+          totalEquityAnnualSeries,
+          totalDebtAnnualSeries,
+          financeLeaseLiabilitiesAnnualSeries,
+          cashAndMarketableDebtSecuritiesAnnualSeries,
+          investedCapitalProvenance
+        )
+      ),
       lagBiasDirection: "conservative",
     },
     impliedReturnOnNewCapital: null,
@@ -542,6 +594,76 @@ function fiveYearNopatDelta(
   const fromNopat = new Decimal(from.value).mul(oneMinusTaxRate);
 
   return { value: toNopat.minus(fromNopat), provenance: operatingIncomeProvenance };
+}
+
+/** One instant series's value at a given fiscal year, or null if it has none. */
+function instantValueAt(series: AnnualSeries | null, fiscalYear: number): number | null {
+  if (series === null) return null;
+  const obs = series.observations.find((o) => o.fiscalYear === fiscalYear);
+  return obs === undefined ? null : obs.value;
+}
+
+/**
+ * CALVIN RULING — FINANCING-SIDE INVESTED CAPITAL (issue #298,
+ * 2026-09-24T17:24:14Z), applied at one fiscal year-end: total equity +
+ * interest-bearing debt + lease liabilities not already in debt − cash −
+ * marketable securities.
+ *
+ * Total equity, total debt and cash are genuinely REQUIRED: either one
+ * absent for this fiscal year returns null (spec `:455`'s cascade). Finance
+ * lease liabilities are not — the ruling's own carve-out ("add a separately
+ * captured lease liability only when it is not already contained in the debt
+ * figure") reads a filer with no separately captured observation for this
+ * fiscal year as the lease already sitting inside the debt figure, so its
+ * absence contributes zero rather than blocking the whole term. This is not
+ * a proxy or a default for a genuinely missing REQUIRED fact: it is what the
+ * ruling itself says an absent separate lease-liability tag means.
+ */
+function investedCapitalAt(
+  fiscalYear: number,
+  equitySeries: AnnualSeries | null,
+  debtSeries: AnnualSeries | null,
+  leaseSeries: AnnualSeries | null,
+  cashSeries: AnnualSeries | null
+): Decimal | null {
+  const equity = instantValueAt(equitySeries, fiscalYear);
+  const debt = instantValueAt(debtSeries, fiscalYear);
+  const cash = instantValueAt(cashSeries, fiscalYear);
+  if (equity === null || debt === null || cash === null) return null;
+
+  const lease = instantValueAt(leaseSeries, fiscalYear) ?? 0;
+
+  return new Decimal(equity).plus(debt).plus(lease).minus(cash);
+}
+
+/**
+ * Invested capital's own trailing five-year change, over the SAME two fiscal
+ * years `fiveYearNopatDelta` computes its own delta over (`operatingIncome
+ * Series`'s latest observation, and that year minus five) — RONIC's ratio
+ * compares two five-year changes over one identical window, not two
+ * independently-anchored ones. Null unless BOTH endpoints resolve, per
+ * `investedCapitalAt` above.
+ */
+function fiveYearInvestedCapitalDelta(
+  operatingIncomeSeries: AnnualSeries | null,
+  equitySeries: AnnualSeries | null,
+  debtSeries: AnnualSeries | null,
+  leaseSeries: AnnualSeries | null,
+  cashSeries: AnnualSeries | null,
+  investedCapitalProvenance: ProvenanceTokens | null
+): SourcedValue<Decimal> | null {
+  if (operatingIncomeSeries === null || investedCapitalProvenance === null) return null;
+
+  const observations = operatingIncomeSeries.observations;
+  const to = observations[observations.length - 1];
+  if (to === undefined) return null;
+  const fromFiscalYear = to.fiscalYear - 5;
+
+  const toCapital = investedCapitalAt(to.fiscalYear, equitySeries, debtSeries, leaseSeries, cashSeries);
+  const fromCapital = investedCapitalAt(fromFiscalYear, equitySeries, debtSeries, leaseSeries, cashSeries);
+  if (toCapital === null || fromCapital === null) return null;
+
+  return { value: toCapital.minus(fromCapital), provenance: investedCapitalProvenance };
 }
 
 function medianOf(values: Decimal[]): SourcedValue<Decimal> | null {
