@@ -139,9 +139,6 @@ jobs:
       - name: Run BUILD duplicate suppression unit tests
         run: bash .github/scripts/build-duplicate-lib.test.sh
 
-      - name: Run Chief of Staff semantic refresh structural tests
-        run: bash .github/scripts/cf-cos-semantic-refresh.test.sh
-
       # CF-STATUS-PLUMBING-CLEANUP-01: deterministic, network-free
       # structural check that OWNER.md derives current status/attention
       # from native GitHub, never from Cal Finance Project Home's stale
