@@ -10,6 +10,7 @@ import { analystInputsFor } from "./acquisition/analystInputs";
 import { recordAnalystBundle, hasRecordedAnalystBundle } from "./acquisition/recordedBundles";
 import { boundState, NOT_COMPUTED_BINDING } from "./notComputed";
 import { AnalyzerReport } from "@/app/components/AnalyzerReport";
+import AnalystInputsTickerPage from "@/app/analyzer/inputs/[ticker]/page";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYST-INPUT-ENTRY-01, SCOPE item 7 — the reusable entry path proven
@@ -191,6 +192,19 @@ describe("CF-ANALYST-INPUT-ENTRY-01 — the recorded entry path, end to end on a
       [TEST_TICKER]
     );
     expect(rows).toHaveLength(1);
+  });
+
+  it("the review screen never claims a correction that never happened — a freshly recorded bundle reports no correction", async () => {
+    await recordAnalystBundle(TEST_TICKER, TEST_INPUT);
+
+    const element = await AnalystInputsTickerPage({
+      params: Promise.resolve({ ticker: TEST_TICKER }),
+      searchParams: Promise.resolve({}),
+    });
+    const { container } = render(element);
+
+    expect(container.textContent).toContain("has a recorded bundle, entered");
+    expect(container.textContent).not.toContain("last corrected");
   });
 
   it("MSFT and OKLO come out unchanged — still the committed bundle, still its own disclosure, never routed through the recorded store", async () => {

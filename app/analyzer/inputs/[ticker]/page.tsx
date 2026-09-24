@@ -57,12 +57,15 @@ export default async function AnalystInputsTickerPage({
               <p className="why">
                 {recorded === null
                   ? `${ticker} has no recorded bundle yet — it still cannot open a run.`
-                  : `${ticker} has a recorded bundle, entered ` +
-                    `${new Date(recorded.meta.recordedAt).toISOString().slice(0, 10)}` +
-                    (recorded.meta.updatedAt !== recorded.meta.recordedAt
-                      ? `, last corrected ${new Date(recorded.meta.updatedAt).toISOString().slice(0, 10)}.`
-                      : ".") +
-                  ` Saving below replaces it.`}
+                  : (() => {
+                      const recordedOn = new Date(recorded.meta.recordedAt).toISOString().slice(0, 10);
+                      const updatedOn = new Date(recorded.meta.updatedAt).toISOString().slice(0, 10);
+                      return (
+                        `${ticker} has a recorded bundle, entered ${recordedOn}` +
+                        (updatedOn !== recordedOn ? `, last corrected ${updatedOn}.` : ".") +
+                        ` Saving below replaces it.`
+                      );
+                    })()}
               </p>
               <p className="why">
                 Every field left blank is recorded and returned as absent — never a zero, never a
