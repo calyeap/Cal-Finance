@@ -412,3 +412,72 @@ spot-check, both years out of date and neither flagged.
   updated to record the transition, each with the reason written at the
   assertion. They were the mechanism that made this change conscious rather than
   accidental, and they did their job.
+
+---
+
+## 9. TAG_MAPPING_VERSION review — `calboard-secmap-2026-09-2` → `-09-3`
+
+**Status: the bump is made and this is its review.** `CF-RONIC-DELTAS-
+RECON-01` (issue #298), under `CALVIN RULING — AUTHORISE NARROW TOTAL-EQUITY
+CAPTURE` (24 Sep 2026 17:47:12Z) — the narrow authorisation is
+`docs/ronic-deltas-composition-reconciliation.md` §6–7, not repeated here.
+
+**One change, no selection-rule touch.** `total-equity` added to `TAG_MAP`:
+`us-gaap:StockholdersEquity`, with
+`StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest` as
+the fallback candidate. Nothing about `selectTagged.resolveEntry`,
+`history.annualSeries`'s or `history.quarterlySeries`'s own candidate-
+preference rule changed — the `-09-2` selection fix stands untouched.
+
+**Why this review is narrow, and correctly so.** §1's own two-part question
+— did any EXISTING fact's resolution change, and did any fact cross the
+§3.8.1 exempt/queued boundary — has a structural answer for a brand-new
+`factId` that a changed selection rule or a changed candidate on an EXISTING
+entry does not: **a new entry cannot change what any other entry resolves
+to.** Every other `TagMapEntry` in `TAG_MAP` reads its own tag(s) under its
+own `factId`; adding `total-equity` touches no candidate list, no `plus`
+component and no selection precedence any other entry depends on. Measured
+directly rather than assumed: `git diff` on this bump's own capture
+refresh (`lib/analyzer/acquisition/captures/{nvda,msft,oklo}-
+companyfacts.json`) shows only additions — the `StockholdersEquity` /
+`…NoncontrollingInterest` tag blocks and one changed `capturedAt`/`__capture`
+timestamp per file — never a changed value under any tag this mapping
+already read before this bump.
+
+**Facts whose resolution changed: 0. Facts that started or stopped being
+acquired: 1 new one** (`total-equity`, on all three filers this bump
+touched — NVDA, MSFT and OKLO all tag `StockholdersEquity`). Zero facts
+moved between the §3.8.1 exempt and queued sides: `total-equity` is not in
+`NAMED_MATERIAL_FACT_IDS` (`spotCheck.ts`) and was not added there — §3.8
+never named total equity as a material fact category, and this bump invents
+no new classification decision. It is acquired through the mapping like any
+other entry (`tagMappingVersion` recorded, `isExemptFromQueue` true), so it
+carries `SPOT-CHECK NOT REQUIRED` and never enters the queue on this run,
+exactly as `total-debt`/`finance-lease-liabilities`/`cash-and-marketable-
+debt-securities` already do.
+
+**A real defect found and fixed alongside this bump, in acquisition-adjacent
+code rather than in the mapping itself:** `history.annualSeries`'s own
+"primary tag only, never `plus`" rule (correct for the revenue/operating-
+income series it has always served, neither of which has ever carried a
+`plus`) would have silently mis-stated `total-debt`'s and `cash-and-
+marketable-debt-securities`' HISTORICAL values had the new
+`history.instantAnnualSeries` copied it unchanged — MSFT's own `Short
+TermInvestments` ($116,110M FY2021, $55,908M FY2026) would have been
+dropped from the historical cash reading while the CURRENT-period fact
+(`resolveEntry`, unaffected by this bump) kept including it, two different
+quantities under one `factId`. Fixed in the same commit
+(`docs/ronic-deltas-composition-reconciliation.md` §7b has the full
+account): `instantAnnualSeries` sums `plus` components at every historical
+observation, matching `resolveEntry`'s own arithmetic. This is not a mapping
+change — no candidate, no selection rule and no `TAG_MAP` entry changed as
+part of that fix — so it needed no version bump of its own; it is recorded
+here because it was found while reviewing this bump's own output and a
+silent, unreviewed miscalculation is exactly what this review exists to
+catch.
+
+**Verification.** `npx tsc --noEmit` clean. `npm test`: 2037 passed, 1
+failed at the documented CI-exempt baseline (`scripts/evidence/
+selfTest.test.ts`, Playwright `chrome-headless-shell`, unrelated to this
+change). Full account, including the two companies' resulting RONIC ladders,
+in `docs/ronic-deltas-composition-reconciliation.md` §7.

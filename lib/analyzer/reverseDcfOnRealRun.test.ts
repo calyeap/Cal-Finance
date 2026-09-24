@@ -22,11 +22,14 @@ function causeOf(figure: Figure<Decimal>): string | undefined {
 // assumes", Quick Read's "What today's price requires" and the §10.6.2
 // comparator chain unreachable outside the hand-written fixture.
 //
-// This is distinct from the parked RONIC chain: MSFT's capture data has no
-// meaningful RONIC ladder (§7.2 M5), so its nine cells stay suppressed even
-// after this fix — for "RONIC not meaningful", never again for a missing
-// target EV. That remaining suppression is the parked chain's, not this
-// issue's, and this fix must not touch it (see DO NOT in issue #82).
+// This is distinct from the separate RONIC chain (§7.2 M5): this fix touches
+// only the missing-targetEnterpriseValue defect, never the RONIC ladder
+// itself. Historically MSFT's capture had no meaningful RONIC ladder, so
+// every cell stayed suppressed for "RONIC not meaningful" even after this
+// fix; since CF-RONIC-DELTAS-RECON-01 (issue #298) acquired both of RONIC's
+// five-year deltas, MSFT's ladder is CLEAN and growth solves on most cells
+// (docs/ronic-deltas-composition-reconciliation.md §7) — a change in the
+// RONIC chain's own data, not in anything this fix does.
 // ---------------------------------------------------------------------------
 
 const MSFT_CAPTURE_CLOSE = new Decimal("499.70");
@@ -57,16 +60,37 @@ describe("reverse-DCF target enterprise value on an acquired MSFT run", () => {
     expect(cells.every((c) => causeOf(c.fiveYearGrowth) !== "missing REQUIRED input(s): targetEnterpriseValue")).toBe(
       true
     );
-    // MSFT's capture has no meaningful RONIC ladder — a separate, parked
-    // condition this issue does not touch — so every cell is still
-    // suppressed here, but now for that reason, not the missing input this
-    // fix removes. This is the evidence that assemble actually filled
+    // CF-RONIC-DELTAS-RECON-01 (issue #298) — MSFT's capture now carries a
+    // real, non-degenerate RONIC ladder (previously "no meaningful RONIC
+    // ladder", the condition this test used to assert). `ronic` on every
+    // cell is CLEAN at ~17.498% — well above 8/10/12% and the 200% cap
+    // alike — evidence this is the same "RONIC ladder now computed" state
+    // docs/ronic-deltas-composition-reconciliation.md §7 reports for NVDA.
+    // The "RONIC not meaningful" cause this test used to require is gone
+    // entirely — this is the evidence that assemble actually filled
     // targetEnterpriseValue from M1: computeReverseDcfGrid only reaches the
     // per-cell RONIC check once its own missing-base check (which named
     // targetEnterpriseValue before this fix) passes.
-    expect(cells.every((c) => causeOf(c.fiveYearGrowth) === "RONIC not meaningful for this company (§7.2 M5 ladder)")).toBe(
+    expect(cells.every((c) => causeOf(c.fiveYearGrowth) !== "RONIC not meaningful for this company (§7.2 M5 ladder)")).toBe(
       true
     );
+    expect(cells.every((c) => !c.ronic.suppressed)).toBe(true);
+    for (const cell of cells) {
+      if (!cell.ronic.suppressed) {
+        expect(cell.ronic.value.toDecimalPlaces(4).toString()).toBe("0.175");
+      }
+    }
+    // Growth itself now solves on 5 of 9 cells; the other 4 (every 12% rate,
+    // plus stress@10%) hit a real, pre-existing, RONIC-independent solver
+    // state — the terminal value exceeding total value in that cell's own
+    // bracket — never again the missing-input defect this test is named for.
+    expect(cells.filter((c) => !c.fiveYearGrowth.suppressed)).toHaveLength(5);
+    expect(
+      cells
+        .map((c) => c.fiveYearGrowth)
+        .filter((f): f is Extract<Figure<Decimal>, { suppressed: true }> => f.suppressed)
+        .every((f) => f.state === "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE")
+    ).toBe(true);
   });
 
   it("still fails the grid closed where M1 is genuinely INCOMPLETE (§5.4 cascade, not softened)", async () => {

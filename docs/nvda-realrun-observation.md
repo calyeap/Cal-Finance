@@ -10,6 +10,17 @@ same gated product path MSFT and OKLO already run through.
 items, marks no acceptance-matrix row satisfied, and changes no acceptance
 verdict — those stay Calvin's (`docs/product-decisions.md` items 3 and 9).
 
+**Update — `CF-RONIC-DELTAS-RECON-01` (issue #298), fourth pass.** Section
+(a) below and the §12 summary table originally reported the RONIC ladder as
+uniformly unacquired, a pipeline-wide gap unrelated to NVDA's own
+fundamentals. That gap is now closed: both `fiveYearDeltaNopat` and
+`fiveYearDeltaInvestedCapital` are acquired (`docs/ronic-deltas-composition-
+reconciliation.md` §7), and NVDA's own RONIC ladder computes CLEAN. Section
+(a) is corrected in place, per that outcome's SCOPE item 6, to carry the new
+evidence; nothing else in this document (§4.4 left unmade, the price
+sentinel, the two independent enterprise-value gaps, the unrelated
+`priceLocationWithinRange` observation) changes.
+
 ## What was done
 
 1. The now-complete, Calvin-approved NVDA Step-7 / §6.3 bundle
@@ -40,23 +51,30 @@ only through the recorded store, by the same act a human performs at
 ## (a) The reverse-DCF grid and the RONIC ladder behind it
 
 **The RONIC ladder itself** (`diagnostics.reinvestmentRonic.ronic`, read
-independent of enterprise value / §4.4) is:
+independent of enterprise value / §4.4) is, as of `CF-RONIC-DELTAS-RECON-01`'s
+fourth pass (previously `INCOMPLETE`, both deltas hard-coded `null` — see the
+update note above):
 
 ```
-suppressed: true, state: "INCOMPLETE"
-cause: "missing REQUIRED input(s): fiveYearDeltaNopat, fiveYearDeltaInvestedCapital"
+suppressed: false
+cells: [
+  { rate: 0.08, state: "CLEAN", value: 0.75238522251734810476 },
+  { rate: 0.10, state: "CLEAN", value: 0.75238522251734810476 },
+  { rate: 0.12, state: "CLEAN", value: 0.75238522251734810476 },
+]
 ```
 
-This is **not** a reading of NVDA's own five-year returns — it is a
-structural, pipeline-wide gap. `lib/analyzer/acquisition/companyInputs.ts`
-hard-codes both `ronic.fiveYearDeltaNopat` and
-`ronic.fiveYearDeltaInvestedCapital` to `null` for every company this
-mapping version acquires (lines 402–406); `scripts/analyzer/calibrate-
-position.ts` already documents this in its own comment ("RONIC is not
-acquired in this mapping version — companyInputs.ts holds both five-year
-deltas at null — so the ladder has no cells at all"). NVDA's capture was
-never read for this figure at all — the gap exists before any company-
-specific data would be consulted.
+This IS a reading of NVDA's own five-year returns: ΔNOPAT
+$99,425,450,000 ÷ ΔInvestedCapital $132,147,000,000 = 75.2385%, from NVDA's
+own capture — `fiveYearDeltaNopat` (operating income × (1 − 0.21),
+FY2021→FY2026) and `fiveYearDeltaInvestedCapital` (total equity + total debt
++ finance-lease liabilities − cash and marketable securities, CALVIN RULING
+— FINANCING-SIDE INVESTED CAPITAL, applied at the same two fiscal
+year-ends) are both acquired from the already-committed, now-recaptured
+document (`docs/ronic-deltas-composition-reconciliation.md` §7 has the full
+component-by-component figures). 75.24% clears every rate in the grid
+(8/10/12%) and stays under the 200% cap, so every cell reports CLEAN, not
+NOT MEANINGFUL.
 
 **The reverse-DCF grid itself** (`priceImplied.reverseDcfGrid`, all nine
 cells: 8/10/12% × current/median/stress margin) is, on this run:
@@ -79,17 +97,18 @@ ladder)") only because `reverseDcfOnRealRun.test.ts` separately answers
 }`) to get past the EV gate first — this outcome's HARD BOUNDS forbid doing
 that for NVDA.
 
-**Answer to §12's question.** NVDA's ladder is **not** a case of "not
-uniformly NOT MEANINGFUL" — it is uniformly **unacquired** (INCOMPLETE),
-which is the same practical dead end MSFT's ladder reaches ("RONIC not
-meaningful for this company"), for the identical underlying reason
-(`fiveYearDeltaNopat`/`fiveYearDeltaInvestedCapital` never acquired). §12's
-first evidence-gap bullet — "at least one company whose RONIC ladder is
-**not** uniformly NOT MEANINGFUL" — is **not closed** by this run. This is
-a pipeline-wide gap common to every company this acquisition pipeline
-reaches today, not a fact about NVDA's own fundamentals, and this document
-does not propose lifting it (that would be new capture/methodology work,
-outside this outcome's bound).
+**Answer to §12's question.** NVDA's ladder IS now a case of "not uniformly
+NOT MEANINGFUL": every cell is CLEAN at 75.24%. §12's first evidence-gap
+bullet — "at least one company whose RONIC ladder is **not** uniformly NOT
+MEANINGFUL" — **is closed** by this run. MSFT's own real run (§4.4
+answered, `reverseDcfOnRealRun.test.ts`) now reaches the same CLEAN state at
+~17.50%, corroborating rather than contradicting NVDA's reading — both
+companies' ladders moved together once the pipeline-wide denominator gap
+closed, which is evidence the fix was pipeline-wide and not
+company-specific. This document draws no conclusion beyond that the gap is
+closed — it does not read what either RONIC figure means for a verdict,
+which stays outside this outcome's SCOPE and HARD BOUNDS
+(`docs/product-decisions.md` items 3 and 9).
 
 ## (b) The achieved-comparator: ten-year and five-year, on the same series
 
@@ -141,7 +160,7 @@ outcome's HARD BOUNDS place out of scope.
 |---|---|---|
 | Price | — (sentinel) | `AnalysisResult.price` is `{ value: 0, timestamp: "" }` (`buildAcquiredRun`'s own "no price" sentinel, never `null`); the run's own disclosure states: *"No price was available for this run, so anything that needs one reports incomplete. A price is never estimated or carried forward from an earlier day."* No `NVDA` row exists in `prices.json` — the honest expected result under **FINAL OWNER RULING #205**, not a defect. |
 | Enterprise value (`diagnostics.enterpriseValue`) | `INCOMPLETE` | `missing REQUIRED input(s): treasuryMethodDilution, financeLeaseLiabilities, nonOperatingEquityInvestmentsAtBook` — **three** missing inputs, only the third of which is the unmade §4.4 judgment; the first two are pre-existing tag-mapping gaps on this filer's capture (the same class of gap the draft's own text already names for `ShortTermInvestments`/`FinanceLeaseLiability`), independent of §4.4 and not cleared by a §4.4 answer alone. |
-| RONIC ladder (`diagnostics.reinvestmentRonic.ronic`) | `INCOMPLETE` | `missing REQUIRED input(s): fiveYearDeltaNopat, fiveYearDeltaInvestedCapital` — see (a) above. |
+| RONIC ladder (`diagnostics.reinvestmentRonic.ronic`) | not suppressed — `CLEAN`, 75.24% | not applicable — both REQUIRED inputs now acquired; see (a) above. Listed here only because the ladder's own state was previously suppressed on this table. |
 | Reverse-DCF grid, all 9 cells (`priceImplied.reverseDcfGrid`) | `INCOMPLETE` | `missing REQUIRED input(s): targetEnterpriseValue` — cascaded from enterprise value above; see (a) above. |
 | Leverage gate (`gates.leverage`) | `LEVERAGE UNSUPPORTED IN v1` | `netDebtRatio` is `null` — "inputs missing — the ratio could not be computed, so the precondition fails closed" — cascaded from enterprise value. |
 | Fair-value range (`fairValueRange`) | suppressed, `LEVERAGE UNSUPPORTED IN v1` | same cause as leverage above — §3.5's own suppression-scope rule. |
@@ -195,7 +214,7 @@ only), and not something this document is naming a required correction to.
 
 | §12 evidence gap | Closed by NVDA? |
 |---|---|
-| A company whose RONIC ladder is not uniformly NOT MEANINGFUL | **No** — uniformly unacquired (INCOMPLETE), the same practical dead end as MSFT, for a pipeline-wide reason (§12(a) above). |
+| A company whose RONIC ladder is not uniformly NOT MEANINGFUL | **Yes** — CLEAN at 75.24% across the whole rate grid, from NVDA's own re-captured filings (§12(a) above, `CF-RONIC-DELTAS-RECON-01`). |
 | A company producing both a ten-year and five-year achieved comparator on the same series | **Yes** — FY2016→FY2026 (45.70%) and FY2021→FY2026 (66.90%), both on `us-gaap:Revenues` (§12(b) above). |
 
 This document states what the observation does and does not supply against

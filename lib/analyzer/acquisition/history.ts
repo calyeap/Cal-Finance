@@ -122,18 +122,104 @@ export function annualSeries(
   doc: CompanyFactsDocument,
   candidates: readonly TagCandidate[]
 ): AnnualSeries | null {
-  // Only the candidate's primary tag is used. A history series is never
-  // assembled from a tag plus its components: the composition of a summed
-  // figure can change across the window, and a series that silently switches
-  // basis part-way is the mixed basis §3.7 refuses.
+  return buildAnnualSeries(
+    doc,
+    candidates,
+    (row) => {
+      const d = days(row);
+      return d !== null && d >= ANNUAL_DAYS.min && d <= ANNUAL_DAYS.max;
+    },
+    false
+  );
+}
+
+/**
+ * The instant counterpart to `annualSeries` — a balance-sheet position's
+ * value at each fiscal year-end, rather than a duration's total over the
+ * year. Needed for RONIC's invested-capital denominator (`CALVIN RULING —
+ * FINANCING-SIDE INVESTED CAPITAL`, issue #298): total equity, total debt,
+ * finance-lease liabilities and cash are all instants, and `annualSeries`'s
+ * own duration band (`ANNUAL_DAYS`) can never match an instant row, which
+ * carries no `start` at all.
+ *
+ * Same single-tag, non-stale-candidate discipline as `annualSeries` — shared
+ * via `buildAnnualSeries` — because a 10-K's own comparative balance-sheet
+ * column already gives an instant tag two fiscal year-ends per filing, the
+ * same "one entry per distinct reported period" shape a duration series has.
+ * Mirrors `selectTagged.periodMatches`'s own instant test: no `start` at all,
+ * or a `start`/`end` pair one day or less apart (XBRL sometimes emits one
+ * anyway on a balance-sheet element).
+ *
+ * UNLIKE `annualSeries`, this sums each winning candidate's `plus` components
+ * at every observation, not only the current one — `total-debt` and
+ * `cash-and-marketable-debt-securities` are BOTH `withPlus` entries, and
+ * `resolveEntry` already sums their components at the current period; a
+ * series that silently dropped them (as `annualSeries` deliberately does —
+ * see its own candidates, neither of which ever carries a `plus`) would read
+ * a DIFFERENT, narrower quantity at the two RONIC endpoints than the one the
+ * current-period fact already reports, which is not a basis the mapping
+ * defines. A `plus` component absent at one instant contributes zero to that
+ * instant only, mirroring `resolveEntry`'s own arithmetic exactly (absence
+ * recorded there, not fabricated as a different total).
+ */
+export function instantAnnualSeries(
+  doc: CompanyFactsDocument,
+  candidates: readonly TagCandidate[]
+): AnnualSeries | null {
+  return buildAnnualSeries(
+    doc,
+    candidates,
+    (row) => {
+      if (row.start === undefined) return true;
+      const d = days(row);
+      return d !== null && d <= 1;
+    },
+    true
+  );
+}
+
+/**
+ * A `plus` component's own value at EXACTLY one observation's period — same
+ * end, same start-or-absence. Mirrors `selectTagged.componentAtSamePeriod`,
+ * applied here across a whole series' worth of periods instead of one.
+ */
+function componentValueAtPeriod(
+  doc: CompanyFactsDocument,
+  ref: TagRef,
+  periodStart: string,
+  periodEnd: string
+): number | null {
+  let best: XbrlFactUnitRow | null = null;
+  for (const row of doc.facts?.[ref.ns]?.[ref.tag]?.units?.USD ?? []) {
+    if (!ANNUAL_FORMS.has(row.form ?? "")) continue;
+    if (row.end !== periodEnd) continue;
+    if ((row.start ?? row.end) !== periodStart) continue;
+    if (best === null || (row.filed ?? "") > (best.filed ?? "")) best = row;
+  }
+  return best?.val ?? null;
+}
+
+/**
+ * Shared by `annualSeries` and `instantAnnualSeries`: candidates tried in
+ * mapping order, one observation per fiscal year, the non-stale candidate
+ * preferred over a retired one (`preferCurrentSeries`). The only thing that
+ * differs between a duration series and an instant one is which rows count
+ * as "this entry's period shape" — exactly the distinction
+ * `TagMapEntry.period` and `selectTagged.periodMatches` already draw for the
+ * current-period fact, applied here to a whole series instead of one row.
+ */
+function buildAnnualSeries(
+  doc: CompanyFactsDocument,
+  candidates: readonly TagCandidate[],
+  periodMatches: (row: XbrlFactUnitRow) => boolean,
+  sumPlusComponents: boolean
+): AnnualSeries | null {
   const built: { ref: TagRef; observations: AnnualObservation[] }[] = [];
 
   for (const { ref } of candidates) {
-    const rows = (doc.facts?.[ref.ns]?.[ref.tag]?.units?.USD ?? []).filter((row) => {
-      if (!ANNUAL_FORMS.has(row.form ?? "")) return false;
-      const d = days(row);
-      return d !== null && d >= ANNUAL_DAYS.min && d <= ANNUAL_DAYS.max;
-    });
+    const rows = (doc.facts?.[ref.ns]?.[ref.tag]?.units?.USD ?? []).filter(
+      (row) => ANNUAL_FORMS.has(row.form ?? "") && periodMatches(row)
+    );
 
     const byPeriod = latestByPeriod(rows);
     if (byPeriod.size === 0) continue;
@@ -153,7 +239,7 @@ export function annualSeries(
       .sort((a, b) => a[0] - b[0])
       .map(([fiscalYear, row]) => ({
         fiscalYear,
-        periodStart: row.start as string,
+        periodStart: row.start ?? row.end,
         periodEnd: row.end,
         value: row.val,
         accession: row.accn ?? null,
@@ -165,7 +251,28 @@ export function annualSeries(
   const won = preferCurrentSeries(built, latestAnnualFiscalYear(doc));
   if (won === null) return null;
 
-  return { tag: `${won.ref.ns}:${won.ref.tag}`, observations: won.observations };
+  if (!sumPlusComponents) {
+    return { tag: `${won.ref.ns}:${won.ref.tag}`, observations: won.observations };
+  }
+
+  const winningCandidate = candidates.find(
+    (c) => c.ref.ns === won.ref.ns && c.ref.tag === won.ref.tag
+  );
+  const plus = winningCandidate?.plus ?? [];
+  if (plus.length === 0) {
+    return { tag: `${won.ref.ns}:${won.ref.tag}`, observations: won.observations };
+  }
+
+  const observations = won.observations.map((obs) => {
+    let total = obs.value;
+    for (const plusRef of plus) {
+      const componentValue = componentValueAtPeriod(doc, plusRef, obs.periodStart, obs.periodEnd);
+      if (componentValue !== null) total += componentValue;
+    }
+    return { ...obs, value: total };
+  });
+
+  return { tag: `${won.ref.ns}:${won.ref.tag}`, observations };
 }
 
 export interface MarginSeries {
