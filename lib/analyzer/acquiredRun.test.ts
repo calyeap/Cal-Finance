@@ -395,6 +395,71 @@ describe("a real OKLO run — pre-revenue, thinner filings", () => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// CF-MULTIPLES-NOPRICE-RECON-01 (issue #304) — the one remaining named,
+// not-fixed member of the zero-price flattening class
+// (docs/noprice-honesty-reconciliation.md §4): multiplesInput.price. Probed
+// directly on real acquired runs with no price, for both companies.
+// ---------------------------------------------------------------------------
+
+describe("a real acquired run with no price — multiplesInput.price (CF-MULTIPLES-NOPRICE-RECON-01)", () => {
+  it("MSFT — carries the missing price through to multiplesInput.price as null, never a flattened $0", async () => {
+    const run = await buildAcquiredRun({
+      ticker: "MSFT",
+      price: null,
+      source: "CAPTURE",
+      acquiredAt: "2026-09-08T10:00:00.000Z",
+    });
+    expect(run.fixture.multiplesInput.price).toBeNull();
+    expect(run.absentInputs).toContain("price");
+
+    // Latent today, exactly like enterpriseValue.price was on NVDA before
+    // CF-NOPRICE-HONESTY-RECON-01 fixed it: MSFT's own epsTrailing,
+    // epsForward and bookValue are already null on the acquired path (EPS
+    // is not in this mapping version), so P/E and P/B were already
+    // INCOMPLETE via their other operand. This proves the fix regardless —
+    // "computes against $0" and "computes against null, still INCOMPLETE
+    // for another stated reason" are different bugs, and only the read
+    // itself (asserted above) proves which one this is.
+    const result = assembleAnalysisResult(run.fixture);
+    for (const m of [result.diagnostics.multiples.peTrailing, result.diagnostics.multiples.peForward, result.diagnostics.multiples.priceToBook]) {
+      expect(m.suppressed).toBe(true);
+    }
+  });
+
+  it("OKLO — carries the missing price through to multiplesInput.price as null, never a flattened $0", async () => {
+    const run = await buildAcquiredRun({
+      ticker: "OKLO",
+      price: null,
+      source: "CAPTURE",
+      acquiredAt: "2026-09-08T10:00:00.000Z",
+    });
+    expect(run.fixture.multiplesInput.price).toBeNull();
+    expect(run.absentInputs).toContain("price");
+
+    const result = assembleAnalysisResult(run.fixture);
+    for (const m of [result.diagnostics.multiples.peTrailing, result.diagnostics.multiples.peForward, result.diagnostics.multiples.priceToBook]) {
+      expect(m.suppressed).toBe(true);
+    }
+  });
+
+  it("REGRESSION — a run WITH a price is unaffected: multiplesInput.price still carries the real value, for both companies", async () => {
+    const msft = await msftRun();
+    expect(msft.fixture.multiplesInput.price).toEqual({ value: PRICE.value, provenance: expect.anything() });
+    expect(msft.absentInputs).not.toContain("price");
+
+    __resetAcquisitionCache();
+    const withPrice = await buildAcquiredRun({
+      ticker: "OKLO",
+      price: { value: new Decimal("92.44"), timestamp: "2026-09-04T21:00:00-04:00", source: "Yahoo Finance latest close" },
+      source: "CAPTURE",
+      acquiredAt: "2026-09-08T10:00:00.000Z",
+    });
+    expect(withPrice.fixture.multiplesInput.price).not.toBeNull();
+    expect(withPrice.absentInputs).not.toContain("price");
+  });
+});
+
 describe("a company with no analyst input bundle", () => {
   it("refuses rather than inventing scenarios", async () => {
     await expect(

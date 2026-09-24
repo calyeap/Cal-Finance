@@ -519,9 +519,21 @@ export function computeBothFundingRamps(
 // extends the same linear-interpolation formula from the probability case
 // to that boundary and clamps at 0%, which is what the formula naturally
 // produces there.
-export function computeImpliedProbability(vSuccess: Decimal, vFail: Decimal, price: Decimal): SuccessDefinitionState {
+export function computeImpliedProbability(vSuccess: Decimal, vFail: Decimal, price: Decimal | null): SuccessDefinitionState {
   if (vSuccess.lessThanOrEqualTo(vFail)) {
     return { kind: "THIS SUCCESS IS WORTH LESS THAN FAILURE" };
+  }
+
+  // CF-MULTIPLES-NOPRICE-RECON-01. Checked only once the price-independent
+  // vSuccess <= vFail case above is ruled out — that outcome must not
+  // become unavailable merely because this run also has no price. price is
+  // the caller's honest signal (fixture.enterpriseValue.price, never the
+  // §3.4 display sentinel); reused, not a new REQUIRED-input rule.
+  if (price === null) {
+    return {
+      kind: "NOT COMPUTED / SUPPRESSED",
+      cause: "missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day",
+    };
   }
 
   if (price.greaterThanOrEqualTo(vSuccess)) {

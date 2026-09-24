@@ -60,6 +60,7 @@ import type {
   ScenarioSet,
   SourcedValue,
   SuccessDefinitionRow,
+  SuccessDefinitionState,
   SuppressingState,
   UndefinedPolicyConstants,
 } from "./types";
@@ -621,6 +622,24 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     if (pr.runway === null) {
       suppressing.push(notComputed(NOT_COMPUTED_BINDING.runway, "INCOMPLETE", pr.runwayCause ?? "not established"));
     }
+    // CF-MULTIPLES-NOPRICE-RECON-01. §10.3 names "success as the price
+    // requires" (successAsPriceRequires, below) as one of the range's own
+    // four parts for a pre-revenue company, so a missing price is a
+    // REQUIRED input of the range itself here — the same standing
+    // cashPerShare's check above already has — not merely of one displayed
+    // figure inside it. fixture.enterpriseValue.price is the honest signal
+    // (the same one the scenarioOutputs currentPrice read below reuses);
+    // fixture.price.value stays the unconditional §3.4 display sentinel.
+    if (fixture.enterpriseValue.price === null) {
+      suppressing.push({
+        ...notComputed(
+          NOT_COMPUTED_BINDING.successAsPriceRequires,
+          "INCOMPLETE",
+          "missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day"
+        ),
+        scope: "the fair-value range",
+      });
+    }
   }
 
   if (triggerA.fired) qualifying.push({ flag: "MARGIN AT HISTORICAL HIGH", appliesTo: "operating margin" });
@@ -731,6 +750,20 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
               // not a substitute finding.
               const dateCause = successWeightDateCause(vFailAsOfDate, d.vSuccessAsOfDate);
               const cause = dateCause ?? successWeightBasisCause(ACQUIRED_CASH_SHARE_BASIS, d.vSuccessBasis);
+              // CF-MULTIPLES-NOPRICE-RECON-01. computeImpliedProbability's
+              // price is a real market comparator, not the §3.4 display
+              // sentinel — fixture.enterpriseValue.price is the same honest
+              // signal reused elsewhere in this file, and computeImpliedProbability
+              // itself now carries the null case (its own REQUIRED-input rule,
+              // checked only once the price-independent "worth less than
+              // failure" case is ruled out). On today's acquired path this is
+              // unreachable regardless — dateCause always fires first, since
+              // vSuccessAsOfDate is unconditionally nulled a few lines above
+              // by companyInputs.ts — so this corrects a $0 read that could
+              // never surface today, not an observable change.
+              const currentPrice = fixture.enterpriseValue.price?.value ?? null;
+              const state: SuccessDefinitionState =
+                cause !== null ? { kind: "NOT COMPUTED / SUPPRESSED", cause } : computeImpliedProbability(d.vSuccess, vFail, currentPrice);
               return {
                 definition: d.definition,
                 vSuccess: d.vSuccess,
@@ -745,7 +778,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
                 rSuccess: d.rSuccess,
                 rFail: d.rFail,
                 rateCapped: d.rateCapped,
-                state: cause !== null ? ({ kind: "NOT COMPUTED / SUPPRESSED", cause } as const) : computeImpliedProbability(d.vSuccess, vFail, fixture.price.value),
+                state,
               };
             })
             .sort((a, b) => a.vSuccess.minus(b.vSuccess).toNumber());

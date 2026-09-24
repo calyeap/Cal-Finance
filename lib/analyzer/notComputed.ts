@@ -45,6 +45,12 @@ export const NOT_COMPUTED_BINDING = {
   cashPerShare: "pre-revenue cash per share",
   quarterlyBurn: "pre-revenue quarterly burn",
   runway: "pre-revenue runway",
+  // CF-MULTIPLES-NOPRICE-RECON-01 — §10.3's own distribution summary names
+  // "success as the price requires" as one of the fair-value range's four
+  // parts for a pre-revenue company, so price is a REQUIRED input of the
+  // range itself here, the same standing cashPerShare already has for
+  // failure/cashFloor two rows above.
+  successAsPriceRequires: "pre-revenue success as the price requires",
 } as const;
 
 const SEPARATOR = " — ";

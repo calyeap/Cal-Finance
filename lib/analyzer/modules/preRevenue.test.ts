@@ -407,6 +407,26 @@ describe("computeImpliedProbability", () => {
     expect(zeroCase.kind).toBe("THIS SUCCESS IS WORTH LESS THAN FAILURE");
     expect(oneCase.kind).toBe("THIS SUCCESS IS WORTH LESS THAN FAILURE");
   });
+
+  // CF-MULTIPLES-NOPRICE-RECON-01. A null price (this run has none) is a
+  // REQUIRED input of the price-comparison branches — never flattened to
+  // $0 — but must not remove the price-independent "worth less than
+  // failure" outcome, which needs no price at all.
+  it("returns NOT COMPUTED / SUPPRESSED, naming the missing price, when V_success > V_fail and price is null", () => {
+    const result = computeImpliedProbability(new Decimal(20), new Decimal(5), null);
+    expect(result.kind).toBe("NOT COMPUTED / SUPPRESSED");
+    if (result.kind === "NOT COMPUTED / SUPPRESSED") {
+      expect(result.cause).toMatch(/missing REQUIRED input/);
+      expect(result.cause).toMatch(/price/);
+    }
+  });
+
+  it("still returns THIS SUCCESS IS WORTH LESS THAN FAILURE with a null price — that outcome needs no price", () => {
+    const zeroCase = computeImpliedProbability(new Decimal(0), new Decimal("3.1"), null);
+    const oneCase = computeImpliedProbability(new Decimal(1), new Decimal("3.1"), null);
+    expect(zeroCase).toEqual({ kind: "THIS SUCCESS IS WORTH LESS THAN FAILURE" });
+    expect(oneCase).toEqual({ kind: "THIS SUCCESS IS WORTH LESS THAN FAILURE" });
+  });
 });
 
 // ---------------------------------------------------------------------------

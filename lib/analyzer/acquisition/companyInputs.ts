@@ -185,13 +185,14 @@ export function buildCompanyInputs(
   acquisition: AcquisitionResult,
   companyFacts: CompanyFactsDocument,
   analyst: AnalystInputs,
-  // CF-NOPRICE-HONESTY-RECON-01. Null exactly where this run has no price
-  // (acquiredRun.ts's own options.price). CompanyFixture.price (§3.4 —
-  // "always a value and a timestamp") and multiplesInput.price keep the
-  // flattened $0 sentinel below, unchanged from before this outcome; only
-  // enterpriseValue.price carries the honest absence through, since that is
-  // the one REQUIRED input computeEnterpriseValue already knows how to read
-  // as missing (modules/enterpriseValue.ts).
+  // CF-NOPRICE-HONESTY-RECON-01, extended by CF-MULTIPLES-NOPRICE-RECON-01.
+  // Null exactly where this run has no price (acquiredRun.ts's own
+  // options.price). CompanyFixture.price (§3.4 — "always a value and a
+  // timestamp") alone keeps the flattened $0 sentinel below; both
+  // enterpriseValue.price and multiplesInput.price carry the honest
+  // absence through instead, since both are REQUIRED inputs their own
+  // consumers already know how to read as missing (modules/enterpriseValue.ts
+  // and modules/preRevenue.ts's computeImpliedProbability).
   price: { value: Decimal; timestamp: string } | null
 ): CompanyInputsResult {
   const byId = new Map(acquisition.facts.map((f) => [f.id, f]));
@@ -384,12 +385,16 @@ export function buildCompanyInputs(
     },
 
     multiplesInput: {
-      // Unchanged by CF-NOPRICE-HONESTY-RECON-01 — out of that outcome's
-      // SCOPE (defect A names only computeEnterpriseValue's REQUIRED price
-      // input). MultiplesInput.price is already nullable
-      // (modules/multiples.ts), but this still supplies the flattened $0
-      // sentinel on a priceless run, exactly as it did before this outcome.
-      price: { value: price?.value ?? new Decimal(0), provenance: CLEAN_PROVENANCE },
+      // CF-MULTIPLES-NOPRICE-RECON-01. The one named, not-fixed member of
+      // the zero-price flattening class docs/noprice-honesty-
+      // reconciliation.md §4 left open — the identical fix CF-NOPRICE-
+      // HONESTY-RECON-01 gave enterpriseValue.price two lines above, applied
+      // here. MultiplesInput.price is already SourcedValue<Decimal> | null
+      // (modules/multiples.ts), so the already-known absence is carried
+      // through via track() instead of being flattened to a $0 SourcedValue.
+      // simpleMultiple (multiples.ts) already returns INCOMPLETE for a null
+      // operand — nothing new is built for the suppressed case.
+      price: track("price", price === null ? null : { value: price.value, provenance: CLEAN_PROVENANCE }),
       // EPS is not in this mapping version: the tagged element exists but the
       // §3.5 basis question (GAAP vs the I5 non-operating-items adjustment) is
       // a per-company decision this milestone does not make. Null, so P/E is
