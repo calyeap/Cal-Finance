@@ -58,14 +58,16 @@ verbatim historical quote. New/current-facing product prose and UI use
   Analyzer V2 is the strongest current visual reference / proving implementation.
   Existing Portfolio/Holdings surfaces and older M9/frozen Analyzer design contracts
   are legacy or surface-scoped references and cannot override it.
-- **Current Cal Finance brand direction / candidate source assets** → external
+- **Current Cal Finance brand direction / source authority** → external
   [Cal Finance — Brand Identity & Assets](https://app.notion.com/p/3dd0ca9a8fd081c4acdae46985a07f56).
-  That page owns the human-readable brand direction and preserved source
-  variants. The current SVG pack is a production candidate, not the final
-  shipped master until the pending Figma/vector and small-size inspection is
-  complete. Once promoted, the actual files shipped from this repo/app are
-  implementation truth for production assets; do not revive stale Calboard
-  branding or legacy Portfolio visuals as current authority.
+  That page owns the human-readable brand direction and preserved source variants.
+  The original approved sculpted-C board is the mark geometry / proportion authority;
+  the later simplified geometric-C SVG recreation is superseded/history only and must
+  not be promoted as current brand authority. Complete the pending small-size/vector
+  production check before declaring a faithful production master final. Once promoted,
+  the actual files shipped from this repo/app are implementation truth for production
+  assets; do not revive stale Calboard branding or legacy Portfolio visuals as current
+  authority.
 - **`DESIGN.md`** is the Portfolio-era routing/index surface over Portfolio
   design intent. It does not govern Analyzer V2 and cannot override
   `docs/design/analyzer-v2-design-authority.md` or its linked current visual sources.
