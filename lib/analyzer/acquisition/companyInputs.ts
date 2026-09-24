@@ -185,13 +185,14 @@ export function buildCompanyInputs(
   acquisition: AcquisitionResult,
   companyFacts: CompanyFactsDocument,
   analyst: AnalystInputs,
-  // CF-NOPRICE-HONESTY-RECON-01. Null exactly where this run has no price
-  // (acquiredRun.ts's own options.price). CompanyFixture.price (§3.4 —
-  // "always a value and a timestamp") and multiplesInput.price keep the
-  // flattened $0 sentinel below, unchanged from before this outcome; only
-  // enterpriseValue.price carries the honest absence through, since that is
-  // the one REQUIRED input computeEnterpriseValue already knows how to read
-  // as missing (modules/enterpriseValue.ts).
+  // CF-NOPRICE-HONESTY-RECON-01, extended by CF-MULTIPLES-NOPRICE-RECON-01.
+  // Null exactly where this run has no price (acquiredRun.ts's own
+  // options.price). CompanyFixture.price (§3.4 — "always a value and a
+  // timestamp") alone keeps the flattened $0 sentinel below; both
+  // enterpriseValue.price and multiplesInput.price carry the honest
+  // absence through instead, since both are REQUIRED inputs their own
+  // consumers already know how to read as missing (modules/enterpriseValue.ts
+  // and modules/preRevenue.ts's computeImpliedProbability).
   price: { value: Decimal; timestamp: string } | null
 ): CompanyInputsResult {
   const byId = new Map(acquisition.facts.map((f) => [f.id, f]));
