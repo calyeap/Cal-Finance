@@ -168,14 +168,18 @@ export function computeScenarioOutputs(input: ScenarioOutputsInput): ScenarioOut
         ? new Decimal(0)
         : currentPrice.minus(bearValue).dividedBy(rangeSpan);
 
-  // Unchanged by this outcome: still the flattened $0 a priceless run's
-  // revaluation solve already used before CF-NOPRICE-HONESTY-RECON-01. Only
-  // priceLocationWithinRange above is this outcome's SCOPE.
-  const rateSolveTargetPrice = currentPrice ?? new Decimal(0);
+  // CF-PRICE-DISPLAY-HONESTY-RECON-01, CONTEXT item 6. Before this outcome,
+  // a supplied revaluation function was solved against `currentPrice ??
+  // new Decimal(0)` — the same $0-flattening class this outcome closes
+  // everywhere else, latent only because no fixture that reaches this
+  // branch with a real revaluation function also carries a null price
+  // today (see docs/price-display-honesty-reconciliation.md). Gated on
+  // `currentPrice === null` the same way `priceLocationWithinRange` above
+  // already is, rather than solving toward a manufactured target.
   const rateAtWhichBaseEqualsPrice =
-    input.revalueBaseCaseAtRate === null
+    input.revalueBaseCaseAtRate === null || currentPrice === null
       ? null
-      : solveRateForTargetValue(input.revalueBaseCaseAtRate, rateSolveTargetPrice);
+      : solveRateForTargetValue(input.revalueBaseCaseAtRate, currentPrice);
 
   return {
     values: { bear: bearValue, base: baseValue, bull: bullValue },

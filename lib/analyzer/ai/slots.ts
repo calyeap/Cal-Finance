@@ -193,8 +193,19 @@ export function buildSlotCatalogue(result: AnalysisResult): SlotCatalogue {
   const b = new CatalogueBuilder();
   const { diagnostics, priceImplied, scenarioOutputs, fairValueRange, preRevenue, policy } = result;
 
-  b.add("price", "current share price", money(result.price.value));
-  b.add("price.timestamp", "price as-of timestamp", result.price.timestamp);
+  // CF-PRICE-DISPLAY-HONESTY-RECON-01 — result.price is §3.4's own
+  // always-present sentinel ($0/blank timestamp on a priceless run, never
+  // nullable); .bound() is required rather than .value()/.add() here for
+  // the same reason it already is two entries below (§9.5: a suppressed
+  // output shown without a cause). The as-of timestamp has no figure of its
+  // own to bind a state to, so it is simply omitted alongside the price —
+  // the same "no companion field when the primary figure is suppressed"
+  // rule preRevenue.cashPerShareAsOfDate already follows below.
+  const priceState = boundState(result.states, NOT_COMPUTED_BINDING.price);
+  b.bound("price", "current share price", priceState, result.price.value, money);
+  if (priceState === null) {
+    b.add("price.timestamp", "price as-of timestamp", result.price.timestamp);
+  }
   addFacts(b, result.facts);
 
   // --- policy constants in force for this run (§7.1) — [C] may say the band

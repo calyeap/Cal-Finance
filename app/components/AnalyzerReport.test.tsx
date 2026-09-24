@@ -786,3 +786,30 @@ describe("AnalyzerReport — table header semantics (M9-ACCESSIBILITY-01)", () =
     expect(targetCell.getAttribute("role")).toBe("cell");
   });
 });
+
+// CF-PRICE-DISPLAY-HONESTY-RECON-01 — Section A's price row (CONTEXT item
+// 3). Before this outcome it read "$0" with a blank as-of timestamp on a
+// priceless run; now it swaps in the same BoundStateBlock this section
+// already uses for priceLocationWithinRange, two rows below it.
+describe("AnalyzerReport — Section A price row, no price (CF-PRICE-DISPLAY-HONESTY-RECON-01)", () => {
+  it("renders BoundStateBlock (INCOMPLETE, with cause) in place of the $0 figure and blank timestamp", () => {
+    const priceless = { ...MSFT_FIXTURE, enterpriseValue: { ...MSFT_FIXTURE.enterpriseValue, price: null } };
+    const result = assembleAnalysisResult(priceless);
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#A") as HTMLElement;
+    const priceRow = section.querySelector(".pricerow") as HTMLElement;
+    expect(priceRow.textContent).toMatch(/INCOMPLETE/);
+    expect(priceRow.textContent).toMatch(/missing REQUIRED input/);
+    expect(priceRow.querySelector(".p")).toBeNull();
+    expect(priceRow.textContent).not.toMatch(/\$0\.00/);
+  });
+
+  it("REGRESSION — a run that has a price renders the figure and timestamp exactly as before", () => {
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#A") as HTMLElement;
+    const priceRow = section.querySelector(".pricerow") as HTMLElement;
+    expect(priceRow.textContent).toContain(`$${MSFT_FIXTURE.price.value.toFixed(2)}`);
+    expect(priceRow.textContent).toContain(MSFT_FIXTURE.price.timestamp);
+  });
+});

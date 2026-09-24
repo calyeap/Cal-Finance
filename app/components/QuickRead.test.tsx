@@ -192,6 +192,49 @@ describe("QuickRead — valuation strip (defect E1)", () => {
   });
 });
 
+// CF-PRICE-DISPLAY-HONESTY-RECON-01 — the "Current price" tile (inside
+// ValuationStrip, rendered by QuickRead) and the header's "price as of"
+// clause. Before this outcome, a priceless run showed a tile reading "$0"
+// under the label "Current price" and a footer reading "price as of "
+// (blank, trailing the em-dash) — both directly contradicting
+// acquiredRun.ts's own committed disclosure ("No price was available for
+// this run, so anything that needs one reports incomplete").
+describe("QuickRead — no price (CF-PRICE-DISPLAY-HONESTY-RECON-01)", () => {
+  const priceless = { ...MSFT_FIXTURE, enterpriseValue: { ...MSFT_FIXTURE.enterpriseValue, price: null } };
+  const result = assembleAnalysisResult(priceless);
+
+  it("the 'Current price' tile shows INCOMPLETE, never $0", () => {
+    render(<QuickRead result={result} />);
+    expect(screen.getByText("Current price")).not.toBeNull();
+    expect(screen.queryByText("$0.00")).toBeNull();
+    // The tile's own figure span carries the bound state name.
+    const tile = screen.getByText("Current price").closest("div");
+    expect(tile?.textContent).toMatch(/INCOMPLETE/);
+  });
+
+  it("omits the 'price as of' clause entirely, rather than printing a blank timestamp", () => {
+    render(<QuickRead result={result} />);
+    expect(screen.queryByText(/price as of/)).toBeNull();
+  });
+
+  it("REGRESSION — a run that has a price is unaffected: the tile and the 'price as of' clause both render as before", () => {
+    const withPrice = assembleAnalysisResult(MSFT_FIXTURE);
+    render(<QuickRead result={withPrice} />);
+    expect(screen.getByText(`$${MSFT_FIXTURE.price.value.toFixed(2)}`)).not.toBeNull();
+    expect(screen.getByText(new RegExp(`price as of ${MSFT_FIXTURE.price.timestamp}`))).not.toBeNull();
+  });
+
+  it("OKLO (pre-revenue branch's own 'Current price' tile) — shows INCOMPLETE, never $0, when this run has no price", () => {
+    const oklopriceless = { ...OKLO_FIXTURE, enterpriseValue: { ...OKLO_FIXTURE.enterpriseValue, price: null } };
+    const oklopricelessResult = assembleAnalysisResult(oklopriceless);
+    render(<QuickRead result={oklopricelessResult} />);
+    expect(screen.getByText("Current price")).not.toBeNull();
+    expect(screen.queryByText("$0.00")).toBeNull();
+    const tile = screen.getByText("Current price").closest("div");
+    expect(tile?.textContent).toMatch(/INCOMPLETE/);
+  });
+});
+
 describe("QuickRead — MSFT", () => {
   const result = assembleAnalysisResult(MSFT_FIXTURE);
 

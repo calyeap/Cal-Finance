@@ -248,6 +248,17 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     expect(result.price.value.isZero()).toBe(true);
     expect(state.acquired.disclosures.some((d) => d.includes("No price was available"))).toBe(true);
 
+    // CF-PRICE-DISPLAY-HONESTY-RECON-01 — the presentation layer's own
+    // signal for "this run has no price" is now bound directly, the same
+    // NOT_COMPUTED_BINDING/states.suppressing mechanism
+    // priceLocationWithinRange already used above. A consumer reading this
+    // binding (the "Current price" tile, Section A's price row, the price
+    // chart panel, the [C] price slot) shows INCOMPLETE, never the $0/blank
+    // sentinel asserted directly above — that sentinel itself is unchanged.
+    const priceState = result.states.suppressing.find((s) => s.appliesTo.startsWith("the current share price — "));
+    expect(priceState).not.toBeUndefined();
+    expect(priceState?.state).toBe("INCOMPLETE");
+
     // CF-NOPRICE-HONESTY-RECON-01, defect A. Enterprise value is INCOMPLETE
     // for FOUR reasons on this capture (previously reported as three,
     // docs/nvda-realrun-observation.md, before this outcome closed the gap

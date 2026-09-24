@@ -33,6 +33,14 @@ import type { ActiveSuppression } from "./suppression";
 type ScenarioKey = "bear" | "base" | "bull";
 
 export const NOT_COMPUTED_BINDING = {
+  // CF-PRICE-DISPLAY-HONESTY-RECON-01 — §3.4's own display sentinel
+  // (AnalysisResult.price) stays a value and a timestamp always (frozen,
+  // untouched); this is the state a presentation consumer binds to it
+  // instead of reading the sentinel directly, exactly where this run has
+  // no real price (fixture.enterpriseValue.price === null, the same
+  // honest signal CF-NOPRICE-HONESTY-RECON-01 established and every
+  // later outcome in this class has reused).
+  price: "the current share price",
   rateAtWhichBaseEqualsPrice: "the discount rate at which the base case equals the price",
   // CF-NOPRICE-HONESTY-RECON-01 — the same treatment, for the same reason:
   // a bare Decimal in the schema (§10 G) with a real "not computed" case
