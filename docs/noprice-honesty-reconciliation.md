@@ -271,6 +271,10 @@ document reports it as an observed fact about the current build, in the
 same "reported, not fixed" form its two predecessors used, not a
 correction made here.
 
+**Update (CF-MULTIPLES-NOPRICE-RECON-01, issue #304).** This hazard is now
+closed — see `docs/multiples-noprice-reconciliation.md` for the fix, its
+two further companion corrections, and the per-company delta.
+
 ## 5. What was checked, and what was not touched
 
 - `lib/analyzer/verdict.ts`, `lib/analyzer/policy.ts` — byte-unchanged.
@@ -291,9 +295,11 @@ correction made here.
 - `npx tsc --noEmit` — clean.
 - `npm test` — green apart from the documented CI-exempt Playwright
   `chrome-headless-shell` baseline (`scripts/evidence/selfTest.test.ts`,
-  `.github/workflows/ci.yml`'s named environmental exception): 2038/2039
-  passing. Existing fixtures/tests pinning a figure this outcome correctly
-  changed were updated and are named in §6.
+  `.github/workflows/ci.yml`'s named environmental exception): 2039/2040
+  passing (corrected — CF-MULTIPLES-NOPRICE-RECON-01, issue #304; the figure
+  above was stale at this document's own merged head, per REVIEW's
+  non-blocking note on PR #303). Existing fixtures/tests pinning a figure
+  this outcome correctly changed were updated and are named in §6.
 
 ## 6. Tests reproducing this outcome in CI
 

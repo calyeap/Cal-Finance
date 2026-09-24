@@ -389,6 +389,59 @@ describe("assembleAnalysisResult — OKLO fixture", () => {
 });
 
 // ---------------------------------------------------------------------------
+// CF-MULTIPLES-NOPRICE-RECON-01 (issue #304) — the pre-revenue fair-value
+// range's own "success as the price requires" figure (§10.3) is a REQUIRED
+// input of the range itself, the same standing cashPerShare already has for
+// failure/cashFloor, so a priceless run must not compute it off the $0
+// fixture.price.value sentinel. Probed directly on OKLO_FIXTURE, whose
+// stated leverage.enterpriseValue bypasses the leverage cascade — isolating
+// this specific fix from the LEVERAGE UNSUPPORTED cascade a real acquired
+// run without a price already hits for an unrelated reason (see
+// acquiredRun.test.ts).
+// ---------------------------------------------------------------------------
+
+describe("assembleAnalysisResult — pre-revenue fair-value range with no price (CF-MULTIPLES-NOPRICE-RECON-01)", () => {
+  const priceless = { ...OKLO_FIXTURE, enterpriseValue: { ...OKLO_FIXTURE.enterpriseValue, price: null } };
+  const result = assembleAnalysisResult(priceless);
+
+  it("suppresses the whole fair-value range — never computing successAsPriceRequires off the $0 display sentinel", () => {
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    if (result.fairValueRange.kind !== "suppressed") return;
+    expect(result.fairValueRange.state).toBe("INCOMPLETE");
+    expect(result.fairValueRange.cause).toMatch(/missing REQUIRED input/);
+    expect(result.fairValueRange.cause).toMatch(/price/);
+  });
+
+  it("binds the removal to successAsPriceRequires by name, not to cashPerShare — cashPerShare is still present on this fixture", () => {
+    const bound = boundState(result.states, NOT_COMPUTED_BINDING.successAsPriceRequires);
+    expect(bound?.state).toBe("INCOMPLETE");
+    expect(boundState(result.states, NOT_COMPUTED_BINDING.cashPerShare)).toBeNull();
+  });
+
+  it("suppresses only the price-dependent success definitions (3, 4) — never THIS SUCCESS IS WORTH LESS THAN FAILURE (1, 2), which needs no price", () => {
+    const rows = result.preRevenue!.successDefinitions;
+    const def1 = rows.find((r) => r.definition.startsWith("Definition 1"));
+    const def2 = rows.find((r) => r.definition.startsWith("Definition 2"));
+    const def3 = rows.find((r) => r.definition.startsWith("Definition 3"));
+    const def4 = rows.find((r) => r.definition.startsWith("Definition 4"));
+    expect(def1?.state.kind).toBe("THIS SUCCESS IS WORTH LESS THAN FAILURE");
+    expect(def2?.state.kind).toBe("THIS SUCCESS IS WORTH LESS THAN FAILURE");
+    expect(def3?.state.kind).toBe("NOT COMPUTED / SUPPRESSED");
+    expect(def4?.state.kind).toBe("NOT COMPUTED / SUPPRESSED");
+    if (def3?.state.kind === "NOT COMPUTED / SUPPRESSED") {
+      expect(def3.state.cause).toMatch(/missing REQUIRED input/);
+      expect(def3.state.cause).toMatch(/price/);
+    }
+  });
+
+  it("REGRESSION — a run that HAS a price is unaffected: the unmodified OKLO_FIXTURE still renders the full distribution", () => {
+    const withPrice = assembleAnalysisResult(OKLO_FIXTURE);
+    expect(withPrice.fairValueRange.kind).toBe("pre-revenue-distribution");
+    expect(boundState(withPrice.states, NOT_COMPUTED_BINDING.successAsPriceRequires)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
 // CF-VERDICT-NONPOLICY-GAPS-01 SCOPE 2 — achievedRevenueCagr is carried onto
 // AnalysisResult unchanged from the fixture (real acquisition, not assembly
 // itself, computes it — see companyInputs.ts and acquiredRun.test.ts for the

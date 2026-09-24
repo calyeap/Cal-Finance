@@ -295,6 +295,29 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     expect(priceLocationState).not.toBeUndefined();
     expect(priceLocationState?.state).toBe("INCOMPLETE");
 
+    // CF-MULTIPLES-NOPRICE-RECON-01 (issue #304) — the one remaining named,
+    // not-fixed member of this same flattening class (docs/noprice-honesty-
+    // reconciliation.md §4), now closed: multiplesInput.price carries the
+    // absence through as null, never the flattened $0 sentinel. Latent on
+    // THIS run, exactly as multiplesInput.price was before the fix: EPS is
+    // not in this mapping version (companyInputs.ts), so epsTrailing,
+    // epsForward and bookValue are already null here regardless of price,
+    // and each of P/E trailing, P/E forward and P/B was already INCOMPLETE
+    // via that other missing operand — confirmed by direct probe below,
+    // not assumed.
+    expect(state.fixture.multiplesInput.price).toBeNull();
+    expect(state.fixture.multiplesInput.epsTrailing).toBeNull();
+    expect(state.fixture.multiplesInput.epsForward).toBeNull();
+    expect(state.fixture.multiplesInput.bookValue).toBeNull();
+    for (const m of [
+      result.diagnostics.multiples.peTrailing,
+      result.diagnostics.multiples.peForward,
+      result.diagnostics.multiples.priceToBook,
+    ]) {
+      expect(m.suppressed).toBe(true);
+      if (m.suppressed) expect(m.cause).toMatch(/missing REQUIRED input\(s\) for/);
+    }
+
     // The §4.4 candidate tags, with whatever the already-committed capture
     // carries for them — evidence for Calvin's later judgment, never a
     // selection made here. Only ONE of the four CANDIDATE_NON_OPERATING_
