@@ -106,16 +106,22 @@ OKLO's committed bundles both use.
 
 ### Scenario values
 
-**Evidence gap — named, not hand-estimated.** `CALVIN RULING — C` (24 Sep
+**Evidence gap — prepared, not yet approved.** `CALVIN RULING — C` (24 Sep
 2026 13:00:02Z, PR #289 comment 5814600108) refused this draft's prior
 single-stage hand estimate — an assumed 9.5% required return and a
 per-scenario 3% / 4% / 5% terminal growth rate, neither authorised by the
 methodology — and required either a re-derivation strictly from the
 current approved methodology and the already-drafted scenario assumptions,
 or a named gap stating exactly which authorised input is missing.
-Reconciling the retrieved authority: two of the three inputs a scenario
-DCF needs are already authorised; the third is not, and cannot be
-authored inside this outcome's scope.
+`CF-ANALYST-DRAFT-NVDA-SCENARIO-02` (issue #290, PR #291) reconciled the
+retrieved authority and found two of the three inputs a scenario DCF needs
+already authorised, with the third — terminal ROIC — missing and not
+draftable inside that outcome's scope. `CALVIN RULING — A, WITH AI DRAFT`
+(24 Sep 2026 15:46:31Z, PR #291 comment 5817385859) now authorises exactly
+the missing piece to be **prepared** here — drafted as labelled AI
+judgment with a written anchor, for Calvin to review, approve or correct —
+without authoring the three scenario dollar values themselves, which stay
+gated behind that approval.
 
 **Authorised, not invented:**
 
@@ -138,7 +144,7 @@ authored inside this outcome's scope.
   invention with the single policy figure. **OBSERVED FACT**, cited to
   `policy.ts:11`.
 
-**Not authorised, and not draftable here: terminal ROIC.** A DCF's
+**Prepared here, pending Calvin's approval: terminal ROIC.** A DCF's
 terminal value must still be built consistently — methodology §3.5,
 stated as a mandatory, software-deterministic [S] rule: *"terminal FCF =
 terminal NOPAT × (1 − g ÷ terminal ROIC). Do not take final-year FCF ×
@@ -155,20 +161,24 @@ or already drafted supplies one:
   "terminal ROIC is an **analyst input with a written anchor** and must
   fade toward the cost of capital unless a durable moat is argued
   explicitly" (methodology §3.5) — a new required scenario driver, not a
-  fact recoverable from the filings or from `policy.ts`.
+  fact recoverable from the filings or from `policy.ts`. That is exactly
+  the driver drafted below, per scenario, per `CALVIN RULING — A, WITH AI
+  DRAFT`'s "lazy-man path": AI drafts, Calvin approves or corrects.
 
   (`lib/analyzer/modules/scenarioOutputs.ts`'s `computeScenarioEnterpriseValue`
   does compute an internal `rate + terminalRoicPremium` for every caller,
-  including the scenario-DCF formula it implements — but that is the kind
-  of disagreement between the frozen contract and the build the spec's
-  own preface calls "a defect to be raised, not drift for a later session
-  to correct on its own judgment" [spec.md:1], not authority to borrow the
-  reverse-DCF-only premium here. It is also not, in practice, how any
-  committed scenario value in this codebase is produced: that function is
-  wired only into the M14 sensitivity tables
-  [`lib/analyzer/modules/sensitivity.ts`], never into the path that
-  produces a company's committed `scenarioValues`. MSFT's own committed
-  bundle supplies its three dollar figures directly, with
+  including the scenario-DCF formula it implements — but that stays the
+  kind of disagreement between the frozen contract and the build the
+  spec's own preface calls "a defect to be raised, not drift for a later
+  session to correct on its own judgment" [spec.md:1], not authority to
+  borrow the reverse-DCF-only premium here. `CALVIN RULING — A, WITH AI
+  DRAFT` explicitly refuses broadening `r + terminalRoicPremium` into the
+  scenario DCF and leaves this defect raised, not resolved, not edited.
+  It is also not, in practice, how any committed scenario value in this
+  codebase is produced: that function is wired only into the M14
+  sensitivity tables [`lib/analyzer/modules/sensitivity.ts`], never into
+  the path that produces a company's committed `scenarioValues`. MSFT's
+  own committed bundle supplies its three dollar figures directly, with
   `revalueBaseCaseAtRate: null`, because — per that fixture's own comment
   — "No real revaluation-at-rate solver exists for this fixture"
   (CB-AUDIT-01 H2). This draft is naming the same absence for NVDA, not a
@@ -176,43 +186,71 @@ or already drafted supplies one:
 - The already-drafted scenario assumptions (`revenueGrowthOrPath`,
   `operatingMargin`, `reinvestmentCapitalIntensity`, `writtenAnchor` per
   scenario, above) supply no terminal ROIC and no ingredients to compute
-  one. Methodology §3.3's computed RONIC (trailing five-year ΔNOPAT ÷
-  Δinvested capital) is a company-level, historical, diagnostic-reverse-
-  DCF quantity: it needs invested-capital inputs (capex, acquisitions,
-  finance-lease ROU additions, ΔNWC) this draft's classification section
-  does not carry, and even if computed, is not what §3.5 defines a
-  *scenario's* terminal ROIC to be — an authored, forward, per-scenario
-  judgment about margin durability, not a trailing historical ratio.
+  one, and stay unchanged here — they are not re-opened by preparing the
+  new driver below. Methodology §3.3's computed RONIC (trailing five-year
+  ΔNOPAT ÷ Δinvested capital) is a company-level, historical, diagnostic-
+  reverse-DCF quantity: it needs invested-capital inputs (capex,
+  acquisitions, finance-lease ROU additions, ΔNWC) this draft's
+  classification section does not carry, and even if computed, is not
+  what §3.5 defines a *scenario's* terminal ROIC to be — an authored,
+  forward, per-scenario judgment about margin durability, not a trailing
+  historical ratio. It is cited here only to explain why it cannot supply
+  the number below; the three terminal-ROIC assumptions that follow are
+  authored judgment, not a RONIC computation.
 
-Authoring a terminal ROIC now — a number, a fade path, or a durable-moat
-argument, per scenario — would itself be exactly the kind of new,
-standalone methodology input `CALVIN RULING — C` forbids ("do not
-introduce ... a terminal-growth assumption, valuation shortcut, or other
-methodology input unless it is already authorised") and would reopen a
-scenario driver Calvin has already reviewed and preserved (HARD BOUNDS:
-"No re-opening of anything Calvin preserved: ... scenario drivers and
-their written anchors").
+**The three prepared assumptions**, in `/analyzer/inputs/NVDA`'s field
+order (after `reinvestmentCapitalIntensity`, alongside `writtenAnchor`),
+each labelled **AI JUDGMENT** — an analyst's prepared, unapproved
+judgment, never sourced fact — and each either fading toward r = 10% or
+carrying an explicit durable-moat argument, per methodology §3.5:
 
-**Named gap:** the three scenario dollar values cannot be re-derived from
-the current approved methodology and the already-drafted scenario
-assumptions alone. **What would close it:** a Calvin-authored terminal
-ROIC — a value, a fade rule, or an explicit durable-moat argument — for
-each of the three scenarios, entered as its own new analyst input with
-its own written anchor (methodology §3.5), which is outside this
-outcome's scope to author. Until that input exists, the three values are
-left blank — not zero, not a placeholder, not the prior hand estimate —
-per `CALVIN RULING — C`'s own named fallback, a success outcome and not a
-defect.
+#### Bear — terminal ROIC
 
-| Scenario | growth | reinvestment | terminal ROIC | Value/share |
+| Field | Value | Provenance |
+|---|---|---|
+| `terminalRoic` | Fade rule: **13% in the first explicit year, linearly to r = 10% by year 10, held at 10% thereafter.** No durable-moat exception invoked. | **AI JUDGMENT** |
+| `terminalRoicAnchor` | "The bear world is a cyclical AI/datacenter capex correction (§3.5's own default case): growth slows to 5% and operating margin reverts to its ten-year OBSERVED median (30.52%), echoing the OBSERVED FY2023 trough. A correction broad enough to force that margin reversion plausibly compresses returns on *incremental* capital too, as customers diversify suppliers and pricing power narrows — this scenario's own narrative is the reason no durable-moat argument is made for it. Terminal ROIC therefore fades to the cost of capital by the terminal year, the §3.5 default, starting modestly above r rather than at an elevated level because the correction is already underway from year 1 of the explicit period." | Analyst's own stated reasoning (AI JUDGMENT), same convention as the scenario's existing `writtenAnchor`. |
+
+#### Base — terminal ROIC
+
+| Field | Value | Provenance |
+|---|---|---|
+| `terminalRoic` | Fade rule: **18% in the first explicit year, linearly to r = 10% by year 10, held at 10% thereafter.** No durable-moat exception invoked. | **AI JUDGMENT** |
+| `terminalRoicAnchor` | "The base world holds a materially higher margin through the explicit period (50% operating margin, versus the bear case's 30%) and decelerates from a higher OBSERVED FY2026 base (65.47% growth to 20%), so the starting level here is drafted above the bear case's, reflecting the stronger near-term economics this scenario's own drivers already assume. But base's own written anchor already concedes 'margin gives back some of its recent expansion... under competitive and pricing pressure' — that conceded pressure is the reason this scenario does not invoke the durable-moat exception either: a moat strong enough to hold terminal returns permanently above the cost of capital is a bull-case claim, not a base-case one. Terminal ROIC fades fully to r = 10% by the terminal year, the §3.5 default, from a higher starting point than bear rather than from a different treatment." | Analyst's own stated reasoning (AI JUDGMENT), same convention as the scenario's existing `writtenAnchor`. |
+
+#### Bull — terminal ROIC
+
+| Field | Value | Provenance |
+|---|---|---|
+| `terminalRoic` | **22%, held (not faded) through the terminal year** — the §3.5 durable-moat exception, invoked explicitly. | **AI JUDGMENT** |
+| `terminalRoicAnchor` | "Durable-moat argument, made explicitly, per §3.5's own exception clause: NVIDIA's CUDA software stack, its multi-generation architecture lead and the resulting switching costs for developers, framework maintainers and hyperscaler customers are AI INFERENCE from the OBSERVED ten-year margin record (a 60%+ operating margin sustained through FY2025–FY2026, the top of the ten-year range) and from NVIDIA's position as the default platform for AI training and inference — not a fact this capture's tags can source directly, and not asserted as one. The bull scenario's own written anchor already argues demand 'sustains at a high level' and margin 'holds near its current elevated level' (60%, OBSERVED FY2026); a moat strong enough to sustain that margin durably is the same moat that should sustain excess returns on incremental capital, so this scenario departs from the §3.5 default and does not fade to r. 22% is a judgment anchor, not a derived number: set below the scenario's own 60% operating margin (a margin, not a return on capital, and not comparable to ROIC without an invested-capital base this draft does not carry) and comfortably above r = 10%, reflecting sustained but bounded excess returns. This is precisely the kind of number `CALVIN RULING — A, WITH AI DRAFT` expects Calvin to review, approve or sharpen by targeted correction, not accept as a computed fact." | Analyst's own stated reasoning (AI JUDGMENT), same convention as the scenario's existing `writtenAnchor`. |
+
+**Named gap, narrowed:** the three scenario dollar values still cannot be
+computed from the current approved methodology and the already-drafted
+scenario assumptions alone — that step is out of this outcome's scope by
+the same `CALVIN RULING — A, WITH AI DRAFT` that authorises the
+preparation above (HARD BOUNDS: "do not compute the three scenario dollar
+values"). What has changed is *which* input is missing: before this
+outcome, the blocking input (terminal ROIC) had no prepared draft at all;
+now it has one, per scenario, labelled AI judgment with a written anchor.
+**What would close the remaining gap:** Calvin's review of the three
+prepared terminal-ROIC assumptions above — approving them as drafted, or
+making a targeted correction to any of them — at `/analyzer/inputs/NVDA`.
+Until that approval, the three scenario dollar values are left blank —
+not zero, not a placeholder, not the prior hand estimate — exactly as
+`CALVIN RULING — C`'s own named fallback describes, a success outcome and
+not a defect.
+
+| Scenario | growth | reinvestment | terminal ROIC (prepared, unapproved) | Value/share |
 |---|---|---|---|---|
-| Bear | 5% | 2% | *(evidence gap — see above)* | *(evidence gap)* |
-| Base | 20% | 4% | *(evidence gap — see above)* | *(evidence gap)* |
-| Bull | 35% | 5% | *(evidence gap — see above)* | *(evidence gap)* |
+| Bear | 5% | 2% | 13% → 10% (fade to r) | *(evidence gap — pending approval)* |
+| Base | 20% | 4% | 18% → 10% (fade to r) | *(evidence gap — pending approval)* |
+| Bull | 35% | 5% | 22% (durable-moat exception) | *(evidence gap — pending approval)* |
 
-Calvin's decision on this gap — authoring the missing terminal-ROIC input,
-or ruling some other basis into scope — is the next step; this draft does
-not anticipate it.
+Calvin's approval or correction of the three prepared terminal-ROIC
+assumptions above is the next step; this draft does not anticipate it,
+and does not compute the three scenario dollar values that approval would
+unlock.
 
 ### §7.1 constants
 
@@ -252,12 +290,14 @@ not anticipate it.
 - **The three scenario dollar values (bear / base / bull) are a named
   evidence gap, not a hand estimate** (see "Scenario values" above): the
   discount rate and terminal growth are authorised (`policy.ts`'s
-  `rateGrid[1]` = 10%, `terminalGrowth` = 3%), but the methodology's
-  terminal-consistency rule (§3.5) also needs a terminal ROIC, and both
-  frozen documents scope the one policy-fixed terminal-ROIC rule (rate + 3
-  points) to the diagnostic reverse DCF only — for the scenario DCF they
-  require a new per-scenario analyst input with its own written anchor,
-  which `CALVIN RULING — C` does not authorise this outcome to add.
+  `rateGrid[1]` = 10%, `terminalGrowth` = 3%), and `CF-ANALYST-DRAFT-NVDA-
+  TERMINAL-ROIC-01` has now prepared the third input — a per-scenario
+  terminal ROIC, drafted as labelled AI judgment with a written anchor
+  under `CALVIN RULING — A, WITH AI DRAFT` — but that preparation is not
+  approval. The three scenario dollar values stay unauthored, and this
+  outcome does not compute them, until Calvin reviews, approves or
+  corrects the prepared terminal-ROIC assumptions at
+  `/analyzer/inputs/NVDA`.
   Closing this gap is Calvin's decision, not a derivation this draft can
   complete from what is already authorised and already drafted.
 
