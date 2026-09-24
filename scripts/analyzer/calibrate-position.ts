@@ -171,7 +171,7 @@ async function runOne(company: CalibrationCompany, offline: boolean): Promise<Co
   }
 
   // --- Input A — price location --------------------------------------------
-  const bundle = analystInputsFor(company.ticker);
+  const bundle = await analystInputsFor(company.ticker);
 
   // EV first: leverage is computed against it, and a suppressed leverage gate
   // suppresses the range, which is what removes the price-location input.

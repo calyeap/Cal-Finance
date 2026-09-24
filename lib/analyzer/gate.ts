@@ -9,7 +9,7 @@ import { buildAcquiredRun, type AcquiredRunInputs } from "./acquiredRun";
 import { deriveH3CashBasis } from "./acquisition/companyInputs";
 import { constrainedAndPassedFactIds } from "./crosschecks/run";
 import type { DerivedExemptionEvidence } from "./spotCheck";
-import { TICKERS_WITH_ANALYST_INPUTS } from "./acquisition/analystInputs";
+import { analystInputsFor, TICKERS_WITH_ANALYST_INPUTS } from "./acquisition/analystInputs";
 import { selectionToNonOperatingInvestments } from "./acquisition/nonOperatingJudgment";
 import { activeProvider } from "../marketdata";
 import { roundMoney } from "../money";
@@ -56,8 +56,19 @@ import { fiftyTwoWeekRangeFrom, type FiftyTwoWeekRange } from "./fiftyTwoWeekRan
 // numbers.
 export const SUPPORTED_FIXTURE_TICKERS = TICKERS_WITH_ANALYST_INPUTS;
 
-export function isSupportedTicker(ticker: string): boolean {
-  return TICKERS_WITH_ANALYST_INPUTS.includes(ticker.toUpperCase());
+/**
+ * CF-ANALYST-INPUT-ENTRY-01 — async, because a ticker is now supported
+ * either by a committed fixture bundle OR by a bundle recorded through the
+ * entry path (a database read). analystInputsFor is the one resolver for
+ * both, so this defers to it directly rather than re-deriving the same
+ * "does a bundle exist" answer a second way (SCOPE item 2).
+ *
+ * A company with no bundle, committed or recorded, still has no scenarios
+ * and still cannot open a run — the refusal itself is unchanged, only its
+ * source now has two places to come back negative from.
+ */
+export async function isSupportedTicker(ticker: string): Promise<boolean> {
+  return (await analystInputsFor(ticker)) !== null;
 }
 
 /**
@@ -82,8 +93,8 @@ function isOffline(): boolean {
  * Kept under its old name so existing callers are unaffected, but it no longer
  * returns a hand-written fact set — there is no longer one to return.
  */
-export function fixtureForTicker(ticker: string): { ticker: string } | null {
-  return isSupportedTicker(ticker) ? { ticker: ticker.toUpperCase() } : null;
+export async function fixtureForTicker(ticker: string): Promise<{ ticker: string } | null> {
+  return (await isSupportedTicker(ticker)) ? { ticker: ticker.toUpperCase() } : null;
 }
 
 interface CapturedPriceRow {
@@ -307,7 +318,7 @@ export async function loadGateState(runId: string): Promise<GateState> {
   const run = await getRun(runId);
   if (run === null) throw new RunNotFoundError(runId);
 
-  if (!isSupportedTicker(run.ticker)) {
+  if (!(await isSupportedTicker(run.ticker))) {
     // A run exists for a ticker with no analyst-input bundle. Fail closed: a
     // run whose scenarios cannot exist must not be computable.
     throw new RunNotFoundError(runId);

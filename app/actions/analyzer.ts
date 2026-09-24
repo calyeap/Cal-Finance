@@ -77,7 +77,7 @@ export async function beginAnalysisAction(formData: FormData): Promise<void> {
   // M7 serves the two validation fixtures; acquisition arrives at M8. A
   // company that resolves but has no fact set cannot be spot-checked, and a
   // run that cannot be spot-checked must not exist.
-  if (fixtureForTicker(identity.ticker) === null) {
+  if ((await fixtureForTicker(identity.ticker)) === null) {
     redirect(`/analyzer?unavailablefixture=${encodeURIComponent(identity.ticker)}`);
   }
 

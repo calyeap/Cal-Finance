@@ -107,7 +107,7 @@ export interface BuildAcquiredRunOptions {
 export async function buildAcquiredRun(
   options: BuildAcquiredRunOptions
 ): Promise<AcquiredRunInputs> {
-  const bundle = analystInputsFor(options.ticker);
+  const bundle = await analystInputsFor(options.ticker);
   if (bundle === null) throw new AnalystInputsUnavailableError(options.ticker);
 
   const acquired = await acquireCompany(options.ticker, {

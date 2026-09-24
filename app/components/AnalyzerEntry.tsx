@@ -128,6 +128,12 @@ export function AnalyzerHomeContent({
             No run was created. A run that cannot be spot-checked must not exist, because
             Step 2 is what every calculation after it depends on.
           </p>
+          <p className="note">
+            <a href={`/analyzer/inputs/${encodeURIComponent(fixtureMissing)}`}>
+              Record analyst inputs for {fixtureMissing}
+            </a>{" "}
+            — a separate authoring surface, not a step in this path.
+          </p>
         </div>
       )}
 

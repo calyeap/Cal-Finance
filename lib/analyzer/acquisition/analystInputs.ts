@@ -1,6 +1,7 @@
 import { MSFT_FIXTURE } from "../fixtures/msft";
 import { OKLO_FIXTURE } from "../fixtures/oklo";
 import type { AnalystInputs } from "./companyInputs";
+import { recordedAnalystInputBundle } from "./recordedBundles";
 
 // ---------------------------------------------------------------------------
 // The inputs that are NOT facts, and were never acquired from anything.
@@ -99,9 +100,28 @@ const BUNDLES: Record<string, AnalystInputBundle> = {
  * Null is the correct answer, not a gap to be filled: a company nobody has
  * supplied scenarios for HAS no scenarios, and inventing three would put
  * numbers with no author into a fair-value range.
+ *
+ * CF-ANALYST-INPUT-ENTRY-01 — the ONE resolver, reading TWO sources: the two
+ * bundles committed above, and — for any other ticker — whatever has been
+ * recorded through the entry path (recordedBundles.ts) into
+ * analyzer_recorded_analyst_bundles. Async because the second source is a
+ * database read; both call sites (acquiredRun.ts, calibrate-position.ts)
+ * already run inside an async function and now await this one too, rather
+ * than caching around the change (SCOPE item 2). The committed bundles are
+ * checked first and returned synchronously-fast, so MSFT and OKLO are
+ * unaffected by the database ever being asked.
  */
-export function analystInputsFor(ticker: string): AnalystInputBundle | null {
-  return BUNDLES[ticker.toUpperCase()] ?? null;
+export async function analystInputsFor(ticker: string): Promise<AnalystInputBundle | null> {
+  const committed = BUNDLES[ticker.toUpperCase()];
+  if (committed !== undefined) return committed;
+  return recordedAnalystInputBundle(ticker);
 }
 
+/** The tickers whose analyst inputs are committed in code, never recorded
+ * through the entry path. A company with a RECORDED bundle instead is a
+ * supported ticker too (gate.ts's isSupportedTicker checks both), but is
+ * deliberately not added to this static list — it is the one place this
+ * file's own header can point a reader to "every committed bundle at a
+ * glance", and a database-backed ticker cannot honestly join a list that is
+ * read without an async call. */
 export const TICKERS_WITH_ANALYST_INPUTS = Object.keys(BUNDLES);
