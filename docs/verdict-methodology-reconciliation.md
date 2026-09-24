@@ -4,6 +4,22 @@
 **Authority:** Calvin's `CALVIN RULING — NEITHER A NOR B AS STATED`, 24 Sep 2026
 05:33:02Z ([PR #271 comment 5808311255](https://github.com/calyeap/Cal-Finance/pull/271#issuecomment-5808311255)).
 
+**Superseding outcome:** `CF-VERDICT-1062-AMEND-TEXT-01` ([issue #274](https://github.com/calyeap/Cal-Finance/issues/274)).
+**Superseding authority:** Calvin's `CALVIN RULING — C`, 24 Sep 2026 06:08:48Z
+([PR #273 comment 5808704819](https://github.com/calyeap/Cal-Finance/pull/273#issuecomment-5808704819)).
+
+> **§§2–4 of this document are SUPERSEDED IN PART, as of `CALVIN RULING — C`.**
+> §2's determination — **AMEND** §10.6.2 — stands and is not reopened. **§3.1
+> and §3.3's proposed structure and proposed §10.6.2 text do not stand.**
+> Calvin ruled a different, simpler single-comparison structure instead of
+> §3.3's two-dimension design. §§9–14 below are the current proposal;
+> §§2–4 remain in the document only as the record of the superseded
+> candidate and are not current guidance. §1 (the five-finding
+> reconciliation), §5 (minimum evidence) and §6 (carried-forward non-policy
+> gaps) are live input, re-read and re-applied at §§11–13 below — they are
+> not superseded, only re-derived where the new structure changes what
+> follows from them.
+
 **This is a reconciliation and decision-structuring document, not an
 implementation and not a decision.** Per `docs/product-decisions.md` items 3
 and 9, AI does not make the final qualitative call and human input is
@@ -791,3 +807,661 @@ company; lift the 21 Sep third-company deferral or the no-new-capture/no-EDGAR
 bound; reopen the merged Analyzer V2 UI or claim Calvin's acceptance of it;
 decide anything — every determination above, KEEP-or-AMEND included, is a
 recommendation for Calvin's ruling, not a decision taken.
+
+---
+---
+
+# Addendum — `CF-VERDICT-1062-AMEND-TEXT-01`: exact §10.6.2 text under `CALVIN RULING — C`
+
+**This addendum (§§9–14) supersedes §§3.1 and 3.3 above.** It does not
+supersede §1, §2, §5 or §6, which it re-reads and re-applies rather than
+repeats. Per `docs/product-decisions.md` items 3 and 9, this remains a
+recommendation for Calvin's ruling, never a decision taken, and no
+`docs/frozen/` byte is edited by this addendum.
+
+Re-verified at `origin/master` = `ed81500`, working tree clean throughout.
+`lib/analyzer/verdict.ts` and `lib/analyzer/policy.ts` are byte-identical to
+that commit (§13 below cites the exact lines re-read). No `docs/frozen/`
+byte and no `FROZEN_HASHES` entry is touched. No threshold, band, cut-point,
+zone width, horizon rule, disagreement constant, `PROVISIONAL` entry or
+`POLICY_THRESHOLD_PROVENANCE` row is introduced anywhere below, in code or
+in prose presented as settled.
+
+---
+
+## 9. `CALVIN RULING — C`, verbatim — this addendum's authorisation
+
+Quoted in full ([PR #273 comment 5808704819](https://github.com/calyeap/Cal-Finance/pull/273#issuecomment-5808704819), 24 Sep 2026 06:08:48Z), because every clause binds and none is paraphrased for the structural work below:
+
+> AMEND §10.6.2, but do **not** adopt §3.3 exactly as written.
+>
+> Use the simpler single-comparison structure below:
+>
+> 1. **UNDERWRITABILITY** — a fundamental valuation must be usable. If not, return INCOMPLETE.
+> 2. **GROWTH LICENCE** — determine whether going-forward / incremental returns on new capital economically exceed their cost. If YES, growth-inclusive value may count. If NO, use a conservative / no-growth value. If UNKNOWN, compute both.
+> 3. **VALUE** — produce one underwritten fundamental value (or both values when the growth licence is unresolved).
+> 4. **UNCERTAINTY / MARGIN OF SAFETY** — economic / forecast uncertainty determines the required fair-value zone / margin of safety. Exact policy remains open.
+> 5. **VERDICT** — compare current price with the underwritten value / fair zone to derive BUY / HOLD / SELL.
+> 6. **FLIP TEST** — when the growth licence is UNKNOWN, if both growth-inclusive and conservative values imply the same verdict, issue it; if they imply different verdicts, return INCOMPLETE.
+> 7. **REVERSE DCF** — explanation and consistency check only. It must not cast an independent verdict vote.
+>
+> Structural clarifications:
+> - Do not retain a two-vote classifier where price location is one vote and growth-quality is a second independent vote requiring agreement. Growth quality instead governs what value is allowed to be underwritten; the verdict itself comes from one underwritten value-vs-price comparison.
+> - Do not call the growth/no-growth flip test the margin-of-safety overlay. The flip test handles unresolved growth licensing. Margin of safety is separately driven by economic/forecast uncertainty on an already-underwritten valuation.
+> - Evidence / estimation confidence remains an underwritability gate; economic / forecast uncertainty remains a separate MOS input. Do not collapse them.
+> - Do not adopt Morningstar numeric bands, mirrored SELL geometry, or any new numeric threshold in this ruling.
+> - Existing settled constraints remain settled: no price-location-alone verdict, no PVGO shortcut, no model-in-the-path verdict, no default HOLD when evidence is insufficient.
+>
+> Return next with the smallest exact §10.6.2 replacement text consistent with this ruling, plus only the remaining explicit Cal Finance house-policy decisions and the minimum evidence required to set them. No code implementation or new evidence capture yet.
+
+**One note on vocabulary, not a deviation from the ruling.** Step 5 and
+Step 6's plain English says "BUY / HOLD / SELL" and "INCOMPLETE." Those are
+the product-facing words (`lib/analyzer/verdict.ts`, `VerdictStatus`); the
+frozen text this addendum proposes replacing sits one layer below that, at
+§10.6.1's already-fixed **CHEAP / FAIR / EXPENSIVE / INCONCLUSIVE**
+vocabulary, and the mapping between the two layers is itself settled and
+not reopened here (§6.5 above; `verdict.ts:14-16`). §10 below therefore
+writes the proposed §10.6.2 text in §10.6.1's vocabulary — CHEAP / FAIR /
+EXPENSIVE where Calvin's Step 5 says BUY / HOLD / SELL, INCONCLUSIVE where
+Steps 1 and 6 say INCOMPLETE — because that is the frozen layer being
+amended, and the settled mapping is what carries one to the other. This is
+not a redesign of the ruled structure; it is the same vocabulary
+substitution §6.5 already records as settled, applied consistently.
+
+---
+
+## 10. Proposed §10.6.2 replacement text (ruling C — supersedes §3.3; not applied)
+
+**Smallest-footprint statement.** The text below replaces §10.6.2 alone.
+It restates §10.6.3's three render conditions and §7.2 M5's RONIC ladder by
+reference rather than duplicating their substance, so that if either of
+those subsections is separately edited in the future this text does not
+silently drift from them. No other frozen subsection is touched, and §10.4
+below states, for each of §10.6.1/§10.6.3/§10.6.4, why none needs its own
+amendment to coexist with this text.
+
+**Disposition of every paragraph of current §10.6.2 (spec `:1068–1098`)
+this replacement does not restate in the seven steps, stated here so
+nothing is dropped by silence.** The heading, the two-input table, fixed
+rule 1 and fixed rule 2 are restructured into the seven steps and the
+paragraph replacing fixed rule 2 below. Four of the six achieved-versus-
+required comparator paragraphs — spec `:1079`, `:1081`, `:1083`, `:1087`
+(the horizon and calibration rules) — are orthogonal to the two-vote
+structure ruling C drops: they govern the achieved-history comparator
+Step 7 reads and cast no vote of their own, so they are carried forward
+**verbatim** inside the quoted block below rather than silently lost to a
+whole-subsection replacement. The other two — spec `:1077` and `:1085` —
+are carried forward verbatim as well, but they are not orthogonal in the
+same sense: their consequence clauses name the *position* itself, not
+only the comparator, by way of a term ("the gap" / "the growth input")
+that only the two-input table this replacement removes used to define.
+The quoted block below binds each to Step 7's comparator with a bracketed
+gloss so neither sentence refers to a deleted antecedent, and §11 item 8
+below opens, without resolving, whether that REQUIRED-comparator gate
+still reaches the position under the ruled structure or narrows to
+§10.6.4's action clause only — ruling C is silent on this interaction, so
+it is named rather than assumed either way. Spec `:1089`'s
+bands-are-policy-constants/PROVISIONAL recording requirement is carried
+the same way, with its now-dead "and the disagreement rule" clause struck
+— that rule does not survive Step 6's flip test above, but the
+recording/PROVISIONAL requirement §11 item 5 still depends on does. Spec
+`:1098`'s closing rationale is carried forward verbatim as this
+replacement's own closing paragraph, since "deterministic, never a [C]
+call" is the heading this replacement keeps.
+
+> #### 10.6.2 Derivation — deterministic, never a [C] call
+>
+> The position is derived from a single underwritten-value-versus-price
+> comparison, produced in the seven steps below, in order. Every step reads
+> a field the analyzer already computes, or a load-bearing reading of one;
+> no step calls a model.
+>
+> **1 — Underwritability.** The fundamental valuation must be usable before
+> anything else runs. This is §10.6.3's three existing conditions (a
+> valuation range exists; trust status is CLEAN or PARTIAL; PROFILE NOT
+> CONFIRMED is not active), restated here as this derivation's first step,
+> not a second gate. Where they do not all hold, or a REQUIRED input this
+> derivation depends on is missing or not evidenced to the standard §3.7
+> and §3.8 already require, this step fails and the position is
+> **INCONCLUSIVE**.
+>
+> **2 — Growth licence.** Whether the growth the scenario range and the M7
+> reverse-DCF grid describe earns a return on incremental invested capital
+> in excess of the discount rate used for the same range — RONIC (§7.2 M5),
+> read against the rate grid, now load-bearing on the position rather than
+> only a qualifying flag on the diagnostic. The reading is:
+>
+> - **YES** — [the RONIC-vs-rate reading that licenses growth, and how
+>   §7.2 M5's existing ladder states (RONIC NOT MEANINGFUL · LOW RONIC —
+>   VALUE-DESTROYING GROWTH · computed · RONIC CAPPED AT 200%) map onto
+>   YES / NO / UNKNOWN below — house-policy decision, §11 item 2] — the
+>   growth-inclusive value (Step 3) may be underwritten.
+> - **NO** — growth is not licensed; only the conservative / no-growth
+>   value (Step 3) may be underwritten.
+> - **UNKNOWN** — [what makes the reading genuinely unresolved rather than
+>   YES or NO, including whether a ladder state the RONIC computation
+>   itself cannot resolve (e.g. RONIC NOT MEANINGFUL) is read as UNKNOWN
+>   here or as a Step 1 failure — house-policy decision, §11 item 2] — both
+>   values are computed at Step 3, and Step 6 governs which verdict, if
+>   any, may issue.
+>
+> **3 — Value.** Exactly one underwritten fundamental value is produced
+> under Step 2's licence — the growth-inclusive value where YES, the
+> conservative / no-growth value where NO, or both where UNKNOWN. [Whether
+> the conservative / no-growth value is a fixed floor or a company-specific
+> bound (e.g. the bear scenario's own growth path) — house-policy decision,
+> §11 item 3.] The M7 reverse-DCF grid's required-growth figures are not a
+> third input to this step: they are read at Step 7 as a consistency check
+> on this value and on the range, per §10.1's ordering principle, and cast
+> no vote of their own here or anywhere else in this derivation.
+>
+> **4 — Uncertainty / margin of safety.** Economic / forecast uncertainty
+> on the Step 3 value — [what this uncertainty is measured from, and how it
+> sets the required fair-value zone — house-policy decision, §11 item 1;
+> exact policy remains open] — determines the fair-value zone the Step 5
+> comparison reads. This is evidence/estimation confidence (Step 1) read a
+> second time for a different purpose, not the same test twice: Step 1 asks
+> whether the valuation is usable at all and, where it is not, returns
+> INCONCLUSIVE; Step 4 asks, given that it is usable, how wide the required
+> cushion around it is, and only ever widens or narrows the zone Step 5
+> reads. The two are not collapsed into one gate.
+>
+> **5 — Verdict.** Compare the current price against the Step 3 value (or,
+> where Step 2 was UNKNOWN, both values within Step 4's zone) to derive
+> CHEAP / FAIR / EXPENSIVE. This is one comparison, not two independent
+> votes: Step 2 has already determined which value is being compared before
+> this step runs, so this step never reads price location alone (§10.2
+> below). Where Step 2 was UNKNOWN, this step's result is provisional on
+> Step 6.
+>
+> **6 — Flip test.** Applies only where Step 2's growth licence is UNKNOWN.
+> Compute Step 5 once against the growth-inclusive value and once against
+> the conservative value. Where both agree on the resulting position, issue
+> it. Where they disagree, the position is **INCONCLUSIVE**. This test, and
+> not Step 4's margin-of-safety zone, is what fires here — the two are never
+> one another: the flip test resolves unresolved growth licensing; the
+> margin of safety widens or narrows an already-licensed value's zone.
+>
+> **7 — Reverse DCF.** The M7 grid's required-growth figures, read at Step
+> 3, are reported alongside the position (§10.6.4) solely as explanation
+> and a consistency check on the same underlying DCF relationship the range
+> already reflects, per §10.1's ordering principle. They cast no
+> independent vote at Step 5, Step 6, or anywhere else in this derivation.
+>
+> **The achieved-versus-required comparator Step 7 and §10.6.4's action
+> clause read, carried forward verbatim from current §10.6.2 — orthogonal
+> to the two-vote structure above and not touched by ruling C:**
+>
+> **The comparator fact is REQUIRED.** The achieved figure must be a
+> section B fact **on the same series and the same horizon** as the
+> implied-growth figure it is read against. A ten-year implied CAGR is
+> compared to a ten-year achieved CAGR of the same series, on the same
+> accounting basis, or it is not compared at all. Where no such fact
+> exists, the gap [the achieved-versus-required comparator of Step 7] is
+> **INCOMPLETE**, and the position and its action clause do not render.
+>
+> **Two horizons are valid, and the horizon travels with the result**
+> (CalFinance Methodology v2, ruled 8 September 2026). Ten years is
+> preferred. **A five-year comparator is permitted where a valid ten-year
+> one cannot be constructed** — which is the common case rather than the
+> exception: ASC 606 split most filers' revenue across two tagged elements
+> partway through the decade, and §3.7 refuses to join two series into one
+> comparator, so only a minority of companies can produce a ten-year
+> figure at all.
+>
+> **Five-year and ten-year comparators are related but not semantically
+> identical**, so the horizon is carried with the figure and is never
+> implied. **Both sides must be the same horizon**: a five-year achieved
+> comparator is read against a five-year required-growth figure. Mixing
+> the two sides is not a fallback, it is a different comparison.
+>
+> **No cross-series stitching.** §3.7's refusal stands, and a five-year
+> window that spans a tag change is not a valid five-year comparator.
+>
+> **Where neither horizon can be constructed, the growth input [the
+> achieved-versus-required comparator of Step 7] is UNAVAILABLE and the
+> position is INCONCLUSIVE.** It does not degrade to a
+> weaker reading, and it does not fall back to FAIR — FAIR is a positive
+> claim, not the absence of one. [Unchanged from current text; consistent
+> with Step 1/Step 6 above, neither of which falls back to FAIR either.]
+>
+> **For calibration:** observations from the two horizons are not pooled
+> without evidence that common thresholds hold across them. Whether they
+> do is a testable question and must be answered from observations rather
+> than assumed. Where they do not, thresholds are calibrated per horizon.
+>
+> **What replaces the current rule that "every position requires positive
+> agreement from both inputs."** That rule does not survive this structure:
+> there are no longer two independent votes for a second vote to agree
+> with. In its place: **a position issues only where Step 1 clears, Step 3
+> produces a value under Step 2's licence, and — where Step 2 was UNKNOWN —
+> Step 6's flip test agrees.** Anything else — Step 1 failing, Step 3 unable
+> to produce a value, or Step 6 disagreeing — is **INCONCLUSIVE**.
+> Determinism does not depend on the dropped rule: every test above (Step
+> 1's gate, Step 2's licence reading, Step 4's uncertainty reading, Step 6's
+> flip test) is a uniform rule applied identically to every company, exactly
+> as fixed rule 1 below already requires and exactly as Gate 0 and Gate 1
+> already operate.
+>
+> **Bands are policy constants** [carried forward from current text, minus
+> "and the disagreement rule" — that rule does not survive this structure,
+> replaced above by Step 6's flip test; the recording/PROVISIONAL
+> requirement below does survive and is restated on its own], recorded in
+> `policy` (§10.0.1) and marked **PROVISIONAL** with what they were
+> calibrated on.
+>
+> One rule is fixed here and is not configuration:
+>
+> 1. **The same inputs always produce the same position.** No per-company
+>    adjustment, no override, no model in the path. [Unchanged from current
+>    text.]
+>
+> **Why deterministic and not an AI call, recorded because it will be asked
+> again:** an AI-authored headline verdict would be unreproducible and
+> unauditable. Two runs on identical inputs could differ, and neither could
+> be traced. That is the failure §3 exists to prevent, applied to the
+> loudest sentence in the report. [Unchanged from current text.]
+
+### 10.1 Why this is one comparison, not the old two-vote rule, restated plainly
+
+Current §10.6.2 asks two questions that must separately agree (price
+location; the growth-rate gap) before it will name a position. The text
+above asks one question — is the current price CHEAP, FAIR or EXPENSIVE
+relative to a single value the process has already decided is the right
+one to underwrite. Step 2 decides *which value* is licensed; Step 5 does
+the *only* comparing. This is what "one comparison, not two votes" means in
+concrete terms: nowhere does the proposed text compare two independently
+computed classifications and require them to concur; it computes one
+value (or, transiently, two candidate values pending Step 6) and compares
+that against price exactly once.
+
+### 10.2 Why the 17 Sep 2026 single-diagnostic ruling is still satisfied
+
+**Stated explicitly, in this document's own words, because REVIEW checks
+it.** The 17 Sep 2026 ruling ([PR #140 comment 5719869973](https://github.com/calyeap/Cal-Finance/pull/140#issuecomment-5719869973))
+forbids a fair-value range, or any other single diagnostic, from by itself
+determining BUY/HOLD/SELL. Step 5 above compares price against a value —
+not against the range's location alone — and that value is never available
+to Step 5 until Step 2 has determined, from a second, independent fact
+(RONIC read against the discount rate — a statement about whether the
+company's incremental capital earns its keep, which price location does
+not measure), which value may be underwritten at all. A company whose price
+sits cheap within its scenario range but whose growth is NO — not licensed
+— is compared against the conservative value, not the growth-inclusive one,
+so price location by itself never produces the verdict: it produces a
+verdict only in combination with, and licensed by, Step 2's independent
+growth-quality finding. This is not price-location-alone with extra
+narration; Step 2 changes *what value the price is compared against*,
+which is a substantive second input, not a restatement of the range. The
+apparent tension between "one comparison" (ruling C) and "not one
+diagnostic alone" (17 Sep) is therefore not a conflict: "one comparison"
+describes how many times Step 5 runs; "not one diagnostic alone" describes
+how many independent facts feed what it compares. Ruling C's structure
+satisfies both by construction — one comparison, fed by two independent
+findings (Step 2's growth licence and Step 3's resulting value; the price
+itself is the third term of the comparison, not a fourth vote).
+
+### 10.3 Reconciliation against §10.6.1, §10.6.3 and §10.6.4
+
+- **§10.6.1 (vocabulary).** **Unchanged.** CHEAP · FAIR · EXPENSIVE ·
+  INCONCLUSIVE remain the four values Step 5/Step 1/Step 6 above produce;
+  "INCONCLUSIVE is not FAIR" is preserved exactly — nothing in the proposed
+  text routes a failed step to FAIR.
+- **§10.6.3 (render conditions).** **Consequentially affected in wording
+  only, not in substance.** Its three conditions are restated inside Step 1
+  above as this derivation's first step rather than a separate subsection
+  read before it. §10.6.3 itself needs no amendment to coexist with this
+  text — Step 1 points to it rather than duplicating or contradicting it —
+  but a future editor implementing this text may find it clearer to cross-
+  reference Step 1 from within §10.6.3's own wording. That is a wording
+  choice for whoever implements the ruling, not a substantive change this
+  addendum proposes or requires.
+- **§10.6.4 (the action clause, entry-side-only).** **Unchanged.** Step 7's
+  reverse-DCF figures are exactly the required-versus-achieved figures
+  §10.6.4 already requires the action clause to name and show; entry-side-
+  only (start / do not start / wait for a better price, never trim / add /
+  sell / hold) is untouched by this text and not reached by any step above.
+- **No adjacent subsection needs its own separate amendment.** The ruled
+  structure is expressible as a replacement to §10.6.2 alone.
+
+### 10.4 Where ruling C appears to modify a settled ruling — named, not silently overridden, not stopped on
+
+Per issue #274's own instruction: Calvin's ruling C is newer than every
+ruling it touches, so an apparent tension is not the two-authority conflict
+`AGENTS.md`'s **If authorities conflict** rule sends to
+`STOP: RECONCILIATION REQUIRED` — that rule is for two authorities where
+**neither** is Calvin's newest ruling. Two places are named here for his
+ruling on the text, not overridden and not stopped on:
+
+1. **The two-dimension structure §3.1/§3.3 above proposed is dropped in
+   favour of a one-dimension-plus-licence structure.** §3's own §3.2 argued
+   the 17 Sep ruling was satisfied because two dimensions required positive
+   agreement; ruling C explicitly forbids that shape ("do not retain a
+   two-vote classifier"). §10.2 above shows the newer structure satisfies
+   the same 17 Sep ruling by a different mechanism (licensing what is
+   compared, not requiring two independent classifications to agree) —
+   Calvin's own ruling text anticipates and resolves this by naming both
+   constraints together ("Growth quality instead governs what value is
+   allowed to be underwritten; the verdict itself comes from one
+   underwritten value-vs-price comparison").
+2. **Step 5's plain English says BUY/HOLD/SELL; §10.6.1's fixed vocabulary
+   says CHEAP/FAIR/EXPENSIVE/INCONCLUSIVE.** §9 above states this is
+   resolved by the already-settled product/spec vocabulary mapping (§6.5),
+   not a new decision — named here again because it sits at the exact spot
+   the ruling's own wording could otherwise be read as reopening it.
+
+Neither is a conflict between two authorities where neither is Calvin's
+newest ruling, so `STOP: RECONCILIATION REQUIRED` does not apply to either.
+
+---
+
+## 11. The remaining explicit house-policy decisions — re-derived under ruling C
+
+**Re-derived from the ruled structure, not copied from §4.** Per issue
+#274's SCOPE 2, each of §4's seven items above is given a disposition —
+**closes**, **changes**, or **stays open unchanged** — before what survives
+is carried forward, together with what ruling C newly opens.
+
+**Disposition of §4's seven items:**
+
+| §4 item | Disposition under ruling C | Why |
+|---|---|---|
+| 1. Which M7 cell supplies the required-growth figure | **Changes** — re-scoped, not closed | No longer "Dimension 2's required-growth figure" (a dropped concept); now Step 2's RONIC-vs-rate reading and Step 7's consistency-check figure. Same open substance, new attachment point. Carried forward as item 4 below. |
+| 2. What counts as "genuinely ambiguous" for the dual-value test | **Changes** — splits into two items | Ruling C's own structural clarification forbids calling the flip test the margin-of-safety overlay. What was one question under §3's merged overlay is now two independent ones: what makes Step 2 UNKNOWN (item 2 below) and what Step 4's margin-of-safety input actually measures (item 1 below). Neither is answered by the split itself. |
+| 3. Fixed floor vs. company-specific conservative/no-growth reading | **Stays open, unchanged in substance** | Same question, now attached to Step 2's NO branch and Step 3. Carried forward as item 3 below. |
+| 4. Numeric band/cut-point for CHEAP/FAIR/EXPENSIVE | **Stays open, unchanged** | Ruling C adopts no numeric threshold ("do not adopt ... any new numeric threshold in this ruling"); the classification still needs one eventually. Carried forward as item 5 below. |
+| 5. Mirrored vs. asymmetric SELL (EXPENSIVE) geometry | **Stays open, unchanged** | Ruling C explicitly declines to adopt mirrored SELL geometry; the question of whether it should eventually be adopted is not answered either way. Carried forward as item 6 below. |
+| 6. Five-year/ten-year band pooling | **Stays open, unchanged** | §10.6.2's own text on this point is carried forward **verbatim** into the quoted replacement at §10 above (the calibration-pooling paragraph following Step 7); ruling C does not touch it. Carried forward as item 7 below. |
+| 7. Which reverse-DCF cell feeds the structure | **Closes as a separate item — absorbed into item 1** | It was already flagged in §4 as restating item 1 rather than adding to it (`docs/verdict-synthesis-research.md` §5.2's demoted question); ruling C's Step 7 clarifies reverse DCF's *role* (explanation only) but does not answer *which cell*, so the substance is unchanged and stays merged with item 4 below rather than listed twice. |
+
+**The re-derived list**, each as one closed question with options, the
+consequence of each, and what it would take to answer it. None defaults to
+a Morningstar-style shape (Finding 5, still confirmed at §1.5 above), and a
+default is named explicitly wherever ruling C's silence could otherwise be
+read as adopting one.
+
+1. **What is "economic / forecast uncertainty" for Step 4's margin of
+   safety, and what fair-value-zone shape does it produce?** Newly opened
+   by ruling C's own "exact policy remains open." Options: a measure of the
+   dispersion across the bear/base/bull scenario range itself (reusing
+   machinery already computed, but risking the same double-counting concern
+   Finding 3 raised about reverse DCF, one layer down, since the range
+   already feeds Step 5's comparison); a measure of evidence-quality flags
+   already carried (SECONDARY, UNVERIFIED, AI-EXTRACTED, SHORT HISTORY) —
+   but those already drive §9.6 trust status and Step 1's gate, so reusing
+   them for Step 4 risks collapsing the two Step 1/Step 4 are supposed to
+   keep separate; a genuinely new measure of forecast dispersion not yet
+   computed anywhere. **A default would otherwise have crept in here** if
+   this addendum reused the scenario range's own spread as the uncertainty
+   measure without naming that it is a choice — it is not adopted by
+   default. Answering it needs Calvin's ruling on which shape, then real
+   observations to size it (§12 below); no number is proposed.
+
+2. **What makes Step 2's growth licence UNKNOWN rather than resolved YES or
+   NO — and does a ladder state the RONIC computation itself cannot
+   resolve (RONIC NOT MEANINGFUL, §7.2 M5) count as UNKNOWN, or as a Step 1
+   underwritability failure?** Newly opened by ruling C's three-way YES /
+   NO / UNKNOWN split, which names no test for membership. Options: treat
+   UNKNOWN as "the RONIC reading is close enough to the rate-grid boundary
+   that estimation error could plausibly place it on either side" (an
+   estimation-uncertainty test, symmetric with item 1's concern but
+   distinct in what it measures); treat any ladder state that is not a
+   clean "computed" reading (i.e. RONIC NOT MEANINGFUL as well as a
+   boundary-adjacent LOW RONIC reading) as UNKNOWN; or treat RONIC NOT
+   MEANINGFUL specifically as a Step 1 failure rather than a Step 2 state,
+   on the reasoning that a licence that cannot be computed at all is not
+   the same claim as one that is computed but ambiguous. Consequence: the
+   first two route MSFT-shaped companies (RONIC NOT MEANINGFUL on every
+   cell) through Step 6's flip test; the third routes them to INCONCLUSIVE
+   at Step 1 directly. **For MSFT and OKLO today this choice does not
+   change the outcome** — see §12 below; it is still Calvin's to make, not
+   defaulted here either way.
+
+3. **Is the conservative / no-growth value a fixed floor (e.g. zero growth)
+   or a company-specific lower bound (e.g. the bear scenario's own growth
+   path)?** Unchanged from §4 item 3 above, restated for Step 2's NO branch
+   and Step 3. Consequence unchanged: a fixed floor is simpler and more
+   uniform (favours fixed rule 1) but may be economically meaningless for a
+   structurally shrinking company; a company-specific bound reuses the
+   range's own bear case but ties Step 3's conservative reading to an
+   assumption that already feeds Step 5's comparison, which risks
+   reintroducing Finding 3's double-counting concern one layer down. Not
+   resolved here.
+
+4. **Which of M7's nine reverse-DCF cells (or which combination) supplies
+   Step 2's RONIC-vs-rate reading and Step 7's consistency-check figure?**
+   Re-scoped from §4 items 1 and 7 (now merged; see the disposition table
+   above). Options unchanged: a single designated margin/rate cell;
+   requiring direction-of-agreement across all nine; reading the grid's
+   range. Consequence unchanged: a single cell is simplest but arbitrary; a
+   grid range is more defensible but has no precedent in the frozen text
+   for collapsing a *range* of readings into one Step 2 determination.
+   Needs real observations across companies whose RONIC ladder is not
+   uniformly NOT MEANINGFUL — which the current calibration set (§12
+   below) does not supply.
+
+5. **Any numeric band or cut-point the eventual CHEAP / FAIR / EXPENSIVE
+   classification at Step 5 still needs**, once real observations exist.
+   Unchanged from §4 item 4. Explicitly not answered here, per HARD BOUNDS
+   and `docs/frozen/calfinance-methodology-v2.md`'s own "numerical
+   valuation-position cut-points remain TEST/provisional... until
+   adequately validated and explicitly approved" (line 154).
+
+6. **The mirrored-versus-asymmetric EXPENSIVE geometry question.**
+   Unchanged from §4 item 5, named directly by Finding 5 and by ruling C's
+   own "do not adopt ... mirrored SELL geometry ... in this ruling." No
+   default is assumed either way by that non-adoption; ruling C declining
+   to adopt the shape now is not itself a ruling that the shape is wrong,
+   only that it is not decided.
+
+7. **Whether five-year and ten-year observations may share one band.**
+   Unchanged from §4 item 6 (`docs/m8c-calibration-findings.md:151`). Still
+   open, still to be "answered from observations rather than assumed," per
+   §10.6.2's own text on this point, carried forward **verbatim** into the
+   quoted replacement at §10 above.
+
+8. **Does the REQUIRED-comparator gate (spec `:1077`, `:1085`, carried
+   forward into Step 7's paragraphs at §10 above) still reach the position
+   itself, or does it narrow to §10.6.4's action clause only, now that no
+   step between 2 and 6 reads the comparator?** Newly opened by carrying
+   these two paragraphs forward under the ruled structure: their
+   consequence clauses ("the position and its action clause do not
+   render"; "the position is INCONCLUSIVE") were written for the two-vote
+   structure, where the comparator sat inside the vote itself; Step 7
+   states the same comparator "cast[s] no independent vote at Step 5, Step
+   6, or anywhere else in this derivation," which is in tension with a
+   clause that still routes the *position*. Options: keep the
+   REQUIRED-comparator gate reaching the position, as a Step 1
+   underwritability input "this derivation depends on" (consistent with
+   Step 1's own language, but re-admits an explanation-only check as
+   position-determining — the shape #274 says reverse DCF must not have);
+   or narrow its consequence to §10.6.4's action clause only, so a missing
+   or unconstructable comparator suppresses the reverse-DCF explanation
+   and action clause without touching Step 5/6's CHEAP/FAIR/EXPENSIVE
+   position. **For MSFT and OKLO today this choice does not change the
+   outcome** — see §12 below; both are already INCONCLUSIVE upstream of
+   Step 7 under either branch, so it is not resolved here.
+
+---
+
+## 12. The minimum evidence required to set them
+
+**The composition requirement is unchanged in shape from §5 above** — the
+ruled structure changes what Dimension 2 is called and how it licenses a
+value, not the underlying facts that would have to exist to observe it.
+Restated against the ruled structure's own steps, not re-derived from
+scratch, because the same evidence gaps block both:
+
+- At least one company whose RONIC ladder is **not** uniformly NOT
+  MEANINGFUL across the 8/10/12% × three-margin-level grid — needed for
+  Step 2 to ever resolve YES or NO rather than the item-2 open question
+  above. MSFT fails this today (all nine cells NOT COMPUTABLE, §13 below),
+  so MSFT alone can never validate Step 2 regardless of which of item 2's
+  options is ruled.
+- At least one company producing **both** a ten-year and a five-year
+  achieved comparator on the same series — needed for item 7's
+  horizon-pooling question, exactly as §5 stated; unchanged.
+- At least one company clearing every upstream blocker
+  `docs/m8c-calibration-findings.md` §5 lists in dependency order (Step 7
+  scenario authorship, the §4.4 non-operating-investments judgment, an
+  acquired RONIC ladder, a set `nopatTaxRate`) — a partial clearance
+  produces zero usable observations, exactly as the M8-c counterfactual
+  pass demonstrated for MSFT and COST ("still solve 0 of 9 cells").
+- For Step 6's flip test and item 2's UNKNOWN question specifically: at
+  least one company where the RONIC-vs-rate reading is genuinely close to
+  the rate-grid boundary, so that YES/NO/UNKNOWN's boundary condition has a
+  real case to test against rather than only the two clean extremes
+  (uniformly NOT MEANINGFUL, or comfortably above the rate).
+- For Step 4's margin-of-safety input specifically (newly opened, item 1
+  above): at least one company where forecast/estimation uncertainty is
+  material and can be measured independently of the scenario range's own
+  spread, so item 1's options can be told apart empirically rather than
+  merely argued.
+
+**No number of companies below the point where these facts exist is
+"enough,"** for the same reason §5 gave (small-sample decision theory;
+Cooke's classical model's ascertainable-ground-truth requirement) — naming
+a count here would itself be the numeric policy constant HARD BOUNDS
+forbids.
+
+**What would have to be lifted to obtain it — named without lifting any of
+it here.** Unchanged from §5's list, in the same dependency order: (1) the
+21 Sep 2026 third-company deferral; (2) the no-new-capture/no-EDGAR bound,
+needed for RONIC's five-year deltas beyond what is captured; (3) Command
+Center's `nopatTaxRate` ruling (one of the four `UNDEFINED_POLICY_CONSTANTS`,
+`lib/analyzer/policy.ts:68-73`); (4) the §4.4 non-operating-investments
+judgment, recorded per company; (5) Step 7 scenario authorship for more
+companies than the validation set already has. None of these is lifted by
+this addendum. The ruled structure does not change which bounds gate the
+evidence — it changes what the evidence would be used to decide.
+
+**What the ruled structure would and would not produce for MSFT and OKLO
+today, on the real numbers already in the tree — and whether that differs
+from §5's answer.**
+
+- **MSFT.** RONIC NOT MEANINGFUL on all nine reverse-DCF cells, confirmed
+  unchanged at this head (`lib/analyzer/modules/reverseDcf.ts:187-199`;
+  `lib/analyzer/reverseDcfOnRealRun.test.ts:57-69`). Step 2 cannot resolve
+  YES or NO for MSFT today regardless of which of item 2's options is
+  ruled. **Whichever way item 2 is answered, the outcome is the same**: if
+  RONIC NOT MEANINGFUL is read as UNKNOWN, Step 3 would need to compute
+  both values, but Step 2's own YES/NO/UNKNOWN reading depends on a RONIC
+  figure that does not exist for MSFT on any cell, so Step 6's flip test
+  has no genuine second reading to test against the first — the position
+  is INCONCLUSIVE; if RONIC NOT MEANINGFUL is instead read as a Step 1
+  failure, the position is INCONCLUSIVE at Step 1 directly. Either
+  resolution of item 2 leaves MSFT INCONCLUSIVE. **This is unchanged from
+  §5's answer under the superseded §3.3 structure** (MSFT stays
+  `INCOMPLETE` at the product layer, INCONCLUSIVE at the spec layer,
+  either way) — the ruled structure does not create a RONIC figure MSFT's
+  own fundamentals do not support, and reads the same per-cell ladder the
+  frozen contract already computes
+  (`lib/analyzer/assemble.ts:508-520`; `lib/analyzer/suppression.ts:79-91,121,175-179`
+  confirm the range itself is unaffected — `SUPPRESSION_SCOPE_BY_STATE`,
+  `SCOPE_REMOVES_FAIR_VALUE_RANGE` and `stateRemovingFairValueRange` all
+  re-read and matching §5's citations).
+- **OKLO.** Unchanged: never reaches §10.6.2 at all, blocked upstream at
+  Step 1 by the leverage precondition (`LEVERAGE UNSUPPORTED IN v1`,
+  downstream of the missing enterprise value). **Identical to §5's
+  answer.** No ruling on this addendum changes that structural fact.
+
+---
+
+## 13. Carried forward, still unresolved
+
+Both non-policy gaps §6 above named are re-checked against the ruled
+structure, per issue #274 SCOPE 4. **Neither is fixed here** — both remain
+frozen under the 24 Sep 2026 04:52:41Z ruling ([#269 comment 5807914821](https://github.com/calyeap/Cal-Finance/issues/269#issuecomment-5807914821)),
+which ruling C does not lift.
+
+- **§6.3 — §10.6.3's PROFILE NOT CONFIRMED condition has no `deriveVerdict`
+  branch.** **Still needed, unchanged.** Step 1 above restates §10.6.3's
+  three conditions including PROFILE NOT CONFIRMED as this derivation's
+  first step, so whichever future outcome implements the ruled structure
+  inherits the same standing implementation gap this addendum does not
+  resolve.
+- **§6.4 — `achievedRevenueCagr` remains unwired into `AnalysisResult`.**
+  **Still needed, unchanged.** Step 2 as proposed reads the achieved side
+  (this figure) against the required side (M7's grid via RONIC), so wiring
+  this figure into `AnalysisResult` remains exactly as necessary under the
+  ruled structure as it was under either KEEP or the superseded §3.3
+  AMEND candidate.
+- **`lib/analyzer/verdict.ts` and `lib/analyzer/policy.ts` re-verified
+  byte-identical to `ed81500`** at this head — the same four unconditional
+  `INCOMPLETE` branches (`verdict.ts:53-59,63-68,70-75,77-80`) and the same
+  absence of any §10.6.2 entry in `PolicyConstants` or
+  `POLICY_THRESHOLD_PROVENANCE` (`policy.ts:10-61,102-144`) as §6.1/§6.2
+  above recorded at `c99712f`. This addendum's structural proposal in §10
+  is not implemented by this diff and could not be without violating HARD
+  BOUNDS.
+
+---
+
+## 14. The smallest next action
+
+**First: this addendum is itself the immediate target of the next action —
+Calvin's ruling on §10's exact text and §11's re-derived house-policy
+list.** Per issue #274's own CALVIN REQUIRED section, that ruling is not
+expected as part of this outcome's terminal comment; §11's list is the
+material for it, delivered here rather than as a terminal gate.
+
+**Second, and dependency-safe under whatever Calvin rules on this text:
+close the §10.6.3/`deriveVerdict` non-policy implementation gap named in
+§13 (carried from §6.3 above).** This is the same smallest concrete
+outcome §7 above already named, restated because it does not change under
+ruling C: it adds the missing PROFILE NOT CONFIRMED branch to
+`deriveVerdict` (or explains in that outcome's own evidence why it is
+already moot), touches no policy constant, sets no threshold, and is
+required identically under the superseded §3.3 candidate or the ruled
+structure this addendum proposes instead. It does not close
+`docs/acceptance-matrix.md` row 13, and it does not by itself unblock
+MSFT's or OKLO's `INCOMPLETE` verdict — those stay gated on the structural
+facts §12 restates and on Calvin's ruling on §10.
+
+No other outcome is named or started here. Analyzer final acceptance
+remains withheld until the verdict-methodology dependency this addendum
+addresses is resolved.
+
+---
+
+## What this addendum (§§9–14) does and does not do
+
+**Did:** quoted Calvin's `CALVIN RULING — C` in full as this addendum's
+authorisation; wrote the smallest exact proposed §10.6.2 replacement text
+expressing its seven ruled steps and all five structural clarifications,
+with every numeric slot bracketed to §11 and none filled in; stated, in the
+document's own words, how the resulting single value-vs-price comparison
+still satisfies the 17 Sep 2026 single-diagnostic ruling; reconciled the
+proposed text against §10.6.1's vocabulary, §10.6.3's render conditions and
+§10.6.4's action clause, finding none needs its own separate amendment;
+named the two places the ruled structure appears to modify a settled
+ruling, for Calvin's ruling rather than silently overriding either or
+stopping; gave the close/change/open disposition of each of §4's seven
+house-policy items above and re-derived the surviving and newly-opened
+list under the ruled structure, including the two items ruling C itself
+newly opens (the margin-of-safety input, and what makes the growth licence
+UNKNOWN — including the RONIC-NOT-MEANINGFUL boundary case) and the one
+item newly opened by carrying two comparator paragraphs forward verbatim
+(whether the REQUIRED-comparator gate still reaches the position or
+narrows to §10.6.4's action clause only); restated the
+minimum evidence as the same composition requirement, named against the
+ruled structure's own steps, and stated explicitly that MSFT and OKLO
+produce the same outcome today as they did under the superseded §3.3
+structure, under every open resolution of the newly-opened questions;
+carried forward §6.3 and §6.4 unresolved, confirming both are still needed;
+named the smallest next action.
+
+**Did not:** change `lib/analyzer/verdict.ts` or `lib/analyzer/policy.ts`
+(confirmed byte-identical to `ed81500` throughout, §13); acquire new
+evidence or capture; introduce any band, cut-point, horizon rule,
+disagreement constant, or `POLICY_THRESHOLD_PROVENANCE` row anywhere,
+including inside the proposed §10.6.2 text; touch any `docs/frozen/` byte
+or `FROZEN_HASHES` entry; redesign the ruled structure's seven steps or add
+an eighth; re-open KEEP-vs-AMEND, restate §1's five findings, or re-argue
+§3.3; recommend price-location-alone or PVGO-share-of-EV, in any form;
+recommend a model-authored verdict or a default HOLD; resolve any of §11's
+open questions with a number, a shape, or a default; lift the 21 Sep
+third-company deferral or the no-new-capture/no-EDGAR bound; reopen the
+merged Analyzer V2 UI or claim Calvin's acceptance of it; decide anything —
+every statement above is a recommendation for Calvin's ruling, not a
+decision taken, and §10.6.2 is not amended by this addendum.
