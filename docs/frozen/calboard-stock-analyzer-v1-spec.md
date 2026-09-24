@@ -1121,7 +1121,7 @@ Under **UNUSABLE**, under **PROFILE NOT CONFIRMED**, under any §9.3 suppressing
 
 #### 10.6.4 The action clause
 
-**The label alone is not the deliverable.** Beneath the position, page one states the required figure against the achieved figure and what follows from the gap, in plain sentences:
+**The label alone is not the deliverable.** Beneath the position, where the Step 7 comparator (§10.6.2) is available, page one states the required figure against the achieved figure and what follows from the gap, in plain sentences:
 
 > The price requires 14% a year. The company has delivered 13.8% over ten years. Not a price to start a position at.
 
@@ -1134,6 +1134,8 @@ Under **UNUSABLE**, under **PROFILE NOT CONFIRMED**, under any §9.3 suppressing
 **ENTRY-SIDE ONLY IN v1.** The clause may say **start**, **do not start**, or **wait for a better price**. It may never say trim, add, sell or hold — those are statements about a position, and they need the position size and cost basis §1.4 forbids the analyzer from holding. This is a hard boundary, not a default.
 
 **The action clause never renders under suppression**, on the same rule as the position in §10.6.3. It is not rendered separately, and it does not survive a suppressed position.
+
+**Where the Step 7 comparator is INCOMPLETE or UNAVAILABLE (§10.6.2), the sentences above are themselves suppressed or marked unavailable**, whether or not the position renders — there is no required figure and no achieved figure to name and show, so the clause has nothing to substitute (§10.7) into the form above. This is a second, independent way for the action clause to go unrendered, distinct from the suppression rule above: it turns on the Step 7 comparator alone, not on §10.6.3's three conditions, and a missing or incomplete comparator does not, by itself, force the Step 5/6 position (§10.6.2) to INCONCLUSIVE.
 
 #### 10.6.5 Decided now, built with milestone M8
 
