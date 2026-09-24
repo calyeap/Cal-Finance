@@ -101,6 +101,32 @@ describe("AnalyzerRouteLoading — the Analyzing state", () => {
   });
 });
 
+describe("only the run root renders the Analyzing state", () => {
+  // CORRECT (PR #268) — this boundary is shared by report/, facts/,
+  // profile/ and snapshot/[version]/ too, none of which is ever mid-
+  // analysis for a run whose report already exists. Rendering AnalyzingState
+  // there would claim a gathering/valuation stage that isn't real, so those
+  // routes keep the pre-PREREPORT-01 neutral text instead.
+  it("renders AnalyzingState at the run root", async () => {
+    usePathnameMock.mockReturnValue(`/analyzer/${RUN_ID}`);
+    const { container } = render(<AnalyzerRouteLoading />);
+    expect(container.querySelector(".az-analyzing")).not.toBeNull();
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+  });
+
+  it.each(["report", "facts", "profile", "snapshot/2"])(
+    "renders the neutral loading text, not AnalyzingState, on %s",
+    (segment) => {
+      usePathnameMock.mockReturnValue(`/analyzer/${RUN_ID}/${segment}`);
+      const { container } = render(<AnalyzerRouteLoading />);
+      expect(container.querySelector(".az-analyzing")).toBeNull();
+      expect(screen.getByText("Loading")).toBeInTheDocument();
+      expect(screen.getByText("Preparing this analysis run.")).toBeInTheDocument();
+      expect(fetch).not.toHaveBeenCalled();
+    }
+  );
+});
+
 describe("this file is the nearest loading boundary for both M9 routes", () => {
   it("neither report/ nor facts/ nor profile/ declares its own loading.tsx that would shadow this one", () => {
     for (const segment of ["report", "facts", "profile"]) {

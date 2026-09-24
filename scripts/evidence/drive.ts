@@ -91,7 +91,7 @@ export async function assertCardsForQueue(
 export async function resolveTicker(page: Page, ticker: string): Promise<void> {
   await page.fill('input[name="ticker"]', ticker);
   await page.locator('input[name="ticker"]').blur();
-  await page.waitForSelector(".result", { timeout: 30_000 });
+  await page.waitForSelector(".az-home-result", { timeout: 30_000 });
 }
 
 /**

@@ -19,11 +19,23 @@ import { AnalyzingState, type AnalyzingIdentity } from "@/app/components/Analyzi
 // URL itself (usePathname) and fetch the run's own identity from it; see
 // AnalyzingState.tsx for exactly what that does and does not let this
 // screen honestly claim.
+//
+// This boundary is shared by five routes: the run root (where
+// beginAnalysisAction redirects while an analysis is actually running) plus
+// report/, facts/, profile/ and snapshot/[version]/, none of which declares
+// its own loading.tsx. Only the run root is ever mid-analysis, so only it
+// renders AnalyzingState; the other four keep the same neutral in-place
+// text this boundary always used, so opening an already-finished run's
+// detail screens never claims a gathering/valuation stage that isn't real.
+const RUN_ROOT = /^\/analyzer\/[^/]+$/;
+
 export default function AnalyzerRouteLoading() {
   const pathname = usePathname();
+  const isRunRoot = RUN_ROOT.test(pathname);
   const [identity, setIdentity] = useState<AnalyzingIdentity | null>(null);
 
   useEffect(() => {
+    if (!isRunRoot) return;
     const runId = pathname.match(/^\/analyzer\/([^/]+)/)?.[1];
     if (!runId) return;
 
@@ -43,12 +55,23 @@ export default function AnalyzerRouteLoading() {
     return () => {
       cancelled = true;
     };
-  }, [pathname]);
+  }, [pathname, isRunRoot]);
 
   return (
     <AnalyzerShell>
       <AnalyzerTopBar variant="overview" />
-      <AnalyzingState identity={identity} />
+      {isRunRoot ? (
+        <AnalyzingState identity={identity} />
+      ) : (
+        <div className="layout routestate">
+          <main>
+            <div className="state">
+              <span className="name">Loading</span>
+              <span className="cause">Preparing this analysis run.</span>
+            </div>
+          </main>
+        </div>
+      )}
     </AnalyzerShell>
   );
 }
