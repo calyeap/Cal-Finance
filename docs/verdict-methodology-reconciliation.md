@@ -880,6 +880,25 @@ silently drift from them. No other frozen subsection is touched, and §10.4
 below states, for each of §10.6.1/§10.6.3/§10.6.4, why none needs its own
 amendment to coexist with this text.
 
+**Disposition of every paragraph of current §10.6.2 (spec `:1068–1098`)
+this replacement does not restate in the seven steps, stated here so
+nothing is dropped by silence.** The heading, the two-input table, fixed
+rule 1 and fixed rule 2 are restructured into the seven steps and the
+paragraph replacing fixed rule 2 below. Six further paragraphs — the
+achieved-versus-required comparator rules (spec `:1077`, `:1079`, `:1081`,
+`:1083`, `:1085`, `:1087`) — are orthogonal to the two-vote structure
+ruling C drops: they govern the achieved-history comparator Step 7 and
+§10.6.4's action clause still read, not the dropped second vote, so they
+are carried forward **verbatim** inside the quoted block below rather than
+silently lost to a whole-subsection replacement. Spec `:1089`'s
+bands-are-policy-constants/PROVISIONAL recording requirement is carried
+the same way, with its now-dead "and the disagreement rule" clause struck
+— that rule does not survive Step 6's flip test above, but the
+recording/PROVISIONAL requirement §11 item 5 still depends on does. Spec
+`:1098`'s closing rationale is carried forward verbatim as this
+replacement's own closing paragraph, since "deterministic, never a [C]
+call" is the heading this replacement keeps.
+
 > #### 10.6.2 Derivation — deterministic, never a [C] call
 >
 > The position is derived from a single underwritten-value-versus-price
@@ -959,6 +978,47 @@ amendment to coexist with this text.
 > already reflects, per §10.1's ordering principle. They cast no
 > independent vote at Step 5, Step 6, or anywhere else in this derivation.
 >
+> **The achieved-versus-required comparator Step 7 and §10.6.4's action
+> clause read, carried forward verbatim from current §10.6.2 — orthogonal
+> to the two-vote structure above and not touched by ruling C:**
+>
+> **The comparator fact is REQUIRED.** The achieved figure must be a
+> section B fact **on the same series and the same horizon** as the
+> implied-growth figure it is read against. A ten-year implied CAGR is
+> compared to a ten-year achieved CAGR of the same series, on the same
+> accounting basis, or it is not compared at all. Where no such fact
+> exists, the gap is **INCOMPLETE**, and the position and its action
+> clause do not render.
+>
+> **Two horizons are valid, and the horizon travels with the result**
+> (CalFinance Methodology v2, ruled 8 September 2026). Ten years is
+> preferred. **A five-year comparator is permitted where a valid ten-year
+> one cannot be constructed** — which is the common case rather than the
+> exception: ASC 606 split most filers' revenue across two tagged elements
+> partway through the decade, and §3.7 refuses to join two series into one
+> comparator, so only a minority of companies can produce a ten-year
+> figure at all.
+>
+> **Five-year and ten-year comparators are related but not semantically
+> identical**, so the horizon is carried with the figure and is never
+> implied. **Both sides must be the same horizon**: a five-year achieved
+> comparator is read against a five-year required-growth figure. Mixing
+> the two sides is not a fallback, it is a different comparison.
+>
+> **No cross-series stitching.** §3.7's refusal stands, and a five-year
+> window that spans a tag change is not a valid five-year comparator.
+>
+> **Where neither horizon can be constructed, the growth input is
+> UNAVAILABLE and the position is INCONCLUSIVE.** It does not degrade to a
+> weaker reading, and it does not fall back to FAIR — FAIR is a positive
+> claim, not the absence of one. [Unchanged from current text; consistent
+> with Step 1/Step 6 above, neither of which falls back to FAIR either.]
+>
+> **For calibration:** observations from the two horizons are not pooled
+> without evidence that common thresholds hold across them. Whether they
+> do is a testable question and must be answered from observations rather
+> than assumed. Where they do not, thresholds are calibrated per horizon.
+>
 > **What replaces the current rule that "every position requires positive
 > agreement from both inputs."** That rule does not survive this structure:
 > there are no longer two independent votes for a second vote to agree
@@ -972,11 +1032,24 @@ amendment to coexist with this text.
 > as fixed rule 1 below already requires and exactly as Gate 0 and Gate 1
 > already operate.
 >
+> **Bands are policy constants** [carried forward from current text, minus
+> "and the disagreement rule" — that rule does not survive this structure,
+> replaced above by Step 6's flip test; the recording/PROVISIONAL
+> requirement below does survive and is restated on its own], recorded in
+> `policy` (§10.0.1) and marked **PROVISIONAL** with what they were
+> calibrated on.
+>
 > One rule is fixed here and is not configuration:
 >
 > 1. **The same inputs always produce the same position.** No per-company
 >    adjustment, no override, no model in the path. [Unchanged from current
 >    text.]
+>
+> **Why deterministic and not an AI call, recorded because it will be asked
+> again:** an AI-authored headline verdict would be unreproducible and
+> unauditable. Two runs on identical inputs could differ, and neither could
+> be traced. That is the failure §3 exists to prevent, applied to the
+> loudest sentence in the report. [Unchanged from current text.]
 
 ### 10.1 Why this is one comparison, not the old two-vote rule, restated plainly
 
@@ -1087,7 +1160,7 @@ is carried forward, together with what ruling C newly opens.
 | 3. Fixed floor vs. company-specific conservative/no-growth reading | **Stays open, unchanged in substance** | Same question, now attached to Step 2's NO branch and Step 3. Carried forward as item 3 below. |
 | 4. Numeric band/cut-point for CHEAP/FAIR/EXPENSIVE | **Stays open, unchanged** | Ruling C adopts no numeric threshold ("do not adopt ... any new numeric threshold in this ruling"); the classification still needs one eventually. Carried forward as item 5 below. |
 | 5. Mirrored vs. asymmetric SELL (EXPENSIVE) geometry | **Stays open, unchanged** | Ruling C explicitly declines to adopt mirrored SELL geometry; the question of whether it should eventually be adopted is not answered either way. Carried forward as item 6 below. |
-| 6. Five-year/ten-year band pooling | **Stays open, unchanged** | §10.6.2's own text (unchanged by this proposal on this point) already requires this be answered from observations; ruling C does not touch it. Carried forward as item 7 below. |
+| 6. Five-year/ten-year band pooling | **Stays open, unchanged** | §10.6.2's own text on this point is carried forward **verbatim** into the quoted replacement at §10 above (the calibration-pooling paragraph following Step 7); ruling C does not touch it. Carried forward as item 7 below. |
 | 7. Which reverse-DCF cell feeds the structure | **Closes as a separate item — absorbed into item 1** | It was already flagged in §4 as restating item 1 rather than adding to it (`docs/verdict-synthesis-research.md` §5.2's demoted question); ruling C's Step 7 clarifies reverse DCF's *role* (explanation only) but does not answer *which cell*, so the substance is unchanged and stays merged with item 4 below rather than listed twice. |
 
 **The re-derived list**, each as one closed question with options, the
@@ -1173,7 +1246,8 @@ read as adopting one.
 7. **Whether five-year and ten-year observations may share one band.**
    Unchanged from §4 item 6 (`docs/m8c-calibration-findings.md:151`). Still
    open, still to be "answered from observations rather than assumed," per
-   §10.6.2's own text on this point, which this proposal does not touch.
+   §10.6.2's own text on this point, carried forward **verbatim** into the
+   quoted replacement at §10 above.
 
 ---
 
