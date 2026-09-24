@@ -423,12 +423,19 @@ export function buildCompanyInputs(
     // the three already-committed captures (verified directly against
     // lib/analyzer/acquisition/captures/{nvda,msft,oklo}-companyfacts.json,
     // each trimmed at capture time to exactly TAG_MAP's needs — no equity
-    // tag was ever captured for any filer). Acquiring it would need a new
-    // capture/EDGAR fetch this outcome's HARD BOUNDS forbid, so the term
-    // stays honestly null with this cause rather than a proxy, an estimate,
-    // or a different, un-ruled composition (docs/ronic-deltas-composition-
-    // reconciliation.md §2b). A half-acquired ladder that still reports
-    // INCOMPLETE is a truthful result (SCOPE item 3), not a failure.
+    // tag was ever captured for any filer). A second ruling, CALVIN RULING —
+    // AUTHORISE NARROW TOTAL-EQUITY CAPTURE (issue #298, 2026-09-24T17:47:12Z),
+    // has since lifted this outcome's own no-new-capture/EDGAR bound narrowly
+    // enough to supply it (a `total-equity` TAG_MAP entry, a
+    // TAG_MAPPING_VERSION bump, a re-run of the existing capture path for
+    // NVDA/MSFT/OKLO) — but that capture step is not yet done: the run
+    // authorised to perform it needs outbound EDGAR access this run's own
+    // execution environment does not have (docs/ronic-deltas-composition-
+    // reconciliation.md §6). So the term stays honestly null with this cause
+    // — an unperformed, already-authorised capture, not a proxy, an
+    // estimate, or a different, un-ruled composition. A half-acquired ladder
+    // that still reports INCOMPLETE is a truthful result (SCOPE item 3), not
+    // a failure.
     ronic: {
       fiveYearDeltaNopat: track(
         "fiveYearDeltaNopat",

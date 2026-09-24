@@ -314,10 +314,68 @@ inside this outcome's bounds can produce it from what is already committed.
    un-ruled methodology choice `tag-mapping-version-review.md` and the
    ruling both mean to foreclose.
 
-**Ending.** Per this outcome's TERMINAL CONTRACT, this is the reconciliation
-ending on the denominator: `companyInputs.ts:404` stays `null`, this document
-is corrected in place rather than duplicated, and the run ends on a closed
-`CALVIN REQUIRED:` naming total equity's absence from the already-committed
-captures — alongside a real, committed, CI-tested acquisition of
-`fiveYearDeltaNopat` (`companyInputs.ts:403`), which is not blocked by this
-question and is not withheld pending its answer.
+**Ending, second pass.** Per this outcome's TERMINAL CONTRACT, this was the
+reconciliation ending on the denominator: `companyInputs.ts:404` stayed
+`null`, and the run ended on a closed `CALVIN REQUIRED:` naming total
+equity's absence from the already-committed captures — alongside a real,
+committed, CI-tested acquisition of `fiveYearDeltaNopat`
+(`companyInputs.ts:403`), which was not blocked by this question and was not
+withheld pending its answer.
+
+## 6. Update, third pass — capture authorised, blocked on this run's own network access
+
+Calvin answered the second `CALVIN REQUIRED:` (§5 above) —
+**`CALVIN RULING — AUTHORISE NARROW TOTAL-EQUITY CAPTURE`**, issue #298,
+2026-09-24T17:47:12Z:
+
+> Authorise lifting the no-new-capture / EDGAR bound only as required to
+> supply the already-ruled RONIC invested-capital denominator. Add
+> `total-equity` to the existing tag mapping using
+> `us-gaap:StockholdersEquity`, with the appropriate noncontrolling-interest
+> variant as fallback where required; bump `TAG_MAPPING_VERSION`; and re-run
+> the existing capture path for NVDA, MSFT and OKLO.
+
+This run is the one dispatched to act on that ruling. It attempted the
+authorised capture step — add a `total-equity` `TAG_MAP` entry, bump
+`TAG_MAPPING_VERSION`, and re-run
+`npx tsx scripts/analyzer/capture-companyfacts.ts NVDA MSFT OKLO` to refresh
+`lib/analyzer/acquisition/captures/{nvda,msft,oklo}-companyfacts.json` with
+the additional tag — and could not: this run's own execution environment has
+no path to `data.sec.gov`. The outbound network gateway this session runs
+behind refuses the connection at the policy layer (`CONNECT data.sec.gov:443`
+→ HTTP 403, "policy denial"), independent of and prior to any application-level
+concern; `SEC_USER_AGENT` is also unset in this environment, which
+`secClientFromEnv` (`lib/analyzer/acquisition/secClient.ts:328-333`) requires
+and fails closed without, exactly as designed (`SecUserAgentMissingError`).
+Both facts were confirmed directly (a `curl` to the EDGAR submissions
+endpoint, and an environment check), not inferred.
+
+**No code was changed for this reason.** `TAG_MAP` was deliberately left
+without a `total-equity` entry, and `TAG_MAPPING_VERSION` was not bumped:
+this file's own header requires the version to change whenever an entry
+changes and to identify how a fact was actually obtained, and a version bump
+with no corresponding re-capture would tag a future run's absent-equity
+finding as "checked under the new mapping" when nothing was actually
+re-fetched — the same kind of misrepresentation §4.3's "absence is a fact,
+not a gap" discipline exists to prevent. `companyInputs.ts:403-404`'s comment
+is corrected in place to record this (SCOPE item 6): the denominator is
+blocked on an authorised-but-unperformed capture, not on an unresolved
+composition question (§1b, superseded) and not on this outcome's own HARD
+BOUNDS (superseded by the ruling above) — a narrower, more precise cause than
+either prior pass recorded, and the true one as of this run.
+
+**§12 status, unchanged again.** `docs/verdict-methodology-reconciliation.md`
+§12's first evidence gap stays **open**: NVDA's RONIC ladder remains
+`INCOMPLETE`, `missing REQUIRED input(s): fiveYearDeltaInvestedCapital`
+alone, exactly as the second pass left it. Nothing regressed; nothing new
+acquired this pass.
+
+**Ending, third pass.** This is not a `CALVIN REQUIRED:` — both the
+composition question (§1b) and the capture-authorisation question (§5) are
+already ruled, and nothing about this pass's finding is a product, finance,
+or permission judgement for Calvin to make. It is a concrete execution
+blocker: the authorised capture needs outbound EDGAR access and a configured
+`SEC_USER_AGENT` that this run's own environment does not provide. The run
+ends `BLOCKED`, naming exactly that, so a future BUILD pass with EDGAR
+network access can carry out the already-authorised capture and finish the
+acquisition without re-litigating either ruling.
