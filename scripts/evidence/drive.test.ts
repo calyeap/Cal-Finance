@@ -1,4 +1,6 @@
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { readFileSync } from "node:fs";
+import path from "node:path";
 import { getPool } from "@/lib/db";
 import { createRun } from "@/lib/analyzer/runStore";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
@@ -6,6 +8,28 @@ import { loadGateState } from "@/lib/analyzer/gate";
 import { queuedFacts } from "@/lib/analyzer/spotCheck";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import { expectedQueueForRun, assertCardsForQueue } from "./drive";
+
+describe("resolveTicker waits on a selector Screen 1 actually renders", () => {
+  // ANALYZER-V2-PREREPORT-01's rebuild renamed Screen 1's result container
+  // from .result to .az-home-result; resolveTicker still waited on the old
+  // class, so npm test stayed green while npm run evidence silently timed
+  // out on every ticker resolution. Pinned at the source level because
+  // resolveTicker itself drives a real Playwright page and isn't exercised
+  // by the (environment-gapped) unit suite — see selfTest.test.ts.
+  it("drive.ts waits for .az-home-result, not the stale .result class", () => {
+    const source = readFileSync(path.resolve(__dirname, "./drive.ts"), "utf-8");
+    expect(source).toMatch(/waitForSelector\(["']\.az-home-result["']/);
+    expect(source).not.toMatch(/waitForSelector\(["']\.result["']/);
+  });
+
+  it("AnalyzerEntry still renders the .az-home-result class resolveTicker waits for", () => {
+    const source = readFileSync(
+      path.resolve(__dirname, "../../app/components/AnalyzerEntry.tsx"),
+      "utf-8"
+    );
+    expect(source).toMatch(/className="az-home-result"/);
+  });
+});
 
 // ---------------------------------------------------------------------------
 // The runner's expected Step 2 queue.

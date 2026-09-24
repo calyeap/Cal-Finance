@@ -3740,3 +3740,386 @@ h6 {
     display: none;
   }
 }
+
+/* =====================================================================
+   Analyzer Home (pre-report) — ANALYZER-V2-PREREPORT-01
+   docs/design/analyzer-v2-design-authority.md, "Pre-report states":
+   "one dominant ticker/company entry action ... Input + Analyze may stay
+   inline when readable and stack at narrow portrait/mobile widths."
+
+   Scoped under its own .az-home rather than reusing .cb-steps: Home now
+   tracks the V2 shell's own width (this block), while Screens 2/3
+   (facts/profile) keep .cb-steps's flat 1100px container completely
+   unchanged below. The state/idcard/entry-field/disclose declarations
+   here intentionally mirror .cb-steps's own (same tokens, same numbers)
+   for one visual language across the app — this is a second, independent
+   copy so Home's width can diverge from Screens 2/3 without touching
+   them.
+   ===================================================================== */
+.cb-analyzer .az-home {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+}
+@media (min-width: 1600px) {
+  .cb-analyzer .az-home {
+    max-width: 1360px;
+  }
+}
+.cb-analyzer .az-home-hero,
+.cb-analyzer .az-home-result,
+.cb-analyzer .az-home-learnmore {
+  max-width: 560px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.cb-analyzer .az-home-title {
+  margin: 0 0 24px;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+/* ---------- entry row: input + the current real action, inline at
+   readable widths, stacked under the phone breakpoint AnalyzerShell's own
+   nav already uses ---------- */
+.cb-analyzer .az-home-entryrow {
+  display: flex;
+  align-items: flex-end;
+  gap: 16px;
+}
+.cb-analyzer .az-home-field {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.cb-analyzer .az-home-field label {
+  display: block;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.cb-analyzer .az-home-input {
+  border: 0;
+  border-bottom: 1px solid var(--line-strong);
+  background: transparent;
+  font: inherit;
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  width: 100%;
+  padding: 6px 2px;
+  color: var(--ink);
+}
+.cb-analyzer .az-home-input:focus {
+  outline: none;
+  border-bottom: 2px solid var(--ink);
+}
+.cb-analyzer .az-home-actionform {
+  flex: 0 0 auto;
+}
+.cb-analyzer .az-home-scope {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 14px 0 0;
+}
+@media (max-width: 599px) {
+  .cb-analyzer .az-home-entryrow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+/* ---------- the current outcome: resolved identity, a rejection, or the
+   unavailable-fixture notice ---------- */
+.cb-analyzer .az-home-result {
+  margin-top: 26px;
+}
+.cb-analyzer .az-home .act {
+  font: inherit;
+  font-size: 14px;
+  padding: 12px 22px;
+  border: 1px solid var(--line-strong);
+  background: var(--field);
+  color: var(--ink);
+  cursor: pointer;
+}
+.cb-analyzer .az-home .state,
+.cb-analyzer .az-home .open {
+  padding: 12px 14px;
+  text-align: left;
+  font-feature-settings: "tnum" 0;
+}
+.cb-analyzer .az-home .state {
+  background: var(--tint);
+  border-left: 2px solid var(--ink);
+}
+.cb-analyzer .az-home .open {
+  background: transparent;
+  border: 1px dashed var(--line-strong);
+}
+.cb-analyzer .az-home .state .name,
+.cb-analyzer .az-home .open .name {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  display: block;
+}
+.cb-analyzer .az-home .state .cause,
+.cb-analyzer .az-home .open .cause {
+  font-size: 11px;
+  color: var(--muted);
+  display: block;
+  margin-top: 3px;
+}
+.cb-analyzer .az-home .state .plain,
+.cb-analyzer .az-home .open .plain {
+  display: block;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--ink);
+  margin-bottom: 8px;
+}
+.cb-analyzer .az-home .note {
+  font-size: 12px;
+  color: var(--muted);
+  margin-top: 14px;
+  max-width: 62ch;
+}
+
+.cb-analyzer .az-home .idcard {
+  background: var(--field);
+  border: 1px solid var(--hairline);
+  padding: 22px;
+}
+.cb-analyzer .az-home .idkicker {
+  margin: 0 0 6px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cb-analyzer .az-home .idname {
+  margin: 0;
+  font-size: 21px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  line-height: 1.25;
+}
+.cb-analyzer .az-home .idline {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ink);
+}
+.cb-analyzer .az-home .idsource {
+  margin-top: 18px;
+  border-top: 1px solid var(--hairline);
+  padding-top: 16px;
+}
+.cb-analyzer .az-home .idsource h3 {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+}
+.cb-analyzer .az-home .idsource dl {
+  margin: 0;
+  font-size: 12px;
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  gap: 9px 18px;
+}
+.cb-analyzer .az-home .idsource dt {
+  color: var(--muted);
+}
+.cb-analyzer .az-home .idsource dd {
+  margin: 0;
+}
+.cb-analyzer .az-home .stamp {
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 8px;
+}
+.cb-analyzer .az-home .stamp span {
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: 1px;
+}
+.cb-analyzer .az-home .stamp .sep {
+  border: 0;
+  padding: 0 5px;
+}
+@media (max-width: 720px) {
+  .cb-analyzer .az-home .idsource dl {
+    grid-template-columns: 1fr;
+    gap: 2px 0;
+  }
+  .cb-analyzer .az-home .idsource dt {
+    padding-top: 9px;
+  }
+}
+
+/* ---------- comprehension layer, progressively disclosed (SCOPE item 2)
+   — same interaction/visual language as .cb-steps .disclose, not deleted,
+   just no longer occupying the first viewport ---------- */
+.cb-analyzer .az-home-learnmore {
+  margin-top: 30px;
+}
+.cb-analyzer .az-home .finding {
+  max-width: 72ch;
+}
+.cb-analyzer .az-home .finding .lede {
+  font-size: 15px;
+  line-height: 1.5;
+  font-weight: 500;
+  margin: 0 0 18px;
+  letter-spacing: -0.005em;
+}
+.cb-analyzer .az-home .finding dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: 132px minmax(0, 1fr);
+  gap: 9px 18px;
+}
+.cb-analyzer .az-home .finding dt {
+  font-size: 10px;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-weight: 600;
+  padding-top: 3px;
+}
+.cb-analyzer .az-home .finding dd {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink);
+}
+@media (max-width: 599px) {
+  .cb-analyzer .az-home .finding dl {
+    grid-template-columns: 1fr;
+    gap: 3px 0;
+  }
+}
+.cb-analyzer .az-home .disclose {
+  margin-top: 16px;
+}
+.cb-analyzer .az-home .disclose summary {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 13px;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 9px 0;
+  min-height: 38px;
+  list-style: none;
+  transition: color 0.12s ease-out;
+}
+.cb-analyzer .az-home .disclose summary::-webkit-details-marker {
+  display: none;
+}
+.cb-analyzer .az-home .disclose summary::marker {
+  content: "";
+}
+.cb-analyzer .az-home .disclose summary::before {
+  content: "\25B8";
+  flex: 0 0 auto;
+  font-size: 11px;
+  color: var(--muted);
+  transition: transform 0.12s ease-out, color 0.12s ease-out;
+  line-height: 1;
+}
+.cb-analyzer .az-home .disclose[open] > summary::before {
+  content: "\25BE";
+}
+.cb-analyzer .az-home .disclose summary .lbl {
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: 1px;
+}
+.cb-analyzer .az-home .disclose summary:hover::before {
+  color: var(--ink);
+}
+.cb-analyzer .az-home .disclose summary:hover .lbl {
+  border-bottom-color: var(--ink);
+}
+.cb-analyzer .az-home .disclose summary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+.cb-analyzer .az-home .disclose .body {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--ink);
+  max-width: 72ch;
+  padding: 0 0 4px 20px;
+}
+
+/* =====================================================================
+   Analyzing (pre-report) — ANALYZER-V2-PREREPORT-01
+   docs/design/analyzer-v2-design-authority.md, "Pre-report states":
+   "narrow calm vertical progress state ... No fake percentage, backend
+   jargon or extra controls." No spinner, no progress bar, no animation —
+   a plain vertical list; the only thing that varies between stages is the
+   done/pending mark AnalyzingState.tsx assigns from real run state.
+   ===================================================================== */
+.cb-analyzer .az-analyzing {
+  max-width: 1160px;
+  margin: 0 auto;
+  padding: 64px 24px 96px;
+  display: flex;
+  justify-content: center;
+}
+.cb-analyzer .az-analyzing-card {
+  width: 100%;
+  max-width: 420px;
+}
+.cb-analyzer .az-analyzing-kicker {
+  margin: 0 0 10px;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.cb-analyzer .az-analyzing-company {
+  margin: 0 0 36px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+.cb-analyzer .az-analyzing-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+.cb-analyzer .az-analyzing-stage {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font-size: 14px;
+  color: var(--muted);
+}
+.cb-analyzer .az-analyzing-stage[data-state="done"] {
+  color: var(--ink);
+}
+.cb-analyzer .az-analyzing-mark {
+  flex: 0 0 auto;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  border: 1px solid var(--line-strong);
+  background: transparent;
+}
+.cb-analyzer .az-analyzing-stage[data-state="done"] .az-analyzing-mark {
+  background: var(--ink);
+  border-color: var(--ink);
+}

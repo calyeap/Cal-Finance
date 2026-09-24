@@ -61,6 +61,19 @@ describe("AnalyzerEntryNotFound", () => {
     expect(links).toHaveLength(1);
     expect(links[0]).toHaveAttribute("href", "/");
   });
+
+  // ANALYZER-V2-PREREPORT-01 — True Failure renders no report-only chrome
+  // (design authority doc, "Pre-report states").
+  it("renders no report-tab, verdict-slot, scenario-tile or right-rail chrome", () => {
+    const { container } = render(
+      <Providers>
+        <AnalyzerEntryNotFound />
+      </Providers>
+    );
+    expect(container.querySelector(".az-tabs")).toBeNull();
+    expect(container.querySelector(".az-hero")).toBeNull();
+    expect(container.querySelector(".az-rightrail")).toBeNull();
+  });
 });
 
 describe("this is the nearest not-found boundary for /analyzer, and the [runId] boundary is unshadowed for its own subtree", () => {

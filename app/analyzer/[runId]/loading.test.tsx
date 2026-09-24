@@ -1,15 +1,18 @@
 // @vitest-environment jsdom
-import { describe, it, expect, afterEach, vi } from "vitest";
-import { render, screen, cleanup } from "@testing-library/react";
+import { describe, it, expect, afterEach, beforeEach, vi } from "vitest";
+import { render, screen, cleanup, waitFor } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
-import { PrivacyProvider } from "@/app/components/PrivacyContext";
-import { ThemeProvider } from "@/app/components/ThemeContext";
-import AnalyzerRouteLoading from "./loading";
 
-// M9-STATE-HANDLING-01 — DONE WHEN: "the loading state is in-place text
-// with no spinner, overlay or skeleton shimmer, per DESIGN.md's own
-// words", rendered inside AnalyzerShell with the chrome above it.
+// ANALYZER-V2-PREREPORT-01 — this file used to render generic "Loading" /
+// "Preparing this analysis run" text (M9-STATE-HANDLING-01). It is now the
+// Analyzing pre-report state (design authority doc, "Pre-report states"):
+// still the nearest Suspense fallback for the whole [runId] subtree, still
+// rendered inside AnalyzerShell, but carrying real company identity and the
+// four locked stages instead. AnalyzingState.test.tsx pins the stage
+// contract itself; this file pins the wrapper's plumbing — reading the
+// runId from the URL (loading.tsx receives no params from Next) and
+// fetching identity from it.
 
 vi.mock("next/link", () => ({
   default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => (
@@ -19,53 +22,109 @@ vi.mock("next/link", () => ({
   ),
 }));
 
-afterEach(cleanup);
+const usePathnameMock = vi.fn();
+vi.mock("next/navigation", () => ({
+  usePathname: () => usePathnameMock(),
+}));
 
-function Providers({ children }: { children: React.ReactNode }) {
-  return (
-    <ThemeProvider>
-      <PrivacyProvider>{children}</PrivacyProvider>
-    </ThemeProvider>
+const RUN_ID = "11111111-1111-4111-8111-111111111111";
+
+beforeEach(() => {
+  usePathnameMock.mockReturnValue(`/analyzer/${RUN_ID}`);
+  vi.stubGlobal(
+    "fetch",
+    vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ticker: "MSFT", companyName: "Microsoft Corporation" }),
+    })
   );
-}
+});
 
-describe("AnalyzerRouteLoading", () => {
+afterEach(() => {
+  cleanup();
+  vi.unstubAllGlobals();
+});
+
+const { default: AnalyzerRouteLoading } = await import("./loading");
+
+describe("AnalyzerRouteLoading — the Analyzing state", () => {
   it("renders inside .cb-analyzer with the Calboard chrome above it", () => {
-    const { container } = render(
-      <Providers>
-        <AnalyzerRouteLoading />
-      </Providers>
-    );
+    const { container } = render(<AnalyzerRouteLoading />);
     const shell = container.querySelector(".cb-analyzer")!;
     expect(shell).not.toBeNull();
     expect(shell.querySelector(".az-topbar")).not.toBeNull();
   });
 
-  it("names what is happening as in-place text", () => {
-    render(
-      <Providers>
-        <AnalyzerRouteLoading />
-      </Providers>
+  it("fetches identity for the runId read from the URL, and renders it once resolved", async () => {
+    render(<AnalyzerRouteLoading />);
+    expect(fetch).toHaveBeenCalledWith(
+      `/api/analyzer/runs/${RUN_ID}/identity`,
+      expect.objectContaining({ cache: "no-store" })
     );
-    expect(screen.getByText("Loading")).toBeInTheDocument();
-    expect(screen.getByText(/preparing this analysis run/i)).toBeInTheDocument();
+    expect(await screen.findByText(/Microsoft Corporation \(MSFT\)/)).toBeInTheDocument();
   });
 
-  it("contains no spinner, overlay or shimmer element in the loading content itself (the topbar's own pre-existing privacy/theme icons are unrelated chrome, not a loading indicator)", () => {
-    const { container } = render(
-      <Providers>
-        <AnalyzerRouteLoading />
-      </Providers>
+  it("renders the four locked stages", async () => {
+    const { container } = render(<AnalyzerRouteLoading />);
+    await waitFor(() => expect(container.textContent).toContain("Microsoft Corporation"));
+    const items = Array.from(container.querySelectorAll(".az-analyzing-stage")).map(
+      (el) => el.textContent
     );
-    const content = container.querySelector(".routestate")!;
+    expect(items).toEqual([
+      "Gathering company information",
+      "Checking financial data",
+      "Running valuation",
+      "Preparing analysis",
+    ]);
+  });
+
+  it("claims no identity and marks no stage done while the fetch is still pending", () => {
+    vi.stubGlobal("fetch", vi.fn(() => new Promise(() => {})));
+    const { container } = render(<AnalyzerRouteLoading />);
+    expect(container.textContent).not.toMatch(/MSFT/);
+    expect(
+      Array.from(container.querySelectorAll(".az-analyzing-stage")).every(
+        (el) => el.getAttribute("data-state") === "pending"
+      )
+    ).toBe(true);
+  });
+
+  it("contains no spinner, overlay, shimmer, skeleton or progressbar", () => {
+    const { container } = render(<AnalyzerRouteLoading />);
+    const content = container.querySelector(".az-analyzing")!;
     expect(content).not.toBeNull();
-    expect(content.querySelector("svg")).toBeNull();
     expect(content.querySelectorAll('[class*="spinner" i]')).toHaveLength(0);
     expect(content.querySelectorAll('[class*="overlay" i]')).toHaveLength(0);
     expect(content.querySelectorAll('[class*="shimmer" i]')).toHaveLength(0);
     expect(content.querySelectorAll('[class*="skeleton" i]')).toHaveLength(0);
     expect(content.querySelectorAll("[role='progressbar']")).toHaveLength(0);
   });
+});
+
+describe("only the run root renders the Analyzing state", () => {
+  // CORRECT (PR #268) — this boundary is shared by report/, facts/,
+  // profile/ and snapshot/[version]/ too, none of which is ever mid-
+  // analysis for a run whose report already exists. Rendering AnalyzingState
+  // there would claim a gathering/valuation stage that isn't real, so those
+  // routes keep the pre-PREREPORT-01 neutral text instead.
+  it("renders AnalyzingState at the run root", async () => {
+    usePathnameMock.mockReturnValue(`/analyzer/${RUN_ID}`);
+    const { container } = render(<AnalyzerRouteLoading />);
+    expect(container.querySelector(".az-analyzing")).not.toBeNull();
+    await waitFor(() => expect(fetch).toHaveBeenCalled());
+  });
+
+  it.each(["report", "facts", "profile", "snapshot/2"])(
+    "renders the neutral loading text, not AnalyzingState, on %s",
+    (segment) => {
+      usePathnameMock.mockReturnValue(`/analyzer/${RUN_ID}/${segment}`);
+      const { container } = render(<AnalyzerRouteLoading />);
+      expect(container.querySelector(".az-analyzing")).toBeNull();
+      expect(screen.getByText("Loading")).toBeInTheDocument();
+      expect(screen.getByText("Preparing this analysis run.")).toBeInTheDocument();
+      expect(fetch).not.toHaveBeenCalled();
+    }
+  );
 });
 
 describe("this file is the nearest loading boundary for both M9 routes", () => {
