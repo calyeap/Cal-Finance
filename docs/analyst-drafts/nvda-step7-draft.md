@@ -106,9 +106,9 @@ OKLO's committed bundles both use.
 
 ### Scenario values
 
-**Evidence gap — prepared, not yet approved.** `CALVIN RULING — C` (24 Sep
-2026 13:00:02Z, PR #289 comment 5814600108) refused this draft's prior
-single-stage hand estimate — an assumed 9.5% required return and a
+**Computed — 24 Sep 2026, following Calvin's approval.** `CALVIN RULING — C`
+(24 Sep 2026 13:00:02Z, PR #289 comment 5814600108) refused this draft's
+prior single-stage hand estimate — an assumed 9.5% required return and a
 per-scenario 3% / 4% / 5% terminal growth rate, neither authorised by the
 methodology — and required either a re-derivation strictly from the
 current approved methodology and the already-drafted scenario assumptions,
@@ -117,11 +117,20 @@ or a named gap stating exactly which authorised input is missing.
 retrieved authority and found two of the three inputs a scenario DCF needs
 already authorised, with the third — terminal ROIC — missing and not
 draftable inside that outcome's scope. `CALVIN RULING — A, WITH AI DRAFT`
-(24 Sep 2026 15:46:31Z, PR #291 comment 5817385859) now authorises exactly
-the missing piece to be **prepared** here — drafted as labelled AI
-judgment with a written anchor, for Calvin to review, approve or correct —
-without authoring the three scenario dollar values themselves, which stay
-gated behind that approval.
+(24 Sep 2026 15:46:31Z, PR #291 comment 5817385859) authorised exactly the
+missing piece to be **prepared** — drafted as labelled AI judgment with a
+written anchor, for Calvin to review, approve or correct — without
+authoring the three scenario dollar values themselves, which stayed gated
+behind that approval. `CF-ANALYST-DRAFT-NVDA-TERMINAL-ROIC-01` (issue #292,
+PR #293) prepared the three terminal-ROIC assumptions below.
+**`CALVIN RULING — APPROVE AS DRAFTED`, 24 Sep 2026 16:14:25Z** (PR #293
+comment 5817834576) approved all three exactly as prepared, with no
+correction, closing the one remaining gate. This section now computes the
+three scenario dollar values the approval unlocked, strictly from the
+already-authorised r and g, the already-drafted scenario drivers above, and
+the now-approved terminal-ROIC assumptions — under the current approved
+scenario DCF, not the disputed `computeScenarioEnterpriseValue` helper
+(see below).
 
 **Authorised, not invented:**
 
@@ -144,12 +153,13 @@ gated behind that approval.
   invention with the single policy figure. **OBSERVED FACT**, cited to
   `policy.ts:11`.
 
-**Prepared here, pending Calvin's approval: terminal ROIC.** A DCF's
-terminal value must still be built consistently — methodology §3.5,
-stated as a mandatory, software-deterministic [S] rule: *"terminal FCF =
-terminal NOPAT × (1 − g ÷ terminal ROIC). Do not take final-year FCF ×
-(1+g)."* That rule needs a terminal ROIC, and nothing already authorised
-or already drafted supplies one:
+**Approved: terminal ROIC.** A DCF's terminal value must still be built
+consistently — methodology §3.5, stated as a mandatory,
+software-deterministic [S] rule: *"terminal FCF = terminal NOPAT × (1 − g
+÷ terminal ROIC). Do not take final-year FCF × (1+g)."* That rule needs a
+terminal ROIC. Nothing already authorised or already drafted before
+`CF-ANALYST-DRAFT-NVDA-TERMINAL-ROIC-01` supplied one; the three
+per-scenario values below, now approved as drafted, do:
 
 - The one terminal-ROIC shortcut this methodology fixes by rule — rate +
   3 points (`terminalRoicPremium`, `policy.ts:14`) — is scoped, in both
@@ -198,59 +208,236 @@ or already drafted supplies one:
   the number below; the three terminal-ROIC assumptions that follow are
   authored judgment, not a RONIC computation.
 
-**The three prepared assumptions**, in `/analyzer/inputs/NVDA`'s field
+**The three approved assumptions**, in `/analyzer/inputs/NVDA`'s field
 order (after `reinvestmentCapitalIntensity`, alongside `writtenAnchor`),
-each labelled **AI JUDGMENT** — an analyst's prepared, unapproved
-judgment, never sourced fact — and each either fading toward r = 10% or
-carrying an explicit durable-moat argument, per methodology §3.5:
+each labelled **AI JUDGMENT — APPROVED AS DRAFTED** (`CALVIN RULING —
+APPROVE AS DRAFTED`, 24 Sep 2026 16:14:25Z, PR #293 comment 5817834576) —
+an analyst's judgment Calvin has reviewed and approved with no correction,
+never sourced fact — and each either fading toward r = 10% or carrying an
+explicit durable-moat argument, per methodology §3.5. Their `terminalRoic`
+and `terminalRoicAnchor` values are unchanged from preparation — this
+outcome consumes them, it does not re-draft them:
 
 #### Bear — terminal ROIC
 
 | Field | Value | Provenance |
 |---|---|---|
-| `terminalRoic` | Fade rule: **13% in the first explicit year, linearly to r = 10% by year 10, held at 10% thereafter.** No durable-moat exception invoked. | **AI JUDGMENT** |
-| `terminalRoicAnchor` | "The bear world is a cyclical AI/datacenter capex correction (§3.5's own default case): growth slows to 5% and operating margin reverts to its ten-year OBSERVED median (30.52%), echoing the OBSERVED FY2023 trough. A correction broad enough to force that margin reversion plausibly compresses returns on *incremental* capital too, as customers diversify suppliers and pricing power narrows — this scenario's own narrative is the reason no durable-moat argument is made for it. Terminal ROIC therefore fades to the cost of capital by the terminal year, the §3.5 default, starting modestly above r rather than at an elevated level because the correction is already underway from year 1 of the explicit period." | Analyst's own stated reasoning (AI JUDGMENT), same convention as the scenario's existing `writtenAnchor`. |
+| `terminalRoic` | Fade rule: **13% in the first explicit year, linearly to r = 10% by year 10, held at 10% thereafter.** No durable-moat exception invoked. | **AI JUDGMENT — APPROVED AS DRAFTED** |
+| `terminalRoicAnchor` | "The bear world is a cyclical AI/datacenter capex correction (§3.5's own default case): growth slows to 5% and operating margin reverts to its ten-year OBSERVED median (30.52%), echoing the OBSERVED FY2023 trough. A correction broad enough to force that margin reversion plausibly compresses returns on *incremental* capital too, as customers diversify suppliers and pricing power narrows — this scenario's own narrative is the reason no durable-moat argument is made for it. Terminal ROIC therefore fades to the cost of capital by the terminal year, the §3.5 default, starting modestly above r rather than at an elevated level because the correction is already underway from year 1 of the explicit period." | Analyst's own stated reasoning (AI JUDGMENT — APPROVED AS DRAFTED), same convention as the scenario's existing `writtenAnchor`. |
 
 #### Base — terminal ROIC
 
 | Field | Value | Provenance |
 |---|---|---|
-| `terminalRoic` | Fade rule: **18% in the first explicit year, linearly to r = 10% by year 10, held at 10% thereafter.** No durable-moat exception invoked. | **AI JUDGMENT** |
-| `terminalRoicAnchor` | "The base world holds a materially higher margin through the explicit period (50% operating margin, versus the bear case's 30%) and decelerates from a higher OBSERVED FY2026 base (65.47% growth to 20%), so the starting level here is drafted above the bear case's, reflecting the stronger near-term economics this scenario's own drivers already assume. But base's own written anchor already concedes 'margin gives back some of its recent expansion,' and its `operatingMargin` provenance attributes that give-back to 'competitive and pricing pressure' — that conceded pressure is the reason this scenario does not invoke the durable-moat exception either: a moat strong enough to hold terminal returns permanently above the cost of capital is a bull-case claim, not a base-case one. Terminal ROIC fades fully to r = 10% by the terminal year, the §3.5 default, from a higher starting point than bear rather than from a different treatment." | Analyst's own stated reasoning (AI JUDGMENT), same convention as the scenario's existing `writtenAnchor`. |
+| `terminalRoic` | Fade rule: **18% in the first explicit year, linearly to r = 10% by year 10, held at 10% thereafter.** No durable-moat exception invoked. | **AI JUDGMENT — APPROVED AS DRAFTED** |
+| `terminalRoicAnchor` | "The base world holds a materially higher margin through the explicit period (50% operating margin, versus the bear case's 30%) and decelerates from a higher OBSERVED FY2026 base (65.47% growth to 20%), so the starting level here is drafted above the bear case's, reflecting the stronger near-term economics this scenario's own drivers already assume. But base's own written anchor already concedes 'margin gives back some of its recent expansion,' and its `operatingMargin` provenance attributes that give-back to 'competitive and pricing pressure' — that conceded pressure is the reason this scenario does not invoke the durable-moat exception either: a moat strong enough to hold terminal returns permanently above the cost of capital is a bull-case claim, not a base-case one. Terminal ROIC fades fully to r = 10% by the terminal year, the §3.5 default, from a higher starting point than bear rather than from a different treatment." | Analyst's own stated reasoning (AI JUDGMENT — APPROVED AS DRAFTED), same convention as the scenario's existing `writtenAnchor`. |
 
 #### Bull — terminal ROIC
 
 | Field | Value | Provenance |
 |---|---|---|
-| `terminalRoic` | **22%, held (not faded) through the terminal year** — the §3.5 durable-moat exception, invoked explicitly. | **AI JUDGMENT** |
-| `terminalRoicAnchor` | "Durable-moat argument, made explicitly, per §3.5's own exception clause: NVIDIA's CUDA software stack, its multi-generation architecture lead and the resulting switching costs for developers, framework maintainers and hyperscaler customers are AI INFERENCE from the OBSERVED ten-year margin record (a 60%+ operating margin sustained through FY2025–FY2026, the top of the ten-year range) and from NVIDIA's position as the default platform for AI training and inference — not a fact this capture's tags can source directly, and not asserted as one. The bull scenario's own written anchor already argues demand 'sustains at a high level' and margin 'holds near its current elevated level' (60%, OBSERVED FY2026); a moat strong enough to sustain that margin durably is the same moat that should sustain excess returns on incremental capital, so this scenario departs from the §3.5 default and does not fade to r. 22% is a judgment anchor, not a derived number: set below the scenario's own 60% operating margin (a margin, not a return on capital, and not comparable to ROIC without an invested-capital base this draft does not carry) and comfortably above r = 10%, reflecting sustained but bounded excess returns. This is precisely the kind of number `CALVIN RULING — A, WITH AI DRAFT` expects Calvin to review, approve or sharpen by targeted correction, not accept as a computed fact." | Analyst's own stated reasoning (AI JUDGMENT), same convention as the scenario's existing `writtenAnchor`. |
+| `terminalRoic` | **22%, held (not faded) through the terminal year** — the §3.5 durable-moat exception, invoked explicitly. | **AI JUDGMENT — APPROVED AS DRAFTED** |
+| `terminalRoicAnchor` | "Durable-moat argument, made explicitly, per §3.5's own exception clause: NVIDIA's CUDA software stack, its multi-generation architecture lead and the resulting switching costs for developers, framework maintainers and hyperscaler customers are AI INFERENCE from the OBSERVED ten-year margin record (a 60%+ operating margin sustained through FY2025–FY2026, the top of the ten-year range) and from NVIDIA's position as the default platform for AI training and inference — not a fact this capture's tags can source directly, and not asserted as one. The bull scenario's own written anchor already argues demand 'sustains at a high level' and margin 'holds near its current elevated level' (60%, OBSERVED FY2026); a moat strong enough to sustain that margin durably is the same moat that should sustain excess returns on incremental capital, so this scenario departs from the §3.5 default and does not fade to r. 22% is a judgment anchor, not a derived number: set below the scenario's own 60% operating margin (a margin, not a return on capital, and not comparable to ROIC without an invested-capital base this draft does not carry) and comfortably above r = 10%, reflecting sustained but bounded excess returns. This is precisely the kind of number `CALVIN RULING — A, WITH AI DRAFT` expects Calvin to review, approve or sharpen by targeted correction, not accept as a computed fact." | Analyst's own stated reasoning (AI JUDGMENT — APPROVED AS DRAFTED), same convention as the scenario's existing `writtenAnchor`. |
 
-**Named gap, narrowed:** the three scenario dollar values still cannot be
-computed from the current approved methodology and the already-drafted
-scenario assumptions alone — that step is out of this outcome's scope by
-the same `CALVIN RULING — A, WITH AI DRAFT` that authorises the
-preparation above (HARD BOUNDS: "do not compute the three scenario dollar
-values"). What has changed is *which* input is missing: before this
-outcome, the blocking input (terminal ROIC) had no prepared draft at all;
-now it has one, per scenario, labelled AI judgment with a written anchor.
-**What would close the remaining gap:** Calvin's review of the three
-prepared terminal-ROIC assumptions above — approving them as drafted, or
-making a targeted correction to any of them — at `/analyzer/inputs/NVDA`.
-Until that approval, the three scenario dollar values are left blank —
-not zero, not a placeholder, not the prior hand estimate — exactly as
-`CALVIN RULING — C`'s own named fallback describes, a success outcome and
-not a defect.
+**Net cash and share count for the enterprise-value → equity bridge.**
+The three inputs the scenario DCF needs are now all authorised (r, g,
+terminal ROIC); the one remaining ingredient — net cash/debt, to bridge
+computed enterprise value to value per share — is not yet stated
+explicitly anywhere in this draft's prose, though `balanceSheetNature`'s
+reasoning above already cites one of its two components. Sourced here
+from the same already-committed capture this whole draft is built from
+(`lib/analyzer/acquisition/captures/nvda-companyfacts.json`, no new
+fetch), using the same tag-selection convention and the same FY2026
+period/accession already cited throughout this draft
+(period 2025-01-27–2026-01-25, accession 0001045810-26-000021):
 
-| Scenario | growth | reinvestment | terminal ROIC (prepared, unapproved) | Value/share |
-|---|---|---|---|---|
-| Bear | 5% | 2% | 13% → 10% (fade to r) | *(evidence gap — pending approval)* |
-| Base | 20% | 4% | 18% → 10% (fade to r) | *(evidence gap — pending approval)* |
-| Bull | 35% | 5% | 22% (durable-moat exception) | *(evidence gap — pending approval)* |
+| Component | Value | Provenance |
+|---|---|---|
+| Total debt (`us-gaap:LongTermDebt`, already current) | $8,468M | **OBSERVED FACT** — same figure already cited above for `balanceSheetNature`. `us-gaap:CommercialPaper` is $0 in every year this capture reports it and carries no FY2026 observation; `us-gaap:ShortTermBorrowings` is not a tag this capture carries — both treated as $0 additions, not omitted. |
+| Cash and marketable debt securities (`us-gaap:CashAndCashEquivalentsAtCarryingValue`) | $10,605M | **OBSERVED FACT**, same period/accession. `us-gaap:ShortTermInvestments` — the mapping's second candidate for this line (`tagMap.ts`) — is not a tag this capture carries at all, so this figure is cash alone; named here as the same kind of tag-availability limitation already flagged above for `capitalIntensity` and `balanceSheetNature`, not resolved differently. |
+| Finance lease liabilities (`us-gaap:FinanceLeaseLiability`) | not carried by this capture | Treated as a $0 addition to net debt, on the same tag-availability basis as the two rows above — not confirmed absent from NVIDIA's actual balance sheet, only absent from this mapping's capture of it. |
+| **Net debt** = total debt + finance leases − cash and securities | **−$2,137M** (a net **cash** position of $2,137M) | **Computed**, from the three OBSERVED rows above. |
 
-Calvin's approval or correction of the three prepared terminal-ROIC
-assumptions above is the next step; this draft does not anticipate it,
-and does not compute the three scenario dollar values that approval would
-unlock.
+**Leverage precondition test (§3.4 safeguard 4), computed, not asserted:**
+net debt ÷ EV is negative (net cash) in all three scenarios below —
+Bear −0.32%, Base −0.09%, Bull −0.03% — every reading comfortably inside
+the <10% PASS band, so the r = 10% band applies to firm cash flows
+directly with no leverage refusal. (NVIDIA's own worked example in
+methodology §3.4 records a similarly small negative ratio, −0.4%, on a
+different EV base — not reproduced exactly here, and not expected to be,
+since these are three new scenario-specific EVs, not the single
+current-price EV the frozen example used.)
+
+`shareCount` — **24.1B**, **OBSERVED FACT**, already committed above
+(`dei:EntityCommonStockSharesOutstanding`, cover page), held constant
+across all three scenarios, unchanged.
+
+**Computing the three scenario values, per methodology §3.1–§3.5.** Each
+scenario is projected over the ten-year explicit period using its own
+already-drafted, already-approved revenue growth, operating margin and
+reinvestment capital intensity (unchanged, cited above), its own
+now-approved terminal ROIC (unchanged, cited above), the authorised r =
+10% and g = 3%, and the already-committed `nopatTaxRate` = 21% (§7.1
+constants, below). **Not** via `computeScenarioEnterpriseValue` — that
+function is not called, and its internal `rate + terminalRoicPremium`
+line is not used for any of these three terminal ROICs, per the HARD
+BOUNDS. The one piece of that module's math this outcome does reuse is
+the policy path shape itself: methodology §7.1's fixed shape — constant
+growth years 1–5, linear fade to terminal growth by year 10, terminal
+thereafter — is named as shared between M7 and M15 in `growthPath.ts`'s
+own header, so each scenario's single drafted growth rate is expanded
+into that shape (not held flat for all ten years), the same shape any
+correct scenario-DCF implementation must use; this is the undisputed
+general path-shape rule, not the disputed terminal-ROIC-premium line.
+
+For each year *t*: NOPAT_t = Revenue_t × margin × (1 − 21%); Reinvestment_t
+= Revenue_t × capital intensity; FCFF_t = NOPAT_t − Reinvestment_t;
+PV_t = FCFF_t ÷ (1.10)^t.
+
+#### Bear — value per share
+
+| Year | Growth | Revenue ($B) | NOPAT ($B) | Reinvestment ($B) | FCFF ($B) | PV @ 10% ($B) |
+|---|---|---|---|---|---|---|
+| 1 | 5.00% | 226.7 | 53.7 | 4.5 | 49.2 | 44.7 |
+| 2 | 5.00% | 238.1 | 56.4 | 4.8 | 51.7 | 42.7 |
+| 3 | 5.00% | 250.0 | 59.2 | 5.0 | 54.2 | 40.8 |
+| 4 | 5.00% | 262.5 | 62.2 | 5.2 | 57.0 | 38.9 |
+| 5 | 5.00% | 275.6 | 65.3 | 5.5 | 59.8 | 37.1 |
+| 6 | 4.60% | 288.3 | 68.3 | 5.8 | 62.6 | 35.3 |
+| 7 | 4.20% | 300.4 | 71.2 | 6.0 | 65.2 | 33.4 |
+| 8 | 3.80% | 311.8 | 73.9 | 6.2 | 67.7 | 31.6 |
+| 9 | 3.40% | 322.4 | 76.4 | 6.4 | 70.0 | 29.7 |
+| 10 | 3.00% | 332.1 | 78.7 | 6.6 | 72.1 | 27.8 |
+
+Sum of explicit-period PV = **$362.0B**. Terminal: NOPAT₁₀ = $78.7B, EBIT₁₀
+(NOPAT₁₀ ÷ (1−21%)) = $99.6B. Terminal identity [S]: terminal NOPAT
+(year 11) = NOPAT₁₀ × (1+g) = $81.1B; approved terminal ROIC = **10%** (the
+bear fade reaches r exactly by year 10) ⇒ 1 − g÷ROIC = 1 − 0.03÷0.10 =
+0.70 ⇒ terminal FCF = $81.1B × 0.70 = **$56.7B**. Terminal value at year 10
+= terminal FCF ÷ (r−g) = $56.7B ÷ 0.07 = **$810.6B**; PV of terminal value =
+$810.6B ÷ (1.10)^10 = **$312.5B**.
+
+Enterprise value = $362.0B + $312.5B = **$674.5B**. Equity value = EV +
+net cash $2.137B = **$676.7B**. **Value per share = $676.7B ÷ 24.1B =
+$28.08.**
+
+Companions (§3.5, [S]): terminal share of value = $312.5B ÷ $674.5B =
+**46.3%** — below the 60–75% normal band for a ten-year explicit period
+(neither the >75% caution nor the >85% multiple-in-disguise band applies);
+a low terminal share here says the bear case's value sits mostly in the
+explicit decade, not in perpetuity, the same shape methodology §3.5 notes
+for NVIDIA's own historical reverse-DCF reading. Implied exit multiple =
+terminal value at year 10 ÷ EBIT₁₀ = $810.6B ÷ $99.6B = **8.14× EV/EBIT**
+— the metric it actually divides, not revenue or FCF. Comparison against
+today's actual EV/EBIT is **INCOMPLETE**: `prices.json` carries no NVDA
+row, so no current EV can be computed (FINAL OWNER RULING #205); the
+reverse direction (growth implied by a chosen "reasonable" exit multiple)
+is not performed either, since naming a reasonable multiple without a
+price anchor would be new judgment beyond this outcome's approved scope,
+not a computation. ±1% rate sensitivity: r = 9% ⇒ $32.40 (**+15.4%**);
+r = 11% ⇒ $24.80 (**−11.7%**) — both above the 10% sensitivity-display
+threshold, reported per §3.5/§5, not used as a standalone signal.
+
+#### Base — value per share
+
+| Year | Growth | Revenue ($B) | NOPAT ($B) | Reinvestment ($B) | FCFF ($B) | PV @ 10% ($B) |
+|---|---|---|---|---|---|---|
+| 1 | 20.00% | 259.1 | 102.4 | 10.4 | 92.0 | 83.6 |
+| 2 | 20.00% | 311.0 | 122.8 | 12.4 | 110.4 | 91.2 |
+| 3 | 20.00% | 373.1 | 147.4 | 14.9 | 132.5 | 99.5 |
+| 4 | 20.00% | 447.8 | 176.9 | 17.9 | 159.0 | 108.6 |
+| 5 | 20.00% | 537.3 | 212.2 | 21.5 | 190.7 | 118.4 |
+| 6 | 16.60% | 626.5 | 247.5 | 25.1 | 222.4 | 125.5 |
+| 7 | 13.20% | 709.2 | 280.1 | 28.4 | 251.8 | 129.2 |
+| 8 | 9.80% | 778.7 | 307.6 | 31.1 | 276.4 | 129.0 |
+| 9 | 6.40% | 828.6 | 327.3 | 33.1 | 294.1 | 124.7 |
+| 10 | 3.00% | 853.4 | 337.1 | 34.1 | 303.0 | 116.8 |
+
+Sum of explicit-period PV = **$1,126.6B**. Terminal: NOPAT₁₀ = $337.1B,
+EBIT₁₀ = $426.7B. Terminal identity [S]: terminal NOPAT (year 11) =
+$337.1B × 1.03 = $347.2B; approved terminal ROIC = **10%** (base also
+fades to r exactly by year 10) ⇒ 1 − 0.03÷0.10 = 0.70 ⇒ terminal FCF =
+$347.2B × 0.70 = **$243.0B**. Terminal value at year 10 = $243.0B ÷ 0.07 =
+**$3,472.1B**; PV = $3,472.1B ÷ (1.10)^10 = **$1,338.7B**.
+
+Enterprise value = $1,126.6B + $1,338.7B = **$2,465.3B**. Equity value =
+EV + $2.137B = **$2,467.4B**. **Value per share = $2,467.4B ÷ 24.1B =
+$102.38.**
+
+Companions: terminal share of value = $1,338.7B ÷ $2,465.3B = **54.3%** —
+also below the 60–75% normal band, neither caution band applies. Implied
+exit multiple = $3,472.1B ÷ $426.7B = **8.14× EV/EBIT** — identical to
+bear's, because both scenarios' terminal ROIC fades fully to the same
+r = 10%, and the ratio terminal value ÷ EBIT₁₀ depends only on the
+after-tax rate, g, terminal ROIC and r — not on the scenario's own growth
+or margin path; a direct consequence of the [S] terminal identity, not a
+coincidence to read further into. Comparison against today's multiple:
+**INCOMPLETE**, same reason as bear (no NVDA price row). ±1% sensitivity:
+r = 9% ⇒ $120.41 (**+17.6%**); r = 11% ⇒ $88.85 (**−13.2%**).
+
+#### Bull — value per share
+
+| Year | Growth | Revenue ($B) | NOPAT ($B) | Reinvestment ($B) | FCFF ($B) | PV @ 10% ($B) |
+|---|---|---|---|---|---|---|
+| 1 | 35.00% | 291.5 | 138.2 | 14.6 | 123.6 | 112.4 |
+| 2 | 35.00% | 393.5 | 186.5 | 19.7 | 166.9 | 137.9 |
+| 3 | 35.00% | 531.3 | 251.8 | 26.6 | 225.3 | 169.2 |
+| 4 | 35.00% | 717.2 | 340.0 | 35.9 | 304.1 | 207.7 |
+| 5 | 35.00% | 968.3 | 459.0 | 48.4 | 410.5 | 254.9 |
+| 6 | 28.60% | 1,245.2 | 590.2 | 62.3 | 528.0 | 298.0 |
+| 7 | 22.20% | 1,521.6 | 721.3 | 76.1 | 645.2 | 331.1 |
+| 8 | 15.80% | 1,762.1 | 835.2 | 88.1 | 747.1 | 348.5 |
+| 9 | 9.40% | 1,927.7 | 913.7 | 96.4 | 817.3 | 346.6 |
+| 10 | 3.00% | 1,985.5 | 941.1 | 99.3 | 841.9 | 324.6 |
+
+Sum of explicit-period PV = **$2,531.0B**. Terminal: NOPAT₁₀ = $941.1B,
+EBIT₁₀ = $1,191.3B. Terminal identity [S]: terminal NOPAT (year 11) =
+$941.1B × 1.03 = $969.4B; approved terminal ROIC = **22%, held, not
+faded** (the durable-moat exception) ⇒ 1 − 0.03÷0.22 = 0.8636 ⇒ terminal
+FCF = $969.4B × 0.8636 = **$837.2B**. Terminal value at year 10 = $837.2B
+÷ 0.07 = **$11,959.7B**; PV = $11,959.7B ÷ (1.10)^10 = **$4,611.0B**.
+
+Enterprise value = $2,531.0B + $4,611.0B = **$7,142.0B**. Equity value =
+EV + $2.137B = **$7,144.1B**. **Value per share = $7,144.1B ÷ 24.1B =
+$296.44.**
+
+Companions: terminal share of value = $4,611.0B ÷ $7,142.0B = **64.6%** —
+inside the 60–75% normal band this time, because the un-faded 22%
+terminal ROIC keeps the terminal FCF conversion factor materially higher
+than bear/base's. Implied exit multiple = $11,959.7B ÷ $1,191.3B =
+**10.04× EV/EBIT** — higher than bear/base's 8.14×, entirely because
+terminal ROIC is held at 22% instead of fading to 10%, the direct effect
+of the durable-moat exception on the terminal identity, not of the
+scenario's higher near-term growth. Comparison against today's multiple:
+**INCOMPLETE**, same reason. ±1% sensitivity: r = 9% ⇒ $356.05
+(**+20.1%**); r = 11% ⇒ $252.13 (**−14.9%**).
+
+**Provenance.** All three value-per-share figures are **computed**, not
+AI inference and not sourced fact: computed deterministically from
+authorised policy constants (r = `policy.ts` `rateGrid[1]` = 10%, g =
+`policy.ts` `terminalGrowth` = 3%), already-committed OBSERVED figures
+(FY2026 revenue $215,938M, `nopatTaxRate` 21%, share count 24.1B, and the
+net-cash figures derived above from the same capture), and the
+already-drafted / now-approved AI-judgment scenario drivers (growth,
+margin, capital intensity, terminal ROIC per scenario) — every input is
+individually labelled above at its own source; the arithmetic combining
+them carries no separate judgment of its own.
+
+| Scenario | growth | reinvestment | terminal ROIC (approved) | Terminal share | Implied exit multiple | ±1% sensitivity | Value/share |
+|---|---|---|---|---|---|---|---|
+| Bear | 5% | 2% | 13% → 10% (fade to r) | 46.3% | 8.14× EV/EBIT | +15.4% / −11.7% | **$28.08** |
+| Base | 20% | 4% | 18% → 10% (fade to r) | 54.3% | 8.14× EV/EBIT | +17.6% / −13.2% | **$102.38** |
+| Bull | 35% | 5% | 22% (durable-moat exception) | 64.6% | 10.04× EV/EBIT | +20.1% / −14.9% | **$296.44** |
+
+This outcome computes the three scenario values and stops here, per
+`CALVIN RULING — A, WITH AI DRAFT`'s own scoping: it does not run the
+report, does not produce the §12 observation, and does not take up the
+Analyzer finish-line work — all a separate, later continuation. NVDA
+still has no `BUNDLES` entry, no recorded row, and still fails closed at
+`gate.ts`; nothing here makes it resolvable. No price comparison is made
+and none is implied — NVDA's absent price row keeps any downstream
+verdict `INCOMPLETE`, the expected result under FINAL OWNER RULING #205,
+not a defect these three numbers change.
 
 ### §7.1 constants
 
@@ -287,19 +474,16 @@ unlock.
   `CALVIN RULING — A` and issue #188's MSFT precedent. This is a run-time
   judgment outside the recorded-bundle shape this draft covers, named here
   for completeness rather than left implicit.
-- **The three scenario dollar values (bear / base / bull) are a named
-  evidence gap, not a hand estimate** (see "Scenario values" above): the
-  discount rate and terminal growth are authorised (`policy.ts`'s
-  `rateGrid[1]` = 10%, `terminalGrowth` = 3%), and `CF-ANALYST-DRAFT-NVDA-
-  TERMINAL-ROIC-01` has now prepared the third input — a per-scenario
-  terminal ROIC, drafted as labelled AI judgment with a written anchor
-  under `CALVIN RULING — A, WITH AI DRAFT` — but that preparation is not
-  approval. The three scenario dollar values stay unauthored, and this
-  outcome does not compute them, until Calvin reviews, approves or
-  corrects the prepared terminal-ROIC assumptions at
-  `/analyzer/inputs/NVDA`.
-  Closing this gap is Calvin's decision, not a derivation this draft can
-  complete from what is already authorised and already drafted.
+- **The three scenario dollar values (bear / base / bull) are now computed**
+  (see "Scenario values" above), following `CALVIN RULING — APPROVE AS
+  DRAFTED`'s approval of the three prepared terminal-ROIC assumptions:
+  Bear $28.08, Base $102.38, Bull $296.44 per share, under the current
+  approved scenario DCF (r = 10%, g = 3%, per-scenario terminal ROIC),
+  with the working, the [S] terminal identity, and the terminal-share /
+  implied-exit-multiple / ±1% sensitivity companions all shown. This
+  closes the evidence gap named by `CF-ANALYST-DRAFT-NVDA-SCENARIO-02`;
+  it does not run the report, produce the §12 observation, or make NVDA
+  resolvable — those remain separate, later outcomes.
 
 ## What approving and running this draft would, and would not, unlock (SCOPE item 7)
 
