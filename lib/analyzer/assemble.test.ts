@@ -271,7 +271,8 @@ describe("assembleAnalysisResult — MSFT fixture", () => {
   });
 
   it("REGRESSION (B1) — priceLocationWithinRange is unaffected by the weighting fix (still derived from bear/bull/price alone)", () => {
-    expect(result.scenarioOutputs.priceLocationWithinRange.mul(100).toFixed(0)).toBe("64");
+    expect(result.scenarioOutputs.priceLocationWithinRange).not.toBeNull();
+    expect(result.scenarioOutputs.priceLocationWithinRange?.mul(100).toFixed(0)).toBe("64");
   });
 });
 

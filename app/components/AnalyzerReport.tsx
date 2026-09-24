@@ -916,11 +916,24 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
   const { states, diagnostics, priceImplied, scenarios, scenarioOutputs, fairValueRange, preRevenue } = result;
   const rateSensitivityState = boundState(states, NOT_COMPUTED_BINDING.rateSensitivity);
   const rateAtWhichBaseEqualsPriceState = boundState(states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice);
+  // CF-NOPRICE-HONESTY-RECON-01 — priceLocationWithinRange is null exactly
+  // where this run has no price (modules/scenarioOutputs.ts), the same
+  // treatment as rateAtWhichBaseEqualsPrice just above.
+  const priceLocationWithinRangeState = boundState(states, NOT_COMPUTED_BINDING.priceLocationWithinRange);
   const baseRateCell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
+  // `fairValueRange.kind === "range"` does not by itself imply a real price:
+  // `assemble.ts`'s leverage precondition uses `fixture.leverage.
+  // enterpriseValue` when a fixture states one directly, so a priceless run
+  // whose fixture also states its own leverage EV can still reach the
+  // "range" branch with `priceLocationWithinRange` null (no run this
+  // codebase produces today does — see docs/noprice-honesty-
+  // reconciliation.md §2). The null guard below is therefore load-bearing,
+  // not defensive: it is what stops that case from rendering a bogus 0%/NaN
+  // marker position.
   const weightedPositionPct =
-    fairValueRange.kind === "range"
+    fairValueRange.kind === "range" && scenarioOutputs.priceLocationWithinRange !== null
       ? Math.min(100, Math.max(0, scenarioOutputs.priceLocationWithinRange.mul(100).toNumber()))
-      : 0;
+      : null;
   return (
     <>
         {/* ============ Valuation (M9 — theme anchor; regroups the frozen
@@ -1147,7 +1160,11 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
               <tr>
                 <th scope="row">Location of current price within the scenario range</th>
                 <td>
-                  <span className="v">{pct(scenarioOutputs.priceLocationWithinRange, 0)}</span>
+                  {priceLocationWithinRangeState !== null ? (
+                    <BoundStateBlock bound={priceLocationWithinRangeState} />
+                  ) : (
+                    <span className="v">{pct(scenarioOutputs.priceLocationWithinRange as Decimal, 0)}</span>
+                  )}
                 </td>
               </tr>
               <tr>
@@ -1260,13 +1277,17 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                   <span className="lab" style={{ right: 0 }}>
                     Bull
                   </span>
-                  <span
-                    className="lab"
-                    style={{ left: `${weightedPositionPct}%`, transform: "translateX(-50%)" }}
-                  >
-                    Weighted
-                  </span>
-                  <span className="dot" style={{ left: `${weightedPositionPct}%` }} />
+                  {weightedPositionPct !== null && (
+                    <>
+                      <span
+                        className="lab"
+                        style={{ left: `${weightedPositionPct}%`, transform: "translateX(-50%)" }}
+                      >
+                        Weighted
+                      </span>
+                      <span className="dot" style={{ left: `${weightedPositionPct}%` }} />
+                    </>
+                  )}
                 </div>
                 <div className="rangeends">
                   <span>${num(fairValueRange.bear, 0)}</span>

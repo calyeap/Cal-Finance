@@ -143,7 +143,7 @@ describe("QuickRead — valuation strip (defect E1)", () => {
   it("MSFT: shows the price-location line beneath the strip, restated from priceLocationWithinRange (64%)", () => {
     const result = assembleAnalysisResult(MSFT_FIXTURE);
     render(<QuickRead result={result} />);
-    expect(result.scenarioOutputs.priceLocationWithinRange.mul(100).toFixed(0)).toBe("64");
+    expect(result.scenarioOutputs.priceLocationWithinRange?.mul(100).toFixed(0)).toBe("64");
     expect(screen.getByText(/64% of the way from bear to bull/)).not.toBeNull();
   });
 
@@ -166,8 +166,29 @@ describe("QuickRead — valuation strip (defect E1)", () => {
   it("OKLO: shows the price-location line in failure/success wording, never bear/bull", () => {
     const result = assembleAnalysisResult(OKLO_FIXTURE);
     render(<QuickRead result={result} />);
-    const pct = result.scenarioOutputs.priceLocationWithinRange.mul(100).toFixed(0);
+    const pct = result.scenarioOutputs.priceLocationWithinRange?.mul(100).toFixed(0);
     expect(screen.getByText(new RegExp(`${pct}% of the way from failure to success`))).not.toBeNull();
+  });
+
+  // Correction to CF-NOPRICE-HONESTY-RECON-01 (REVIEW `CORRECT`, PR #303):
+  // `fairValueRange.kind === "range"` does not by itself imply a real
+  // price. `assemble.ts`'s leverage precondition passes from a fixture's
+  // own stated `leverage.enterpriseValue` regardless of whether M1 (and so
+  // the price behind it) is INCOMPLETE — MSFT's fixture states one
+  // directly. With `enterpriseValue.price` null, `priceLocationWithinRange`
+  // is null while `fairValueRange.kind` is still "range"; the "Price vs
+  // scenarios" item must fall through to the suppressed wording, never
+  // print "Inside"/"Outside" for a position that is actually unknown.
+  it("MSFT with no price: 'Price vs scenarios' reads suppressed, never Inside/Outside, even though fairValueRange.kind stays \"range\"", () => {
+    const result = assembleAnalysisResult({
+      ...MSFT_FIXTURE,
+      enterpriseValue: { ...MSFT_FIXTURE.enterpriseValue, price: null },
+    });
+    expect(result.fairValueRange.kind).toBe("range");
+    expect(result.scenarioOutputs.priceLocationWithinRange).toBeNull();
+    render(<QuickRead result={result} />);
+    expect(screen.getByText(/fair-value range is suppressed/)).not.toBeNull();
+    expect(screen.queryByText(/the authored bear-bull range/)).toBeNull();
   });
 });
 

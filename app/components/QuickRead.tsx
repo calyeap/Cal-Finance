@@ -41,6 +41,7 @@ function sectionRefFor(appliesTo: string): string | null {
   // ("operating margin") the looser matches below would misplace.
   if (isBoundTo(appliesTo, NOT_COMPUTED_BINDING.rateSensitivity)) return "E";
   if (isBoundTo(appliesTo, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice)) return "G";
+  if (isBoundTo(appliesTo, NOT_COMPUTED_BINDING.priceLocationWithinRange)) return "G";
   if ((["bear", "base", "bull"] as const).some((s) => isBoundTo(appliesTo, NOT_COMPUTED_BINDING.scenarioDrivers(s)))) {
     return "F";
   }
@@ -509,7 +510,15 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
     },
     {
       label: "Price vs scenarios",
-      body: fairValueRange.kind === "range" ? (
+      // `fairValueRange.kind === "range"` does not by itself imply
+      // `priceLocationWithinRange` is non-null — a fixture that states its
+      // own `leverage.enterpriseValue` can pass the leverage precondition
+      // even when M1 (and so the price behind this figure) is INCOMPLETE
+      // (see docs/noprice-honesty-reconciliation.md §2). Gating on `inRange
+      // !== null` here, rather than on `kind` alone, is what keeps this from
+      // ever printing "Outside the authored bear-bull range" for a position
+      // that is actually unknown.
+      body: fairValueRange.kind === "range" && inRange !== null ? (
         <p className="t">
           {insideRange ? "Inside" : "Outside"} the authored bear-bull range, with the weighted value shown inside the
           range rather than as a headline

@@ -129,7 +129,12 @@ export interface ScenarioOutputsInput {
   baseValue: Decimal;
   bullValue: Decimal;
   weights: { bear: Decimal; base: Decimal; bull: Decimal };
-  currentPrice: Decimal;
+  // CF-NOPRICE-HONESTY-RECON-01. Null exactly where this run has no price.
+  // Gates priceLocationWithinRange only — rateAtWhichBaseEqualsPrice below
+  // keeps solving against the flattened $0 it already used on a priceless
+  // run before this outcome (unchanged; naming that a defect too is not
+  // this outcome's SCOPE).
+  currentPrice: Decimal | null;
   // Recomputes the BASE case's value at a hypothetical discount rate —
   // used only to solve for the rate at which the base case equals price.
   //
@@ -153,10 +158,24 @@ export function computeScenarioOutputs(input: ScenarioOutputsInput): ScenarioOut
     .plus(bullValue.mul(weights.bull));
 
   const rangeSpan = bullValue.minus(bearValue);
-  const priceLocationWithinRange = rangeSpan.isZero() ? new Decimal(0) : currentPrice.minus(bearValue).dividedBy(rangeSpan);
+  // §3.4 / CF-NOPRICE-HONESTY-RECON-01: a position needs a real price
+  // behind it. Null price, null position — never an arithmetic answer off
+  // the $0 "no price" sentinel this run's other outputs already refuse.
+  const priceLocationWithinRange =
+    currentPrice === null
+      ? null
+      : rangeSpan.isZero()
+        ? new Decimal(0)
+        : currentPrice.minus(bearValue).dividedBy(rangeSpan);
 
+  // Unchanged by this outcome: still the flattened $0 a priceless run's
+  // revaluation solve already used before CF-NOPRICE-HONESTY-RECON-01. Only
+  // priceLocationWithinRange above is this outcome's SCOPE.
+  const rateSolveTargetPrice = currentPrice ?? new Decimal(0);
   const rateAtWhichBaseEqualsPrice =
-    input.revalueBaseCaseAtRate === null ? null : solveRateForTargetValue(input.revalueBaseCaseAtRate, currentPrice);
+    input.revalueBaseCaseAtRate === null
+      ? null
+      : solveRateForTargetValue(input.revalueBaseCaseAtRate, rateSolveTargetPrice);
 
   return {
     values: { bear: bearValue, base: baseValue, bull: bullValue },

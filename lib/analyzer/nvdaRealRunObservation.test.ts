@@ -238,17 +238,23 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
 
     // No price row for NVDA (FINAL OWNER RULING #205) — price-dependent
     // outputs are the honest expected INCOMPLETE, not a defect. A missing
-    // price surfaces as buildAcquiredRun's own sentinel (value 0, blank
-    // timestamp), never null on AnalysisResult.price itself, plus the
-    // run's own disclosure naming it explicitly.
+    // price still surfaces as buildAcquiredRun's own $3.4 display sentinel
+    // on AnalysisResult.price itself (value 0, blank timestamp — never
+    // null, unchanged by CF-NOPRICE-HONESTY-RECON-01), plus the run's own
+    // disclosure naming it explicitly. What changed under that outcome is
+    // that the SAME absence now also reaches enterpriseValue.price honestly
+    // (below), instead of being flattened to the same $0 there too.
     expect(result.price.timestamp).toBe("");
     expect(result.price.value.isZero()).toBe(true);
     expect(state.acquired.disclosures.some((d) => d.includes("No price was available"))).toBe(true);
 
-    // Enterprise value is INCOMPLETE for THREE reasons on this capture, only
-    // one of which is the unmade §4.4 judgment — the code's own cause names
-    // all three, so this run does not attribute the whole suppression to
-    // §4.4 alone: `treasuryMethodDilution` and `financeLeaseLiabilities` are
+    // CF-NOPRICE-HONESTY-RECON-01, defect A. Enterprise value is INCOMPLETE
+    // for FOUR reasons on this capture (previously reported as three,
+    // docs/nvda-realrun-observation.md, before this outcome closed the gap
+    // that document itself named): `price` now joins the list, because the
+    // no-price sentinel no longer reaches computeEnterpriseValue's REQUIRED
+    // check as a flattened $0 — only one of the four is the unmade §4.4
+    // judgment; `treasuryMethodDilution` and `financeLeaseLiabilities` are
     // pre-existing tag-mapping gaps on this filer's capture (the same class
     // of gap the draft's own text already names for
     // ShortTermInvestments/FinanceLeaseLiability), independent of the §4.4
@@ -257,12 +263,16 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     expect(ev.suppressed).toBe(true);
     if (ev.suppressed) {
       expect(ev.cause).toBe(
-        "missing REQUIRED input(s): treasuryMethodDilution, financeLeaseLiabilities, nonOperatingEquityInvestmentsAtBook"
+        "missing REQUIRED input(s): treasuryMethodDilution, price, financeLeaseLiabilities, nonOperatingEquityInvestmentsAtBook"
       );
     }
 
     // That cascades to leverage, the fair-value range, and trust — the same
-    // shape OKLO's own real run (unchanged) already reaches.
+    // shape OKLO's own real run (unchanged) already reaches. Unchanged by
+    // this outcome: NVDA's leverage/range/trust state was already this
+    // shape before defect A closed (three other REQUIRED inputs were
+    // already missing), so adding `price` as a fourth missing input changes
+    // nothing downstream of it.
     expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
     expect(result.gates.leverage.netDebtRatio).toBeNull();
     expect(result.trust.status).toBe("UNUSABLE");
@@ -270,6 +280,20 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
 
     const verdict = deriveVerdict(result);
     expect(verdict.status).toBe("INCOMPLETE");
+
+    // CF-NOPRICE-HONESTY-RECON-01, defect B. Before this outcome,
+    // `scenarioOutputs.priceLocationWithinRange` silently reported `-0.1046`
+    // on this exact run — a number with no real price behind it
+    // (docs/nvda-realrun-observation.md's "reported, not fixed"
+    // observation) — even though the fair-value range above is already
+    // suppressed. Now it is null, with INCOMPLETE bound to it by name, the
+    // same treatment rateAtWhichBaseEqualsPrice already had.
+    expect(result.scenarioOutputs.priceLocationWithinRange).toBeNull();
+    const priceLocationState = result.states.suppressing.find((s) =>
+      s.appliesTo.startsWith("the current price's location within the scenario range — ")
+    );
+    expect(priceLocationState).not.toBeUndefined();
+    expect(priceLocationState?.state).toBe("INCOMPLETE");
 
     // The §4.4 candidate tags, with whatever the already-committed capture
     // carries for them — evidence for Calvin's later judgment, never a

@@ -143,10 +143,12 @@ export async function buildAcquiredRun(
         crossCheckFailedFactIds: [...acquired.crossCheckFailedFactIds],
       },
     },
-    {
-      value: options.price?.value ?? new Decimal(0),
-      timestamp: options.price?.timestamp ?? "",
-    }
+    // CF-NOPRICE-HONESTY-RECON-01. The real, possibly-absent price — never
+    // flattened to a $0/blank sentinel here any more. buildCompanyInputs
+    // itself now owns exactly where that flattening still belongs
+    // (CompanyFixture.price, multiplesInput.price — both unchanged) and
+    // where the honest null carries through instead (enterpriseValue.price).
+    options.price
   );
 
   const disclosures = [acquired.provenanceNote, bundle.note];

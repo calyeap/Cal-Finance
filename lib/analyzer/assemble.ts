@@ -449,7 +449,14 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     // {1,1,1}, which sums to 3 and turned the weighted average into a
     // plain sum (B1, third-pass fix; authorised for this one line only).
     weights: { bear: new Decimal("1").dividedBy(3), base: new Decimal("1").dividedBy(3), bull: new Decimal("1").dividedBy(3) },
-    currentPrice: fixture.price.value,
+    // CF-NOPRICE-HONESTY-RECON-01. `fixture.price.value` is §3.4's own
+    // always-present display sentinel ($0 on a priceless run — unchanged);
+    // `fixture.enterpriseValue.price` is the honest signal, already null
+    // exactly when this run has no price (modules/enterpriseValue.ts's own
+    // REQUIRED input, wired in acquisition/companyInputs.ts). Reusing it
+    // here is one absence carried through, not a second signal invented for
+    // the same fact.
+    currentPrice: fixture.enterpriseValue.price?.value ?? null,
     revalueBaseCaseAtRate: fixture.revalueBaseCaseAtRate,
   });
 
@@ -563,6 +570,22 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice,
         "NO SOLUTION IN RANGE",
         `searched ${asPct(b.lo)} to ${asPct(b.hi)}: no rate in that bracket brings the base case to the price`
+      )
+    );
+  }
+  // CF-NOPRICE-HONESTY-RECON-01 — §3.4 / acquiredRun.ts's own committed
+  // disclosure: a priceless run's position within the scenario range
+  // reports incomplete rather than a number with no real price behind it
+  // (docs/nvda-realrun-observation.md's "reported, not fixed" observation).
+  // Not an input of the fair-value range (notComputed's own default INCOMPLETE
+  // scope — "the affected reverse-DCF cell" — does not cover it, correctly,
+  // same as rateAtWhichBaseEqualsPrice and rateSensitivity above).
+  if (scenarioOutputs.priceLocationWithinRange === null) {
+    suppressing.push(
+      notComputed(
+        NOT_COMPUTED_BINDING.priceLocationWithinRange,
+        "INCOMPLETE",
+        "missing REQUIRED input: a price for this run — none was available, so today's price has no position to report within the scenario range"
       )
     );
   }

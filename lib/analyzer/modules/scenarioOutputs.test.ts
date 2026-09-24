@@ -134,7 +134,38 @@ describe("computeScenarioOutputs", () => {
       currentPrice: new Decimal(100), // exact midpoint
       revalueBaseCaseAtRate: () => new Decimal(100),
     });
-    expect(result.priceLocationWithinRange.toString()).toBe("0.5");
+    expect(result.priceLocationWithinRange?.toString()).toBe("0.5");
+  });
+
+  it("returns priceLocationWithinRange: null when this run has no price, without changing rateAtWhichBaseEqualsPrice's existing $0-target behaviour", () => {
+    // CF-NOPRICE-HONESTY-RECON-01 — defect B. Before this outcome, a
+    // priceless run's position was computed off the caller's flattened $0
+    // sentinel and reported as a real number. Now it is null, gated the
+    // same way rateAtWhichBaseEqualsPrice already is (H2's own precedent) —
+    // and rateAtWhichBaseEqualsPrice itself is untouched: still solved
+    // against $0, the same target a priceless run's revaluation solve
+    // already used before this outcome (out of this defect's SCOPE).
+    const revalue = (rate: Decimal) => new Decimal(1000).minus(rate.mul(5000));
+    const withNoPrice = computeScenarioOutputs({
+      bearValue: new Decimal(50),
+      baseValue: new Decimal(100),
+      bullValue: new Decimal(150),
+      weights: { bear: new Decimal("0.25"), base: new Decimal("0.5"), bull: new Decimal("0.25") },
+      currentPrice: null,
+      revalueBaseCaseAtRate: revalue,
+    });
+    const withZeroPrice = computeScenarioOutputs({
+      bearValue: new Decimal(50),
+      baseValue: new Decimal(100),
+      bullValue: new Decimal(150),
+      weights: { bear: new Decimal("0.25"), base: new Decimal("0.5"), bull: new Decimal("0.25") },
+      currentPrice: new Decimal(0),
+      revalueBaseCaseAtRate: revalue,
+    });
+
+    expect(withNoPrice.priceLocationWithinRange).toBeNull();
+    expect(withNoPrice.rateAtWhichBaseEqualsPrice).not.toBeNull();
+    expect(withNoPrice.rateAtWhichBaseEqualsPrice?.toString()).toBe(withZeroPrice.rateAtWhichBaseEqualsPrice?.toString());
   });
 
   it("carries the three scenario values through unchanged", () => {
