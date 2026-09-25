@@ -43,11 +43,14 @@ describe("UNDEFINED_POLICY_CONSTANTS", () => {
 });
 
 describe("POLICY_THRESHOLD_PROVENANCE / buildProvisionalLabels", () => {
-  it("records exactly the nine constants the frozen spec labels PROVISIONAL or 'no observations behind it', and no others", () => {
-    // A hardcoded expected key set — verified against every PROVISIONAL /
-    // "no observations" occurrence in the spec (§6.1, §6.2, §7.1, §7.2 M12).
-    // A constant added here without spec support, or a genuinely provisional
-    // constant left out, both fail this test.
+  it("records exactly the nine constants the frozen spec labels PROVISIONAL or 'no observations behind it', plus the two CF-STEP4-TIER-BOUNDARY-DEFAULT-01 AI DEFAULT tier boundaries, and no others", () => {
+    // A hardcoded expected key set — the first nine verified against every
+    // PROVISIONAL / "no observations" occurrence in the spec (§6.1, §6.2,
+    // §7.1, §7.2 M12); the two step4DispersionTier* boundaries are this
+    // outcome's own AI DEFAULT under the OWNER gate-compression rule, using
+    // the same PROVISIONAL/labelled vehicle rather than a new one. A
+    // constant added here without spec or AI-DEFAULT-provenance support, or
+    // a genuinely provisional constant left out, both fail this test.
     expect(Object.keys(POLICY_THRESHOLD_PROVENANCE).sort()).toEqual(
       [
         "terminalRoicPremium",
@@ -59,6 +62,8 @@ describe("POLICY_THRESHOLD_PROVENANCE / buildProvisionalLabels", () => {
         "historyInsufficientStressMarginRelativeReductions",
         "runRateSequentialGrowthTrigger",
         "seasonalityPriorYearThreshold",
+        "step4DispersionTierLowMediumBoundary",
+        "step4DispersionTierMediumHighBoundary",
       ].sort()
     );
   });

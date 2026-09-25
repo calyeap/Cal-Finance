@@ -406,7 +406,7 @@ describe("selectStep4ForecastDispersionReading", () => {
     if (!reading.available) return;
     expect(reading.selectedDriver).toBe("growth");
     expect(reading.fullRangeValueImpact.toString()).toBe("0.4859812108156441166");
-    expect(reading.tier).toBeNull();
+    expect(reading.tier).toBe("HIGH");
   });
 
   it("A1/A2 coincide when growth's swing is the largest of several available rows (MSFT's actual real-run shape)", () => {
@@ -440,10 +440,42 @@ describe("selectStep4ForecastDispersionReading", () => {
     expect(reading.fullRangeValueImpact.toString()).toBe("0.55");
   });
 
-  it("carries the B2 categorical tier shape, honestly unset — no boundary is adopted by this selector", () => {
+  it("carries the B2 categorical tier shape, resolved against the CF-STEP4-TIER-BOUNDARY-DEFAULT-01 AI DEFAULT boundaries", () => {
     const reading = selectStep4ForecastDispersionReading([availableRow("growth", "0.5")]);
     expect(reading.available).toBe(true);
     if (!reading.available) return;
-    expect(reading.tier).toBeNull();
+    expect(reading.tier).toBe("HIGH");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CF-STEP4-TIER-BOUNDARY-DEFAULT-01 — the B2 tier boundaries themselves.
+// Edge-inclusive at both boundaries: the boundary value itself belongs to
+// the HIGHER tier (the same convention `shouldDisplaySensitivityInput`
+// already uses). SYNTHETIC TEST FIXTURES throughout.
+// ---------------------------------------------------------------------------
+
+describe("selectStep4ForecastDispersionReading — B2 tier boundary edges", () => {
+  it("LOW/MEDIUM boundary (0.10): below is LOW, exactly on is MEDIUM, above is MEDIUM", () => {
+    const below = selectStep4ForecastDispersionReading([availableRow("growth", "0.0999")]);
+    const on = selectStep4ForecastDispersionReading([availableRow("growth", "0.1")]);
+    const above = selectStep4ForecastDispersionReading([availableRow("growth", "0.1001")]);
+    expect(below.available && below.tier).toBe("LOW");
+    expect(on.available && on.tier).toBe("MEDIUM");
+    expect(above.available && above.tier).toBe("MEDIUM");
+  });
+
+  it("MEDIUM/HIGH boundary (0.25): below is MEDIUM, exactly on is HIGH, above is HIGH", () => {
+    const below = selectStep4ForecastDispersionReading([availableRow("growth", "0.2499")]);
+    const on = selectStep4ForecastDispersionReading([availableRow("growth", "0.25")]);
+    const above = selectStep4ForecastDispersionReading([availableRow("growth", "0.2501")]);
+    expect(below.available && below.tier).toBe("MEDIUM");
+    expect(on.available && on.tier).toBe("HIGH");
+    expect(above.available && above.tier).toBe("HIGH");
+  });
+
+  it("takes the magnitude of the selected row's impact, matching the display rule's own abs() convention", () => {
+    const reading = selectStep4ForecastDispersionReading([availableRow("growth", "-0.3")]);
+    expect(reading.available && reading.tier).toBe("HIGH");
   });
 });

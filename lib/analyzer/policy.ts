@@ -7,6 +7,12 @@ import type { PolicyConstants, UndefinedPolicyConstants } from "./types";
 // "explicit configuration... not buried as literals in code") has one place
 // to change.
 
+// Named once so `step4DispersionTierLowMediumBoundary` below can share the
+// exact same value as `sensitivityDisplayThreshold` rather than a second
+// literal that could silently drift from it (CF-STEP4-TIER-BOUNDARY-
+// DEFAULT-01 SCOPE 2).
+const SENSITIVITY_DISPLAY_THRESHOLD = new Decimal("0.1");
+
 export const POLICY: PolicyConstants = {
   terminalGrowth: new Decimal("0.03"),
   // r + 3 percentage points — PROVISIONAL, must carry the I16 label wherever
@@ -54,7 +60,14 @@ export const POLICY: PolicyConstants = {
   shapeMismatchGapPoints: new Decimal("0.15"),
   // An input whose full plausible range moves value by less than this is
   // not displayed in the sensitivity table (§7.2 M14).
-  sensitivityDisplayThreshold: new Decimal("0.1"),
+  sensitivityDisplayThreshold: SENSITIVITY_DISPLAY_THRESHOLD,
+  // Step 4 B2 dispersion tier (CF-STEP4-TIER-BOUNDARY-DEFAULT-01) — AI
+  // DEFAULT under the OWNER gate-compression rule, not a CALVIN RULING; see
+  // POLICY_THRESHOLD_PROVENANCE below for basis and direction of error.
+  // LOW below this value; MEDIUM at or above it, below the next boundary.
+  step4DispersionTierLowMediumBoundary: SENSITIVITY_DISPLAY_THRESHOLD,
+  // MEDIUM below this value; HIGH at or above it.
+  step4DispersionTierMediumHighBoundary: new Decimal("0.25"),
   // M11 precondition: (capex + lease additions) ÷ D&A must fall in this
   // band, or the output is PRECONDITION FAILED (§7.2).
   fcfYieldGrowthPreconditionBand: [new Decimal("0.8"), new Decimal("1.5")],
@@ -140,6 +153,27 @@ export const POLICY_THRESHOLD_PROVENANCE: Partial<Record<keyof PolicyConstants, 
   seasonalityPriorYearThreshold: {
     status: "PROVISIONAL",
     calibration: "Comes from I4 and has no observations behind it (§7.2 M12).",
+  },
+  step4DispersionTierLowMediumBoundary: {
+    status: "PROVISIONAL",
+    calibration:
+      "AI DEFAULT (CF-STEP4-TIER-BOUNDARY-DEFAULT-01), not a CALVIN RULING. Anchored in the already-approved " +
+      "sensitivityDisplayThreshold (§7.2 M14: a driver whose full plausible range moves value by less than this " +
+      "is not even displayed) — a driver the approved policy will not show cannot honestly be called anything " +
+      "but LOW dispersion, so this imports no new judgement beyond that existing constant. Reversible by Calvin " +
+      "at any time; retired by a fresh Calvin ruling on the LOW/MEDIUM boundary itself.",
+  },
+  step4DispersionTierMediumHighBoundary: {
+    status: "PROVISIONAL",
+    calibration:
+      "AI DEFAULT (CF-STEP4-TIER-BOUNDARY-DEFAULT-01), not a CALVIN RULING. No approved anchor exists — red-team " +
+      "judgement with no observations behind it. Direction of error: the conservative direction for an " +
+      "uncertainty reading is to over-report rather than under-report dispersion, so the lower of the credible " +
+      "boundaries (0.25, not e.g. 0.50) is chosen deliberately. Consequence: MSFT's real run " +
+      "(fullRangeValueImpact 0.48598121081564411663) reads HIGH under this default and would read MEDIUM under " +
+      "a 0.50 boundary; neither is consumed by anything today, so neither changes a supported result. Retired " +
+      "by capturing a second company's AnalystSuppliedRange to validate the boundary against more than one " +
+      "observation (explicitly not dispatched by this outcome — requires its own Calvin permission).",
   },
 };
 
