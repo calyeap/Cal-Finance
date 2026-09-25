@@ -112,8 +112,21 @@ applies to it, on real evidence, not hypothetically.
 NVDA's three values are the transcribed Step-7 bundle's own authored
 scenario values (`docs/analyst-drafts/nvda-step7-draft.md`, PR #295) carried
 straight through — not independently re-derived by anything this run
-computes beyond authoring itself. OKLO's are the pre-revenue module's own
-computed bear/base/bull values.
+computes beyond authoring itself. **OKLO's and MSFT's are not computed by
+anything.** Both are the M5/M7 validation set's carried scenario constants:
+OKLO's bear/base/bull are hardcoded at `lib/analyzer/fixtures/oklo.ts:353`
+(bear = the `3.10` cash-per-share constant at `:51`, base `31`, bull `48`) —
+that same line's own comment states they are "Not used for the pre-revenue
+profile" — and MSFT's `265`/`510`/`650` are hardcoded at
+`lib/analyzer/fixtures/msft.ts:272`. Both reach the run unchanged through
+`acquisition/analystInputs.ts`, whose own disclosure text is explicit that
+this is not incidental: "The three scenarios, the values they produce and
+four unset policy constants on this run were NOT acquired. They are carried
+from the validation set, because the screen where you enter scenarios is
+not built yet. Every fact, gate and margin figure on this run comes from SEC
+filings." So of option A's three per-company readings above, only NVDA's is
+analyst-authored and approved; OKLO's and MSFT's are arithmetic on carried
+validation-set placeholders the run itself discloses as not acquired.
 
 ## (2) Option B per company — evidence-quality flags and §9.6 trust status
 
@@ -207,6 +220,17 @@ as a good margin-of-safety measure, and §10.3's own `scenarioLabelsWarning`
 already disclaims exactly the confidence-bound reading a margin-of-safety
 input would need. It is reported as the observed asymmetry, not as an
 argument toward either option.
+
+Nor are option A's three readings themselves of equal standing, per §1's
+provenance note above: NVDA's is analyst-authored and approved, while
+OKLO's and MSFT's are arithmetic on carried validation-set placeholders the
+run itself discloses as not acquired. Option B's side of this same
+comparison — the one SHORT HISTORY instance and the zero-count flags — is
+read off genuinely acquired output. A reader weighing this asymmetry should
+weigh it knowing that two of option A's three inputs, and none of option
+B's, are not yet real acquired or analyst-authored data. This is reported
+alongside the asymmetry above, not a re-argument of it, and changes no
+number.
 
 ## (4) What option C would require
 
@@ -333,7 +357,12 @@ independent measure exists" finding (re-verified empty this pass, not
 newly discovered); the NVDA bundle's own authored scenario values
 (`docs/analyst-drafts/nvda-step7-draft.md`, PR #295) and Calvin's §4.4 ruling
 for MSFT (issue #188) — both transcribed, not re-authored, by this pass's
-test, matching their own precedent tests' transcription exactly.
+test, matching their own precedent tests' transcription exactly. OKLO's and
+MSFT's `scenarioValues` inputs themselves (as opposed to the `scenarioOutputs`
+computed from them, which this pass's test does assert fresh) are likewise
+not authored or acquired this pass: they are the M5/M7 validation set's
+pre-existing fixture constants (`fixtures/oklo.ts:353`, `fixtures/msft.ts:272`),
+carried unchanged through `analystInputs.ts`'s own disclosure — see §1.
 
 ## What this document does not do
 
