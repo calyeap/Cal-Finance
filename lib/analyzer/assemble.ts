@@ -19,8 +19,10 @@ import { computeRateSensitivity, rateSensitivityNotModelled } from "./modules/ra
 import { computeFcfYieldGrowth, type FcfYieldGrowthInput } from "./modules/fcfYieldGrowth";
 import { computeRunRate, type RunRateInput } from "./modules/runRate";
 import { computeShapeMismatch } from "./modules/shapeMismatch";
-import { buildSensitivityResult } from "./modules/sensitivity";
+import { buildSensitivityResult, computeTornado, computeGrowthMarginTable, computeRateTerminalGrowthTable } from "./modules/sensitivity";
 import { computeScenarioEnterpriseValue, computeScenarioOutputs, rateSearchBracket } from "./modules/scenarioOutputs";
+import { buildFixedShapeGrowthPath } from "./growthPath";
+import { sensitivityRangesFor } from "./acquisition/analystInputs";
 import { notComputed, NOT_COMPUTED_BINDING } from "./notComputed";
 import {
   computeFundingStackYearByYear,
@@ -58,6 +60,7 @@ import type {
   RawInput,
   ScenarioDriverSet,
   ScenarioSet,
+  SensitivityResult,
   SourcedValue,
   SuccessDefinitionRow,
   SuccessDefinitionState,
@@ -436,10 +439,65 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // --- M13 — shape mismatch -------------------------------------------------
   const shapeMismatch = computeShapeMismatch(fixture.shapeMismatch.guidedNearTermGrowth, fixture.shapeMismatch.impliedConstantGrowth);
 
-  // --- M14 — sensitivity (tornado/two-way tables left to Step 4 wiring; see
-  // sensitivity.ts's own Step 4 note — debtShareRemoved is the only settled
-  // field at this milestone) ------------------------------------------------
-  const sensitivity = buildSensitivityResult();
+  // --- M14 — sensitivity (§7.2). CF-STEP4-MSFT-RANGE-CAPTURE-01 wires the
+  // MSFT-only growth/operating-margin AnalystSuppliedRange capture
+  // (analystInputs.ts, authorised by CALVIN RULING — A) into the existing
+  // tornado/two-way machinery (sensitivity.ts). Every valuationFunction below
+  // closes over `computeScenarioEnterpriseValue` — the SAME M15 model this
+  // run's own scenario valuation uses (imported above, previously unused at
+  // this call site) — never a second model; sensitivity.ts's own header
+  // states this is self-consistent for both the growth tornado row and the
+  // growth x margin table, since neither names RONIC. discountRate,
+  // terminalGrowth and RONIC stay uncaptured (ruling A forbids expanding
+  // beyond growth/margin absent fresh evidence), so those rows and the rate x
+  // terminal-growth table are wired through the SAME real functions with a
+  // null range each, reproducing `validateRange`'s own
+  // "missing REQUIRED analyst-supplied range" cause rather than a hand-typed
+  // stand-in for it.
+  const sensitivityRanges = sensitivityRangesFor(fixture.ticker);
+  const sensitivityBaseScenario = fixture.scenarios.base;
+  const sensitivityBaseGrowth =
+    sensitivityBaseScenario.revenueGrowthOrPath instanceof Decimal ? sensitivityBaseScenario.revenueGrowthOrPath : null;
+  const sensitivityBaseMargin = sensitivityBaseScenario.operatingMargin;
+  const sensitivityBaseCapitalIntensity = sensitivityBaseScenario.reinvestmentCapitalIntensity;
+
+  const sensitivity: SensitivityResult =
+    sensitivityRanges === null ||
+    baseRevenueSourced === null ||
+    nopatTaxRateForRun === null ||
+    sensitivityBaseGrowth === null ||
+    sensitivityBaseMargin === null ||
+    sensitivityBaseCapitalIntensity === null
+      ? buildSensitivityResult()
+      : (() => {
+          const scenarioValueAt = (growth: Decimal, margin: Decimal, terminalGrowth?: Decimal, rate: Decimal = POLICY.rateGrid[1]): Decimal =>
+            computeScenarioEnterpriseValue(
+              baseRevenueSourced.value,
+              buildFixedShapeGrowthPath(growth),
+              margin,
+              sensitivityBaseCapitalIntensity,
+              rate,
+              nopatTaxRateForRun,
+              terminalGrowth
+            );
+          const baseCaseValue = scenarioValueAt(sensitivityBaseGrowth, sensitivityBaseMargin);
+
+          const tornado = computeTornado(baseCaseValue, {
+            growth: { range: sensitivityRanges.growth, valuationFunction: (g) => scenarioValueAt(g, sensitivityBaseMargin) },
+            operatingMargin: { range: sensitivityRanges.operatingMargin, valuationFunction: (m) => scenarioValueAt(sensitivityBaseGrowth, m) },
+            discountRate: { range: null, valuationFunction: () => baseCaseValue },
+            terminalGrowth: { range: null, valuationFunction: () => baseCaseValue },
+            ronic: { range: null, valuationFunction: () => baseCaseValue },
+          });
+          const twoWayGrowthMargin = computeGrowthMarginTable(sensitivityRanges.growth, sensitivityRanges.operatingMargin, (g, m) =>
+            scenarioValueAt(g, m)
+          );
+          const twoWayRateTerminalGrowth = computeRateTerminalGrowthTable(null, null, (r, tg) =>
+            scenarioValueAt(sensitivityBaseGrowth, sensitivityBaseMargin, tg, r)
+          );
+
+          return { tornado, twoWayGrowthMargin, twoWayRateTerminalGrowth, debtShareRemoved: true };
+        })();
 
   // --- M15 — scenario outputs ------------------------------------------------
   //
