@@ -58,8 +58,11 @@ precedent real-run tests already use
 The reproducing test is
 `lib/analyzer/step4SignalObservationOnRealRun.test.ts` — a single new
 read-only observation test (this outcome's only permitted non-doc file per
-`BUILD.md`'s HARD BOUNDS), asserting every figure quoted below directly off
-each run's own output. It records and deletes the NVDA bundle around itself,
+`BUILD.md`'s HARD BOUNDS), asserting every run-output figure quoted below
+directly off each run's own output (the `bull − bear`/`bull ÷ bear` rows in
+§1 are this document's own arithmetic on asserted values, not themselves
+asserted — see the note under §1's table). It records and deletes the NVDA
+bundle around itself,
 the same discipline its precedent already uses, and touches no other file's
 recorded state. Run this pass: **3/3 passing**
 (`npx vitest run lib/analyzer/step4SignalObservationOnRealRun.test.ts`).
@@ -73,9 +76,16 @@ recorded state. Run this pass: **3/3 passing**
 | `scenarioOutputs.values.base` | $510.00 | $31.00 | $102.38 |
 | `scenarioOutputs.values.bull` | $650.00 | $48.00 | $296.44 |
 | `weightedDistribution` | $474.99999999999999999 (≈ $475.00) | $27.366666666666666666 (≈ $27.37) | $142.30 |
-| bull − bear | $385.00 | $44.90 | $268.36 |
-| bull ÷ bear | 2.4528… | 15.4839… | 10.5570… |
+| bull − bear *(derived, not a run output — see below)* | $385.00 | $44.90 | $268.36 |
+| bull ÷ bear *(derived, not a run output — see below)* | 2.4528… | 15.4839… | 10.5570… |
 | `scenarioLabelsWarning` (only meaningful where the range renders) | `true` | — (range suppressed) | — (range suppressed) |
+
+The `bull − bear` and `bull ÷ bear` rows are arithmetic this document derives
+from the two `scenarioOutputs.values` rows directly above them — they are not
+a value any run itself produces, and not a dispersion formula this pass
+defines or adopts (SCOPE 1 forbids that). They sit in the same table as the
+run-output rows for readability only; the two kinds of row are not the same
+kind of fact.
 
 **A dispersion reading is available for all three companies at the raw
 `scenarioOutputs` level, but the rendered `FairValueRange` §10.3 governs is
@@ -293,8 +303,8 @@ TEST_DATABASE_URL=postgresql://<user>:<password>@<host>:5432/<name>_test \
   npx vitest run lib/analyzer/step4SignalObservationOnRealRun.test.ts
 ```
 
-3 test files touched by this outcome in total (one new): the reproducing
-test above. All other real-run test files it reuses helpers/patterns from
+1 test file touched by this outcome (new): the reproducing test above. All
+other real-run test files it reuses helpers/patterns from
 (`nonOperatingJudgmentRecordedOnRealRun.test.ts`, `leverageOnRealRun.test.ts`,
 `reverseDcfOnRealRun.test.ts`, `trustOnRealRun.test.ts`,
 `nvdaRealRunObservation.test.ts`) are unmodified and were also re-run this
@@ -302,13 +312,19 @@ pass (22/22 passing) to confirm nothing in this outcome disturbed them.
 
 ## What this document observed this pass vs. cites from existing authority
 
-**Observed this pass** (executed fresh, this run, at `5caa5fc`): every figure
-in the two tables in §1 and §2; the `scenarioLabelsWarning`/`MARGIN AT
+**Observed this pass** (executed fresh, this run, at `5caa5fc`, and directly
+pinned by `step4SignalObservationOnRealRun.test.ts`'s own assertions): every
+run-output row in the two tables in §1 and §2 — `scenarioOutputs.values`,
+`weightedDistribution`, `fairValueRange`, `scenarioLabelsWarning`,
+`states.qualifying`, `gates.gate1`, `trust.status`, and the fact-level
+SECONDARY/AI-EXTRACTED/NOT CONFIRMED counts (numerators and denominators
+alike) — on all three companies; the `scenarioLabelsWarning`/`MARGIN AT
 HISTORICAL HIGH` link on MSFT; the SHORT HISTORY/rule-1 precedence finding on
-OKLO; the CAPITAL-LIGHT reading on NVDA; the fact-level SECONDARY/
-AI-EXTRACTED/NOT CONFIRMED counts on all three; the `acquire.ts` and
-`assemble.ts` code citations in §2; the `git grep` re-confirmations in §2 and
-§4.
+OKLO; the CAPITAL-LIGHT reading on NVDA; the `acquire.ts` and `assemble.ts`
+code citations in §2; the `git grep` re-confirmations in §2 and §4. The
+`bull − bear` and `bull ÷ bear` rows in §1 are this document's own arithmetic
+on those observed values, not themselves asserted by the test or produced by
+any run — see the note under §1's table.
 
 **Cited from existing authority, not re-derived**: §11 item 1's own text and
 its three options; `CALVIN RULING — B` (amendment 1)'s separation

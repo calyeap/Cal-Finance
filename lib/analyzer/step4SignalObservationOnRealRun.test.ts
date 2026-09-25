@@ -143,6 +143,8 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
     const result = await openMsftRunWithRuling();
 
     expect(result.trust.status).toBe("PARTIAL");
+    expect(result.gates.gate1.state).toBeNull();
+    expect(result.gates.gate1.filedYearsCount).toBe(13);
     expect(result.fairValueRange.kind).toBe("range");
     if (result.fairValueRange.kind === "range") {
       expect(result.fairValueRange.bear.toFixed(2)).toBe("265.00");
@@ -150,10 +152,15 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
       expect(result.fairValueRange.weightedValueInside.toDecimalPlaces(2).toString()).toBe("475");
       expect(result.fairValueRange.scenarioLabelsWarning).toBe(true);
     }
+    expect(result.scenarioOutputs.values.bear.toFixed(2)).toBe("265.00");
+    expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("510.00");
+    expect(result.scenarioOutputs.values.bull.toFixed(2)).toBe("650.00");
     expect(result.states.qualifying.map((q) => q.flag)).toEqual(["MARGIN AT HISTORICAL HIGH"]);
     expect(provenanceQualifierFlagsPresent(result.states.qualifying)).toEqual([]);
+    expect(result.facts).toHaveLength(20);
     expect(result.facts.filter((f) => f.sourceClass === "SECONDARY")).toHaveLength(0);
     expect(result.facts.filter((f) => f.extractionType === "AI-EXTRACTED")).toHaveLength(0);
+    expect(result.facts.filter((f) => f.verificationState === "NOT CONFIRMED")).toHaveLength(0);
   });
 
   it("OKLO (unchanged) — option A's rendered range is suppressed, but the raw scenario dispersion still computes; SHORT HISTORY is the only carried flag, and trust is already UNUSABLE before it is ever read", async () => {
@@ -172,6 +179,7 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
     expect(result.scenarioOutputs.values.bear.toFixed(2)).toBe("3.10");
     expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("31.00");
     expect(result.scenarioOutputs.values.bull.toFixed(2)).toBe("48.00");
+    expect(result.scenarioOutputs.weightedDistribution.toFixed(2)).toBe("27.37");
 
     expect(result.states.qualifying.map((q) => q.flag)).toEqual(["SHORT HISTORY"]);
     expect(provenanceQualifierFlagsPresent(result.states.qualifying)).toEqual([]);
@@ -180,8 +188,10 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
     // carried on the run but plays no part in determining this status.
     expect(result.trust.status).toBe("UNUSABLE");
     expect(result.trust.determinedBy.some((d) => d.detail.includes("SHORT HISTORY"))).toBe(false);
+    expect(result.facts).toHaveLength(16);
     expect(result.facts.filter((f) => f.sourceClass === "SECONDARY")).toHaveLength(0);
     expect(result.facts.filter((f) => f.extractionType === "AI-EXTRACTED")).toHaveLength(0);
+    expect(result.facts.filter((f) => f.verificationState === "NOT CONFIRMED")).toHaveLength(0);
   });
 
   it("NVDA (§4.4 unmade) — option A's raw scenario dispersion is the transcribed bundle's own values; option B carries CAPITAL-LIGHT, not SHORT HISTORY, and not one of the three ProvenanceQualifier flags", async () => {
@@ -196,11 +206,14 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
     expect(result.scenarioOutputs.values.bear.toFixed(2)).toBe("28.08");
     expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("102.38");
     expect(result.scenarioOutputs.values.bull.toFixed(2)).toBe("296.44");
+    expect(result.scenarioOutputs.weightedDistribution.toFixed(2)).toBe("142.30");
 
     expect(result.states.qualifying.map((q) => q.flag)).toEqual(["CAPITAL-LIGHT"]);
     expect(provenanceQualifierFlagsPresent(result.states.qualifying)).toEqual([]);
     expect(result.trust.status).toBe("UNUSABLE");
+    expect(result.facts).toHaveLength(15);
     expect(result.facts.filter((f) => f.sourceClass === "SECONDARY")).toHaveLength(0);
     expect(result.facts.filter((f) => f.extractionType === "AI-EXTRACTED")).toHaveLength(0);
+    expect(result.facts.filter((f) => f.verificationState === "NOT CONFIRMED")).toHaveLength(0);
   });
 });
