@@ -83,3 +83,12 @@ update, not a semantic conflict.
     price-scoped CHEAP/FAIR/EXPENSIVE position with an entry-only action
     clause (start / do not start / wait) — never trim/add/sell, never the
     word "HOLD" here.
+23. Step 4 forecast-dispersion reading (`CF-STEP4-READING-IMPL-01`,
+    25 Sep 2026): adopts A2-in-principle / A1-fallback + B2 for Step 4 — the
+    Step 4 quantity is the maximum `fullRangeValueImpact` across the
+    tornado rows that are `available: true`, which is exactly the growth
+    row alone whenever growth is the only, or the largest, available row;
+    rendered as a categorical LOW/MEDIUM/HIGH dispersion tier. This ruling
+    does not adopt any numeric tier boundary, band or cut-point — those
+    stay open. (`CALVIN RULING — OPTION 1 APPROVED`, 25 Sep 2026 10:36:08Z,
+    [PR #325 comment 5830997078](https://github.com/calyeap/Cal-Finance/pull/325#issuecomment-5830997078).)

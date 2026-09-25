@@ -36,6 +36,7 @@ export function buildSensitivityResult(): SensitivityResult {
     twoWayGrowthMargin: [],
     twoWayRateTerminalGrowth: [],
     debtShareRemoved: true,
+    forecastDispersion: selectStep4ForecastDispersionReading([]),
   };
 }
 
@@ -262,4 +263,68 @@ export function computeRateTerminalGrowthTable(
   valuationFunction: TwoWayValuationFunction
 ): TwoWayTableResult {
   return computeTwoWayTable(rateRange, "discountRate", terminalGrowthRange, "terminalGrowth", valuationFunction);
+}
+
+// ---------------------------------------------------------------------------
+// CF-STEP4-READING-IMPL-01 — the ruled Step 4 forecast-dispersion reading.
+//
+// `CALVIN RULING — OPTION 1 APPROVED` (PR #325 comment 5830997078) adopts,
+// verbatim: "A2-in-principle / A1-fallback + B2 for Step 4 … this ruling
+// does not adopt any numeric tier boundary, band or cut-point." A2 (the
+// tornado's own stated purpose) is the maximum `fullRangeValueImpact`
+// across whichever rows are `available: true` — a formula defined for any
+// subset of the five drivers, not only the full set. A1 (the growth row
+// alone) is not a separate branch: it is what this same formula reduces to
+// exactly when growth is the only, or the largest, available row — MSFT's
+// own case today, where growth (48.60%) already exceeds margin (23.38%).
+// `selectStep4ForecastDispersionReading` is therefore ONE selector, proven
+// by its own tests to genuinely take the max (a wider non-growth row wins
+// when one exists) rather than a hard-coded "growth always wins" shortcut
+// that would coincidentally match MSFT's numbers today without being A2 at
+// all.
+//
+// B2's categorical LOW/MEDIUM/HIGH shape is represented, but `tier` stays
+// `null` on every run — the same "unset is explicit, never guessed"
+// pattern as `UNDEFINED_POLICY_CONSTANTS` (policy.ts) and this file's own
+// `available`/`cause` unions. No boundary, band or cut-point is adopted by
+// this outcome; a future, separately-ruled outcome supplies `tier`.
+//
+// A pure function of the tornado rows it is handed — reads no other run
+// state at all, so it structurally cannot reach either of ruling C's two
+// independence instances (restated by ruling A): the Step 1/Gate 1 fields,
+// or the Step 5 scenario fields.
+export type Step4DispersionTier = "LOW" | "MEDIUM" | "HIGH";
+
+export type Step4ForecastDispersionReading =
+  | { available: false; cause: string }
+  | {
+      available: true;
+      fullRangeValueImpact: Decimal;
+      selectedDriver: TornadoDriver;
+      // B2 shape, boundaries excluded — see header above.
+      tier: Step4DispersionTier | null;
+    };
+
+export function selectStep4ForecastDispersionReading(
+  tornado: readonly TornadoRowResult[]
+): Step4ForecastDispersionReading {
+  const availableRows = tornado.filter(
+    (row): row is Extract<TornadoRowResult, { available: true }> => row.available
+  );
+
+  if (availableRows.length === 0) {
+    return {
+      available: false,
+      cause: "no tornado row is available: true — every analyst-supplied range for this run is missing",
+    };
+  }
+
+  const selectedRow = availableRows.reduce((max, row) => (row.fullRangeValueImpact.greaterThan(max.fullRangeValueImpact) ? row : max));
+
+  return {
+    available: true,
+    fullRangeValueImpact: selectedRow.fullRangeValueImpact,
+    selectedDriver: selectedRow.driver,
+    tier: null,
+  };
 }

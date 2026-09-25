@@ -7,9 +7,12 @@ import {
   computeTornado,
   computeGrowthMarginTable,
   computeRateTerminalGrowthTable,
+  selectStep4ForecastDispersionReading,
   TORNADO_DRIVERS,
   type AnalystSuppliedRange,
+  type TornadoDriver,
   type TornadoDriverConfig,
+  type TornadoRowResult,
 } from "./sensitivity";
 import { computeScenarioEnterpriseValue } from "./scenarioOutputs";
 import { projectReverseDcfValue } from "./reverseDcf";
@@ -34,6 +37,11 @@ describe("shouldDisplaySensitivityInput", () => {
 describe("buildSensitivityResult", () => {
   it("always records that debt share was removed from the table (I10)", () => {
     expect(buildSensitivityResult().debtShareRemoved).toBe(true);
+  });
+
+  it("carries an honestly UNAVAILABLE Step 4 forecast-dispersion reading when the module is not run at all (no tornado rows)", () => {
+    const reading = buildSensitivityResult().forecastDispersion as ReturnType<typeof selectStep4ForecastDispersionReading>;
+    expect(reading.available).toBe(false);
   });
 });
 
@@ -345,5 +353,97 @@ describe("computeRateTerminalGrowthTable", () => {
     // Confirms this really is the pathological case, not an accidental
     // benign one — the terminal-value denominator is negative.
     expect(new Decimal("0.03").minus("0.04").isNegative()).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CF-STEP4-READING-IMPL-01 — the ruled Step 4 reading (A2-in-principle /
+// A1-fallback, B2 tier shape). SYNTHETIC TEST FIXTURES throughout.
+// ---------------------------------------------------------------------------
+
+function availableRow(driver: TornadoDriver, fullRangeValueImpact: string): TornadoRowResult {
+  return {
+    driver,
+    available: true,
+    displayed: true,
+    fullRangeValueImpact: new Decimal(fullRangeValueImpact),
+    values: [new Decimal(0), new Decimal(0), new Decimal(0)],
+  };
+}
+
+function unavailableRow(driver: TornadoDriver): TornadoRowResult {
+  return { driver, available: false, cause: `missing REQUIRED analyst-supplied range: ${driver}` };
+}
+
+describe("selectStep4ForecastDispersionReading", () => {
+  it("is honestly UNAVAILABLE, with a cause, when no tornado row is available: true", () => {
+    const reading = selectStep4ForecastDispersionReading([
+      unavailableRow("growth"),
+      unavailableRow("operatingMargin"),
+      unavailableRow("discountRate"),
+      unavailableRow("terminalGrowth"),
+      unavailableRow("ronic"),
+    ]);
+    expect(reading.available).toBe(false);
+    if (reading.available) return;
+    expect(reading.cause.length).toBeGreaterThan(0);
+  });
+
+  it("is honestly UNAVAILABLE on an empty tornado (the module never ran)", () => {
+    const reading = selectStep4ForecastDispersionReading([]);
+    expect(reading.available).toBe(false);
+  });
+
+  it("A1/A2 coincide when growth is the only available row (MSFT's own shape before margin was captured)", () => {
+    const reading = selectStep4ForecastDispersionReading([
+      availableRow("growth", "0.4859812108156441166"),
+      unavailableRow("operatingMargin"),
+      unavailableRow("discountRate"),
+      unavailableRow("terminalGrowth"),
+      unavailableRow("ronic"),
+    ]);
+    expect(reading.available).toBe(true);
+    if (!reading.available) return;
+    expect(reading.selectedDriver).toBe("growth");
+    expect(reading.fullRangeValueImpact.toString()).toBe("0.4859812108156441166");
+    expect(reading.tier).toBeNull();
+  });
+
+  it("A1/A2 coincide when growth's swing is the largest of several available rows (MSFT's actual real-run shape)", () => {
+    const reading = selectStep4ForecastDispersionReading([
+      availableRow("growth", "0.48598121081564411663"),
+      availableRow("operatingMargin", "0.23377202026469612084"),
+      unavailableRow("discountRate"),
+      unavailableRow("terminalGrowth"),
+      unavailableRow("ronic"),
+    ]);
+    expect(reading.available).toBe(true);
+    if (!reading.available) return;
+    expect(reading.selectedDriver).toBe("growth");
+    expect(reading.fullRangeValueImpact.toString()).toBe("0.48598121081564411663");
+  });
+
+  it("DIVERGES from growth-alone (A1) when a non-growth row's swing is the largest available — proving genuine max-selection (A2), not a hard-coded growth pick", () => {
+    const reading = selectStep4ForecastDispersionReading([
+      availableRow("growth", "0.2"),
+      availableRow("operatingMargin", "0.15"),
+      availableRow("discountRate", "0.55"),
+      unavailableRow("terminalGrowth"),
+      unavailableRow("ronic"),
+    ]);
+    expect(reading.available).toBe(true);
+    if (!reading.available) return;
+    // Growth-alone (A1) would have answered "0.2" here — the selector must
+    // not silently agree with that wrong answer.
+    expect(reading.fullRangeValueImpact.toString()).not.toBe("0.2");
+    expect(reading.selectedDriver).toBe("discountRate");
+    expect(reading.fullRangeValueImpact.toString()).toBe("0.55");
+  });
+
+  it("carries the B2 categorical tier shape, honestly unset — no boundary is adopted by this selector", () => {
+    const reading = selectStep4ForecastDispersionReading([availableRow("growth", "0.5")]);
+    expect(reading.available).toBe(true);
+    if (!reading.available) return;
+    expect(reading.tier).toBeNull();
   });
 });

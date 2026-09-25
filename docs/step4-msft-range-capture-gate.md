@@ -100,7 +100,15 @@ comfortably above the 10% threshold). Nothing here surfaces a reason the
 pack did not anticipate; `discountRate`/`terminalGrowth`/`ronic` remain
 honestly unavailable exactly as ruling A intended.
 
-## 3. The one combined gate — restated against these numbers, not answered
+## 3. The one combined gate — ANSWERED
+
+**Answered** by `CALVIN RULING — OPTION 1 APPROVED`, 25 Sep 2026 10:36:08Z
+([PR #325 comment 5830997078](https://github.com/calyeap/Cal-Finance/pull/325#issuecomment-5830997078)):
+*"Adopt A2-in-principle / A1-fallback + B2 for Step 4 … this ruling does not
+adopt any numeric tier boundary, band or cut-point."* Implemented by
+`CF-STEP4-READING-IMPL-01` (issue #326) and recorded as settled decision 23
+in `docs/product-decisions.md`. The restatement below is left intact as the
+record of what was asked; nothing in it is re-opened.
 
 `docs/verdict-decision-pack.md` §1's already-drafted `(a)`/`(b)` gate,
 restated as one decision with two parts, per ruling A's instruction never to
