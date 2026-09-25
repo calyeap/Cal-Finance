@@ -143,6 +143,69 @@ queued-away wake was about.
    not a new Calvin gate merely because M8 remains outstanding
    (`docs/acceptance-matrix.md` row 13).
 
+   **Gate compression / DRAFT BEFORE ASK — mandatory before any new
+   `CALVIN REQUIRED`.** Calvin's 25 Sep 2026 standing workflow ruling is to
+   optimise for the fewest human interruptions compatible with correctness.
+   Human judgement is not a human-work gate. Before asking Calvin, OWNER
+   must do all of the following:
+
+   1. **Forecast the bounded decision horizon.** Read the current critical
+      path far enough to identify the foreseeable dependent choices that
+      this gate will unlock. Batch every choice that is already answerable
+      from current evidence into one gate. Never knowingly serialise a
+      chain such as permission → implementation shape → rendering shape →
+      threshold/boundary into separate Calvin interruptions when two or
+      more of those choices can already be drafted together. If a later
+      choice genuinely depends on evidence not yet available, state that
+      dependency in the current issue, collect the evidence, then apply the
+      default rule below before escalating again.
+   2. **Draft before ask.** AI owns the research, evidence gathering,
+      recommended option, consequences, and the smallest reversible default.
+      Do not ask Calvin to design a policy or choose among raw options that
+      AI can narrow defensibly first.
+   3. **Default instead of gate when safe.** OWNER may treat the AI's
+      evidence-backed recommended option as authorised and continue without
+      Calvin when the choice is all of: bounded, reversible, cheap to undo,
+      within already-authorised scope, free of authority conflict, and
+      verified not to materially change the current supported real-run
+      verdict/position/acceptance outcome across the credible alternatives.
+      Record the choice and rationale as an `AI DEFAULT`, never as a
+      `CALVIN RULING`, and preserve enough evidence to roll it back.
+   4. **Escalate only a material exception.** A fresh `CALVIN REQUIRED` is
+      allowed only when at least one of these is true:
+      - the choice grants new permission, data capture/source access,
+        spend, external side effect, meaningful risk, or materially expands
+        scope;
+      - credible alternatives can materially change a current supported
+        real-run verdict/position/acceptance result and no conservative
+        default dominates;
+      - current authorities genuinely conflict and OWNER cannot reconcile
+        them without changing semantics;
+      - the action is irreversible or expensive to unwind; or
+      - Calvin's final product acceptance is required.
+      A methodology label, policy word, numeric value, tier boundary, or
+      implementation detail is **not by itself** enough to escalate. Its
+      material consequence is what determines the gate.
+   5. **A high-level ruling carries through derived subchoices.** Once Calvin
+      has selected a direction, derived implementation/policy details inherit
+      that authority when they pass the safe-default test above. Do not
+      re-ask Calvin merely because a later worker can phrase the next detail
+      as another multiple-choice question.
+
+   **Analyzer finish-line standing authorisation — current lane.** For the
+   Analyzer V2 finish-line after Calvin's 25 Sep 2026 `OPTION 1` ruling on
+   PR #325, OWNER is explicitly authorised to continue through the derived
+   Step 4 implementation/tier-boundary work using the gate-compression rule
+   above. Draft and apply the smallest defensible reversible defaults, run
+   the real MSFT proof, and keep §11 items 2–7 parked unless fresh evidence
+   proves one has become a current blocker. Do **not** interrupt Calvin again
+   for a derived Step 4 subchoice merely because a threshold/tier still
+   needs to be instantiated. Escalate only if credible defaults would
+   materially change MSFT's supported verdict/acceptance result, require new
+   permission/data/scope, create an authority conflict, or cannot be made
+   safely reversible. Otherwise the next Calvin touch should be final
+   acceptance after final real-run proof.
+
    **Attention contract — mandatory.** Native GitHub state is the sole
    attention authority for Cal Finance current status/attention (Phase 2
    cutover, issue #231/`CF-GITHUB-SOT-PHASE2-01`, closed out by
@@ -151,27 +214,30 @@ queued-away wake was about.
    Cal Finance Project Home's `NEXT MOVE` line, which is superseded/
    pointer-only for this fact type. Decide the current attention owner from
    that native evidence on every run:
-   - **CALVIN** for a current human decision, permission or acceptance —
-     the most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` /
+   - **CALVIN** only for a current human decision, permission or acceptance
+     that passes the Gate-compression / DRAFT BEFORE ASK test above — the
+     most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` /
      `DONE: EVIDENCE` terminal comment (these route directly to OWNER per
      CF-TERMINAL-HANDOFF-REPAIR-01, whether or not `needs-owner-wake` is
      also present), or an open `CALVIN RULING` question, on any open issue
      or PR;
-   - **AI** while authorised AI work is running, dispatchable or being
-     recovered;
+   - **AI** while authorised AI work is running, dispatchable, recoverable,
+     or a safe default can close the next derived choice under the rule
+     above;
    - **EXTERNAL** only when a third party is the real blocker and Calvin
      need not act or chase;
    - **PARKED** only when an explicit Calvin decision parked the project.
 
    If the authorised runway is empty and none of AI / EXTERNAL / PARKED
-   applies, do **not** fall through to WAIT/GREEN: return a closed
-   `CALVIN REQUIRED` question (see Terminal rule below). Milestone
-   `COMPLETE`, old `NEEDS YOU`, free-text `YOUR MOVE`, or a stale Cal
-   Finance Project Home `NEXT MOVE` line never override this native GitHub
-   evidence. Do not write current status, `NEXT`, or attention to Cal
-   Finance Project Home — this run's own typed terminal comment (below) is
-   the sole attention record. OWNER writes nothing to Project Home at all,
-   in this contract or any other.
+   applies, run the Gate-compression / DRAFT BEFORE ASK test before falling
+   through to a human gate. Return a closed `CALVIN REQUIRED` question only
+   if the choice passes one of the material-exception conditions above (see
+   Terminal rule below). Milestone `COMPLETE`, old `NEEDS YOU`, free-text
+   `YOUR MOVE`, or a stale Cal Finance Project Home `NEXT MOVE` line never
+   override this native GitHub evidence. Do not write current status,
+   `NEXT`, or attention to Cal Finance Project Home — this run's own typed
+   terminal comment (below) is the sole attention record. OWNER writes
+   nothing to Project Home at all, in this contract or any other.
 2. **Routine issue closure (bounded).** Scoped only to the wake target
    itself — this is not a backlog sweep. Close the wake target's linked
    originating issue only when it is an ordinary issue (never an umbrella
@@ -185,10 +251,14 @@ queued-away wake was about.
 3. Confirm there is no active product BUILD or product PR already in
    flight (a just-stopped or Calvin-gated PR/issue still counts as active).
 4. Select the first dependency-safe outcome already authorised by that
-   runway.
+   runway, including a bounded evidence/default-validation outcome that is
+   authorised by the Gate-compression / DRAFT BEFORE ASK rule above.
 5. Create exactly one bounded GitHub issue containing `OUTCOME`,
    `AUTHORITY`, `SCOPE`, `DONE WHEN`, `HARD BOUNDS`, `CALVIN REQUIRED`,
-   `OUTCOME-ID`.
+   `OUTCOME-ID`. When the outcome can expose a later decision, include a
+   short `DECISION HORIZON` inside `SCOPE` naming the foreseeable downstream
+   choices and which ones are expected to default vs genuinely require
+   Calvin; this is planning context, not permission to widen scope.
 6. Add `needs-build-wake`.
 7. Stop.
 
@@ -208,8 +278,9 @@ silently. Return exactly one of:
   next event and Calvin need not act.
 - `WAIT: PARKED — <Calvin-authorised park + wake/date>` — only when a prior
   run already recorded an explicit Calvin park on native GitHub.
-- `CALVIN REQUIRED: <one closed decision>` — the current attention owner is
-  `CALVIN`.
+- `CALVIN REQUIRED: <one compressed material decision>` — the current
+  attention owner is `CALVIN`, and the question has passed the
+  Gate-compression / DRAFT BEFORE ASK test above.
 
 Bare/untyped `WAIT` is forbidden. Empty runway is not WAIT unless Calvin
 explicitly parked it.
@@ -238,9 +309,16 @@ bounded recovery fire described above.
   policy issue.
 - One dispatch maximum per run.
 - Already-authorised work only; follow runway ordering — do not invent or
-  reprioritise work.
+  reprioritise work. The Gate-compression / DRAFT BEFORE ASK standing
+  authorisation counts as authority only for its narrow safe-default class;
+  it does not authorise scope expansion.
 - No new project/product scope, methodology, policy, thresholds, or
-  architecture decisions.
+  architecture decisions **except** the narrow reversible `AI DEFAULT`
+  class explicitly authorised by the Gate-compression / DRAFT BEFORE ASK
+  rule above. That exception never covers a choice whose credible variants
+  materially change a supported real-run verdict/position/acceptance,
+  require new permission/data/spend/risk, conflict with authority, or are
+  expensive/irreversible to unwind.
 - No PR review or merge.
 - No workflow recovery, verifier, monitoring, retry loop, queue, lock,
   scheduler, controller, or multi-agent fanout. The bounded lease/recovery
