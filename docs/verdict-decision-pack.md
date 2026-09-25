@@ -126,7 +126,8 @@ company — be authorised?*
 - **Recommendation, not adopted:** (a), scoped to the growth and margin axes
   only (not all five `sensitivity.ts` axes) and to one already-committed
   company (MSFT or NVDA — both already clear the RONIC-ladder and
-  dual-horizon evidence bullets in §12 below), because it is the smallest
+  dual-horizon evidence bullets in `docs/verdict-methodology-reconciliation.md`
+  §12), because it is the smallest
   capture that unblocks the one candidate that specifies clean against both
   independence tests, and because option (c) is foreclosed by ruling C's own
   words rather than genuinely open.
@@ -293,7 +294,8 @@ nothing in the current evidence set distinguishes a single-cell reading from
 a grid-range reading from a direction-of-agreement reading: whichever option
 is chosen, MSFT's and NVDA's Step 2 reading is YES either way, because every
 cell agrees. Telling the three options apart needs a company whose ladder
-crosses or sits near the grid — the same gap §12 bullet 4 below states is
+crosses or sits near the grid — the same gap
+`docs/verdict-methodology-reconciliation.md` §12 bullet 4 states is
 still open.
 
 **This item's answer changes none of the three companies' current outcomes,
@@ -328,8 +330,8 @@ Unchanged from every prior read of this file in this lane.
 **Options.** None are named — per HARD BOUNDS and `docs/frozen/calfinance-methodology-v2.md:154`'s
 own "numerical valuation-position cut-points remain TEST/provisional...
 until adequately validated and explicitly approved," no shape is proposed
-here, and none is answerable from evidence that does not yet exist (§12
-below).
+here, and none is answerable from evidence that does not yet exist
+(`docs/verdict-methodology-reconciliation.md` §12).
 
 **Consequence.** Whatever band is eventually set governs how wide a Step 4
 zone or Step 3 value must be from price before CHEAP or EXPENSIVE fires,
@@ -343,7 +345,8 @@ no evidence-grounded recommendation is possible without inventing the
 number HARD BOUNDS forbids. That is itself the answer this item needs to
 carry: **not answerable from evidence today**, not merely "not answered
 here." This item is not stalled by not naming a preferred shape; it is
-genuinely blocked on the composition requirement in §12 below.
+genuinely blocked on the composition requirement in
+`docs/verdict-methodology-reconciliation.md` §12.
 
 ---
 
@@ -436,7 +439,7 @@ new capture.
 | 2 (Step 2 UNKNOWN definition) | **LATENT** | Provably does not change MSFT's or NVDA's current Step 2 reading — both read `YES` under all three options (§2 above) — and OKLO never reaches Step 2. No currently-evidenced company's outcome turns on this item. Backlog candidate, named as such by ruling C's own finish-line rule. |
 | 3 (conservative-value shape) | **LATENT** | No currently-evidenced company has a Step 2 reading of `NO` or `UNKNOWN`; the conservative value is not the operative value for MSFT, NVDA (both `YES`) or OKLO (never reaches Step 2). Not exercised by any current outcome. |
 | 4 (which RONIC cell) | **LATENT** | All nine cells agree in direction for both companies whose ladders resolve (MSFT, NVDA); nothing today distinguishes the three options, and none changes either company's Step 2 reading. |
-| 5 (numeric band/cut-point) | **LATENT** | Downstream of Step 4, which is itself blocked (item 1); no company reaches Step 5 today, and the evidence needed to set a number does not exist (§12 below). Not answerable, let alone blocking, until item 1 clears. |
+| 5 (numeric band/cut-point) | **LATENT** | Downstream of Step 4, which is itself blocked (item 1); no company reaches Step 5 today, and the evidence needed to set a number does not exist (`docs/verdict-methodology-reconciliation.md` §12). Not answerable, let alone blocking, until item 1 clears. |
 | 6 (mirrored/asymmetric geometry) | **LATENT** | Downstream of item 5, which is itself downstream of item 1. Conditional on a decision that is not itself reachable today. |
 | 7 (5yr/10yr pooling) | **LATENT** | Needs a second company's matched pair to answer; not reachable from NVDA's pair alone, and downstream of item 5's band existing to be pooled or not. |
 
@@ -463,7 +466,8 @@ is exactly the distinction the finish-line rule draws.
 **One pack, not split.** Item 1's capture question (Command Center/analyst
 authorship of `AnalystSuppliedRange` values) does not block collecting the
 evidence any of items 2–7 need: items 2 and 4 need a company whose RONIC
-ladder crosses or sits near the 8/10/12% grid (§12 bullet 4 below); item 3
+ladder crosses or sits near the 8/10/12% grid
+(`docs/verdict-methodology-reconciliation.md` §12 bullet 4); item 3
 needs a company whose Step 2 reading is `NO` or `UNKNOWN`; items 5 and 6
 need real observations across companies once a band exists to calibrate;
 item 7 needs a second company's matched five-year/ten-year pair. None of
