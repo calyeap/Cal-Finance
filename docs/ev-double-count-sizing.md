@@ -22,6 +22,19 @@ document sizes that across the ten calibration companies. It changes no code,
 bumps no version, and rules nothing about the filers it cannot settle — that
 half is with CalFinance.
 
+**Ruled a documented known limitation, not fixed — 2026-09-25.**
+`CF-LEASE-NESTING-DOUBLECOUNT-RECON-01` (issue #311) found no existing
+authority determines a correction here, and Calvin ruled on the resulting
+closed question: `CALVIN RULING — NONE FOR NOW` (issue #311, 2026-09-25) —
+keep the double-count as a documented known limitation for the Analyzer V2
+finish line, declining a new XBRL instance/calculation-linkbase parser, a
+recurring per-filer human judgment, and §3.8.1 AI-extraction authority under
+the current finish-line scope. The reasoning, the re-probe and the ruling
+itself are in
+[`ev-lease-nesting-doublecount-reconciliation.md`](./ev-lease-nesting-doublecount-reconciliation.md).
+The sizing below — $105M for UNP, and the rest of this document — is
+unchanged by it.
+
 Reproduce:
 
 ```bash
