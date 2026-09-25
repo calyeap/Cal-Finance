@@ -1803,6 +1803,21 @@ No other outcome is named or started here. Analyzer final acceptance
 remains withheld until the verdict-methodology dependency this addendum
 addresses is resolved.
 
+> **Update, `CF-VERDICT-DECISION-PACK-01` ([issue #322](https://github.com/calyeap/Cal-Finance/issues/322),
+> `docs/verdict-decision-pack.md`).** Per `CALVIN RULING — C`'s own
+> execution constraint (quoted in that document), §11 items 1 (residual
+> half) through 7 are consolidated into one decision pack rather than
+> drip-fed — `docs/verdict-decision-pack.md`, at head `51ed41a` — instead of
+> being ruled on individually as this section's text above anticipated.
+> That pack re-verifies each item's evidence at `51ed41a`, states each
+> item's exact consequence and one named recommendation, and classifies
+> item 1 as the sole item currently blocking the verdict/final-acceptance
+> path (§11's own gate) with items 2–7 latent today, per the pack's own §8.
+> This bullet is additive: it records that the pack exists and where it
+> lives. It does not itself rule on any item, does not close any §11 item,
+> and does not change this section's own "still open" disposition of items
+> 1–7 above — that remains Calvin's, on the pack's return.
+
 ---
 
 ## What this addendum (§§9–14) does and does not do
