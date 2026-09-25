@@ -283,11 +283,15 @@ export function computeRateTerminalGrowthTable(
 // that would coincidentally match MSFT's numbers today without being A2 at
 // all.
 //
-// B2's categorical LOW/MEDIUM/HIGH shape is represented, but `tier` stays
-// `null` on every run — the same "unset is explicit, never guessed"
-// pattern as `UNDEFINED_POLICY_CONSTANTS` (policy.ts) and this file's own
-// `available`/`cause` unions. No boundary, band or cut-point is adopted by
-// this outcome; a future, separately-ruled outcome supplies `tier`.
+// B2's categorical LOW/MEDIUM/HIGH shape is resolved on every `available:
+// true` reading (CF-STEP4-TIER-BOUNDARY-DEFAULT-01) against
+// `POLICY.step4DispersionTierLowMediumBoundary` /
+// `step4DispersionTierMediumHighBoundary` — two `PROVISIONAL`, labelled,
+// non-governing constants (policy.ts), instantiated under the OWNER
+// gate-compression `AI DEFAULT` rule (`.github/ai-routines/OWNER.md`,
+// deriving from `CALVIN RULING — OPTION 1 APPROVED`), never a fresh Calvin
+// ruling. `tier` remains read by no valuation, position, gate or verdict
+// computation — see `Step4ForecastDispersionReading` below.
 //
 // A pure function of the tornado rows it is handed — reads no other run
 // state at all, so it structurally cannot reach either of ruling C's two
@@ -301,9 +305,27 @@ export type Step4ForecastDispersionReading =
       available: true;
       fullRangeValueImpact: Decimal;
       selectedDriver: TornadoDriver;
-      // B2 shape, boundaries excluded — see header above.
-      tier: Step4DispersionTier | null;
+      // B2 shape, boundaries resolved — see header above and
+      // `resolveStep4DispersionTier` below.
+      tier: Step4DispersionTier;
     };
+
+// Boundary semantics (edge-inclusive, tested at each boundary in
+// sensitivity.test.ts): below `step4DispersionTierLowMediumBoundary` is
+// LOW; at or above it, and below `step4DispersionTierMediumHighBoundary`,
+// is MEDIUM; at or above the second boundary is HIGH. Each boundary value
+// itself belongs to the HIGHER tier — the same convention
+// `shouldDisplaySensitivityInput` already uses (`greaterThanOrEqualTo`).
+function resolveStep4DispersionTier(fullRangeValueImpact: Decimal): Step4DispersionTier {
+  const magnitude = fullRangeValueImpact.abs();
+  if (magnitude.lessThan(POLICY.step4DispersionTierLowMediumBoundary)) {
+    return "LOW";
+  }
+  if (magnitude.lessThan(POLICY.step4DispersionTierMediumHighBoundary)) {
+    return "MEDIUM";
+  }
+  return "HIGH";
+}
 
 export function selectStep4ForecastDispersionReading(
   tornado: readonly TornadoRowResult[]
@@ -325,6 +347,6 @@ export function selectStep4ForecastDispersionReading(
     available: true,
     fullRangeValueImpact: selectedRow.fullRangeValueImpact,
     selectedDriver: selectedRow.driver,
-    tier: null,
+    tier: resolveStep4DispersionTier(selectedRow.fullRangeValueImpact),
   };
 }

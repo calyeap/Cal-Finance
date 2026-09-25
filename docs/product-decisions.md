@@ -92,3 +92,28 @@ update, not a semantic conflict.
     does not adopt any numeric tier boundary, band or cut-point — those
     stay open. (`CALVIN RULING — OPTION 1 APPROVED`, 25 Sep 2026 10:36:08Z,
     [PR #325 comment 5830997078](https://github.com/calyeap/Cal-Finance/pull/325#issuecomment-5830997078).)
+24. Step 4 B2 dispersion-tier boundaries (`CF-STEP4-TIER-BOUNDARY-DEFAULT-01`,
+    25 Sep 2026): **`AI DEFAULT`, not a `CALVIN RULING`** — instantiated by
+    OWNER under the gate-compression `AI DEFAULT` rule
+    (`.github/ai-routines/OWNER.md`, landed as `9de66dc`), a derived
+    subchoice of item 23's `CALVIN RULING — OPTION 1 APPROVED`, not a fresh
+    product decision. LOW/MEDIUM is `0.10`, the same value as the already-
+    approved `sensitivityDisplayThreshold` (§7.2 M14) — a driver the
+    approved policy will not even display cannot honestly be called
+    anything but LOW dispersion, so this imports no new judgement.
+    MEDIUM/HIGH is `0.25` — no approved anchor exists; this is red-team
+    judgement with no observations behind it, choosing the lower of the
+    credible boundaries because the conservative direction of error for an
+    uncertainty reading is to over-report rather than under-report
+    dispersion. Both are `PROVISIONAL`, labelled, non-governing policy
+    constants (`lib/analyzer/policy.ts`'s `POLICY_THRESHOLD_PROVENANCE`) —
+    `tier` is read by no valuation, position, gate or verdict computation.
+    Consequence: MSFT's real run (`fullRangeValueImpact`
+    `0.48598121081564411663`) reads HIGH under this default and would read
+    MEDIUM under a `0.50` boundary; neither is consumed by anything today,
+    so neither changes a supported result. Reversible by Calvin at any
+    time. Evidence that would retire the MEDIUM/HIGH default: capturing a
+    second company's `AnalystSuppliedRange` (e.g. NVDA) to validate the
+    boundary against more than one observation — explicitly not dispatched
+    by this outcome, since a second capture requires its own Calvin
+    permission.

@@ -864,6 +864,13 @@ export interface PolicyConstants {
   ronicCap: Decimal;
   shapeMismatchGapPoints: Decimal;
   sensitivityDisplayThreshold: Decimal;
+  // Step 4 B2 categorical dispersion-tier boundaries (CF-STEP4-TIER-BOUNDARY-
+  // DEFAULT-01). LOW/MEDIUM is the same value as `sensitivityDisplayThreshold`
+  // (a driver the display-suppression rule already hides cannot honestly be
+  // called anything but LOW). MEDIUM/HIGH has no approved anchor — AI DEFAULT,
+  // red-team judgement (§7.1 policy.ts provenance).
+  step4DispersionTierLowMediumBoundary: Decimal;
+  step4DispersionTierMediumHighBoundary: Decimal;
   fcfYieldGrowthPreconditionBand: [Decimal, Decimal];
 }
 
