@@ -44,11 +44,16 @@ introduced anywhere below, including as an illustrative or "for now" number.
 > above); §§9–10 are `CALVIN RULING — C`'s applied, ruled structure and are
 > not re-opened; §14's delivered items are confirmed still accurate by the
 > same re-read that refreshed §§11–13, but its own text is not edited here.
-> `lib/analyzer/verdict.ts` and `lib/analyzer/policy.ts` remain byte-identical
-> to `edc6fb9`/`f74f314` — the tree state immediately after
-> `CF-VERDICT-NONPOLICY-GAPS-01` (`7a2dd69`, #281) — confirmed directly by
-> `git hash-object` against that commit, not assumed from a prior claim; no
-> `docs/frozen/` byte and no `FROZEN_HASHES` entry is touched. This refresh
+> `lib/analyzer/policy.ts` remains byte-identical to `f74f314` — the tree
+> state immediately after `CF-VERDICT-NONPOLICY-GAPS-01` (`7a2dd69`, #281) —
+> confirmed directly by `git hash-object` against that commit, not assumed
+> from a prior claim. `lib/analyzer/verdict.ts` is byte-identical to `8be9a50`
+> (untouched by this refresh) but **not** to `edc6fb9`: it changed in
+> `b16edc2` (`CF-M9-BLOCKER14-RECON-01`, #283), a comment-only edit to its
+> header block (`verdict.ts:21-39`) recording that `achievedRevenueCagr` now
+> carries the achieved half of §10.6.2's comparator; no branch, condition,
+> string, or line of logic changed. No `docs/frozen/` byte and no
+> `FROZEN_HASHES` entry is touched. This refresh
 > answers no §11 item, adds no numeric slot, and closes no acceptance-matrix
 > row (`docs/acceptance-matrix.md` is cited, not edited).
 
@@ -1705,9 +1710,14 @@ unresolved through this addendum; each now carries what changed.
   The §3/§10 full structural proposal remains unimplemented in either file
   and could not be implemented without violating HARD BOUNDS.
 
-  **Re-verified at `8be9a50`.** Both files are still byte-identical to the
-  tree state right after `7a2dd69` — confirmed directly by `git hash-object`
-  against that commit for this refresh, not assumed. The historical
+  **Re-verified at `8be9a50`.** `lib/analyzer/policy.ts` is still
+  byte-identical to the tree state right after `7a2dd69` — confirmed
+  directly by `git hash-object` against that commit for this refresh, not
+  assumed. `lib/analyzer/verdict.ts` is byte-identical to `8be9a50` (untouched
+  by this refresh) but **not** to the `7a2dd69` tree state: it changed
+  comment-only in `b16edc2` (`CF-M9-BLOCKER14-RECON-01`, #283), recording
+  that `achievedRevenueCagr` now carries the achieved half of §10.6.2's
+  comparator; all five branches below and their logic are unchanged. The historical
   four-branch citation above (`verdict.ts:53-59,63-68,70-75,77-80`) is
   accurate for the pre-`7a2dd69` file it describes and needs no correction;
   the current file's five branches are `verdict.ts:62-68,72-77,79-84,96-103,105-108`,
