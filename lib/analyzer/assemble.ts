@@ -19,7 +19,13 @@ import { computeRateSensitivity, rateSensitivityNotModelled } from "./modules/ra
 import { computeFcfYieldGrowth, type FcfYieldGrowthInput } from "./modules/fcfYieldGrowth";
 import { computeRunRate, type RunRateInput } from "./modules/runRate";
 import { computeShapeMismatch } from "./modules/shapeMismatch";
-import { buildSensitivityResult, computeTornado, computeGrowthMarginTable, computeRateTerminalGrowthTable } from "./modules/sensitivity";
+import {
+  buildSensitivityResult,
+  computeTornado,
+  computeGrowthMarginTable,
+  computeRateTerminalGrowthTable,
+  selectStep4ForecastDispersionReading,
+} from "./modules/sensitivity";
 import { computeScenarioEnterpriseValue, computeScenarioOutputs, rateSearchBracket } from "./modules/scenarioOutputs";
 import { buildFixedShapeGrowthPath } from "./growthPath";
 import { sensitivityRangesFor } from "./acquisition/analystInputs";
@@ -496,7 +502,15 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
             scenarioValueAt(sensitivityBaseGrowth, sensitivityBaseMargin, tg, r)
           );
 
-          return { tornado, twoWayGrowthMargin, twoWayRateTerminalGrowth, debtShareRemoved: true };
+          return {
+            tornado,
+            twoWayGrowthMargin,
+            twoWayRateTerminalGrowth,
+            debtShareRemoved: true,
+            // CF-STEP4-READING-IMPL-01 — the ruled Step 4 reading, derived
+            // solely from this run's own tornado rows above.
+            forecastDispersion: selectStep4ForecastDispersionReading(tornado),
+          };
         })();
 
   // --- M15 — scenario outputs ------------------------------------------------

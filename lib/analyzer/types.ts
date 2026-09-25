@@ -509,6 +509,12 @@ export interface SensitivityResult {
   // Debt share is removed from the table — value-neutral by construction,
   // MM without taxes or distress (I10).
   debtShareRemoved: true;
+  // CF-STEP4-READING-IMPL-01 — the ruled Step 4 forecast-dispersion reading
+  // derived from `tornado` above (`Step4ForecastDispersionReading`,
+  // `sensitivity.ts`). Typed `unknown` here for the same reason `tornado`
+  // itself is: this schema file stays independent of the module that shapes
+  // it; callers cast, as they already do for `tornado`.
+  forecastDispersion: unknown;
 }
 
 export interface DiagnosticsResult {
