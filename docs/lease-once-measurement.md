@@ -252,6 +252,22 @@ holds in reverse: the version bump that would carry the invested-capital
 entries is the same bump that would carry NVDA's dilution derivation, so
 neither has been made.
 
+### Ruled, 2026-09-25 — no route authorised for now
+
+**This open half stays open.** `CALVIN RULING — NONE FOR NOW`
+(issue #311, 2026-09-25) declines to authorise any of the three routes that
+could answer it — a new XBRL instance/calculation-linkbase parser, a
+recurring per-filer human judgment, or §3.8.1 AI-extraction authority — under
+the current Analyzer V2 finish-line scope. (A new mapping-level element test
+is a fourth candidate mechanism named in the paragraph above, but it is out
+of bounds for #311/#312 under their own HARD BOUNDS, not something this
+ruling itself declines.) The ruling does not decide *how* nesting is
+established; it decides that no mechanism for deciding it is built now.
+Revisit is authorised only if the mechanism "blocks a real supported
+company" or as "a separately scoped post-freeze reliability improvement" —
+full text, reasoning and the closed question it answers are in
+[`ev-lease-nesting-doublecount-reconciliation.md`](./ev-lease-nesting-doublecount-reconciliation.md).
+
 ### The defect is sized separately
 
 The live EV double-count this measurement exposed is quantified in
