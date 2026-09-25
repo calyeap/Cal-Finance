@@ -55,7 +55,7 @@ read at), rather than trusted from #308's own record:
 | OKLO | @2026-06-30 | @2026-06-30 | @2026-06-30 | Yes — all three agree |
 | NVDA | @2026-07-26 | `NO_TAG_IN_FILINGS` (does not resolve) | @2026-07-26 | N/A — no mismatch to report; the absent input's own `INCOMPLETE` governs (SCOPE 2) |
 
-These match #308's own probe exactly. **Not latent for any company today**:
+These match #308's own probe exactly. **No mismatch presents for any company today**:
 none of MSFT, OKLO or NVDA presents an actual date mismatch across the three
 named inputs — the correction is latent-only, confirmed rather than assumed.
 
