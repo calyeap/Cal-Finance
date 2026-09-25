@@ -1,7 +1,9 @@
+import Decimal from "decimal.js";
 import { MSFT_FIXTURE } from "../fixtures/msft";
 import { OKLO_FIXTURE } from "../fixtures/oklo";
 import type { AnalystInputs } from "./companyInputs";
 import { recordedAnalystInputBundle } from "./recordedBundles";
+import type { AnalystSuppliedRange } from "../modules/sensitivity";
 
 // ---------------------------------------------------------------------------
 // The inputs that are NOT facts, and were never acquired from anything.
@@ -54,6 +56,81 @@ function bundleFrom(fixture: typeof MSFT_FIXTURE): AnalystInputBundle {
   };
 }
 
+// ---------------------------------------------------------------------------
+// CF-STEP4-MSFT-RANGE-CAPTURE-01 — the minimum AnalystSuppliedRange capture
+// CALVIN RULING — A authorised: MSFT only, growth and operating-margin axes
+// only (PR #323 comment 5830507368). Kept beside the rest of this file's
+// not-acquired surface, not in `lib/`'s deterministic modules — these three
+// points per axis are analyst assumptions, exactly like the scenarios above,
+// and sensitivity.ts's own rule (`sensitivity.ts:53-65`) forbids a module
+// deriving a range from POLICY or a historical calculation; this file may
+// only CITE one when authoring the range by hand, never compute one.
+//
+// Growth: the three values already authored for MSFT's own bear/base/bull
+// scenarios above (`scenarios.bear/base/bull.revenueGrowthOrPath`), cited
+// here as the analyst's own already-recorded growth anchors — not re-read
+// from `scenarios` at runtime, and never a substitute for Step 5's scenario
+// range (ruling A / ruling C: no Step 1/Step 5 reuse) since this capture
+// feeds a structurally different mechanism (M14's tornado/two-way tables),
+// not Step 4's forecast-dispersion measure itself.
+//
+// Operating margin: MSFT's own already-configured stress margin
+// (`configuredConstants.stressMarginLevel`, 38.0%) as the downside anchor,
+// and the M3 margin diagnostics already acquired for this company
+// (`reverseDcf.medianMargin` 41.8% / `reverseDcf.currentMargin` 46.8%,
+// `marginHistory.cyclicality.tenYearMarginRange` 21.4pp — cited for context,
+// not read into a formula) for the mid/high anchors.
+const MSFT_GROWTH_RANGE: AnalystSuppliedRange = {
+  values: [new Decimal("0.10"), new Decimal("0.137"), new Decimal("0.185")],
+  rationale:
+    "MSFT's own bear/base/bull scenario growth assumptions already authored for this run: 10.0% " +
+    "(trigger-A slowdown, margin reverts toward the ten-year median), 13.7% (ten-year CAGR consistent " +
+    "with the price-implied path), 18.5% (five-year implied path sustained). Cited from the scenarios " +
+    "above as the analyst's own already-recorded anchors, not re-derived from policy or history.",
+};
+
+const MSFT_OPERATING_MARGIN_RANGE: AnalystSuppliedRange = {
+  values: [new Decimal("0.38"), new Decimal("0.418"), new Decimal("0.468")],
+  rationale:
+    "38.0% is MSFT's own already-configured stress margin level (configuredConstants.stressMarginLevel), " +
+    "41.8% is the already-acquired M3 median margin (reverseDcf.medianMargin, equal to the bear scenario's " +
+    "own operating margin), and 46.8% is the already-acquired M3 current margin (reverseDcf.currentMargin, " +
+    "equal to the base/bull scenarios' own operating margin) — the company's ten-year margin cyclicality " +
+    "(marginHistory.cyclicality.tenYearMarginRange, 21.4pp) is the historical context these three already-" +
+    "recorded figures sit inside, cited, not computed into a range.",
+};
+
+export interface SensitivityRangeBundle {
+  growth: AnalystSuppliedRange;
+  operatingMargin: AnalystSuppliedRange;
+}
+
+const SENSITIVITY_RANGES: Record<string, SensitivityRangeBundle> = {
+  MSFT: { growth: MSFT_GROWTH_RANGE, operatingMargin: MSFT_OPERATING_MARGIN_RANGE },
+};
+
+/**
+ * MSFT only (ruling A). Null for every other ticker — including OKLO, whose
+ * growth/margin scenario drivers are themselves unauthored (`okloBundle`
+ * below) — so their M14 tornado rows and growth x margin table stay
+ * `available: false` exactly as before this capture.
+ */
+export function sensitivityRangesFor(ticker: string): SensitivityRangeBundle | null {
+  return SENSITIVITY_RANGES[ticker.toUpperCase()] ?? null;
+}
+
+const SENSITIVITY_NOTE =
+  " This run also carries two AnalystSuppliedRange captures for M14's sensitivity tornado/two-way " +
+  "machinery — three explicit growth points and three explicit operating-margin points, each with a " +
+  "recorded rationale (CF-STEP4-MSFT-RANGE-CAPTURE-01, authorised by CALVIN RULING — A). These are " +
+  "likewise analyst assumptions, not filing data: they size a sensitivity test, not a forecast, and " +
+  "must never be presented as though acquired from a filing.";
+
+function msftBundle(): AnalystInputBundle {
+  const bundle = bundleFrom(MSFT_FIXTURE);
+  return { ...bundle, note: bundle.note + SENSITIVITY_NOTE };
+}
+
 /**
  * OKLO, less the two things its validation set carries but nobody authored.
  *
@@ -90,7 +167,7 @@ function okloBundle(): AnalystInputBundle {
 }
 
 const BUNDLES: Record<string, AnalystInputBundle> = {
-  MSFT: bundleFrom(MSFT_FIXTURE),
+  MSFT: msftBundle(),
   OKLO: okloBundle(),
 };
 
