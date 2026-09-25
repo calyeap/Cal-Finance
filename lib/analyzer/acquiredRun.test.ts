@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import Decimal from "decimal.js";
 import { buildAcquiredRun, AnalystInputsUnavailableError } from "./acquiredRun";
+import { computeEnterpriseValue } from "./modules/enterpriseValue";
 import { __resetAcquisitionCache } from "./acquisition/provider";
 import { assembleAnalysisResult } from "./assemble";
 import {
@@ -137,6 +138,56 @@ describe("a real MSFT run, from filings to an Analysis Result", () => {
     }
   });
 
+  // CALVIN RULING — A, REQUIRE SAME-DATE EV BRIDGE INPUTS (issue #308,
+  // ruled 25 Sep 2026 03:46:48Z; implemented under issue #309).
+  it("carries the real acquired as-of date through to the bridge, coherent today — the correction is latent-only for MSFT", async () => {
+    const run = await msftRun({
+      tags: [
+        "us-gaap:EquityMethodInvestments",
+        "us-gaap:EquitySecuritiesWithoutReadilyDeterminableFairValueAmount",
+      ],
+      value: new Decimal("24400000000"),
+      errorDirection: "understates",
+    });
+
+    const ev = run.fixture.enterpriseValue;
+    expect(ev.totalDebtAsOfDate).toBe("2026-06-30");
+    expect(ev.financeLeaseLiabilitiesAsOfDate).toBe("2026-06-30");
+    expect(ev.cashAndMarketableDebtSecuritiesAsOfDate).toBe("2026-06-30");
+
+    // Same-date today, so the bridge still computes — no regression.
+    const result = computeEnterpriseValue(ev);
+    expect(result.suppressed).toBe(false);
+  });
+
+  it("returns INCOMPLETE naming the mismatched dates when the bridge's three balance-sheet inputs disagree, on the real acquired MSFT figures", async () => {
+    const run = await msftRun({
+      tags: [
+        "us-gaap:EquityMethodInvestments",
+        "us-gaap:EquitySecuritiesWithoutReadilyDeterminableFairValueAmount",
+      ],
+      value: new Decimal("24400000000"),
+      errorDirection: "understates",
+    });
+
+    // Force two of the three real, capture-derived bridge inputs to
+    // different as-of dates — the real values are untouched, only the
+    // dates are perturbed, to reproduce the ruling's own refusal case.
+    const mismatched = {
+      ...run.fixture.enterpriseValue,
+      financeLeaseLiabilitiesAsOfDate: "2026-03-31",
+    };
+
+    const result = computeEnterpriseValue(mismatched);
+    expect(result.suppressed).toBe(true);
+    if (result.suppressed) {
+      expect(result.state).toBe("INCOMPLETE");
+      expect(result.cause).toContain("total-debt=2026-06-30");
+      expect(result.cause).toContain("finance-lease-liabilities=2026-03-31");
+      expect(result.cause).toContain("cash-and-marketable-debt-securities=2026-06-30");
+    }
+  });
+
   it("queues price and current-operating-margin, and nothing else", async () => {
     // The 8 September ruling, on the real fact set. price is guard 1 — a feed
     // with no tag mapping. current-operating-margin is named in §3.8. Both are
@@ -229,6 +280,37 @@ describe("a real OKLO run — pre-revenue, thinner filings", () => {
 
     const result = assembleAnalysisResult(run.fixture);
     expect(result.ticker).toBe("OKLO");
+  });
+
+  // CALVIN RULING — A, REQUIRE SAME-DATE EV BRIDGE INPUTS (issue #308,
+  // ruled 25 Sep 2026 03:46:48Z; implemented under issue #309). OKLO's
+  // three named bridge inputs are coherent today (all @2026-06-30) — the
+  // correction is latent-only here too. OKLO's EV bridge stays INCOMPLETE
+  // even with the §4.4 judgment supplied, but for the SAME pre-existing
+  // reason as before this outcome (treasuryMethodDilution is not acquired
+  // for OKLO — unrelated to this ruling, and untouched by it): the
+  // same-date test must not introduce a second, different suppression
+  // reason on top of it.
+  it("stays INCOMPLETE for the same pre-existing reason (missing treasuryMethodDilution), never a date-mismatch cause — no regression for OKLO", async () => {
+    const run = await buildAcquiredRun({
+      ticker: "OKLO",
+      price: { value: new Decimal("92.44"), timestamp: "2026-09-04T21:00:00-04:00", source: "Yahoo Finance latest close" },
+      source: "CAPTURE",
+      acquiredAt: "2026-09-08T10:00:00.000Z",
+      nonOperatingInvestments: { tags: [], value: new Decimal(0), errorDirection: null },
+    });
+
+    const ev = run.fixture.enterpriseValue;
+    expect(ev.totalDebtAsOfDate).toBe("2026-06-30");
+    expect(ev.financeLeaseLiabilitiesAsOfDate).toBe("2026-06-30");
+    expect(ev.cashAndMarketableDebtSecuritiesAsOfDate).toBe("2026-06-30");
+
+    const result = computeEnterpriseValue(ev);
+    expect(result.suppressed).toBe(true);
+    if (result.suppressed) {
+      expect(result.state).toBe("INCOMPLETE");
+      expect(result.cause).toBe("missing REQUIRED input(s): treasuryMethodDilution");
+    }
   });
 
   // CB-H3-IMPLEMENT-01 — CalFinance Methodology v2's acquired-run cash basis

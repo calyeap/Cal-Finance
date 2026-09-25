@@ -372,11 +372,21 @@ export function buildCompanyInputs(
       // nothing here previously supplied the null the type already allowed.
       price: track("price", price === null ? null : { value: price.value, provenance: CLEAN_PROVENANCE }),
       totalDebt: track("totalDebt", get("total-debt")),
+      // CALVIN RULING A (issue #308/#309) — the as-of date each of the
+      // three named bridge inputs actually resolved to, read off the same
+      // FactRecord `get()` above reads its value from (`byId`, already
+      // built with the full record at :198), so the date is exactly the
+      // one the value came from. computeEnterpriseValue's own same-date
+      // test is the single place that compares them (§9 mistake 18 — one
+      // definition, not a second check duplicated here).
+      totalDebtAsOfDate: byId.get("total-debt")?.asOfDate ?? null,
       financeLeaseLiabilities: track("financeLeaseLiabilities", get("finance-lease-liabilities")),
+      financeLeaseLiabilitiesAsOfDate: byId.get("finance-lease-liabilities")?.asOfDate ?? null,
       cashAndMarketableDebtSecurities: track(
         "cashAndMarketableDebtSecurities",
         get("cash-and-marketable-debt-securities")
       ),
+      cashAndMarketableDebtSecuritiesAsOfDate: byId.get("cash-and-marketable-debt-securities")?.asOfDate ?? null,
       nonOperatingEquityInvestmentsAtBook: track(
         "nonOperatingEquityInvestmentsAtBook (§4.4 judgment — not a tagged fact)",
         nonOpSourced
