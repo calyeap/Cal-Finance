@@ -19,6 +19,19 @@ export interface EnterpriseValueInput {
   // value per §3.5. Independent of whether the other REQUIRED inputs are
   // present.
   nonOperatingInvestmentsErrorDirection: "understates" | "overstates" | null;
+  // CALVIN RULING — A, REQUIRE SAME-DATE EV BRIDGE INPUTS (issue #308,
+  // 25 Sep 2026 03:46:48Z, implemented under #309). The as-of date each of
+  // the three named instant balance-sheet inputs above resolved to —
+  // internal plumbing for this module's own INCOMPLETE cause, carrying no
+  // new rendered state and no new public contract. Optional so a caller
+  // that does not carry dates (e.g. calibrate-position.ts, and every
+  // existing unit test's synthetic input) skips the same-date test below
+  // entirely rather than being read as a mismatch — the ruling requires
+  // REFUSING an incoherent bridge, never inventing coherence for one that
+  // was never dated at all.
+  totalDebtAsOfDate?: string | null;
+  financeLeaseLiabilitiesAsOfDate?: string | null;
+  cashAndMarketableDebtSecuritiesAsOfDate?: string | null;
 }
 
 const REQUIRED_FIELD_NAMES = [
@@ -31,12 +44,46 @@ const REQUIRED_FIELD_NAMES = [
   "nonOperatingEquityInvestmentsAtBook",
 ] as const satisfies readonly (keyof EnterpriseValueInput)[];
 
-// Suppressed by: nothing. INCOMPLETE if any REQUIRED input missing (§7.2
-// M1) — never a computed value on partial data.
+// Suppressed by: a missing REQUIRED input (§7.2 M1), or — CALVIN RULING A,
+// issue #308/#309 — the three named instant balance-sheet bridge inputs
+// (total-debt, finance-lease-liabilities, cash-and-marketable-debt-
+// securities) resolving to different as-of dates. Both return INCOMPLETE;
+// neither computes a value on partial or incoherent data.
 export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseValueBridge {
   const missing = REQUIRED_FIELD_NAMES.filter((name) => input[name] === null);
   if (missing.length > 0) {
     return suppressedValue("INCOMPLETE", `missing REQUIRED input(s): ${missing.join(", ")}`);
+  }
+
+  // CALVIN RULING — A, REQUIRE SAME-DATE EV BRIDGE INPUTS (issue #308,
+  // ruled 25 Sep 2026 03:46:48Z; implemented under issue #309). Applies
+  // only to these three named inputs — not sharesOutstanding, price,
+  // treasuryMethodDilution or nonOperatingEquityInvestmentsAtBook (the
+  // ruling's own carve-out).
+  //
+  // Zero tolerance, no new constant: an exact string comparison of each
+  // resolved as-of date, the identical strictness
+  // acquisition/selectTagged.ts's componentAtSamePeriod already uses
+  // (`row.end !== primary.end`) for the same kind of same-period test one
+  // mapping entry over. Skipped entirely when a caller supplies no dates
+  // (undefined/null) for one or more of the three — that is a caller which
+  // never carried this plumbing (every pre-#309 EnterpriseValueInput
+  // caller), not a bridge the ruling has grounds to refuse.
+  const bridgeDates: { factId: string; asOfDate: string | null | undefined }[] = [
+    { factId: "total-debt", asOfDate: input.totalDebtAsOfDate },
+    { factId: "finance-lease-liabilities", asOfDate: input.financeLeaseLiabilitiesAsOfDate },
+    { factId: "cash-and-marketable-debt-securities", asOfDate: input.cashAndMarketableDebtSecuritiesAsOfDate },
+  ];
+  if (bridgeDates.every((d) => d.asOfDate != null)) {
+    const known = bridgeDates as { factId: string; asOfDate: string }[];
+    const disagree = known.some((d) => d.asOfDate !== known[0].asOfDate);
+    if (disagree) {
+      const detail = known.map((d) => `${d.factId}=${d.asOfDate}`).join(", ");
+      return suppressedValue(
+        "INCOMPLETE",
+        `EV bridge inputs resolve to different as-of dates (CALVIN RULING A, issue #308/#309): ${detail}`
+      );
+    }
   }
 
   const sharesOutstanding = input.sharesOutstanding as SourcedValue<Decimal>;

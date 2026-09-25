@@ -115,7 +115,11 @@ exactly this discipline **within** an entry, requiring every summed component
 to sit at the primary row's period — the requirement simply does not extend
 **across** the entries that make up one bridge.
 
-Reported, not fixed. It is a separate defect with a separate decision behind it.
+Still reported, not fixed — a separate defect with a separate decision behind
+it. `docs/ev-bridge-period-coherence-reconciliation.md` covers a related but
+distinct question: CALVIN RULING A (issue #308/#309) requires the bridge's
+three balance-sheet inputs to REFUSE when their resolved dates disagree; it
+does not fix this nested finance-lease double-count.
 
 ## What "today" means
 
