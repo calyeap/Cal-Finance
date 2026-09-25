@@ -215,8 +215,8 @@ queued-away wake was about.
    pointer-only for this fact type. Decide the current attention owner from
    that native evidence on every run:
    - **CALVIN** only for a current human decision, permission or acceptance
-     that passes the Gate-compression / DRAFT BEFORE ASK test above — the
-     most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` /
+     that passes the Gate-compression / DRAFT BEFORE ASK test above —
+     the most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` /
      `DONE: EVIDENCE` terminal comment (these route directly to OWNER per
      CF-TERMINAL-HANDOFF-REPAIR-01, whether or not `needs-owner-wake` is
      also present), or an open `CALVIN RULING` question, on any open issue
@@ -234,10 +234,11 @@ queued-away wake was about.
    if the choice passes one of the material-exception conditions above (see
    Terminal rule below). Milestone `COMPLETE`, old `NEEDS YOU`, free-text
    `YOUR MOVE`, or a stale Cal Finance Project Home `NEXT MOVE` line never
-   override this native GitHub evidence. Do not write current status,
-   `NEXT`, or attention to Cal Finance Project Home — this run's own typed
-   terminal comment (below) is the sole attention record. OWNER writes
-   nothing to Project Home at all, in this contract or any other.
+   override this native GitHub evidence.
+   Do not write current status, `NEXT`, or attention to Cal Finance
+   Project Home — this run's own typed terminal comment (below) is the
+   sole attention record. OWNER writes nothing to Project Home at all, in
+   this contract or any other.
 2. **Routine issue closure (bounded).** Scoped only to the wake target
    itself — this is not a backlog sweep. Close the wake target's linked
    originating issue only when it is an ordinary issue (never an umbrella
