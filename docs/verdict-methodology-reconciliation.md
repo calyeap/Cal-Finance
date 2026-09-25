@@ -1275,6 +1275,24 @@ read as adopting one.
    nothing. §12 bullet 5 below restates the same gap as an evidence
    requirement; neither closes it. No option is chosen here.
 
+   **Shape closed at `02d5970`; the residual half stays open.**
+   `CALVIN RULING — C` (PR #319 comment 5829725268, `02d5970`) rules this
+   item's shape question: **option C**, a genuinely new forecast-dispersion
+   measure — not A, not B. That half of this item is now answered and is
+   not reopened here or elsewhere in this pass. What ruling C leaves open —
+   "build/reconcile the smallest defensible independent measure first,
+   using existing captured and already-approved inputs where possible" — was
+   executed as `CF-STEP4-DISPERSION-C-01` (issue #320) and could not be
+   completed honestly: `docs/step4-forecast-dispersion.md` reconciles every
+   already-captured candidate the tree offers (scenario drivers, historical
+   margin cyclicality, the M14 tornado/two-way mechanism, rate sensitivity,
+   the reverse-DCF RONIC ladder, the pre-revenue funding module) and finds
+   each one either absent, not an already-approved input, already Step 1's
+   own object (`states.qualifying` → `trust.status`), or unbuildable without
+   new capture (`AnalystSuppliedRange` values the M14 mechanism needs exist
+   nowhere in the tree). The measure itself remains unbuilt; only the shape
+   question is closed.
+
 2. **What makes Step 2's growth licence UNKNOWN rather than resolved YES or
    NO — and does a ladder state the RONIC computation itself cannot
    resolve (RONIC NOT MEANINGFUL, §7.2 M5) count as UNKNOWN, or as a Step 1
@@ -1522,6 +1540,21 @@ forward from a prior read of this document.
   item 1's evidence-status note above; nothing acquired or built since the
   last read bears on this bullet, and none of the RONIC/comparator
   evidence above is a forecast-uncertainty measure of any kind.
+
+  **Re-verified still open at `02d5970`, with the gap now traced to its
+  structural cause rather than restated as a general absence.**
+  `CF-STEP4-DISPERSION-C-01` (issue #320, `docs/step4-forecast-dispersion.md`)
+  reconciled every already-captured candidate the tree offers against
+  ruling C's now-chosen shape (option C) and found none buildable: the
+  tornado/two-way `M14` mechanism (`lib/analyzer/modules/sensitivity.ts`)
+  is the one candidate that specifies independent of both option A's range
+  and option B's flags, and it is fully built and tested, but every real
+  run's `AnalystSuppliedRange` inputs are unset (`git grep -n
+  "AnalystSuppliedRange" -- lib` returns only the module and its own test
+  file) — a capture gap, not a code or methodology gap. This bullet
+  therefore no longer needs "a company where the reading differs" to stay
+  open; it needs analyst-supplied growth/margin (or rate/terminal-growth)
+  ranges captured for at least one company before it can close at all.
 
 **No number of companies below the point where these facts exist is
 "enough,"** for the same reason §5 gave (small-sample decision theory;
