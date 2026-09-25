@@ -34,6 +34,29 @@ that commit (§3 and §6 below cite the exact lines re-read). No
 document. No threshold, band, cut-point, or disagreement constant is
 introduced anywhere below, including as an illustrative or "for now" number.
 
+> **Refreshed at `origin/master` = `8be9a50`, by `CF-VERDICT-EVIDENCE-REFRESH-01`
+> ([issue #316](https://github.com/calyeap/Cal-Finance/issues/316)).** Only
+> **§§11–13** below were re-read and re-verified against the tree at this
+> head for this pass, each citation opened or run fresh rather than carried
+> from a prior document's summary (issue #205's IMPLEMENTATION PROOF rule).
+> **§§0–10 and §14 are untouched by this pass** — §§0–8 were already
+> historical record before this refresh (superseded-in-part, per the note
+> above); §§9–10 are `CALVIN RULING — C`'s applied, ruled structure and are
+> not re-opened; §14's delivered items are confirmed still accurate by the
+> same re-read that refreshed §§11–13, but its own text is not edited here.
+> `lib/analyzer/policy.ts` remains byte-identical to `f74f314` — the tree
+> state immediately after `CF-VERDICT-NONPOLICY-GAPS-01` (`7a2dd69`, #281) —
+> confirmed directly by `git hash-object` against that commit, not assumed
+> from a prior claim. `lib/analyzer/verdict.ts` is byte-identical to `8be9a50`
+> (untouched by this refresh) but **not** to `edc6fb9`: it changed in
+> `b16edc2` (`CF-M9-BLOCKER14-RECON-01`, #283), a comment-only edit to its
+> header block (`verdict.ts:21-39`) recording that `achievedRevenueCagr` now
+> carries the achieved half of §10.6.2's comparator; no branch, condition,
+> string, or line of logic changed. No `docs/frozen/` byte and no
+> `FROZEN_HASHES` entry is touched. This refresh
+> answers no §11 item, adds no numeric slot, and closes no acceptance-matrix
+> row (`docs/acceptance-matrix.md` is cited, not edited).
+
 ---
 
 ## 0. What this reconciles, and against what
@@ -1243,6 +1266,15 @@ read as adopting one.
    default. Answering it needs Calvin's ruling on which shape, then real
    observations to size it (§12 below); no number is proposed.
 
+   **Evidence status, refreshed at `8be9a50`.** Unchanged and still fully
+   open: no measure of forecast/estimation uncertainty independent of the
+   scenario range's own spread exists anywhere in the current tree — a
+   fresh search of `lib/analyzer` for any such construct (by name or by
+   the concepts this item names: forecast uncertainty, estimation
+   uncertainty, a margin-of-safety input distinct from the range) returns
+   nothing. §12 bullet 5 below restates the same gap as an evidence
+   requirement; neither closes it. No option is chosen here.
+
 2. **What makes Step 2's growth licence UNKNOWN rather than resolved YES or
    NO — and does a ladder state the RONIC computation itself cannot
    resolve (RONIC NOT MEANINGFUL, §7.2 M5) count as UNKNOWN, or as a Step 1
@@ -1263,6 +1295,28 @@ read as adopting one.
    change the outcome** — see §12 below; it is still Calvin's to make, not
    defaulted here either way.
 
+   **Evidence status, refreshed at `8be9a50`.** The premise of the
+   consequence sentence above — "RONIC NOT MEANINGFUL on every cell" for
+   MSFT — is superseded (§12 below); it no longer describes MSFT's real
+   ladder. On the current, real, CI-asserted read, MSFT's RONIC is **CLEAN**
+   at ~17.4977% on all nine reverse-DCF cells
+   (`lib/analyzer/reverseDcfOnRealRun.test.ts:74-82`), comfortably above
+   every one of the 8/10/12% rate-grid points, not close to any of them.
+   That reading is not the case any of this item's three options define as
+   ambiguous: option 1's estimation-uncertainty test does not fire (17.5%
+   is not close to 8%, 10%, or 12%); option 2's "not a clean computed
+   reading" does not fire (this is a clean computed reading); option 3's
+   Step 1 failure does not fire (the RONIC computation resolves, it is not
+   unmeaningful). So MSFT's Step 2 reading is `YES` under **all three**
+   options alike — this item's answer **still does not change MSFT's Step 2
+   outcome**, exactly as the sentence above states, but that invariance now
+   holds for the opposite reason and points to the opposite reading: not
+   because RONIC is uncomputable under every option, but because it is
+   cleanly computed and licensing under every option. This item therefore
+   has no live MSFT case bearing on its answer either way today; it remains
+   open on its own merits (and on OKLO, which never reaches Step 2 — §12
+   below). No option is chosen by this observation.
+
 3. **Is the conservative / no-growth value a fixed floor (e.g. zero growth)
    or a company-specific lower bound (e.g. the bear scenario's own growth
    path)?** Unchanged from §4 item 3 above, restated for Step 2's NO branch
@@ -1273,6 +1327,9 @@ read as adopting one.
    assumption that already feeds Step 5's comparison, which risks
    reintroducing Finding 3's double-counting concern one layer down. Not
    resolved here.
+
+   **Evidence status, refreshed at `8be9a50`.** Unchanged — no new evidence
+   bears on fixed-floor versus company-specific bound; still open.
 
 4. **Which of M7's nine reverse-DCF cells (or which combination) supplies
    Step 2's RONIC-vs-rate reading and Step 7's consistency-check figure?**
@@ -1286,12 +1343,31 @@ read as adopting one.
    uniformly NOT MEANINGFUL — which the current calibration set (§12
    below) does not supply.
 
+   **Evidence status, refreshed at `8be9a50`.** The final clause above is
+   superseded: the calibration set now DOES supply two such companies —
+   MSFT, CLEAN at ~17.4977%, and NVDA, CLEAN at ~75.24% (§12 below) — real,
+   CI-asserted ladders, neither "not uniformly NOT MEANINGFUL" as a bare
+   absence any longer. That closes part of what this item's own text named
+   as missing, but not the part that would let its three options be told
+   apart: both companies sit far above every rate in the 8/10/12% grid
+   rather than spanning or straddling it, so nothing yet distinguishes a
+   single-cell reading from a grid-range reading from a
+   direction-of-agreement reading — all nine cells agree in direction for
+   both companies today. That would need a company whose ladder crosses or
+   sits near the grid, which neither currently supplies (§12 bullet 4
+   below, still open). The three options themselves are unchanged; none is
+   chosen here.
+
 5. **Any numeric band or cut-point the eventual CHEAP / FAIR / EXPENSIVE
    classification at Step 5 still needs**, once real observations exist.
    Unchanged from §4 item 4. Explicitly not answered here, per HARD BOUNDS
    and `docs/frozen/calfinance-methodology-v2.md`'s own "numerical
    valuation-position cut-points remain TEST/provisional... until
    adequately validated and explicitly approved" (line 154).
+
+   **Evidence status, refreshed at `8be9a50`.** Unchanged and, by HARD
+   BOUNDS and the frozen methodology's own PROVISIONAL discipline, not
+   answerable from evidence alone even where it existed; still open.
 
 6. **The mirrored-versus-asymmetric EXPENSIVE geometry question.**
    Unchanged from §4 item 5, named directly by Finding 5 and by ruling C's
@@ -1300,11 +1376,26 @@ read as adopting one.
    to adopt the shape now is not itself a ruling that the shape is wrong,
    only that it is not decided.
 
+   **Evidence status, refreshed at `8be9a50`.** Unchanged — ruling C's
+   non-adoption stands; still open.
+
 7. **Whether five-year and ten-year observations may share one band.**
    Unchanged from §4 item 6 (`docs/m8c-calibration-findings.md:151`). Still
    open, still to be "answered from observations rather than assumed," per
    §10.6.2's own text on this point, carried forward **verbatim** into the
    quoted replacement at §10 above.
+
+   **Evidence status, refreshed at `8be9a50`.** Partly exists, where it did
+   not before. NVDA now supplies one company's own matched pair on the same
+   single-tag series (`us-gaap:Revenues`): ten-year FY2016→FY2026 at
+   45.6965% and five-year FY2021→FY2026 at 66.8986% (§12 below,
+   `docs/nvda-realrun-observation.md:113-155`) — §12's second evidence-gap
+   bullet, closed. That is one company's pair, not the cross-company
+   comparison "answered from observations rather than assumed" implies:
+   whether a common band holds needs multiple companies' pairs to compare
+   against each other, and NVDA supplies only the first. This item is not
+   answered by having one data point; it is closer to answerable than
+   before.
 
 8. **Does the REQUIRED-comparator gate (spec `:1077`, `:1085`, carried
    forward into Step 7's paragraphs at §10 above) still reach the position
@@ -1351,31 +1442,86 @@ value, not the underlying facts that would have to exist to observe it.
 Restated against the ruled structure's own steps, not re-derived from
 scratch, because the same evidence gaps block both:
 
-- At least one company whose RONIC ladder is **not** uniformly NOT
-  MEANINGFUL across the 8/10/12% × three-margin-level grid — needed for
+**Refreshed at `8be9a50`.** Each bullet below is individually
+re-dispositioned against the current tree rather than left as one
+undifferentiated list. Bullets 1 and 2 are **CLOSED**; bullets 3, 4 and 5
+are **OPEN**, each re-verified on its own current evidence, not carried
+forward from a prior read of this document.
+
+- **CLOSED.** At least one company whose RONIC ladder is **not** uniformly
+  NOT MEANINGFUL across the 8/10/12% × three-margin-level grid — needed for
   Step 2 to ever resolve YES or NO rather than the item-2 open question
-  above. MSFT fails this today (all nine cells NOT COMPUTABLE, §13 below),
-  so MSFT alone can never validate Step 2 regardless of which of item 2's
-  options is ruled.
-- At least one company producing **both** a ten-year and a five-year
-  achieved comparator on the same series — needed for item 7's
-  horizon-pooling question, exactly as §5 stated; unchanged.
-- At least one company clearing every upstream blocker
-  `docs/m8c-calibration-findings.md` §5 lists in dependency order (Step 7
-  scenario authorship, the §4.4 non-operating-investments judgment, an
-  acquired RONIC ladder, a set `nopatTaxRate`) — a partial clearance
-  produces zero usable observations, exactly as the M8-c counterfactual
-  pass demonstrated for MSFT and COST ("still solve 0 of 9 cells").
-- For Step 6's flip test and item 2's UNKNOWN question specifically: at
-  least one company where the RONIC-vs-rate reading is genuinely close to
-  the rate-grid boundary, so that YES/NO/UNKNOWN's boundary condition has a
-  real case to test against rather than only the two clean extremes
-  (uniformly NOT MEANINGFUL, or comfortably above the rate).
-- For Step 4's margin-of-safety input specifically (newly opened, item 1
-  above): at least one company where forecast/estimation uncertainty is
-  material and can be measured independently of the scenario range's own
-  spread, so item 1's options can be told apart empirically rather than
-  merely argued.
+  above. ~~MSFT fails this today (all nine cells NOT COMPUTABLE, §13
+  below), so MSFT alone can never validate Step 2 regardless of which of
+  item 2's options is ruled.~~ **Superseded.** Both MSFT and NVDA now clear
+  this bullet on real, CI-asserted runs: MSFT's ladder is CLEAN at
+  ~17.4977% on all nine cells (`lib/analyzer/reverseDcfOnRealRun.test.ts:74-82`,
+  test run fresh for this refresh, passing), NVDA's is CLEAN at ~75.2385%
+  on all nine (`lib/analyzer/nvdaRealRunObservation.test.ts`, likewise
+  re-run and passing; `docs/ronic-deltas-composition-reconciliation.md`
+  §7c-7d). Closed by `CF-RONIC-DELTAS-RECON-01` (`1d654a9`, #299), which
+  acquired both `fiveYearDeltaNopat` and `fiveYearDeltaInvestedCapital` —
+  the pipeline-wide denominator gap, not a company-specific fact. See the
+  corrected MSFT paragraph below for what this changes.
+- **CLOSED.** At least one company producing **both** a ten-year and a
+  five-year achieved comparator on the same series — needed for item 7's
+  horizon-pooling question, exactly as §5 stated; unchanged in
+  requirement. NVDA supplies this on `us-gaap:Revenues`: ten-year
+  FY2016→FY2026 at 45.6965% and five-year FY2021→FY2026 at 66.8986%, both
+  with `yearsStale: 0` and no cross-series stitching
+  (`docs/nvda-realrun-observation.md:113-155`). Closed by
+  `CF-NVDA-RUN-OBSERVE-01` (#296); see item 7's evidence-status note above
+  for what one company's pair does and does not settle.
+- **OPEN.** At least one company clearing every upstream blocker
+  `docs/m8c-calibration-findings.md` §5 lists in dependency order (1: the
+  §4.4 non-operating-investments judgment, recorded per company; 2: an
+  acquired RONIC ladder; 3: Command Center's `nopatTaxRate` ruling; 4:
+  resolving the D1 stale-window defect; 5: Step 7 scenario authorship
+  beyond the two-company set; 6: ruling the horizon and which-cell
+  questions) — a partial clearance produces zero usable observations,
+  exactly as the M8-c counterfactual pass demonstrated for MSFT and COST
+  ("still solve 0 of 9 cells"). **Re-verified still open, item by item.**
+  Item 2 (RONIC acquired) is now cleared for MSFT and NVDA (bullet 1
+  above). Item 3 is not: `lib/analyzer/policy.ts`'s
+  `UNDEFINED_POLICY_CONSTANTS.nopatTaxRate` is still `null`
+  (`policy.ts:68-73`, re-read, byte-identical to `7a2dd69` — no Command
+  Center ruling has landed); the non-zero tax rate the MSFT real run above
+  actually uses comes from that run's own `configuredConstants` (an
+  analyst-supplied, per-run input threaded through
+  `lib/analyzer/acquisition/companyInputs.ts:546`), not from a
+  policy-wide constant — exactly the distinction the M8-c report itself
+  drew ("the 0.20 in the MSFT fixture is what a recovered reference grid
+  is *consistent with*, not a configured constant"). Item 1 is not fully
+  cleared through the product's own recording path either: the MSFT real
+  run above answers §4.4 by constructing the run directly with
+  `nonOperatingInvestments: { tags: [], value: 0 }` rather than through
+  `recordJudgment`'s `analyzer_run_judgments` seam that
+  `nonOperatingJudgmentRecordedOnRealRun.test.ts` exercises elsewhere in
+  the tree; NVDA's own real run leaves §4.4 explicitly **unmade**
+  (`docs/nvda-realrun-observation.md`, "What was done" item 3). No company
+  today clears every item in this list through the product's own recording
+  and configuration paths at once, so this bullet stays open — for a
+  narrower reason than before (RONIC is no longer any part of what blocks
+  it), but open.
+- **OPEN.** For Step 6's flip test and item 2's UNKNOWN question
+  specifically: at least one company where the RONIC-vs-rate reading is
+  genuinely close to the rate-grid boundary, so that YES/NO/UNKNOWN's
+  boundary condition has a real case to test against rather than only the
+  two clean extremes (uniformly NOT MEANINGFUL, or comfortably above the
+  rate). **Re-verified still open.** MSFT (~17.50%) and NVDA (~75.24%) are
+  both now in the "comfortably above the rate" extreme this bullet already
+  named as insufficient on its own — neither is within any plausible
+  reading of "close to" 8%, 10%, or 12%. The calibration set now has two
+  companies at one extreme and none near the boundary; the case this
+  bullet asks for still does not exist.
+- **OPEN.** For Step 4's margin-of-safety input specifically (newly
+  opened, item 1 above): at least one company where forecast/estimation
+  uncertainty is material and can be measured independently of the
+  scenario range's own spread, so item 1's options can be told apart
+  empirically rather than merely argued. **Re-verified still open** — see
+  item 1's evidence-status note above; nothing acquired or built since the
+  last read bears on this bullet, and none of the RONIC/comparator
+  evidence above is a forecast-uncertainty measure of any kind.
 
 **No number of companies below the point where these facts exist is
 "enough,"** for the same reason §5 gave (small-sample decision theory;
@@ -1398,31 +1544,102 @@ evidence — it changes what the evidence would be used to decide.
 today, on the real numbers already in the tree — and whether that differs
 from §5's answer.**
 
-- **MSFT.** RONIC NOT MEANINGFUL on all nine reverse-DCF cells, confirmed
-  unchanged at this head (`lib/analyzer/modules/reverseDcf.ts:187-199`;
-  `lib/analyzer/reverseDcfOnRealRun.test.ts:57-69`). Step 2 cannot resolve
-  YES or NO for MSFT today regardless of which of item 2's options is
-  ruled. **Whichever way item 2 is answered, the outcome is the same**: if
-  RONIC NOT MEANINGFUL is read as UNKNOWN, Step 3 would need to compute
-  both values, but Step 2's own YES/NO/UNKNOWN reading depends on a RONIC
-  figure that does not exist for MSFT on any cell, so Step 6's flip test
-  has no genuine second reading to test against the first — the position
-  is INCONCLUSIVE; if RONIC NOT MEANINGFUL is instead read as a Step 1
-  failure, the position is INCONCLUSIVE at Step 1 directly. Either
-  resolution of item 2 leaves MSFT INCONCLUSIVE. **This is unchanged from
-  §5's answer under the superseded §3.3 structure** (MSFT stays
-  `INCOMPLETE` at the product layer, INCONCLUSIVE at the spec layer,
-  either way) — the ruled structure does not create a RONIC figure MSFT's
-  own fundamentals do not support, and reads the same per-cell ladder the
-  frozen contract already computes
-  (`lib/analyzer/assemble.ts:508-520`; `lib/analyzer/suppression.ts:79-91,121,175-179`
-  confirm the range itself is unaffected — `SUPPRESSION_SCOPE_BY_STATE`,
+**Refreshed at `8be9a50` — the MSFT paragraph below is corrected from the
+tree, not carried forward.** The prior text's premise (RONIC NOT MEANINGFUL
+on every MSFT cell) is superseded by `CF-RONIC-DELTAS-RECON-01`; this is the
+single most decision-relevant correction this refresh makes, per issue
+#316's own framing, so it is stated plainly with the numbers rather than
+patched in place.
+
+- **MSFT.** RONIC is **CLEAN at ~17.4977%** on all nine reverse-DCF cells —
+  not NOT MEANINGFUL — confirmed on a real acquired run through the same
+  gated product path OKLO and NVDA use
+  (`lib/analyzer/reverseDcfOnRealRun.test.ts:74-82`,
+  `lib/analyzer/modules/reverseDcf.ts:187-199`; both re-read and the test
+  re-run for this refresh, passing). Five-year growth itself solves on 5 of
+  the 9 cells; the other 4 (every 12% cell, plus stress@10%) hit a
+  real, RONIC-independent solver state (`DEGENERATE — TERMINAL EXCEEDS
+  TOTAL VALUE`), never the missing-input defect this test file's own
+  history is named for. Separately, the same run's leverage/trust/range
+  path — unaffected by the RONIC fix, driven instead by §4.4 being
+  answered — produces a real, unsuppressed fair-value range (bear $265 /
+  bull $650 / weighted ≈$475), leverage `PASS` (`netDebtRatio` ≈0.008), and
+  trust `PARTIAL`, re-confirmed directly against this run's own output for
+  this refresh (`lib/analyzer/assemble.ts:508-520`;
+  `lib/analyzer/suppression.ts:79-91,121,175-179` — `SUPPRESSION_SCOPE_BY_STATE`,
   `SCOPE_REMOVES_FAIR_VALUE_RANGE` and `stateRemovingFairValueRange` all
-  re-read and matching §5's citations).
+  re-read and consistent with what the range's own suppression state
+  shows).
+
+  **Is MSFT's outcome under item 2's options still invariant? Yes — but not
+  for the reason previously stated, and not to the same result.** RONIC at
+  ~17.50% sits comfortably above every point in the 8/10/12% rate grid —
+  not close to any of them, and not a ladder state any of item 2's three
+  options treat as ambiguous (item 2's evidence-status note above spells
+  out why each of the three options reads this identically). So **Step 2's
+  growth licence for MSFT reads `YES` under all three of item 2's options
+  alike** — the opposite reading from the superseded text, and for the
+  opposite reason: not because RONIC cannot be computed under any option,
+  but because it computes cleanly and licenses growth under every option.
+  Item 2's own answer therefore still does not change MSFT's Step 2
+  reading — but where the old text's invariance meant "INCONCLUSIVE either
+  way," the current invariance means "`YES` either way."
+
+  **This does not mean MSFT would render a CHEAP/FAIR/EXPENSIVE position
+  today.** Step 2 resolving `YES` only licenses Step 3 to compute the
+  growth-inclusive value; Step 5's comparison still needs Step 4 to set the
+  fair-value zone that comparison reads, and Step 4's own measurement is
+  item 1 above — still fully open, with no independently-measurable
+  forecast-uncertainty input anywhere in the tree (item 1's evidence-status
+  note above). **The controlling open item for MSFT's position has moved
+  from item 2 to item 1** — a different §11 item than the one MSFT's
+  outcome depended on before this refresh, not the same blocker restated.
+  This observation names which item now controls; it answers neither item
+  1 nor item 2, and it does not compute or imply a position (HARD BOUNDS).
+  The achieved-versus-required comparator (Step 7, item 8) is already
+  closed and does not reach the position either way (item 8's own CLOSED
+  note above, unchanged by this refresh). At the product layer, MSFT's
+  actual `deriveVerdict` output is unaffected by any of this: the function
+  implements none of the ruled structure's seven steps yet (§13 below), so
+  it still returns `INCOMPLETE` with `COMPARATOR_NOT_YET_AVAILABLE` for
+  every run regardless of RONIC, confirmed directly against this same real
+  run's own `deriveVerdict(result)` output for this refresh.
 - **OKLO.** Unchanged: never reaches §10.6.2 at all, blocked upstream at
   Step 1 by the leverage precondition (`LEVERAGE UNSUPPORTED IN v1`,
-  downstream of the missing enterprise value). **Identical to §5's
-  answer.** No ruling on this addendum changes that structural fact.
+  downstream of the missing enterprise value) — re-confirmed at this head
+  by the currently-passing real-run tests that assert exactly this state
+  for OKLO (`lib/analyzer/nonOperatingJudgmentRecordedOnRealRun.test.ts`,
+  `lib/analyzer/recordedAnalystInputEntryOnRealRun.test.tsx`). **Identical
+  to §5's answer**, and unaffected by the RONIC fix (OKLO's own RONIC ladder
+  is separately unacquired — `docs/ronic-deltas-composition-reconciliation.md`
+  §7c — but OKLO never reaches Step 2 for this reason regardless). No
+  ruling on this addendum changes that structural fact.
+
+**What this refresh changes about the next step, and what it does not.**
+Per issue #316 SCOPE 5 — naming this precisely is this refresh's own
+deliverable; ruling on it is a separate, later outcome, not this one.
+Two of §12's five evidence bullets are now closed (RONIC not-uniformly-
+NOT-MEANINGFUL; a same-series dual-horizon comparator), both by real,
+CI-asserted company evidence rather than by argument. That does **not**
+make §11's gate rulable on true evidence today: three of the five bullets
+remain open (bullets 3–5 above), and every one of §11 items 1, 3, 4, 5 and
+6 is still either fully open or only partly evidenced — none is answerable
+from what exists in the tree now. What has changed is narrower and more
+specific than "closer to rulable": MSFT's position no longer depends on
+item 2 (its RONIC reading is no longer the ambiguous case item 2's options
+disagree about), so item 2 could be ruled today without changing MSFT's own
+outcome either way; but item 1 (Step 4's margin-of-safety measurement) has
+become the item MSFT's outcome now turns on, and item 1 remains as
+unevidenced as it was before this refresh — no forecast-uncertainty measure
+independent of the scenario range exists anywhere in the tree. **The named,
+specific evidence gap still standing in front of §11's gate is item 1's
+own bullet (§12 bullet 5 above): a company where forecast/estimation
+uncertainty is material and independently measurable.** Ruling item 2 alone
+would not unblock MSFT; ruling item 1 might, but no evidence exists yet to
+rule it on. That is a narrowing of what stands in front of the gate, not a
+clearing of it — and it is reported, not acted on: no §11 item is answered
+by this refresh, and the gate itself is not raised here (HARD BOUNDS,
+CALVIN REQUIRED section).
 
 ---
 
@@ -1453,6 +1670,9 @@ unresolved through this addendum; each now carries what changed.
   this one standing branch gap is closed, and MSFT and OKLO both still read
   `INCOMPLETE` before and after (§12 above; issue #280's PR states the exact
   mechanism for each).
+
+  **Re-verified at `8be9a50`.** `lib/analyzer/verdict.ts:93-103` still names
+  the condition exactly as described; no drift.
 - **§6.4 — `achievedRevenueCagr` remains unwired into `AnalysisResult`.**
   Was still needed, unchanged — description corrected under
   `CALVIN RULING — B` (amendment 3) — through this addendum. This figure is
@@ -1469,6 +1689,12 @@ unresolved through this addendum; each now carries what changed.
   (`fixtures/msft.ts`, `fixtures/oklo.ts`), which carry no such series. The
   §3/§10 full structure's Dimension 2 / Step 2 growth licence remains
   unimplemented; only the wiring gap this bullet named is closed.
+
+  **Re-verified at `8be9a50`.** `AnalysisResult.achievedRevenueCagr` is
+  still declared at `lib/analyzer/types.ts:1044`, still populated at
+  `lib/analyzer/acquisition/companyInputs.ts:269,579`, and
+  `fixtures/msft.ts:300-304`/`fixtures/oklo.ts:373` still carry the same
+  honest `blockedBy` state with no revenue series; no drift.
 - **`lib/analyzer/verdict.ts` re-verified byte-identical to `ed81500`
   through this addendum and every outcome before `CF-VERDICT-NONPOLICY-GAPS-01`**
   — the same four unconditional `INCOMPLETE` branches
@@ -1483,6 +1709,20 @@ unresolved through this addendum; each now carries what changed.
   by `CF-VERDICT-NONPOLICY-GAPS-01`, whose HARD BOUNDS forbid touching it.
   The §3/§10 full structural proposal remains unimplemented in either file
   and could not be implemented without violating HARD BOUNDS.
+
+  **Re-verified at `8be9a50`.** `lib/analyzer/policy.ts` is still
+  byte-identical to the tree state right after `7a2dd69` — confirmed
+  directly by `git hash-object` against that commit for this refresh, not
+  assumed. `lib/analyzer/verdict.ts` is byte-identical to `8be9a50` (untouched
+  by this refresh) but **not** to the `7a2dd69` tree state: it changed
+  comment-only in `b16edc2` (`CF-M9-BLOCKER14-RECON-01`, #283), recording
+  that `achievedRevenueCagr` now carries the achieved half of §10.6.2's
+  comparator; all five branches below and their logic are unchanged. The historical
+  four-branch citation above (`verdict.ts:53-59,63-68,70-75,77-80`) is
+  accurate for the pre-`7a2dd69` file it describes and needs no correction;
+  the current file's five branches are `verdict.ts:62-68,72-77,79-84,96-103,105-108`,
+  matching `docs/acceptance-matrix.md` row 13's own `:61-109` citation
+  exactly — no line-number drift found in either citation.
 
 ---
 
