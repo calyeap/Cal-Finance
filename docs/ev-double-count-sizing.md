@@ -22,6 +22,19 @@ document sizes that across the ten calibration companies. It changes no code,
 bumps no version, and rules nothing about the filers it cannot settle — that
 half is with CalFinance.
 
+**Reconciled against current authority, still not fixed — 2026-09-25.**
+`CF-LEASE-NESTING-DOUBLECOUNT-RECON-01` (issue #311) checked whether
+authority already determines a correction here. It does not: applying the
+2026-09-09 ruling to a specific filer's bridge needs a per-filer nesting
+determination, and `lease-once-measurement.md` §6 leaves *how that is
+established* open — every route to it (a new mapping-level element test, an
+instance/linkbase fetch, a fourth §4.4 judgment, the §3.8.1 AI fallback) was
+also this outcome's own HARD BOUND. It ends on one closed `CALVIN REQUIRED`,
+not a code change. The reasoning, the re-probe and the closed question are
+in [`ev-lease-nesting-doublecount-reconciliation.md`](./ev-lease-nesting-doublecount-reconciliation.md).
+The sizing below — $105M for UNP, and the rest of this document — is
+unchanged by it.
+
 Reproduce:
 
 ```bash
