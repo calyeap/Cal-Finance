@@ -134,8 +134,9 @@ No UPDATE capability is implemented by this record.
   its own right, independently restated in §6 above and in
   `docs/product-decisions.md` item 18. No authority conflict — no
   `RECONCILIATION REQUIRED`.
-- Full citations, reasoning and a proposed (not started) first bounded
-  UPDATE implementation outcome: [`docs/update-workflow-mode-reconciliation.md`](update-workflow-mode-reconciliation.md).
+- Full citations, reasoning, and the first bounded UPDATE implementation
+  outcome — implemented (`CF-UPDATE-FIRST-OUTCOME-01`, issue #337):
+  [`docs/update-workflow-mode-reconciliation.md`](update-workflow-mode-reconciliation.md).
 
 ## Source-of-truth rule
 

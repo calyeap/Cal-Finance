@@ -1,15 +1,16 @@
 "use server";
 
-import { redirect } from "next/navigation";
+import { redirect, notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { activeProvider } from "@/lib/marketdata";
 import {
   resolveAnalyzerIdentity,
   mayBeginAnalysis,
-
+  type AnalyzerIdentity,
 } from "@/lib/analyzer/identity";
 import {
   createRun,
+  getRun,
   recordFactDecision,
   recordJudgment,
   recordProfileDecision,
@@ -50,14 +51,16 @@ export async function resolveTickerAction(
 }
 
 /**
- * Commits the run, runs the analysis, and moves to the report.
+ * Refuses exactly as Screen 1 does when an identity does not resolve, or
+ * otherwise commits a brand-new run for it and runs the run through the
+ * unchanged acquire → verify → compute pipeline.
  *
- * Re-resolves rather than trusting the posted company name: the identity in
- * the form is client-supplied, and a run must not be created for a company the
- * server has not itself resolved. This is the same reasoning as the gate —
- * what the client says happened is not evidence that it did.
+ * Shared by beginAnalysisAction (Step 1, a client-typed ticker) and
+ * beginUpdateRunAction (CF-UPDATE-FIRST-OUTCOME-01, a prior run's own
+ * server-held ticker) so the two entry points refuse identically and neither
+ * can drift from the other's fixture/refusal behaviour.
  *
- * CF-ANALYZER-AUTORUN-01 — this action used to hand the analyst to Screen 2's
+ * CF-ANALYZER-AUTORUN-01 — this used to hand the analyst to Screen 2's
  * per-fact queue. Calvin ruled on 22 September 2026 04:28:04Z that the normal
  * contract is "ticker in → report out", so acquisition, routine verification
  * and the profile determination now run here, behind the scenes, and the
@@ -65,10 +68,7 @@ export async function resolveTickerAction(
  * still reachable, from the Sources / Details links on Overview and Full
  * Analysis — they are detail, not steps.
  */
-export async function beginAnalysisAction(formData: FormData): Promise<void> {
-  const ticker = String(formData.get("ticker") ?? "");
-  const identity = await resolveAnalyzerIdentity(ticker, activeProvider());
-
+async function commitAndRunAnalysis(identity: AnalyzerIdentity): Promise<void> {
   if (!mayBeginAnalysis(identity) || identity.outcome !== "RESOLVED") {
     // Nothing is created. The screen re-renders with the refusal.
     redirect("/analyzer");
@@ -95,6 +95,49 @@ export async function beginAnalysisAction(formData: FormData): Promise<void> {
   await advanceRunAutomatically(runId);
 
   redirect(`/analyzer/${runId}`);
+}
+
+/**
+ * Commits the run, runs the analysis, and moves to the report.
+ *
+ * Re-resolves rather than trusting the posted company name: the identity in
+ * the form is client-supplied, and a run must not be created for a company the
+ * server has not itself resolved. This is the same reasoning as the gate —
+ * what the client says happened is not evidence that it did.
+ */
+export async function beginAnalysisAction(formData: FormData): Promise<void> {
+  const ticker = String(formData.get("ticker") ?? "");
+  const identity = await resolveAnalyzerIdentity(ticker, activeProvider());
+  await commitAndRunAnalysis(identity);
+}
+
+/**
+ * CF-UPDATE-FIRST-OUTCOME-01 — the UPDATE entry point: "Look at this company
+ * again", surfaced from an existing completed report (AnalyzerReportFrame).
+ *
+ * Starts a brand-new, independent Analyzer run for the SAME, already-
+ * confirmed company — skipping only Screen 1's ticker-entry/resolution
+ * interaction — while the full Step 2 per-fact spot-check pass still runs
+ * unchanged on the new run, exactly as it would on a first run. Nothing is
+ * copied forward from the prior run: the new run gets its own runId and its
+ * own fact decisions, and the prior run's row and report are left untouched.
+ *
+ * The company identity comes ONLY from the prior run's own server-held
+ * ticker (getRun), re-resolved server-side through the same
+ * resolveAnalyzerIdentity call Screen 1 uses — never from anything the
+ * client posts. This is the same property beginAnalysisAction already holds
+ * ("what the client says happened is not evidence that it did"), applied to
+ * an entry point that has no client-typed ticker to begin with. A ticker
+ * that no longer resolves is refused by commitAndRunAnalysis exactly as it
+ * would be on Screen 1 — this entry point does not weaken that check.
+ */
+export async function beginUpdateRunAction(formData: FormData): Promise<void> {
+  const priorRunId = String(formData.get("runId") ?? "");
+  const priorRun = await getRun(priorRunId);
+  if (priorRun === null) notFound();
+
+  const identity = await resolveAnalyzerIdentity(priorRun.ticker, activeProvider());
+  await commitAndRunAnalysis(identity);
 }
 
 function parseReasonCode(raw: FormDataEntryValue | null): ReasonCode | null {

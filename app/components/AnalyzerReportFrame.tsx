@@ -7,7 +7,7 @@ import { PriceChartPanel } from "./PriceChartPanel";
 import { ScenarioRangeStrip } from "./ScenarioRangeStrip";
 import { AnalyzerRightRail } from "./AnalyzerRightRail";
 import { trustStatusLine, trustConsequenceLine, uncertaintyLevel } from "@/lib/analyzer/trustCopy";
-import { createDeepSnapshotAction } from "@/app/actions/analyzer";
+import { createDeepSnapshotAction, beginUpdateRunAction } from "@/app/actions/analyzer";
 import { boundState, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — docs/design/analyzer-v2-design-authority.md
@@ -160,6 +160,20 @@ export function AnalyzerReportFrame({
           <input type="hidden" name="runId" value={runId} />
           <button className="act" type="submit">
             Save this version
+          </button>
+        </form>
+
+        {/* CF-UPDATE-FIRST-OUTCOME-01 — the UPDATE entry point. Starts a
+            brand-new, independent Analyzer run for this same,
+            already-confirmed company; the new run pays the full Step 2
+            per-fact spot-check pass unchanged, exactly like a first run
+            (app/actions/analyzer.ts beginUpdateRunAction). Not a refresh:
+            it neither mutates nor supersedes this report, and it carries no
+            price-movement indicator or "facts unchanged" shortcut. */}
+        <form action={beginUpdateRunAction} className="az-save">
+          <input type="hidden" name="runId" value={runId} />
+          <button className="act" type="submit">
+            Look at this company again
           </button>
         </form>
 

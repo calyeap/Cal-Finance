@@ -86,4 +86,19 @@ describe("AnalyzerReportFrame — locked shell invariant order", () => {
       expect(shape).toEqual(shapes[0]);
     }
   });
+
+  // CF-UPDATE-FIRST-OUTCOME-01 — the UPDATE entry point, surfaced from this
+  // same shared shell alongside the existing "Save this version" action, on
+  // every tab (not just Overview), since every tab renders this frame.
+  it("surfaces the UPDATE entry point ('Look at this company again') alongside Save this version, carrying this run's own id", () => {
+    const { container } = renderFrame("overview");
+    const forms = Array.from(container.querySelectorAll("form.az-save"));
+    expect(forms).toHaveLength(2);
+
+    const updateForm = forms.find((f) => f.textContent?.includes("Look at this company again"));
+    expect(updateForm).toBeDefined();
+    const hiddenRunId = updateForm!.querySelector('input[type="hidden"][name="runId"]');
+    expect(hiddenRunId).not.toBeNull();
+    expect((hiddenRunId as HTMLInputElement).value).toBe("run-1");
+  });
 });
