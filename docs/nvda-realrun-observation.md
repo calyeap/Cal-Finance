@@ -1,5 +1,7 @@
 # NVDA — real-run §12 observation
 
+**Superseded as *current* evidence by `docs/analyzer-v2-final-realrun-proof.md` (`CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01`, issue #331), which re-runs NVDA at head, additionally records the Step 4 forecast-dispersion reading, and records one changed figure (the enterprise-value bridge now names a fourth missing REQUIRED input, `price`); this document is not rewritten and remains the historical record of its own pass.**
+
 `CF-NVDA-RUN-OBSERVE-01` (issue #296). This document reports the §12
 observation `docs/verdict-methodology-reconciliation.md` §12 names as the
 minimum evidence the Analyzer finish-line work still lacks: one company

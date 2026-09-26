@@ -1,5 +1,7 @@
 # M9 — real-company validation: MSFT and OKLO acceptance runs
 
+**Superseded as *current* evidence by `docs/analyzer-v2-final-realrun-proof.md` (`CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01`, issue #331), which re-runs both companies at head and additionally records the Step 4 forecast-dispersion reading; this document is not rewritten and remains the historical record of its own pass.**
+
 **Status: both acceptance runs open, compute, and render on both M9 surfaces. No presentation defect was found in either route. Both runs render `INCOMPLETE` in slot 2 — the verbatim, observed output of today's unchanged `verdict.ts` (`:56`, `:65`, `:72`, `:78`), reported here as the observed result of a nonconforming implementation path awaiting its own outcome, not as a ruled end state for this pass.**
 
 **Update — CF-S44-RECORD-01, 2026-09-21.** Calvin's §4.4 ruling on issue #188 (`CALVIN DECISION`, 2026-09-21T08:19:14Z) has been recorded for MSFT through the existing `recordJudgment` product path and re-run against this run. §1 and §2 below now describe that recorded state; the "no judgment recorded" observation that follows describes the run's original, pre-ruling state and OKLO's continuing state — OKLO has zero tagged candidates, so no selection was ever possible for it and nothing about it changed. MSFT's verdict is still `INCOMPLETE`, for the separate §10.6.2 reason §2 now records.
