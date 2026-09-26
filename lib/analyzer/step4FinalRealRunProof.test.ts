@@ -257,7 +257,7 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
   });
 
-  it("NVDA — trust, EV bridge (three named missing inputs), leverage, suppressed range, honest $0 price sentinel, tornado unavailable, Step 4 unavailable, verdict", async () => {
+  it("NVDA — trust, EV bridge (four named missing inputs), leverage, suppressed range, honest $0 price sentinel, tornado unavailable, Step 4 unavailable, verdict", async () => {
     const result = await openNvdaObservationRun();
 
     expect(result.trust.status).toBe("UNUSABLE");
