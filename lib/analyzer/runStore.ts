@@ -9,6 +9,14 @@ import { getPool } from "../db";
 // in this module, and none may be added. The absence of every listing surface
 // is what keeps this clear of Saved Analysis (§13.1), and a listing helper
 // written "just for debugging" is how that boundary would quietly go.
+//
+// One narrow, explicitly authorised exception: `getLatestRunForHeldTicker`
+// below (CF-PORTFOLIO-REVIEW-FIRST-OUTCOME-01, issue #352 SCOPE 6). It is not
+// a listing surface reopening this boundary: it returns at most ONE run
+// (the most recent), never a list; it is called only from Portfolio Review,
+// only for a ticker that is already a symbol in the caller's own current
+// positions; and no route accepts an arbitrary ticker and forwards it here —
+// there is still no way to browse, search, or page through analyzer_runs.
 // ---------------------------------------------------------------------------
 
 // The vocabulary lives in ./decisions, which has no server dependency, so
@@ -332,6 +340,40 @@ export async function recordAutomaticProfileResolution(
         AND profile_decision IS NULL`,
     [runId, recommendedProfile]
   );
+}
+
+export interface LatestRunSummary {
+  runId: string;
+  resolvedCompanyName: string;
+}
+
+/**
+ * The single most recent run for one ticker, or null if none exists.
+ *
+ * CF-PORTFOLIO-REVIEW-FIRST-OUTCOME-01 (issue #352, SCOPE 6): Portfolio
+ * Review links a holding to its existing Analyzer report, where one exists.
+ * `ticker` is stored uppercase (lib/analyzer/identity.ts's
+ * `rawTicker.trim().toUpperCase()`), matching `assets.primary_symbol`'s own
+ * uppercase convention, so an exact match against a held position's symbol
+ * is correct without a second normalisation step.
+ *
+ * Callers MUST only pass a ticker already present in the caller's own
+ * holdings — see the module-header note above for why this does not reopen
+ * R7's no-listing boundary. `LIMIT 1` plus this doc comment are the only
+ * enforcement; there is no route that lets an arbitrary ticker reach this
+ * function.
+ */
+export async function getLatestRunForHeldTicker(ticker: string): Promise<LatestRunSummary | null> {
+  const { rows } = await getPool().query(
+    `SELECT run_id, resolved_company_name
+       FROM analyzer_runs
+      WHERE ticker = $1
+      ORDER BY created_at DESC
+      LIMIT 1`,
+    [ticker]
+  );
+  if (rows.length === 0) return null;
+  return { runId: rows[0].run_id, resolvedCompanyName: rows[0].resolved_company_name };
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
