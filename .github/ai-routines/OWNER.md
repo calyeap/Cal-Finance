@@ -124,6 +124,22 @@ queued-away wake was about.
    does not reconcile, write, or read back any Notion state as part of this
    or any later step.
 
+   **Coalesced-wake recovery check — mandatory as part of this read.** The
+   `cf-owner-single-writer` concurrency group (see Single-writer
+   serialization above) can replace a queued, not-yet-run OWNER wake with a
+   newer one for a different target; the replaced wake never gets its own
+   liveness guard, so its transition can otherwise sit unreconciled
+   indefinitely. As part of this same read, check whether any other open
+   issue/PR's latest OWNER-requiring terminal/ruling transition (its most
+   recent `DONE: EVIDENCE` / `STOP:` / `BLOCKED:` / `CALVIN REQUIRED:` /
+   qualifying `CALVIN RULING` marker) has no later `OWNER ATTEMPT START:`
+   receipt of its own. If one exists and it differs from the current wake
+   target, reconcile that pending transition first — treat it exactly like
+   the terminal/ruling wake it is — before continuing to step 2 below for
+   the current wake target. This is a read-time recovery check inside this
+   existing process, not a new scheduler, queue, or service, and it does
+   not relax the one-routing-mutation-per-run bound in Hard boundaries.
+
    **Closed-ruling guard — mandatory before any Calvin gate.** If the wake
    target, issue text, implementation note, stale spec, or model output asks
    for a decision that current repo authority — chiefly
@@ -192,34 +208,6 @@ queued-away wake was about.
       re-ask Calvin merely because a later worker can phrase the next detail
       as another multiple-choice question.
 
-   **Analyzer finish-line standing authorisation — current lane.** For the
-   Analyzer V2 finish-line after Calvin's 25 Sep 2026 `OPTION 1` ruling on
-   PR #325, OWNER is explicitly authorised to continue through the derived
-   Step 4 implementation/tier-boundary work using the gate-compression rule
-   above. Draft and apply the smallest defensible reversible defaults, run
-   the real MSFT proof, and keep §11 items 2–7 parked unless fresh evidence
-   proves one has become a current blocker. Do **not** interrupt Calvin again
-   for a derived Step 4 subchoice merely because a threshold/tier still
-   needs to be instantiated. Escalate only if credible defaults would
-   materially change MSFT's supported verdict/acceptance result, require new
-   permission/data/scope, create an authority conflict, or cannot be made
-   safely reversible. Otherwise the next Calvin touch should be final
-   acceptance after final real-run proof.
-
-   **Standing pause — CF-HANDOFF-FAIL-CLOSED-01 canary.** This outcome is a
-   workflow-reliability repair only, and its own resulting PR is the canary
-   that proves the repaired BUILD → REVIEW → merge → OWNER handoff actually
-   works end to end. Until Calvin lifts this pause, do not dispatch any new
-   Cal Finance product work (Analyzer, UPDATE, M8/M9, Portfolio Review,
-   Screen, or any other product/finance lane) from a merge or terminal wake
-   whose linked outcome is `CF-HANDOFF-FAIL-CLOSED-01`. If step 3/4 below
-   would otherwise select a dispatch, instead return
-   `WAIT: PARKED — workflow reliability validation complete; Calvin has
-   paused product continuation until this canary's PR merges and OWNER's
-   own next terminal wake confirms it.` This pause covers only this
-   outcome's own merge/terminal wake — it does not reopen or override any
-   other already-authorised runway once a later, unrelated wake arrives.
-
    **Attention contract — mandatory.** Native GitHub state is the sole
    attention authority for Cal Finance current status/attention (Phase 2
    cutover, issue #231/`CF-GITHUB-SOT-PHASE2-01`, closed out by
@@ -229,15 +217,20 @@ queued-away wake was about.
    pointer-only for this fact type. Decide the current attention owner from
    that native evidence on every run:
    - **CALVIN** only for a current human decision, permission or acceptance
-     that passes the Gate-compression / DRAFT BEFORE ASK test above —
-     the most recent unanswered `CALVIN REQUIRED:` / `STOP:` / `BLOCKED:` /
-     `DONE: EVIDENCE` terminal comment (these route directly to OWNER per
-     CF-TERMINAL-HANDOFF-REPAIR-01, whether or not `needs-owner-wake` is
-     also present), or an open `CALVIN RULING` question, on any open issue
-     or PR;
+     that passes the Gate-compression / DRAFT BEFORE ASK test above — the
+     most recent unanswered `CALVIN REQUIRED:` terminal comment, or an open
+     `CALVIN RULING` question, on any open issue or PR. An unresolved
+     `STOP:`, `BLOCKED:`, or `DONE: EVIDENCE` terminal comment is not by
+     itself `NEEDS CALVIN` — those route directly to OWNER per
+     CF-TERMINAL-HANDOFF-REPAIR-01 (whether or not `needs-owner-wake` is
+     also present) as an OWNER/control-layer transition for this process to
+     resolve into AI / EXTERNAL / PARKED / a fresh `CALVIN REQUIRED`, not as
+     Calvin attention in its own right;
    - **AI** while authorised AI work is running, dispatchable, recoverable,
      or a safe default can close the next derived choice under the rule
-     above;
+     above — this includes an unresolved `STOP:`, `BLOCKED:`, or
+     `DONE: EVIDENCE` this run has not yet converted into a fresh
+     `CALVIN REQUIRED`;
    - **EXTERNAL** only when a third party is the real blocker and Calvin
      need not act or chase;
    - **PARKED** only when an explicit Calvin decision parked the project.
@@ -256,13 +249,20 @@ queued-away wake was about.
 2. **Routine issue closure (bounded).** Scoped only to the wake target
    itself — this is not a backlog sweep. Close the wake target's linked
    originating issue only when it is an ordinary issue (never an umbrella
-   issue, a tracking/meta issue, or a methodology/policy issue) and its
-   stated outcome is now clearly satisfied by either an `ACCEPT`ed and
-   merged PR (merge wake) or a completed `DONE: EVIDENCE` result (terminal
-   wake). If satisfaction is unclear, or the issue is umbrella/tracking/
-   meta/methodology/policy, leave it open — do not guess. When closing, set
-   `state_reason: completed` and post one closing comment naming the
-   satisfying PR or evidence.
+   issue, a tracking/meta issue, or a methodology/policy issue) and either:
+   - its stated outcome is now clearly satisfied by either an `ACCEPT`ed and
+     merged PR (merge wake) or a completed `DONE: EVIDENCE` result (terminal
+     wake); or
+   - an explicit `CALVIN RULING` on the wake target itself redirects or
+     supersedes its ordinary outcome — close it with a successor/defer
+     pointer (the ruling comment and, when one exists, the successor
+     issue/PR) rather than leaving it open indefinitely as residue that
+     could later be misread as still `ACTIVE`.
+   If satisfaction is unclear, or the issue is umbrella/tracking/
+   meta/methodology/policy, leave it open — do not guess, and never bulk-close
+   beyond the wake target itself. When closing, set `state_reason: completed`
+   and post one closing comment naming the satisfying PR/evidence or the
+   redirecting ruling and successor/defer pointer.
 3. Confirm there is no active product BUILD or product PR already in
    flight (a just-stopped or Calvin-gated PR/issue still counts as active).
 4. Select the first dependency-safe outcome already authorised by that
@@ -370,4 +370,8 @@ own process.
   obligation from it beyond the wake it already knows how to process.
 - No broad backlog search beyond the current authorised Cal Finance runway.
 - Never use Calvin as a message courier.
+- An AI worker must never begin any GitHub comment with `CALVIN RULING` or
+  present an AI/default decision as a Calvin ruling. `CALVIN RULING` is
+  reserved for a decision promoted from an authenticated Calvin-facing
+  interaction.
 - Never end silently.

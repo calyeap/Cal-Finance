@@ -160,12 +160,40 @@ jobs:
       - name: Run handoff liveness/auth reachability structural tests
         run: bash .github/scripts/handoff-liveness-reachability.test.sh
 
-      # CF-STATUS-PLUMBING-CLEANUP-01: deterministic, network-free
-      # structural check that OWNER.md derives current status/attention
-      # from native GitHub, never from Cal Finance Project Home's stale
-      # `NEXT MOVE` line.
+      # CF-STATUS-PLUMBING-CLEANUP-01 / CF-FREEZE-CLOSEOUT-01: deterministic,
+      # network-free structural check that OWNER.md derives current
+      # status/attention from native GitHub, never from Cal Finance Project
+      # Home's stale `NEXT MOVE` line, plus this outcome's F2/F4/F6/F9/F10
+      # OWNER.md structural fixes.
       - name: Run OWNER attention-authority structural tests
         run: bash .github/scripts/owner-attention-authority.test.sh
+
+      # CF-FREEZE-CLOSEOUT-01 (F1): the three live OWNER fire/recovery
+      # prompts stay thin and never restate the obsolete Project Home
+      # write/readback OWNER.md no longer performs.
+      - name: Run OWNER prompt lean-ness tests
+        run: bash .github/scripts/owner-prompt-lean.test.sh
+
+      # CF-FREEZE-CLOSEOUT-01 (F3): AGENTS.md routes a fresh worker by the
+      # explicit authority map, not an undefined Project Home fallback.
+      - name: Run AGENTS.md authority lean-ness tests
+        run: bash .github/scripts/agents-authority-lean.test.sh
+
+      # CF-FREEZE-CLOSEOUT-01 (F5): BUILD's raised liveness lease and
+      # matching job timeout; REVIEW's lease/timeout stay unchanged.
+      - name: Run BUILD lease config tests
+        run: bash .github/scripts/build-lease-config.test.sh
+
+      # CF-FREEZE-CLOSEOUT-01 (F9): a coalesced middle OWNER wake is
+      # discoverable by a later OWNER run via the existing admission
+      # classifier.
+      - name: Run OWNER coalesced-wake recovery tests
+        run: bash .github/scripts/owner-coalesced-wake.test.sh
+
+      # CF-FREEZE-CLOSEOUT-01 (F10): BUILD/CC/OWNER adapters explicitly
+      # prohibit a worker from authoring a first-line CALVIN RULING receipt.
+      - name: Run CALVIN RULING impersonation guard tests
+        run: bash .github/scripts/calvin-ruling-impersonation-guard.test.sh
 
       - name: Set up Node
         uses: actions/setup-node@v4

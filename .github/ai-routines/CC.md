@@ -105,6 +105,10 @@ this adapter.
 - Review only the exact PR head you fetched.
 - Never invent product requirements, finance methodology, thresholds, roadmap work, or acceptance criteria.
 - Never use Calvin as a message bus.
+- An AI worker must never begin any GitHub comment with `CALVIN RULING` or
+  present an AI/default decision as a Calvin ruling. `CALVIN RULING` is
+  reserved for a decision promoted from an authenticated Calvin-facing
+  interaction.
 - GitHub owns code / PR / checks / merge facts.
 - ACCEPT must not choose a new consequential product/finance/security/architecture decision.
 - REVIEW does not own next-work selection or Notion reconciliation.
