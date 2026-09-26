@@ -4123,3 +4123,37 @@ h6 {
   background: var(--ink);
   border-color: var(--ink);
 }
+
+/* --- Portfolio Review (CF-PORTFOLIO-REVIEW-FIRST-OUTCOME-01) ---------------
+   A new, distinct surface with no approved design contract of its own
+   (reconciliation §3, DESIGN.md:3-10) — deliberately NOT the redesigned
+   .cb-dash / .holdings-chrome token systems. Reuses only the original
+   unscoped foundation above (:root tokens, .page-shell, the shared status
+   message classes, .editor-table) plus this one small, self-contained
+   block, the same way .holdings-chrome once stood up its own scoped rules
+   beside .cb-dash's. AI DEFAULT — reversible by a later, separately
+   authorised design pass. */
+.pr-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+.pr-table th,
+.pr-table td {
+  text-align: left;
+  padding: var(--space-sm) var(--space-md);
+  border-bottom: 1px solid var(--color-border);
+}
+.pr-table th {
+  font-size: 0.85em;
+  font-weight: 600;
+  color: var(--color-text-muted);
+}
+.pr-table .num {
+  font-variant-numeric: tabular-nums;
+}
+.pr-cap-review {
+  color: var(--color-warning);
+}
+.pr-cap-not_checkable {
+  color: var(--color-text-muted);
+}
