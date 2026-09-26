@@ -34,6 +34,20 @@ name: Notify Calvin in Slack
 # HTTP status, or its secret at all. A gate stays live under Calvin's
 # attention regardless of what happens here; only a typed Calvin ruling
 # closes it (OWNER.md's Wake sources, "Ruling wake").
+#
+# CF-HANDOFF-FAIL-CLOSED-01
+#
+# Extends the same "react to the comment that carries the fact, not to a
+# label" fix to the new WORKFLOW BLOCKED - AUTH / WORKFLOW BLOCKED -
+# LIVENESS receipts (fire-auth-lib.sh, worker-liveness-guard.sh) and to the
+# pre-existing OWNER LIVENESS EXHAUSTED - RECONCILIATION REQUIRED receipt
+# (CF-OWNER-LIVENESS-01, left unrenamed for backward compatibility): each
+# is a durable, once-only receipt on the target itself, so alerting off the
+# comment event, exactly like CALVIN REQUIRED: already does, needs no new
+# label and cannot double-notify for the same receipt. The same invariant
+# from Part B still holds for these too: SLACK_SENT != GATE_RESOLVED /
+# BLOCK_CLEARED - this workflow only attempts delivery, never decides
+# anything on GitHub.
 on:
   issue_comment:
     types: [created]
@@ -46,11 +60,14 @@ jobs:
     # Cheap prefilter only — mirrors cc-auto-fire.yml's fire-review job,
     # which gates the job on a substring `contains(...)` and leaves the
     # strict first-line contract to the step below. A comment that merely
-    # mentions CALVIN REQUIRED: later in its body (quoted, example, prose)
-    # still reaches this job but is rejected inside "Resolve terminal
-    # outcome" once the marker turns out not to be the first non-blank
-    # line.
-    if: contains(github.event.comment.body, 'CALVIN REQUIRED:')
+    # mentions one of these markers later in its body (quoted, example,
+    # prose) still reaches this job but is rejected inside "Resolve
+    # terminal outcome" once the marker turns out not to be the first
+    # non-blank line.
+    if: >-
+      contains(github.event.comment.body, 'CALVIN REQUIRED:') ||
+      contains(github.event.comment.body, 'WORKFLOW BLOCKED') ||
+      contains(github.event.comment.body, 'OWNER LIVENESS EXHAUSTED')
     runs-on: ubuntu-latest
     steps:
       # CF-CALVIN-ATTENTION-LEAN-01 correction: classify the marker through
@@ -72,35 +89,51 @@ jobs:
           # shellcheck source=../scripts/terminal-routing-lib.sh
           source .github/scripts/terminal-routing-lib.sh
 
-          if [ "$(terminal_is_calvin_required_marker "$COMMENT_BODY")" != "true" ]; then
+          if [ "$(terminal_is_calvin_required_marker "$COMMENT_BODY")" = "true" ]; then
+            FIRST_LINE="$(terminal_first_line "$COMMENT_BODY")"
+            NORMALIZED="$(terminal_strip_markdown_heading "$FIRST_LINE")"
+
+            ASK=${NORMALIZED#CALVIN REQUIRED:}
+            # CF-SLACK-ALERT-RELIABILITY-01: `xargs` parses its input for
+            # shell-like quoting, so an apostrophe in an ordinary ask (e.g.
+            # "Calvin's decision") produced an unmatched-quote failure here.
+            # terminal_trim_whitespace trims via bash parameter expansion
+            # only and treats quotes/backticks/brackets as opaque text.
+            ASK=$(printf '%s' "$ASK" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//')
+            ASK=$(terminal_trim_whitespace "$ASK")
+
+            echo "kind=calvin_required" >> "$GITHUB_OUTPUT"
+            echo "notify=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "ask<<EOF"
+              echo "$ASK"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          elif [ "$(terminal_is_workflow_blocked_marker "$COMMENT_BODY")" = "true" ]; then
+            # CF-HANDOFF-FAIL-CLOSED-01: the WORKFLOW BLOCKED / OWNER
+            # LIVENESS EXHAUSTED marker itself is already the headline
+            # (e.g. "WORKFLOW BLOCKED — AUTH") — no need to extract an "ask"
+            # suffix from it the way a CALVIN REQUIRED: line's own text is.
+            ASK="$(terminal_first_line "$COMMENT_BODY")"
+
+            echo "kind=blocked" >> "$GITHUB_OUTPUT"
+            echo "notify=true" >> "$GITHUB_OUTPUT"
+            {
+              echo "ask<<EOF"
+              echo "$ASK"
+              echo "EOF"
+            } >> "$GITHUB_OUTPUT"
+          else
             echo "notify=false" >> "$GITHUB_OUTPUT"
-            echo "First non-empty line is not CALVIN REQUIRED:; no Slack alert."
+            echo "First non-empty line is neither CALVIN REQUIRED: nor a WORKFLOW BLOCKED / OWNER LIVENESS EXHAUSTED marker; no Slack alert."
             exit 0
           fi
-
-          FIRST_LINE="$(terminal_first_line "$COMMENT_BODY")"
-          NORMALIZED="$(terminal_strip_markdown_heading "$FIRST_LINE")"
-
-          ASK=${NORMALIZED#CALVIN REQUIRED:}
-          # CF-SLACK-ALERT-RELIABILITY-01: `xargs` parses its input for
-          # shell-like quoting, so an apostrophe in an ordinary ask (e.g.
-          # "Calvin's decision") produced an unmatched-quote failure here.
-          # terminal_trim_whitespace trims via bash parameter expansion
-          # only and treats quotes/backticks/brackets as opaque text.
-          ASK=$(printf '%s' "$ASK" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//')
-          ASK=$(terminal_trim_whitespace "$ASK")
-
-          echo "notify=true" >> "$GITHUB_OUTPUT"
-          {
-            echo "ask<<EOF"
-            echo "$ASK"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
 
       - name: Send Calvin Slack alert
         if: steps.terminal.outputs.notify == 'true'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
+          KIND: ${{ steps.terminal.outputs.kind }}
           ASK: ${{ steps.terminal.outputs.ask }}
           COMMENT_URL: ${{ github.event.comment.html_url }}
           ITEM_URL: ${{ github.event.issue.html_url }}
@@ -113,13 +146,26 @@ jobs:
             exit 1
           fi
 
+          # CF-HANDOFF-FAIL-CLOSED-01: "blocked" (WORKFLOW BLOCKED — AUTH/
+          # LIVENESS, or the pre-existing OWNER LIVENESS EXHAUSTED) uses its
+          # own marker line as the headline, since it is already
+          # self-describing; "calvin_required" keeps its existing header +
+          # extracted-ask shape unchanged.
           PAYLOAD=$(jq -n \
+            --arg kind "$KIND" \
             --arg repo "$REPO" \
             --arg ask "$ASK" \
             --arg item_url "$ITEM_URL" \
             --arg comment_url "$COMMENT_URL" \
             '{
-              text: ("CALVIN REQUIRED — " + $repo + "\n" + (if ($ask | length) > 0 then $ask else "Your decision is needed." end) + "\n" + (if ($comment_url | length) > 0 then $comment_url else $item_url end))
+              text: (
+                (if $kind == "blocked" then
+                  ($ask + " — " + $repo)
+                else
+                  ("CALVIN REQUIRED — " + $repo + "\n" + (if ($ask | length) > 0 then $ask else "Your decision is needed." end))
+                end)
+                + "\n" + (if ($comment_url | length) > 0 then $comment_url else $item_url end)
+              )
             }')
 
           HTTP_CODE=$(curl -sS -o /tmp/slack_response.txt -w '%{http_code}' \

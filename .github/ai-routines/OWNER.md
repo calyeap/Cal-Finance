@@ -206,6 +206,20 @@ queued-away wake was about.
    safely reversible. Otherwise the next Calvin touch should be final
    acceptance after final real-run proof.
 
+   **Standing pause — CF-HANDOFF-FAIL-CLOSED-01 canary.** This outcome is a
+   workflow-reliability repair only, and its own resulting PR is the canary
+   that proves the repaired BUILD → REVIEW → merge → OWNER handoff actually
+   works end to end. Until Calvin lifts this pause, do not dispatch any new
+   Cal Finance product work (Analyzer, UPDATE, M8/M9, Portfolio Review,
+   Screen, or any other product/finance lane) from a merge or terminal wake
+   whose linked outcome is `CF-HANDOFF-FAIL-CLOSED-01`. If step 3/4 below
+   would otherwise select a dispatch, instead return
+   `WAIT: PARKED — workflow reliability validation complete; Calvin has
+   paused product continuation until this canary's PR merges and OWNER's
+   own next terminal wake confirms it.` This pause covers only this
+   outcome's own merge/terminal wake — it does not reopen or override any
+   other already-authorised runway once a later, unrelated wake arrives.
+
    **Attention contract — mandatory.** Native GitHub state is the sole
    attention authority for Cal Finance current status/attention (Phase 2
    cutover, issue #231/`CF-GITHUB-SOT-PHASE2-01`, closed out by
@@ -297,6 +311,23 @@ MERGE-123456-1]`. This is how `.github/scripts/owner-liveness-guard.sh`
 (CF-OWNER-LIVENESS-01) tells a completed run apart from a stalled one; a
 terminal comment missing this tag reads as a stall and can trigger the one
 bounded recovery fire described above.
+
+CF-HANDOFF-FAIL-CLOSED-01 clarifies, without changing, this mechanism's
+existing attempt accounting: a healthy original terminal closes the
+original attempt (`owner_liveness_status` on `OWNER_ATTEMPT_ID` finds it and
+`owner-liveness-guard.sh` exits clean without ever firing a recovery); a
+recovery terminal closes only the recovery attempt's own id, never the
+original's; and because every lookup binds strictly to one attempt id and
+to comments created after that exact attempt's own start receipt, no wake
+fired after a terminal receipt already exists for its attempt can ever be
+described as "live" for that same attempt — it is simply a different,
+later attempt with its own id. This is unchanged behaviour, verified by
+`owner-liveness-lib.test.sh`'s existing predating/wrong-attempt cases; no
+new mechanism was added here. If the fire that would have started an OWNER
+run never reached it at all (missing secret, HTTP 401/403), the firing
+workflow classifies and reports that itself as `WORKFLOW BLOCKED — AUTH` —
+this is unchanged workflow-layer machinery, not a new obligation on OWNER's
+own process.
 
 ## Hard boundaries
 

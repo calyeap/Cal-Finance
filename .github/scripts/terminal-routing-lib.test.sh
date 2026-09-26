@@ -129,6 +129,34 @@ assert_eq "quoted CALVIN REQUIRED: later in the comment does not match" "false" 
 assert_eq "leading blank lines before ## CALVIN REQUIRED: still match" "true" \
   "$(terminal_is_calvin_required_marker "$(printf '\n\n  ## CALVIN REQUIRED: approve A or B\nbody\n')")"
 
+# --- terminal_is_workflow_blocked_marker (CF-HANDOFF-FAIL-CLOSED-01) ------
+
+assert_eq "WORKFLOW BLOCKED — AUTH marker matches" "true" \
+  "$(terminal_is_workflow_blocked_marker "WORKFLOW BLOCKED — AUTH
+
+actor: BUILD
+secret: BUILD_FIRE_TOKEN")"
+
+assert_eq "WORKFLOW BLOCKED — LIVENESS marker matches" "true" \
+  "$(terminal_is_workflow_blocked_marker "WORKFLOW BLOCKED — LIVENESS
+
+actor: BUILD")"
+
+assert_eq "pre-existing OWNER LIVENESS EXHAUSTED marker still matches" "true" \
+  "$(terminal_is_workflow_blocked_marker "OWNER LIVENESS EXHAUSTED — RECONCILIATION REQUIRED
+
+detail")"
+
+assert_eq "a heading-prefixed WORKFLOW BLOCKED marker still matches" "true" \
+  "$(terminal_is_workflow_blocked_marker "## WORKFLOW BLOCKED — AUTH")"
+
+assert_eq "DONE: terminal does not match workflow-blocked" "false" \
+  "$(terminal_is_workflow_blocked_marker "DONE: https://github.com/x/y/pull/42")"
+
+quoted_blocked=$(printf 'DONE: https://github.com/x/y/pull/42\n\nEarlier this said "WORKFLOW BLOCKED" but that was superseded.')
+assert_eq "quoted WORKFLOW BLOCKED later in the comment does not match" "false" \
+  "$(terminal_is_workflow_blocked_marker "$quoted_blocked")"
+
 # --- CF-SLACK-ALERT-RELIABILITY-01 ----------------------------------------
 #
 # Root cause A: terminal_first_line used to be `sed | head -n1 | sed`.
