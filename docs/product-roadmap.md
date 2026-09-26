@@ -142,6 +142,47 @@ has since landed under it.
   outcome — implemented (`CF-UPDATE-FIRST-OUTCOME-01`, issue #337):
   [`docs/update-workflow-mode-reconciliation.md`](update-workflow-mode-reconciliation.md).
 
+## 8. PORTFOLIO REVIEW workflow mode — reconciled definition (26 Sep 2026)
+
+Opened as the next capability lane per `CALVIN RULING — LIFT OPTION E`
+([issue #349](https://github.com/calyeap/Cal-Finance/issues/349)). This
+record itself implements no PORTFOLIO REVIEW capability — it defines and
+reconciles the mode; see the proposed first implementation outcome in the
+linked document for what a later, separately authorised dispatch could
+build.
+
+- **PORTFOLIO REVIEW is** the cross-company, portfolio-level review step in
+  the canonical sequence Foundation → Stock Analysis → Portfolio Review →
+  Calvin — the step between a company already having a Stock Analyzer
+  report and a Calvin decision, sitting between UPDATE and SCREEN in the V2
+  delivery order above. It is exactly the cross-company concern
+  `docs/product-decisions.md` item 15 excludes from the Analyzer itself.
+- **PORTFOLIO REVIEW is not** autonomous trading or an action generator, a
+  universal score or ranking, a price- or momentum-triggered surface, an
+  authoring surface for portfolio-policy numbers (item 14), a replacement
+  for or extension of the existing Dashboard/Holdings/setup-wizard
+  monitoring surfaces, or any of SCREEN, monitoring, Research Memory,
+  Sector Intelligence, What Changed?, Decision Logic or Action Candidates.
+- **Which of the "four workflow modes" (§1) PORTFOLIO REVIEW is remains
+  unanswered** by current authority, for the same reason recorded for
+  UPDATE in §7 above. Not resolved here.
+- **Depends on** existing position-level data already computed by
+  `lib/portfolio.ts` (no new holdings capture needed for that layer) and, per
+  company, whatever Analyzer report already exists — there is no code link
+  between the two today, which a first implementation would need to build.
+  It does **not** depend on the snapshot contract above existing first —
+  resolved as an `AI DEFAULT` (not a Calvin ruling); see
+  `docs/portfolio-review-workflow-mode-reconciliation.md` §4 for the
+  rationale and reversal path. It consumes, and never authors, INVESTING's
+  portfolio-policy numbers (item 14).
+- While M8 / verdict completion stays deferred, a portfolio review can
+  honestly aggregate existing position-level and per-company qualitative
+  Analyzer facts, but cannot honestly offer any BUY/HOLD/SELL-informed
+  synthesis across holdings — that gap is not proposed to be closed here.
+- Full citations, reasoning, and the proposed (not authorised) first bounded
+  PORTFOLIO REVIEW implementation outcome:
+  [`docs/portfolio-review-workflow-mode-reconciliation.md`](portfolio-review-workflow-mode-reconciliation.md).
+
 ## Source-of-truth rule
 
 This file is the current authority for strategic sequencing / runway
