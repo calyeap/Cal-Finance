@@ -270,9 +270,9 @@ export function SetupWizard() {
           <h1>Add your holdings</h1>
           <p className="wizard-step">Step 1 of 2</p>
           <p>
-            Calboard mirrors the equities and crypto you already hold elsewhere, as one combined
+            Cal Finance mirrors the equities and crypto you already hold elsewhere, as one combined
             portfolio. Enter what you hold now; update it here whenever your real holdings change.
-            Calboard never places trades — you keep doing that in your own trading app.
+            Cal Finance never places trades — you keep doing that in your own trading app.
           </p>
 
           <div className="wizard-section">

@@ -311,7 +311,7 @@ describe("Dashboard — hierarchy, weight sort & responsive Dashboard", () => {
     getPortfolioViewMock.mockResolvedValue(twoPriced());
     render(await DashboardPage());
 
-    expect(screen.getByText("Calboard")).toBeInTheDocument();
+    expect(screen.getByText("Cal Finance")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: /dashboard/i })).toHaveClass("on");
     expect(screen.getByRole("link", { name: /^holdings$/i })).toHaveAttribute("href", "/holdings");
     expect(screen.getByRole("button", { name: /hide values/i })).toBeInTheDocument();
@@ -338,7 +338,7 @@ describe("Dashboard — empty state derives from holdings existence (Rev-3 §2.3
       "/accounts/new"
     );
     // Chrome still renders in the empty state.
-    expect(screen.getByText("Calboard")).toBeInTheDocument();
+    expect(screen.getByText("Cal Finance")).toBeInTheDocument();
 
     // None of the populated-Dashboard content renders.
     expect(container.querySelector(".valueblock")).toBeNull();

@@ -1,4 +1,4 @@
-# Calboard — Design & UX Entry Point
+# Cal Finance — Design & UX Entry Point
 
 **Scope.** This file indexes design authority for the **Portfolio surfaces** —
 Dashboard (`/`), Holdings (`/holdings`), and the setup wizard (`/accounts/new`).
@@ -28,15 +28,15 @@ do not invent a system to close it as a side effect of other work. Conventions
 
 ## Product and Design Intent
 
-**What Calboard is.** A private, single-user portfolio **monitoring** tool. V1 shows
+**What Cal Finance is.** A private, single-user portfolio **monitoring** tool. V1 shows
 one combined portfolio of equities and selected crypto held elsewhere: value,
 holdings, cost basis, unrealised gain/loss, allocation, data freshness. The user's
-trading app is the system of record; Calboard never executes trades.
+trading app is the system of record; Cal Finance never executes trades.
 
 **How it should feel.** Calm, professional, restrained, information-focused, highly
 scannable. Functional before decorative — a quiet reference instrument, not a
 dashboard competing for attention. The design should let a check-in *end*, not extend
-it. **Calboard describes; it never prescribes** — no suggested actions, no
+it. **Cal Finance describes; it never prescribes** — no suggested actions, no
 buy/sell/hold framing, no causal explanation of a price move, no advice. State what is
 true and stop. (`CRITICAL §0.2`.)
 
@@ -124,7 +124,7 @@ decision is reopened deliberately.
    or motion by default; add one only where it solves a concrete hierarchy, feedback
    or interaction problem better than the restrained default. The current app uses none.
 8. **No new visual identity, brand palette or illustration style.** Branding polish is
-   deferred (UX design §10) — a scope decision, not a promise Calboard never has an
+   deferred (UX design §10) — a scope decision, not a promise Cal Finance never has an
    identity, but never acquired incidentally.
 
 ## Durable UX Principles
@@ -253,7 +253,7 @@ deleted — logged here for a future cleanup pass.
   **Entered values survive a validation failure**; staged work says so in plain words
   ("Nothing has been saved yet.").
 
-**Durable rule.** Calboard must not silently ignore or discard valid, visible user
+**Durable rule.** Cal Finance must not silently ignore or discard valid, visible user
 input. Staged and saved states must be clear.
 
 ### Unresolved UX finding — "Add" vs. page-level "Save"
@@ -390,7 +390,7 @@ Every UI change must still satisfy all of these:
 3. **Preserve existing patterns** (tokens, shells, `.status-*`, `.editor-table`, the
    form/Server-Action shape); smallest coherent change, no drive-by restyling; invent
    no new system (type scale, component library, dark mode) without a concrete need,
-   then flag it here. If a change would make Calboard feel more like a trading or
+   then flag it here. If a change would make Cal Finance feel more like a trading or
    gamified product, stop.
 
 **Review gate.** Run the [Accessibility](#accessibility) checklist; re-check every

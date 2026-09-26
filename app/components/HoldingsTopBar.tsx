@@ -14,7 +14,7 @@ import { TopBarControls } from "./TopBarControls";
 export function HoldingsTopBar() {
   return (
     <div className="topbar">
-      <div className="brand">Calboard</div>
+      <div className="brand">Cal Finance</div>
       <div className="nav">
         <Link href="/">Dashboard</Link>
         <Link href="/holdings" className="on">

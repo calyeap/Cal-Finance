@@ -20,7 +20,7 @@ const UNSUPPORTED_TYPE_MESSAGE = (symbol: string) =>
 const PROVIDER_UNAVAILABLE_MESSAGE = (symbol: string) =>
   `Couldn't verify "${symbol}" right now — the market data provider is unavailable. Try again shortly.`;
 const NOT_A_CRYPTO_MESSAGE = (symbol: string) =>
-  `"${symbol}" is not a supported cryptocurrency. Calboard tracks a specific ` +
+  `"${symbol}" is not a supported cryptocurrency. Cal Finance tracks a specific ` +
   `set of verified cryptocurrencies, and this symbol is not one of them.`;
 const PRICE_UNAVAILABLE_MESSAGE = (symbol: string) =>
   `Identity confirmed for "${symbol}", but its live price is unavailable right now. ` +

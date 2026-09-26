@@ -39,7 +39,7 @@ authorised on
 
 ## 2. Long-term north star
 
-- **Operating model**: Calvin acts as CIO; Calboard supplies the
+- **Operating model**: Calvin acts as CIO; Cal Finance supplies the
   institutional-style research, analysis, challenge, and decision process
   around him.
 - **Canonical capability sequence**: Foundation → Stock Analysis →
