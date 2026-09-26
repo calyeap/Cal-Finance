@@ -52,7 +52,7 @@ export function isSupportedCrypto(ticker: string): boolean {
 export class UnsupportedCryptoError extends Error {
   constructor(ticker: string) {
     super(
-      `"${normalize(ticker)}" is not a supported cryptocurrency. Calboard tracks a ` +
+      `"${normalize(ticker)}" is not a supported cryptocurrency. Cal Finance tracks a ` +
         `specific set of verified cryptocurrencies, and this symbol is not one of them.`
     );
     this.name = "UnsupportedCryptoError";

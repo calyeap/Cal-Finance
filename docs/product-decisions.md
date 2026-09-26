@@ -46,14 +46,14 @@ update, not a semantic conflict.
    workload; humans supply real-world context, management/incentive
    judgement, final qualitative decisions; human input is evidence, not
    authority; no MNPI.
-10. Paid research data allowed only when Calboard names the exact
+10. Paid research data allowed only when Cal Finance names the exact
     decision-relevant blind spot, shows public sources insufficient, and
     trials before recurring commitment.
-11. Calboard aims for decision readiness, not certainty; Calvin supplies
+11. Cal Finance aims for decision readiness, not certainty; Calvin supplies
     final judgment.
 12. Do not add analysis once core decision jobs are covered unless it
     materially improves them.
-13. Cross-Calboard UX/design consistency is a hard product requirement —
+13. Cal Finance-wide UX/design consistency is a hard product requirement —
     one durable design language, same semantics/tokens across surfaces.
 14. INVESTING (separate project) owns portfolio-policy numbers (target
     weights, caps, rebalance rules); Cal Finance consumes/checks but never
