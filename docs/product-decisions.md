@@ -117,3 +117,21 @@ update, not a semantic conflict.
     boundary against more than one observation — explicitly not dispatched
     by this outcome, since a second capture requires its own Calvin
     permission.
+25. Analyzer V2 final acceptance/freeze (`CF-ANALYZER-V2-FINAL-ACCEPTANCE-FREEZE-01`,
+    26 Sep 2026): Calvin narrows his 24 Sep 2026 final-acceptance condition
+    ([issue #210 comment 5807320616](https://github.com/calyeap/Cal-Finance/issues/210#issuecomment-5807320616))
+    and accepts/freezes Analyzer V2 at the current verified state
+    (`origin/master` = `2e87077`, `CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01`,
+    PR #332). The dominant `INCOMPLETE` verdict every real run at and
+    foreseeably after `2e87077` shows is recorded as a documented known
+    limitation pending M8 — not a claim that verdict completion is solved,
+    and deliberately deferring that work rather than inventing unsupported
+    CHEAP/FAIR/EXPENSIVE policy bands or authorising further Analyzer V2
+    engineering now. No new `AnalystSuppliedRange` capture; no Steps 2/3/5/6
+    completion work in Analyzer V2 — `docs/verdict-methodology-reconciliation.md`
+    §11 items 1–7 stay parked. Verdict completion belongs to M8 unless a new
+    explicit Calvin ruling reopens it. This accepts Analyzer V2 only, not M9
+    as a whole milestone. (`CALVIN RULING — A`, 2026-09-26T03:28:38Z,
+    [PR #332 comment 5842778329](https://github.com/calyeap/Cal-Finance/pull/332#issuecomment-5842778329),
+    answering the OWNER final-acceptance gate
+    [comment 5842578864](https://github.com/calyeap/Cal-Finance/pull/332#issuecomment-5842578864).)

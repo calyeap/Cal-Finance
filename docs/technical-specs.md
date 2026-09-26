@@ -32,6 +32,7 @@ The repo snapshot exists for reproducible implementation evidence. It is **not**
 - **Brand direction / candidate source assets** → [Cal Finance — Brand Identity & Assets](https://app.notion.com/p/3dd0ca9a8fd081c4acdae46985a07f56)
 - **Code/runtime truth** → repository code, tests, commits, PRs, CI and merged state
 - **Current status / NEXT** → native GitHub issue/PR state, not this file
+- **Current acceptance state** → [`docs/acceptance-matrix.md`](acceptance-matrix.md); Analyzer V2's final acceptance/freeze → [`docs/analyzer-v2-final-acceptance-freeze.md`](analyzer-v2-final-acceptance-freeze.md)
 
 ## Legacy / historical material
 
