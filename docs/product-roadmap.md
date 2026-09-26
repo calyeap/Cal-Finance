@@ -106,7 +106,9 @@ driver evidence and valuation review zones:
 Opened as the next capability lane per `CALVIN RULING — OPTION B`
 ([issue #335](https://github.com/calyeap/Cal-Finance/issues/335),
 [PR #334 comment 5842994023](https://github.com/calyeap/Cal-Finance/pull/334#issuecomment-5842994023)).
-No UPDATE capability is implemented by this record.
+This record itself implements no UPDATE capability — it defines and
+reconciles the mode; see the implementation-outcome bullet below for what
+has since landed under it.
 
 - **UPDATE is** the workflow mode that lets an analyst explicitly initiate
   a fresh look at a company Cal Finance already has a report for, once new
@@ -124,8 +126,10 @@ No UPDATE capability is implemented by this record.
   the four modes or stating where monitoring fits. Not resolved here.
 - **Depends on** an existing accepted Analyzer report (M9/Analyzer V2,
   accepted and frozen per `docs/analyzer-v2-final-acceptance-freeze.md`)
-  and the existing acquire → verify → compute pipeline; whether it also
-  depends on the snapshot contract above is left open.
+  and the existing acquire → verify → compute pipeline. It does **not**
+  depend on the snapshot contract above — resolved as an `AI DEFAULT`
+  (not a Calvin ruling); see `docs/update-workflow-mode-reconciliation.md`
+  §7 for the rationale and reversal path.
 - The `docs/frozen/calboard-stock-analyzer-v1-design.md:110`/`:125`
   no-refresh / no-history-list constraint is **superseded only for
   design-contract purposes** (`docs/CURRENT-AUTHORITY.md`,
