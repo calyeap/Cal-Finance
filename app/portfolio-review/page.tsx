@@ -4,6 +4,7 @@ import { getPortfolioView } from "@/lib/portfolio";
 import { buildPortfolioReviewView, MATURE_POSITION_CAP_PERCENT } from "@/lib/portfolioReview";
 import { getLatestRunForHeldTicker, type LatestRunSummary } from "@/lib/analyzer/runStore";
 import { PortfolioReviewTable } from "../components/PortfolioReviewTable";
+import { MaskableValue } from "../components/MaskableValue";
 
 // PORTFOLIO REVIEW — first bounded outcome (CF-PORTFOLIO-REVIEW-FIRST-OUTCOME-01,
 // issue #352). One new, read-only route. Distinct from, not built on top of,
@@ -57,9 +58,10 @@ export default async function PortfolioReviewPage() {
           <section>
             <h2>What this weight is computed against</h2>
             <p className="status-msg status-neutral">
-              Each holding&apos;s weight below is its market value ÷ US${view!.totalPricedMarketValueUsd},
-              the portfolio&apos;s total priced market value — the same total computeAllocation and
-              the Dashboard&apos;s allocation view already use. No second total is computed here.
+              Each holding&apos;s weight below is its market value ÷ US$
+              <MaskableValue>{view!.totalPricedMarketValueUsd}</MaskableValue>, the portfolio&apos;s
+              total priced market value — the same total computeAllocation and the Dashboard&apos;s
+              allocation view already use. No second total is computed here.
             </p>
             {view!.excludedFromTotalSymbols.length > 0 && (
               <p className="status-msg status-warning">

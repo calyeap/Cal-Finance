@@ -1,11 +1,25 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { render, screen, cleanup, within } from "@testing-library/react";
+import { render, screen, cleanup, within, fireEvent } from "@testing-library/react";
 import Decimal from "decimal.js";
 import type { PortfolioView, PositionView } from "@/lib/portfolio";
 import { listAccounts } from "@/lib/accounts";
 import { getPortfolioView } from "@/lib/portfolio";
 import { getLatestRunForHeldTicker } from "@/lib/analyzer/runStore";
+import { PrivacyProvider, usePrivacy } from "@/app/components/PrivacyContext";
+
+// This page renders no top bar / privacy toggle of its own (SCOPE 8: no nav
+// added). The real toggle button lives in DashboardTopBar/HoldingsTopBar,
+// mounted elsewhere in the layout — this local stand-in exercises the same
+// PrivacyContext this page's own MaskableValue reads.
+function TestToggleButton() {
+  const { toggle } = usePrivacy();
+  return (
+    <button type="button" onClick={toggle}>
+      toggle privacy
+    </button>
+  );
+}
 
 vi.mock("@/lib/accounts", () => ({ listAccounts: vi.fn() }));
 vi.mock("@/lib/portfolio", () => ({ getPortfolioView: vi.fn() }));
@@ -205,5 +219,26 @@ describe("Portfolio Review page — populated state", () => {
     render(await PortfolioReviewPage());
     expect(getLatestRunForHeldTickerMock).toHaveBeenCalledTimes(1);
     expect(getLatestRunForHeldTickerMock).toHaveBeenCalledWith("AAPL");
+  });
+
+  it("hides the priced-total denominator figure behind the privacy toggle, same as Dashboard's headline value", async () => {
+    getPortfolioViewMock.mockResolvedValue(
+      portfolio([position({ symbol: "AAPL", marketValueUsd: new Decimal("21500") })])
+    );
+
+    const page = await PortfolioReviewPage();
+    const { container } = render(
+      <PrivacyProvider>
+        <TestToggleButton />
+        {page}
+      </PrivacyProvider>
+    );
+    expect(container.textContent).toContain("21,500.00");
+
+    fireEvent.click(screen.getByRole("button", { name: /toggle privacy/i }));
+    expect(container.textContent).not.toContain("21,500.00");
+    // The denominator sentence itself, and the weight percentage, stay visible.
+    expect(screen.getByText(/total.*priced.*market value/i)).toBeInTheDocument();
+    expect(container.textContent).toContain("100.00%");
   });
 });
