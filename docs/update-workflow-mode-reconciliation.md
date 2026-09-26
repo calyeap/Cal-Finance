@@ -178,19 +178,78 @@ cost, gets a new report artefact" without needing a refresh control, a
 history list, or a price-triggered indicator of any kind. No `STOP:
 RECONCILIATION REQUIRED` is warranted.
 
-## 7. First bounded UPDATE implementation outcome (proposal only — not started here)
+## 7. First bounded UPDATE implementation outcome — implemented
 
-The smallest bounded UPDATE outcome under this definition is a single new
-entry point — for example a "Look at this company again" action surfaced
-from an existing completed report — that starts a **brand-new** Analyzer
-run for the same company identity (skipping only Screen 1's ticker
+**Outcome:** `CF-UPDATE-FIRST-OUTCOME-01` (issue #337), authorised under
+`CALVIN RULING — OPTION B` (26 Sep 2026,
+[PR #334 comment 5842994023](https://github.com/calyeap/Cal-Finance/pull/334#issuecomment-5842994023)).
+
+What this section originally proposed is what was built, unchanged in
+shape: a single new entry point — **"Look at this company again"**,
+surfaced from an existing completed report (`AnalyzerReportFrame`, next to
+the existing "Save this version" action) — that starts a **brand-new**
+Analyzer run for the same company identity (skipping only Screen 1's ticker
 resolution, since the company is already confirmed) while still requiring
 the full Screen 2 per-fact spot-check pass unchanged, producing a new,
-independent `runId`/report artefact rather than mutating or superseding
-the prior one. It reuses the existing acquire → verify → compute pipeline
+independent `runId`/report artefact rather than mutating or superseding the
+prior one. It reuses the existing acquire → verify → compute pipeline
 (`lib/analyzer/autoRun.ts`) and existing data sources verbatim, adds no new
 `AnalystSuppliedRange` capture, no run index or history surface (preserving
 R7), no notification/alert/scheduled job, and produces whatever verdict the
-current pipeline produces today (no BUY/HOLD/SELL requirement, since none
-is required or produced by any path today). This would be scoped and
-authorised as its own later issue, not implemented here.
+current pipeline produces today (no BUY/HOLD/SELL requirement, since none is
+required or produced by any path today).
+
+**What was built, concretely:**
+
+- `app/actions/analyzer.ts` — `beginUpdateRunAction`, a new server action
+  taking only a prior `runId`. It reads that prior run's own server-held
+  ticker via `getRun` — never a client-posted ticker or company name — and
+  re-resolves it through the same `resolveAnalyzerIdentity` call Screen 1
+  uses. Both this action and the existing `beginAnalysisAction` now share one
+  `commitAndRunAnalysis(identity)` helper (refuse-if-not-RESOLVED, refuse-if-
+  no-fixture, `createRun`, `advanceRunAutomatically`, redirect to the new
+  run), extracted verbatim from `beginAnalysisAction`'s prior body — so the
+  two entry points cannot drift apart on refusal behaviour or on the
+  pipeline they run.
+- `app/components/AnalyzerReportFrame.tsx` — a second `<form className="az-
+  save">` beside the existing "Save this version" one, posting to
+  `beginUpdateRunAction` with this run's own `runId` as its only field.
+  Placement follows the smallest-reversible default the design contract
+  already accommodates (SCOPE item 4, below) rather than adding a new shell
+  region.
+- Tests: `app/actions/analyzer.test.ts` (the action's own control flow,
+  fully mocked — proves the identity comes only from the prior run's stored
+  ticker, never from anything else posted, and that the refusal path is
+  shared with `beginAnalysisAction`); `lib/analyzer/updateRunOnRealRun.test.ts`
+  (against the real store and the real committed MSFT/OKLO captures — proves
+  a re-look gets a distinct `runId`, that the prior run's row/decisions/
+  report are untouched, that no fact or judgment is copied forward, and that
+  the new run is gated shut until its own automatic pass completes it);
+  `app/components/AnalyzerReportFrame.test.tsx` (the button renders, wired to
+  this run's id, without disturbing the existing locked shell-order guard).
+
+**SCOPE item 4 — checked against the frozen design contract before
+writing it.** `docs/design/analyzer-v2-design-authority.md`'s locked shell
+invariants govern the identity row, hero, tab rail and right rail; they say
+nothing about the small action row below the tab rail, which already carries
+one non-hero, non-tab action ("Save this version", `CF-V2-PROOF-01`). Adding
+a second sibling form there is the same accommodated shape, not an amendment
+to accepted semantics — no visual pack change, no new shell region, no
+change to any locked invariant. No `STOP: RECONCILIATION REQUIRED` applies.
+
+**§4's open question — resolved, `AI DEFAULT`:** UPDATE **produces a fully
+independent run**, with no dependency on the snapshot contract
+(`docs/product-roadmap.md:31-33`). Concretely: `beginUpdateRunAction` calls
+the same `createRun` + `advanceRunAutomatically` pair a first run calls, with
+no read of, or write to, anything resembling a snapshot boundary; the only
+thing carried from the prior run is the ticker used to re-resolve identity,
+which is Screen 1 information, not report content. **Rationale:** this is the
+smallest reversible shape under SIMPLE FIRST — it needed no snapshot contract
+to exist at all, since none has been defined yet, and defining one here would
+have been scope beyond this outcome's SCOPE/HARD BOUNDS. **How to reverse:**
+if a later outcome defines the snapshot contract and rules that UPDATE should
+key off it instead, `beginUpdateRunAction` is the only touch point — it can
+be changed to read from a snapshot rather than from `getRun(priorRunId)`
+without touching `AnalyzerReportFrame`'s form, `commitAndRunAnalysis`, or any
+existing run's data, since no run created under this outcome depends on a
+snapshot in any way that would need migrating.
