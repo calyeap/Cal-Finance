@@ -62,7 +62,7 @@ run computes — reproducing, not re-litigating, the same ruling
 | `fairValueRange` | `kind: "range"`, bear **$265.00**, bull **$650.00**, `weightedValueInside` ≈ **$475.00** (`474.99999999999999999`), `drivingInputs`: years 1-5 revenue growth / operating margin path / reinvestment as % of NOPAT, `scenarioLabelsWarning: true` | assertion |
 | `price` | **$499.70**, as of 2026-09-04 (recorded capture close) | assertion |
 | Tornado (M14, all five rows) | `growth`: `available: true`, `displayed: true`, `fullRangeValueImpact` **0.48598121081564411663**; `operatingMargin`: `available: true`, `displayed: true`, `fullRangeValueImpact` **0.23377202026469612084**; `discountRate` / `terminalGrowth` / `ronic`: each `available: false`, cause `"missing REQUIRED analyst-supplied range: <driver>"` | assertion (all five rows and both available `fullRangeValueImpact` values) |
-| **Step 4 forecast-dispersion reading** (`diagnostics.sensitivity.forecastDispersion`) | `available: true`, `selectedDriver: "growth"`, `fullRangeValueImpact` **`0.48598121081564411663`**, `tier: "HIGH"` | assertion — the now-live figure this outcome exists to prove |
+| **Step 4 forecast-dispersion reading** (`diagnostics.sensitivity.forecastDispersion`) | `available: true`, `selectedDriver: "growth"`, `fullRangeValueImpact` **`0.48598121081564411663`**, `tier: "HIGH"` — both tier boundaries are labelled **`PROVISIONAL`, non-governing `AI DEFAULT`** constants (`lib/analyzer/policy.ts:168-176`; `docs/product-decisions.md` item 24), neither validated nor retired by this outcome | assertion — the now-live figure this outcome exists to prove |
 | `deriveVerdict(result)` | `status: "INCOMPLETE"`, `reason`: *"Decision-critical analysis is incomplete — a fair-value range alone cannot determine BUY / HOLD / SELL. Synthesizing a verdict also requires the required-versus-achieved growth comparator (spec §10.6.2), and that fact has not been acquired yet (spec §10.6.5, milestone M8). Recovery: this verdict becomes available once M8 delivers the comparator fact."* | assertion (status + a substring of reason) |
 | Rendered dominant-verdict hero | The `.az-hero-verdict` INCOMPLETE state: state name `INCOMPLETE`, `verdict.reason` verbatim as the cause line, no `.confidence` element | recorded observation — `app/components/analyzerSurfacesOnRealRun.test.tsx:148-167` renders this exact MSFT run through `AnalyzerReportFrame`/`DominantVerdictSlot` and asserts this, re-run and passing at this head; `DominantVerdictSlot.tsx:41-48` shows the branch is keyed only on `verdict.status`/`verdict.reason`, never on ticker |
 
@@ -85,7 +85,7 @@ carried from that comment.
 | `fairValueRange` | `kind: "suppressed"`, `state: "LEVERAGE UNSUPPORTED IN v1"`, `cause: "inputs missing — the ratio could not be computed, so the precondition fails closed"` — **not** `pre-revenue-distribution`, per `docs/m9-real-company-validation-findings.md` §3's own recorded finding, reproduced here | assertion |
 | `price` | **$41.27**, as of 2026-09-04 (recorded capture close) | assertion |
 | Tornado (M14) | **`[]` — genuinely empty, not five populated-but-unavailable rows.** `assemble.ts`'s `sensitivityRangesFor(ticker)` wires a captured `AnalystSuppliedRange` only for MSFT (`CF-STEP4-MSFT-RANGE-CAPTURE-01`); for OKLO it returns `null`, and the run falls back to `buildSensitivityResult()`'s own empty-array default (`sensitivity.ts:33-41`) — the M14 module never runs for this ticker at all | assertion (`toEqual([])`) |
-| **Step 4 forecast-dispersion reading** | `available: false`, `cause: "no tornado row is available: true — every analyst-supplied range for this run is missing"`, **no `tier` field** | assertion — reproduced by this run, not merely cited; unchanged from `docs/step4ForecastDispersionReadingOnRealRun.test.ts`'s own prior pin |
+| **Step 4 forecast-dispersion reading** | `available: false`, `cause: "no tornado row is available: true — every analyst-supplied range for this run is missing"`, **no `tier` field** | assertion — reproduced by this run, not merely cited; unchanged from `lib/analyzer/step4ForecastDispersionReadingOnRealRun.test.ts`'s own prior pin |
 | `deriveVerdict(result)` | `status: "INCOMPLETE"`, `reason: "Decision-critical analysis is incomplete — LEVERAGE UNSUPPORTED IN v1 — inputs missing — the ratio could not be computed, so the precondition fails closed"` | assertion |
 | Rendered dominant-verdict hero | Same `.az-hero-verdict` INCOMPLETE state as MSFT, different cause line | recorded observation — `app/components/analyzerSurfacesOnRealRun.test.tsx:148-167`'s OKLO case, re-run and passing at this head |
 
@@ -340,9 +340,9 @@ option is adoptable by anyone but Calvin, and none is adopted here.
 ## Whether `docs/acceptance-matrix.md` was touched
 
 **Left byte-untouched.** SCOPE item 6 of this outcome makes this narrow
-currency update optional and explicitly says "given the size/fragility of
-this file (79 lines, extremely dense prose cells), lean toward leaving it
-untouched unless you're confident the edit is narrow and safe." Row 10, 11,
+currency update optional and explicitly says "if keeping inside those bounds
+is not cleanly possible, leave the file byte-untouched and say so in the
+PR — that is an acceptable outcome, not a failure." Row 10, 11,
 13 and 14's cells are each a single, extremely dense paragraph
 cross-referencing exact commit SHAs, line numbers and prior headers; a safe
 edit would need to thread four new commits (`22a96dc`/#325, `87eca78`/#328,
