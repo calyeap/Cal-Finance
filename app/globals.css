@@ -4157,3 +4157,8 @@ h6 {
 .pr-cap-not_checkable {
   color: var(--color-text-muted);
 }
+.pr-table tfoot td {
+  padding-top: var(--space-sm);
+  color: var(--color-text-muted);
+  font-size: 0.85em;
+}

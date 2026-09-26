@@ -122,6 +122,52 @@ describe("buildPortfolioReviewRows — unpriced positions (SCOPE 9: floor total,
     expect(stale.weightPercent).toBe("20.00");
     expect(stale.matureCapState).toBe("REVIEW");
   });
+
+  it("carries the priced position's date so a stale cap conclusion can disclose which close it was drawn from", () => {
+    const positions = [
+      position({ symbol: "STALE", priceStatus: "stale", priceDate: "2026-06-01", marketValueUsd: new Decimal("100") }),
+    ];
+    const rows = buildPortfolioReviewRows(positions, new Decimal("100"), NO_RUNS);
+    expect(rows[0].priceDate).toBe("2026-06-01");
+  });
+});
+
+describe("buildPortfolioReviewRows — cross-account aggregation (correction: a symbol split across accounts is one position)", () => {
+  it("two accounts each holding 6% of the same symbol aggregate to one 12% row in REVIEW, never two 6% rows WITHIN_CAP", () => {
+    const positions = [
+      position({ symbol: "AAPL", accountId: 1, marketValueUsd: new Decimal("6000") }),
+      position({ symbol: "AAPL", accountId: 2, marketValueUsd: new Decimal("6000") }),
+      position({ symbol: "REST", accountId: 1, marketValueUsd: new Decimal("88000") }),
+    ];
+    const rows = buildPortfolioReviewRows(positions, new Decimal("100000"), NO_RUNS);
+
+    const aaplRows = rows.filter((r) => r.symbol === "AAPL");
+    expect(aaplRows).toHaveLength(1);
+    expect(aaplRows[0].weightPercent).toBe("12.00");
+    expect(aaplRows[0].matureCapState).toBe("REVIEW");
+    expect(aaplRows[0].marketValueUsd).toBe("12,000.00");
+  });
+
+  it("a symbol priced in one account and unpriced-elsewhere still aggregates only the priced market value", () => {
+    // Defensive case: priceStatus/priceDate are looked up per-asset in
+    // getPortfolioView, so this should not arise from real data, but the
+    // aggregation must not let a null marketValueUsd from one row erase a
+    // real value already summed from another.
+    const positions = [
+      position({ symbol: "AAPL", accountId: 1, marketValueUsd: new Decimal("5000") }),
+      position({
+        symbol: "AAPL",
+        accountId: 2,
+        marketValueUsd: null,
+        latestPriceUsd: null,
+        priceStatus: "unavailable",
+      }),
+    ];
+    const rows = buildPortfolioReviewRows(positions, new Decimal("5000"), NO_RUNS);
+    expect(rows).toHaveLength(1);
+    expect(rows[0].marketValueUsd).toBe("5,000.00");
+    expect(rows[0].weightPercent).toBe("100.00");
+  });
 });
 
 describe("buildPortfolioReviewRows — Analyzer report linkage (SCOPE 6, 9)", () => {

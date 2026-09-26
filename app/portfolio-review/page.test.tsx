@@ -144,6 +144,41 @@ describe("Portfolio Review page — populated state", () => {
     expect(nopxRow.textContent).not.toMatch(/review/i);
   });
 
+  it("discloses which close date a stale-priced holding's cap conclusion was drawn from", async () => {
+    getPortfolioViewMock.mockResolvedValue(
+      portfolio([
+        position({
+          symbol: "STL",
+          priceStatus: "stale",
+          priceDate: "2026-06-01",
+          marketValueUsd: new Decimal("100"),
+        }),
+      ])
+    );
+
+    render(await PortfolioReviewPage());
+    expect(screen.getByText(/STL is priced at 2026-06-01 close\./i)).toBeInTheDocument();
+  });
+
+  it("a symbol split across two accounts is checked as one aggregated position, not two separately-passing rows", async () => {
+    getPortfolioViewMock.mockResolvedValue(
+      portfolio([
+        position({ symbol: "AAPL", accountId: 1, marketValueUsd: new Decimal("6000") }),
+        position({ symbol: "AAPL", accountId: 2, marketValueUsd: new Decimal("6000") }),
+        position({ symbol: "REST", accountId: 1, marketValueUsd: new Decimal("88000") }),
+      ])
+    );
+
+    render(await PortfolioReviewPage());
+    const table = screen.getByRole("table");
+    const aaplRows = within(table)
+      .getAllByRole("row")
+      .filter((r) => r.textContent?.includes("AAPL"));
+    expect(aaplRows).toHaveLength(1);
+    expect(aaplRows[0].textContent).toContain("12.00%");
+    expect(aaplRows[0].textContent).toMatch(/review/i);
+  });
+
   it("a weight above the 10% cap names a REVIEW state, never a trim", async () => {
     getPortfolioViewMock.mockResolvedValue(
       portfolio([
