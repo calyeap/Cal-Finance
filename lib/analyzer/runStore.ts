@@ -5,10 +5,23 @@ import { getPool } from "../db";
 // R7 — run persistence. Server-side, runId in the URL, no index, no history
 // list, no listing endpoint. Lose the URL and the run is gone.
 //
-// There is deliberately no listRuns, findRunsByTicker or recentRuns function
-// in this module, and none may be added. The absence of every listing surface
-// is what keeps this clear of Saved Analysis (§13.1), and a listing helper
-// written "just for debugging" is how that boundary would quietly go.
+// There is deliberately no listRuns, findAllRunsByTicker or recentRuns
+// function in this module, and none may be added. The absence of every
+// general listing surface is what keeps this clear of Saved Analysis
+// (§13.1), and a listing helper written "just for debugging" is how that
+// boundary would quietly go.
+//
+// getLatestRunsForTickers below is a narrow, explicitly authorised exception
+// (CF-PORTFOLIO-REVIEW-FIRST-OUTCOME-01, issue #352 SCOPE 6), not a
+// reopening of this rule: it takes a caller-supplied, bounded set of tickers
+// — always the symbols already present in the caller's own current
+// positions — and answers only "does this specific held symbol have a
+// report?", never "what runs exist?", and an empty ticker list yields
+// nothing rather than defaulting to "all". Every caller in this repo passes
+// only symbols the caller already knows are held; nothing in this module
+// enumerates tickers on its own, so it remains distinct from the general
+// run-listing/browse/search surface this file and HARD BOUNDS both continue
+// to forbid.
 // ---------------------------------------------------------------------------
 
 // The vocabulary lives in ./decisions, which has no server dependency, so
@@ -79,6 +92,43 @@ export async function createRun(ticker: string, resolvedCompanyName: string): Pr
     [runId, ticker, resolvedCompanyName]
   );
   return runId;
+}
+
+export interface LatestRunSummary {
+  runId: string;
+  createdAt: string;
+}
+
+/**
+ * Looks up the most recent run per ticker, for a caller-supplied set of
+ * tickers only — never all tickers, never unbounded.
+ *
+ * This exists for PORTFOLIO REVIEW's holding-to-report link
+ * (CF-PORTFOLIO-REVIEW-FIRST-OUTCOME-01, issue #352 SCOPE 6): every caller
+ * passes only the symbols already present in the user's own current
+ * positions (lib/portfolioReview.ts), never a browse-everything query. This
+ * is still not the listing/browse/search surface the module header disclaims
+ * — it answers "does this specific, already-held symbol have a report?", not
+ * "what runs exist?" — and no caller may use it that way.
+ */
+export async function getLatestRunsForTickers(
+  tickers: readonly string[]
+): Promise<Map<string, LatestRunSummary>> {
+  if (tickers.length === 0) return new Map();
+
+  const { rows } = await getPool().query(
+    `SELECT DISTINCT ON (ticker) ticker, run_id, created_at
+       FROM analyzer_runs
+      WHERE ticker = ANY($1::text[])
+      ORDER BY ticker, created_at DESC`,
+    [tickers]
+  );
+
+  const result = new Map<string, LatestRunSummary>();
+  for (const r of rows) {
+    result.set(r.ticker, { runId: r.run_id, createdAt: r.created_at });
+  }
+  return result;
 }
 
 export async function getRun(runId: string): Promise<AnalyzerRun | null> {
