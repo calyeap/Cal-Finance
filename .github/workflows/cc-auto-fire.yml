@@ -28,13 +28,21 @@ jobs:
     concurrency:
       group: fire-build-${{ github.event.issue.number || github.event.pull_request.number }}
       cancel-in-progress: false
-    # CF-HANDOFF-FAIL-CLOSED-01: this job now legitimately runs up to
-    # roughly two liveness lease windows long (~40 minutes at the default
-    # 20-minute lease) once the fire below succeeds, because
-    # worker-liveness-guard.sh's bounded observation window and single
-    # recovery run as a later step in this same job — see that script and
-    # BUILD.md's "Liveness correlation" rule for the full contract.
-    timeout-minutes: 50
+    # CF-HANDOFF-FAIL-CLOSED-01 / CF-FREEZE-CLOSEOUT-01 (F5): this job now
+    # legitimately runs up to roughly two liveness lease windows long once
+    # the fire below succeeds, because worker-liveness-guard.sh's bounded
+    # observation window and single recovery run as a later step in this
+    # same job — see that script and BUILD.md's "Liveness correlation" rule
+    # for the full contract. BUILD's own lease is raised to 40 minutes (see
+    # the "Run BUILD liveness guard" step's WORKER_LIVENESS_LEASE_MINUTES
+    # below): issue #352 observed the original 20-minute terminal-only lease
+    # cross before a real product BUILD actually completed, so the one
+    # bounded recovery fired while the original attempt was still live,
+    # producing two live BUILD sessions for one outcome. 90 minutes covers
+    # two bounded 40-minute windows (80m) plus overhead. REVIEW keeps the
+    # unchanged 20-minute default lease and this job's prior 50-minute
+    # timeout — see fire-review below.
+    timeout-minutes: 90
     steps:
       # CF-CORRECT-ROUTER-01: moved ahead of "Resolve target" (unconditional
       # — this job's precise CORRECT match needs terminal-routing-lib.sh on
@@ -240,6 +248,10 @@ jobs:
           TARGET_REPO: ${{ github.repository }}
           TARGET_NUMBER: ${{ steps.target.outputs.number }}
           ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+          # CF-FREEZE-CLOSEOUT-01 (F5): BUILD only, raised from the 20-minute
+          # default to cover real observed product-build duration (issue
+          # #352's false-death/double-run). REVIEW below keeps the default.
+          WORKER_LIVENESS_LEASE_MINUTES: "40"
         run: bash .github/scripts/worker-liveness-guard.sh
 
   fire-review:
@@ -656,7 +668,7 @@ jobs:
             exit 0
           fi
 
-          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER} carries needs-owner-wake: a terminal STOP or CALVIN REQUIRED outcome, not a merge. Follow the current .github/ai-routines/OWNER.md adapter's terminal-wake path exactly: first reconcile the full owned current-state block in Cal Finance Project Home from fresh evidence (including this item's own terminal outcome) and read it back, then confirm whether a product BUILD or product PR is already in flight (this item usually still is), then either WAIT, dispatch at most one bounded already-authorised next outcome, or raise exactly one closed CALVIN REQUIRED question. Do not repair Chief of Staff, do not review or merge PRs, and do not take on any broader orchestration role beyond the owned-block reconciliation OWNER.md defines. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}: per OWNER.md's liveness correlation rule, your terminal receipt's first non-empty line must still be exactly one of the typed forms (DISPATCHED: / WAIT: AI — / WAIT: EXTERNAL — / WAIT: PARKED — / CALVIN REQUIRED:) and must also include the exact tag [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}] on that same line."
+          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER}. wake_class: TERMINAL — a BUILD/REVIEW terminal STOP, BLOCKED, DONE: EVIDENCE, or CALVIN REQUIRED outcome (or a qualifying CALVIN RULING), not a merge. Follow the current .github/ai-routines/OWNER.md adapter's terminal-wake path exactly from its Process section — read current native GitHub evidence only (including this item's own terminal outcome), then decide. Do not take on any broader orchestration role beyond what OWNER.md defines. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}: per OWNER.md's liveness correlation rule, your terminal receipt's first non-empty line must still be exactly one of the typed forms (DISPATCHED: / WAIT: AI — / WAIT: EXTERNAL — / WAIT: PARKED — / CALVIN REQUIRED:) and must also include the exact tag [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}] on that same line."
           REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/owner_terminal_response.json -w '%{http_code}' \

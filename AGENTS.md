@@ -27,9 +27,6 @@ verbatim historical quote. New/current-facing product prose and UI use
   Cal Finance Project Home — see [`docs/CURRENT-AUTHORITY.md`](docs/CURRENT-AUTHORITY.md)
   for how to reconstruct it. Don't infer current state from filenames,
   branch names, or doc age in this repo.
-- **Cal Finance Project Home** (external) owns durable semantic authorities
-  not covered by the class above and not yet cut over to GitHub — see
-  `docs/CURRENT-AUTHORITY.md` for the current split.
 - **Cal Finance Methodology** (external) owns finance semantics — what a
   metric means, how it's computed, what counts as correct.
 - **Product Decision Log** (external, superseded) previously owned settled

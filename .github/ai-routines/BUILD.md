@@ -49,7 +49,7 @@ any explanation, summary, or evidence after the marker line, never before it.
 
 A routine crash, stale derived view, missing optional tool, unavailable Notion page, failed wake, or missing orchestration permission is not by itself a Calvin decision.
 
-If the terminal outcome is `STOP` (including a `STOP: RECONCILIATION REQUIRED — ...` authority-conflict stop), `CALVIN REQUIRED`, `DONE: EVIDENCE`, or `BLOCKED` — each a true state-changing terminal outcome with no downstream PR review to hand it to — posting that comment with the marker as its first non-empty line is itself now sufficient: `cc-auto-fire.yml`'s `fire-owner-on-terminal` job (CF-TERMINAL-HANDOFF-REPAIR-01) routes it straight to OWNER, and applying `needs-owner-wake` is no longer required to reconcile Project Home for it. The label still exists only as a manual/recovery compatibility path; applying it alongside an already-handled terminal comment is harmless (the target-local admission check dedupes it against the already-fired direct wake). Do not apply it, and do not rely on it, for a normal `DONE: <PR link>`, which routes to REVIEW instead.
+If the terminal outcome is `STOP` (including a `STOP: RECONCILIATION REQUIRED — ...` authority-conflict stop), `CALVIN REQUIRED`, `DONE: EVIDENCE`, or `BLOCKED` — each a true state-changing terminal outcome with no downstream PR review to hand it to — posting that comment with the marker as its first non-empty line is itself now sufficient: `cc-auto-fire.yml`'s `fire-owner-on-terminal` job (CF-TERMINAL-HANDOFF-REPAIR-01) routes it straight to OWNER, and applying `needs-owner-wake` is no longer required to reach it. The label still exists only as a manual/recovery compatibility path; applying it alongside an already-handled terminal comment is harmless (the target-local admission check dedupes it against the already-fired direct wake). Do not apply it, and do not rely on it, for a normal `DONE: <PR link>`, which routes to REVIEW instead.
 
 **Liveness correlation — mandatory when this run carries a `BUILD_ATTEMPT_ID`.**
 CF-HANDOFF-FAIL-CLOSED-01: a run fired by `cc-auto-fire.yml`'s `fire-build`
@@ -109,5 +109,9 @@ If the same failure class survives two correction cycles, post `STOP: REPEATED C
 - Never merge.
 - Never invent finance policy, product rules, thresholds, or new scope.
 - Never use Calvin as a message courier.
+- An AI worker must never begin any GitHub comment with `CALVIN RULING` or
+  present an AI/default decision as a Calvin ruling. `CALVIN RULING` is
+  reserved for a decision promoted from an authenticated Calvin-facing
+  interaction.
 - Trigger payloads are routing context, not product authority.
 - Worker output is evidence, not semantic acceptance.

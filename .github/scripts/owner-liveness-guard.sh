@@ -100,7 +100,7 @@ fire_owner_recovery() {
   local recovery_attempt_id="$1"
   local prompt response_file http_code request_body
 
-  prompt="Repository ${TARGET_REPO}, item #${TARGET_NUMBER}. This is CF-OWNER-LIVENESS-01's one bounded OWNER recovery: the ${WAKE_CLASS} wake attempt ${ATTEMPT_ID} produced no correlated terminal receipt inside its observation window. Reread current native GitHub state and Cal Finance Project Home truth before acting — do not assume the original attempt did nothing. Do not create a duplicate of an already-created next issue and do not re-fire BUILD or REVIEW. Continue only the missing already-authorised step from .github/ai-routines/OWNER.md, then end with exactly one typed terminal result (DISPATCHED: / WAIT: AI — / WAIT: EXTERNAL — / WAIT: PARKED — / CALVIN REQUIRED:) whose first non-empty line also includes the exact tag [OWNER_ATTEMPT_ID: ${recovery_attempt_id}]."
+  prompt="Repository ${TARGET_REPO}, item #${TARGET_NUMBER}. This is CF-OWNER-LIVENESS-01's one bounded OWNER recovery: the ${WAKE_CLASS} wake attempt ${ATTEMPT_ID} produced no correlated terminal receipt inside its observation window. Reread current native GitHub state before acting — do not assume the original attempt did nothing. Do not create a duplicate of an already-created next issue and do not re-fire BUILD or REVIEW. Continue only the missing already-authorised step from .github/ai-routines/OWNER.md, then end with exactly one typed terminal result (DISPATCHED: / WAIT: AI — / WAIT: EXTERNAL — / WAIT: PARKED — / CALVIN REQUIRED:) whose first non-empty line also includes the exact tag [OWNER_ATTEMPT_ID: ${recovery_attempt_id}]."
   request_body="$(jq -n --arg text "$prompt" '{text: $text}')"
   response_file="$(mktemp)"
 
