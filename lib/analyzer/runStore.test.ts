@@ -244,13 +244,46 @@ describe("runStore", () => {
     });
   });
 
-  // R7: lose the URL and the run is gone. There is no listing surface, so
-  // this is asserted against the module's own exports.
-  it("exposes no way to list or search runs", async () => {
+  // R7: lose the URL and the run is gone. There is no GENERAL listing surface
+  // (getLatestRunsForTickers below is a narrow, scoped exception — see the
+  // module header and its own describe block — and its name is deliberately
+  // clear of this regex), so this is asserted against the module's own
+  // exports.
+  it("exposes no way to list or search runs by name", async () => {
     const store = await import("./runStore");
     const listingLike = Object.keys(store).filter((k) =>
       /list|all|search|find|recent|history|index/i.test(k)
     );
     expect(listingLike).toEqual([]);
+  });
+
+  describe("getLatestRunsForTickers", () => {
+    it("returns nothing for an empty ticker list, without querying the database", async () => {
+      const { getLatestRunsForTickers } = await import("./runStore");
+      expect(await getLatestRunsForTickers([])).toEqual(new Map());
+    });
+
+    it("returns only the tickers asked for, each with its most recent run", async () => {
+      const older = await createRun("MSFT", "Microsoft Corporation");
+      // A distinct, later run for the same ticker — the map must carry the
+      // newer one, not the first. created_at is set explicitly (rather than
+      // relying on two back-to-back now() calls to land on different
+      // instants) so the ordering this test asserts is deterministic.
+      const newer = await createRun("MSFT", "Microsoft Corporation");
+      await getPool().query(
+        `UPDATE analyzer_runs SET created_at = created_at - interval '1 hour' WHERE run_id = $1`,
+        [older]
+      );
+      await createRun("OKLO", "Oklo Inc."); // held, but not asked for below
+
+      const { getLatestRunsForTickers } = await import("./runStore");
+      const result = await getLatestRunsForTickers(["MSFT", "NVDA"]);
+
+      expect(Array.from(result.keys())).toEqual(["MSFT"]);
+      expect(result.get("MSFT")!.runId).toBe(newer);
+      expect(result.get("MSFT")!.runId).not.toBe(older);
+      expect(result.has("OKLO")).toBe(false);
+      expect(result.has("NVDA")).toBe(false);
+    });
   });
 });
