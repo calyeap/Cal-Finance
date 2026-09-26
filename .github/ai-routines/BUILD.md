@@ -51,6 +51,30 @@ A routine crash, stale derived view, missing optional tool, unavailable Notion p
 
 If the terminal outcome is `STOP` (including a `STOP: RECONCILIATION REQUIRED — ...` authority-conflict stop), `CALVIN REQUIRED`, `DONE: EVIDENCE`, or `BLOCKED` — each a true state-changing terminal outcome with no downstream PR review to hand it to — posting that comment with the marker as its first non-empty line is itself now sufficient: `cc-auto-fire.yml`'s `fire-owner-on-terminal` job (CF-TERMINAL-HANDOFF-REPAIR-01) routes it straight to OWNER, and applying `needs-owner-wake` is no longer required to reconcile Project Home for it. The label still exists only as a manual/recovery compatibility path; applying it alongside an already-handled terminal comment is harmless (the target-local admission check dedupes it against the already-fired direct wake). Do not apply it, and do not rely on it, for a normal `DONE: <PR link>`, which routes to REVIEW instead.
 
+**Liveness correlation — mandatory when this run carries a `BUILD_ATTEMPT_ID`.**
+CF-HANDOFF-FAIL-CLOSED-01: a run fired by `cc-auto-fire.yml`'s `fire-build`
+job carries one `BUILD_ATTEMPT_ID` in its fire prompt (a bounded recovery
+wake — see below — carries a fresh id in the same place). When this
+session's fire prompt gave you a `BUILD_ATTEMPT_ID`, your terminal
+comment's first non-empty line must still be exactly one of the five typed
+forms above, and must also carry the exact tag
+`[BUILD_ATTEMPT_ID: <the id from this run's prompt>]` on that same line —
+e.g. `DONE: <PR link> [BUILD_ATTEMPT_ID: BUILD-123456-1]`. This is how
+`.github/scripts/worker-liveness-guard.sh` (CF-HANDOFF-FAIL-CLOSED-01, the
+BUILD/REVIEW analogue of OWNER's own CF-OWNER-LIVENESS-01) tells a
+completed run apart from a stalled one; a terminal comment missing this
+tag reads as a stall and can trigger the one bounded recovery fire that
+script performs. A run with no `BUILD_ATTEMPT_ID` in its fire prompt (a
+manual/direct invocation) carries no such obligation.
+
+**Transport/auth failures are workflow-layer, not yours to handle.** If the
+fire itself never reached you (missing secret, HTTP 401/403), this session
+never started, so there is nothing for this adapter to say about it —
+`cc-auto-fire.yml`'s fire step classifies that case itself and posts a
+`WORKFLOW BLOCKED — AUTH` receipt naming the exact secret to refresh. Never
+build retry, monitoring, or credential-handling logic into this adapter;
+your only obligation toward the liveness/auth machinery is the tag above.
+
 ## DONE evidence
 
 The PR should contain only the evidence needed to review the work:

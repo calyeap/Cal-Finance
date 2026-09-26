@@ -139,6 +139,27 @@ jobs:
       - name: Run BUILD duplicate suppression unit tests
         run: bash .github/scripts/build-duplicate-lib.test.sh
 
+      # CF-HANDOFF-FAIL-CLOSED-01: deterministic, network-free coverage for
+      # the new BUILD/REVIEW post-fire liveness contract, the shared
+      # generic liveness engine underneath it (and OWNER's), the
+      # missing-secret/401/403 AUTH classification shared by every fire
+      # path, and the structural wiring that makes all of it reachable in
+      # production, not just correct in isolation.
+      - name: Run fire-auth classification unit tests
+        run: bash .github/scripts/fire-auth-lib.test.sh
+
+      - name: Run BUILD liveness guard unit tests
+        run: bash .github/scripts/build-liveness-lib.test.sh
+
+      - name: Run REVIEW liveness guard unit tests
+        run: bash .github/scripts/review-liveness-lib.test.sh
+
+      - name: Run BUILD/REVIEW liveness guard control-flow tests
+        run: bash .github/scripts/worker-liveness-guard.test.sh
+
+      - name: Run handoff liveness/auth reachability structural tests
+        run: bash .github/scripts/handoff-liveness-reachability.test.sh
+
       # CF-STATUS-PLUMBING-CLEANUP-01: deterministic, network-free
       # structural check that OWNER.md derives current status/attention
       # from native GitHub, never from Cal Finance Project Home's stale

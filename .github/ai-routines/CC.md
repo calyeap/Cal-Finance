@@ -77,6 +77,29 @@ Use for ambiguous target, missing task contract, changed head during review, con
 - Posting `STOP:` as the comment's first non-empty line routes directly to CALBOARD-OWNER on its own (CF-TERMINAL-HANDOFF-REPAIR-01) — applying `needs-owner-wake` is no longer required.
 - Never end silently.
 
+## Liveness correlation — mandatory when this run carries a `REVIEW_ATTEMPT_ID`
+
+CF-HANDOFF-FAIL-CLOSED-01: a run fired by `cc-auto-fire.yml`'s `fire-review`
+job carries one `REVIEW_ATTEMPT_ID` in its fire prompt (a bounded recovery
+wake carries a fresh id in the same place). When this session's fire
+prompt gave you a `REVIEW_ATTEMPT_ID`, your terminal comment's first
+non-empty line must still be exactly one of the four typed forms above
+(`ACCEPT:`, `CORRECT:`, `CALVIN REQUIRED:`, `STOP:`), and must also carry
+the exact tag `[REVIEW_ATTEMPT_ID: <the id from this run's prompt>]` on
+that same line. This is how `.github/scripts/worker-liveness-guard.sh`
+(CF-HANDOFF-FAIL-CLOSED-01, the BUILD/REVIEW analogue of OWNER's own
+CF-OWNER-LIVENESS-01) tells a completed run apart from a stalled one; a
+terminal comment missing this tag reads as a stall and can trigger the one
+bounded recovery fire that script performs. A run with no
+`REVIEW_ATTEMPT_ID` in its fire prompt (a manual/direct invocation) carries
+no such obligation.
+
+If the fire that would have started this session never reached you at all
+(missing secret, HTTP 401/403), there is nothing for this adapter to say
+about it — `cc-auto-fire.yml`'s fire step classifies and reports that case
+itself. Never build retry, monitoring, or credential-handling logic into
+this adapter.
+
 ## Hard boundaries
 
 - Review only the exact PR head you fetched.

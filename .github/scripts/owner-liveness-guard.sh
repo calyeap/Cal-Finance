@@ -37,6 +37,8 @@ set -uo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=owner-liveness-lib.sh
 source "${SCRIPT_DIR}/owner-liveness-lib.sh"
+# shellcheck source=fire-auth-lib.sh
+source "${SCRIPT_DIR}/fire-auth-lib.sh"
 
 : "${GH_TOKEN:?GH_TOKEN is required}"
 : "${TARGET_REPO:?TARGET_REPO is required}"
@@ -120,8 +122,17 @@ fire_owner_recovery() {
     return 0
   fi
 
-  post_comment "$(printf 'OWNER LIVENESS EXHAUSTED — RECONCILIATION REQUIRED\n\nOriginal attempt %s (%s wake) produced no correlated terminal receipt inside its observation window, and the one bounded recovery fire itself failed to reach OWNER (HTTP %s). First broken transition: OWNER fire -> HTTP acceptance. No further recovery will be attempted.' \
-    "$ATTEMPT_ID" "$WAKE_CLASS" "$http_code")"
+  # CF-HANDOFF-FAIL-CLOSED-01: a missing secret / 401 / 403 on the recovery
+  # fire is a credential problem, not ordinary liveness exhaustion — name it
+  # as such (actor + exact secret to refresh) instead of folding it into
+  # the generic RECONCILIATION REQUIRED receipt, and never print the
+  # response body, which may carry the credential itself.
+  if [ "$(fire_auth_status "$http_code")" = "auth" ]; then
+    post_comment "$(fire_auth_blocked_body OWNER OWNER_FIRE_TOKEN "$http_code")"
+  else
+    post_comment "$(printf 'OWNER LIVENESS EXHAUSTED — RECONCILIATION REQUIRED\n\nOriginal attempt %s (%s wake) produced no correlated terminal receipt inside its observation window, and the one bounded recovery fire itself failed to reach OWNER (HTTP %s). First broken transition: OWNER fire -> HTTP acceptance. No further recovery will be attempted.' \
+      "$ATTEMPT_ID" "$WAKE_CLASS" "$http_code")"
+  fi
   rm -f "$response_file"
   return 1
 }

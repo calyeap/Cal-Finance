@@ -160,6 +160,28 @@ terminal_is_calvin_required_marker() {
 # calvin_ruling_gate_status (calvin-ruling-lib.sh) reads as the gate having
 # closed — before Calvin ever ruled on it. BUILD/REVIEW's own
 # CALVIN REQUIRED: comments never carry this tag and keep routing directly.
+# CF-HANDOFF-FAIL-CLOSED-01
+#
+# terminal_is_workflow_blocked_marker <comment_body>
+# True ("true") when the comment's first non-blank line — after dropping
+# leading blank lines, trimming whitespace, and stripping a harmless
+# Markdown heading prefix — begins with `WORKFLOW BLOCKED` (the AUTH/
+# LIVENESS-exhaustion receipts fire-*-lib.sh's callers post; see
+# fire-auth-lib.sh and worker-liveness-guard.sh) or with the pre-existing
+# `OWNER LIVENESS EXHAUSTED` marker (CF-OWNER-LIVENESS-01, left unrenamed
+# for backward compatibility). calvin-slack-alert.yml uses this to decide
+# whether a comment should alert Calvin once through the existing Slack
+# webhook, alongside its existing CALVIN REQUIRED: trigger.
+terminal_is_workflow_blocked_marker() {
+  local body="$1" first_line normalized
+  first_line="$(terminal_first_line "$body")"
+  normalized="$(terminal_strip_markdown_heading "$first_line")"
+  case "$normalized" in
+    "WORKFLOW BLOCKED"*|"OWNER LIVENESS EXHAUSTED"*) echo true ;;
+    *) echo false ;;
+  esac
+}
+
 terminal_is_owner_direct_marker() {
   local body="$1" first_line normalized
   first_line="$(terminal_first_line "$body")"

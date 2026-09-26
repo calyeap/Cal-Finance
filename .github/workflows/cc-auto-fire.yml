@@ -28,6 +28,13 @@ jobs:
     concurrency:
       group: fire-build-${{ github.event.issue.number || github.event.pull_request.number }}
       cancel-in-progress: false
+    # CF-HANDOFF-FAIL-CLOSED-01: this job now legitimately runs up to
+    # roughly two liveness lease windows long (~40 minutes at the default
+    # 20-minute lease) once the fire below succeeds, because
+    # worker-liveness-guard.sh's bounded observation window and single
+    # recovery run as a later step in this same job — see that script and
+    # BUILD.md's "Liveness correlation" rule for the full contract.
+    timeout-minutes: 50
     steps:
       # CF-CORRECT-ROUTER-01: moved ahead of "Resolve target" (unconditional
       # — this job's precise CORRECT match needs terminal-routing-lib.sh on
@@ -71,6 +78,7 @@ jobs:
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "attempt_id=BUILD-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
       # CF-OUTCOME-LOOP-LEAN-01
       # Deterministic BUILD admission guard: issue #188 fired two BUILD
@@ -110,16 +118,34 @@ jobs:
           BUILD_FIRE_TOKEN: ${{ secrets.BUILD_FIRE_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
           TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
         run: |
           set -uo pipefail
+          # shellcheck source=../scripts/fire-auth-lib.sh
+          source .github/scripts/fire-auth-lib.sh
 
-          if [ -z "${BUILD_FIRE_URL:-}" ] || [ -z "${BUILD_FIRE_TOKEN:-}" ]; then
+          if [ -z "${BUILD_FIRE_URL:-}" ]; then
             echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
+            echo "missing_secret_name=BUILD_FIRE_URL" >> "$GITHUB_OUTPUT"
             echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${BUILD_FIRE_TOKEN:-}" ]; then
+            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
+            echo "missing_secret_name=BUILD_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER}. Run CALBOARD-BUILD for this exact target. Always post DONE, BLOCKED, STOP, or CALVIN REQUIRED before ending."
+          # CF-HANDOFF-FAIL-CLOSED-01: this run's BUILD_ATTEMPT_ID is echoed
+          # in the fire receipt below (which doubles as this attempt's
+          # liveness start marker — see build-liveness-lib.sh) and must also
+          # come back on BUILD's own terminal comment per BUILD.md's
+          # Liveness correlation rule, so worker-liveness-guard.sh can tell
+          # a completed run apart from a stalled one.
+          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER}. Run CALBOARD-BUILD for this exact target. Always post DONE, BLOCKED, STOP, or CALVIN REQUIRED before ending. This run's BUILD_ATTEMPT_ID is ${ATTEMPT_ID}: per BUILD.md's liveness correlation rule, your terminal comment's first non-empty line must also include the exact tag [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}] on that same line."
           REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/build_response.json -w '%{http_code}' \
@@ -135,8 +161,15 @@ jobs:
             echo "session_id=$(jq -r '.claude_code_session_id // "unknown"' /tmp/build_response.json)" >> "$GITHUB_OUTPUT"
             echo "session_url=$(jq -r '.claude_code_session_url // "unknown"' /tmp/build_response.json)" >> "$GITHUB_OUTPUT"
             echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
           else
             echo "ok=false" >> "$GITHUB_OUTPUT"
+            if [ "$(fire_auth_status "$HTTP_CODE")" = "auth" ]; then
+              echo "missing_secret_name=BUILD_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
+              echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Report BUILD fire
@@ -146,12 +179,18 @@ jobs:
         run: |
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="BUILD FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+            -f body="BUILD FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }}) [BUILD_ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}]"
 
+      # CF-HANDOFF-FAIL-CLOSED-01: removed on a genuine duplicate suppression
+      # (as before) and now also on an AUTH-classified fire failure — a
+      # missing secret / 401 / 403 must leave the target in a state where
+      # refreshing the secret and re-applying this label deterministically
+      # re-drives it, instead of the label silently going nowhere because it
+      # was still present (issue's observed "stale wake label" failure).
       - name: Remove BUILD wake label
         if: >-
           github.event.label.name == 'needs-build-wake' &&
-          (steps.fire.outputs.ok == 'true' || steps.dedup.outputs.status == 'duplicate')
+          (steps.fire.outputs.ok == 'true' || steps.dedup.outputs.status == 'duplicate' || steps.fire.outputs.auth_blocked == 'true')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -166,16 +205,55 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -uo pipefail
+          # shellcheck source=../scripts/fire-auth-lib.sh
+          source .github/scripts/fire-auth-lib.sh
+
+          if [ "${{ steps.fire.outputs.auth_blocked }}" = "true" ]; then
+            BODY="$(fire_auth_blocked_body BUILD "${{ steps.fire.outputs.missing_secret_name }}" "${{ steps.fire.outputs.http_code }}")"
+          else
+            BODY="BUILD FIRE FAILED: HTTP ${{ steps.fire.outputs.http_code }}"
+          fi
+
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="BUILD FIRE FAILED: HTTP ${{ steps.fire.outputs.http_code }}"
+            -f body="$BODY"
           exit 1
+
+      # CF-HANDOFF-FAIL-CLOSED-01
+      # Only reached once the fire above succeeded and the tagged
+      # "BUILD FIRED:" receipt landed. Watches this exact attempt for a
+      # correlated terminal receipt, fires the one bounded recovery if it
+      # stalls, and posts the durable WORKFLOW BLOCKED — LIVENESS receipt if
+      # the recovery also stalls. See worker-liveness-guard.sh and BUILD.md's
+      # "Liveness correlation" rule for the full contract.
+      - name: Run BUILD liveness guard
+        if: >-
+          steps.target.outputs.skip != 'true' &&
+          steps.dedup.outputs.status != 'duplicate' &&
+          steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: BUILD
+          FIRE_URL: ${{ secrets.BUILD_FIRE_URL }}
+          FIRE_TOKEN: ${{ secrets.BUILD_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+        run: bash .github/scripts/worker-liveness-guard.sh
 
   fire-review:
     if: >-
       github.event.label.name == 'needs-cc-rereview' ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'DONE:'))
     runs-on: ubuntu-latest
+    # CF-HANDOFF-FAIL-CLOSED-01: this job now legitimately runs up to
+    # roughly two liveness lease windows long (~40 minutes at the default
+    # 20-minute lease) once the fire below succeeds, because
+    # worker-liveness-guard.sh's bounded observation window and single
+    # recovery run as a later step in this same job — see that script and
+    # CC.md's "Liveness correlation" rule for the full contract.
+    timeout-minutes: 50
     steps:
       # CF-OUTCOME-LOOP-LEAN-01: terminal-routing-lib.sh needs to exist on
       # disk to bind the PR reference to the terminal/first-line contract
@@ -239,6 +317,7 @@ jobs:
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "attempt_id=REVIEW-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
       - name: Fire CALBOARD-CC-AUTO / REVIEW
         id: fire
@@ -248,16 +327,33 @@ jobs:
           CC_AUTO_FIRE_TOKEN: ${{ secrets.CC_AUTO_FIRE_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
           TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
         run: |
           set -uo pipefail
+          # shellcheck source=../scripts/fire-auth-lib.sh
+          source .github/scripts/fire-auth-lib.sh
 
-          if [ -z "${CC_AUTO_FIRE_URL:-}" ] || [ -z "${CC_AUTO_FIRE_TOKEN:-}" ]; then
+          if [ -z "${CC_AUTO_FIRE_URL:-}" ]; then
             echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
+            echo "missing_secret_name=CC_AUTO_FIRE_URL" >> "$GITHUB_OUTPUT"
             echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${CC_AUTO_FIRE_TOKEN:-}" ]; then
+            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
+            echo "missing_secret_name=CC_AUTO_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
-          PROMPT="Repository ${TARGET_REPO}, PR/item #${TARGET_NUMBER}. Run CALBOARD-CC-AUTO / REVIEW for this exact target. Post a literal ACCEPT:, CORRECT:, CALVIN REQUIRED:, or STOP: as the first non-empty line before ending — no Markdown heading prefix."
+          # CF-HANDOFF-FAIL-CLOSED-01: this run's REVIEW_ATTEMPT_ID is
+          # echoed in the fire receipt below (which doubles as this
+          # attempt's liveness start marker — see review-liveness-lib.sh)
+          # and must also come back on REVIEW's own terminal comment per
+          # CC.md's Liveness correlation rule.
+          PROMPT="Repository ${TARGET_REPO}, PR/item #${TARGET_NUMBER}. Run CALBOARD-CC-AUTO / REVIEW for this exact target. Post a literal ACCEPT:, CORRECT:, CALVIN REQUIRED:, or STOP: as the first non-empty line before ending — no Markdown heading prefix. This run's REVIEW_ATTEMPT_ID is ${ATTEMPT_ID}: per CC.md's liveness correlation rule, that first non-empty line must also include the exact tag [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]."
           REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
 
           HTTP_CODE=$(curl -sS -o /tmp/review_response.json -w '%{http_code}' \
@@ -273,8 +369,15 @@ jobs:
             echo "session_id=$(jq -r '.claude_code_session_id // "unknown"' /tmp/review_response.json)" >> "$GITHUB_OUTPUT"
             echo "session_url=$(jq -r '.claude_code_session_url // "unknown"' /tmp/review_response.json)" >> "$GITHUB_OUTPUT"
             echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
           else
             echo "ok=false" >> "$GITHUB_OUTPUT"
+            if [ "$(fire_auth_status "$HTTP_CODE")" = "auth" ]; then
+              echo "missing_secret_name=CC_AUTO_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
+              echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Report REVIEW fire
@@ -284,10 +387,15 @@ jobs:
         run: |
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="REVIEW FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }})"
+            -f body="REVIEW FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }}) [REVIEW_ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}]"
 
+      # CF-HANDOFF-FAIL-CLOSED-01: also removed on an AUTH-classified fire
+      # failure — see fire-build's "Remove BUILD wake label" step for the
+      # matching rationale (deterministic re-drive after a secret refresh).
       - name: Remove REVIEW wake label
-        if: github.event.label.name == 'needs-cc-rereview' && steps.fire.outputs.ok == 'true'
+        if: >-
+          github.event.label.name == 'needs-cc-rereview' &&
+          (steps.fire.outputs.ok == 'true' || steps.fire.outputs.auth_blocked == 'true')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -299,10 +407,37 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -uo pipefail
+          # shellcheck source=../scripts/fire-auth-lib.sh
+          source .github/scripts/fire-auth-lib.sh
+
+          if [ "${{ steps.fire.outputs.auth_blocked }}" = "true" ]; then
+            BODY="$(fire_auth_blocked_body REVIEW "${{ steps.fire.outputs.missing_secret_name }}" "${{ steps.fire.outputs.http_code }}")"
+          else
+            BODY="REVIEW FIRE FAILED: HTTP ${{ steps.fire.outputs.http_code }}"
+          fi
+
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="REVIEW FIRE FAILED: HTTP ${{ steps.fire.outputs.http_code }}"
+            -f body="$BODY"
           exit 1
+
+      # CF-HANDOFF-FAIL-CLOSED-01
+      # Only reached once the fire above succeeded and the tagged
+      # "REVIEW FIRED:" receipt landed. See fire-build's matching step and
+      # worker-liveness-guard.sh / CC.md's "Liveness correlation" rule for
+      # the full contract.
+      - name: Run REVIEW liveness guard
+        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ACTOR: REVIEW
+          FIRE_URL: ${{ secrets.CC_AUTO_FIRE_URL }}
+          FIRE_TOKEN: ${{ secrets.CC_AUTO_FIRE_TOKEN }}
+          TARGET_REPO: ${{ github.repository }}
+          TARGET_NUMBER: ${{ steps.target.outputs.number }}
+          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+        run: bash .github/scripts/worker-liveness-guard.sh
 
   # CF-OWNER-RECONCILE-01
   # Terminal non-merge OWNER wake: BUILD/REVIEW apply needs-owner-wake only
@@ -501,11 +636,23 @@ jobs:
           ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
         run: |
           set -uo pipefail
+          # shellcheck source=../scripts/fire-auth-lib.sh
+          source .github/scripts/fire-auth-lib.sh
 
-          if [ -z "${OWNER_FIRE_URL:-}" ] || [ -z "${OWNER_FIRE_TOKEN:-}" ]; then
-            echo "::error::OWNER_FIRE_URL or OWNER_FIRE_TOKEN repository secret is missing."
+          if [ -z "${OWNER_FIRE_URL:-}" ]; then
+            echo "::error::OWNER_FIRE_URL repository secret is missing."
             echo "ok=false" >> "$GITHUB_OUTPUT"
             echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
+            echo "missing_secret_name=OWNER_FIRE_URL" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${OWNER_FIRE_TOKEN:-}" ]; then
+            echo "::error::OWNER_FIRE_TOKEN repository secret is missing."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
+            echo "missing_secret_name=OWNER_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -525,8 +672,15 @@ jobs:
             echo "session_id=$(jq -r '.claude_code_session_id // "unknown"' /tmp/owner_terminal_response.json)" >> "$GITHUB_OUTPUT"
             echo "session_url=$(jq -r '.claude_code_session_url // "unknown"' /tmp/owner_terminal_response.json)" >> "$GITHUB_OUTPUT"
             echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
           else
             echo "ok=false" >> "$GITHUB_OUTPUT"
+            if [ "$(fire_auth_status "$HTTP_CODE")" = "auth" ]; then
+              echo "missing_secret_name=OWNER_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
+              echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Report OWNER terminal-wake fire
@@ -539,8 +693,13 @@ jobs:
             -f body="$(printf 'OWNER ATTEMPT START: %s\nwake_class: TERMINAL\nCF-OWNER-RECONCILE-01: fired CALBOARD-OWNER (terminal wake) for needs-owner-wake (HTTP %s). session: %s (%s)' \
               "${{ steps.target.outputs.attempt_id }}" "${{ steps.fire.outputs.http_code }}" "${{ steps.fire.outputs.session_id }}" "${{ steps.fire.outputs.session_url }}")"
 
+      # CF-HANDOFF-FAIL-CLOSED-01: also removed on an AUTH-classified fire
+      # failure, same deterministic re-drive rationale as fire-build's
+      # "Remove BUILD wake label" step.
       - name: Remove OWNER terminal-wake label
-        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
+        if: >-
+          steps.target.outputs.skip != 'true' &&
+          (steps.fire.outputs.ok == 'true' || steps.fire.outputs.auth_blocked == 'true')
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -573,9 +732,19 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
+          set -uo pipefail
+          # shellcheck source=../scripts/fire-auth-lib.sh
+          source .github/scripts/fire-auth-lib.sh
+
+          if [ "${{ steps.fire.outputs.auth_blocked }}" = "true" ]; then
+            BODY="$(fire_auth_blocked_body OWNER "${{ steps.fire.outputs.missing_secret_name }}" "${{ steps.fire.outputs.http_code }}")"
+          else
+            BODY="CF-OWNER-RECONCILE-01: CALBOARD-OWNER terminal-wake fire failed (HTTP ${{ steps.fire.outputs.http_code }})."
+          fi
+
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="CF-OWNER-RECONCILE-01: CALBOARD-OWNER terminal-wake fire failed (HTTP ${{ steps.fire.outputs.http_code }})."
+            -f body="$BODY"
           exit 1
 
       # CF-OWNER-LIVENESS-01

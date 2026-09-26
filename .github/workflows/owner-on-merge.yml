@@ -95,11 +95,23 @@ jobs:
           ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
         run: |
           set -uo pipefail
+          # shellcheck source=../scripts/fire-auth-lib.sh
+          source .github/scripts/fire-auth-lib.sh
 
-          if [ -z "${OWNER_FIRE_URL:-}" ] || [ -z "${OWNER_FIRE_TOKEN:-}" ]; then
-            echo "::error::OWNER_FIRE_URL or OWNER_FIRE_TOKEN repository secret is missing."
+          if [ -z "${OWNER_FIRE_URL:-}" ]; then
+            echo "::error::OWNER_FIRE_URL repository secret is missing."
             echo "ok=false" >> "$GITHUB_OUTPUT"
             echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
+            echo "missing_secret_name=OWNER_FIRE_URL" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "${OWNER_FIRE_TOKEN:-}" ]; then
+            echo "::error::OWNER_FIRE_TOKEN repository secret is missing."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
+            echo "missing_secret_name=OWNER_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
 
@@ -122,8 +134,15 @@ jobs:
             echo "session_id=$SESSION_ID" >> "$GITHUB_OUTPUT"
             echo "session_url=$SESSION_URL" >> "$GITHUB_OUTPUT"
             echo "ok=true" >> "$GITHUB_OUTPUT"
+            echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
           else
             echo "ok=false" >> "$GITHUB_OUTPUT"
+            if [ "$(fire_auth_status "$HTTP_CODE")" = "auth" ]; then
+              echo "missing_secret_name=OWNER_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
+              echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
+            fi
           fi
 
       - name: Record OWNER continuation fire
@@ -142,14 +161,24 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
         run: |
-          RAW_BODY=$(cat /tmp/owner_merge_response.json 2>/dev/null || echo "(no response body — request may not have completed)")
-          if [ -n "${OWNER_FIRE_TOKEN:-}" ]; then
-            SAFE_BODY=$(printf '%s' "$RAW_BODY" | sed "s/${OWNER_FIRE_TOKEN}/[REDACTED]/g")
+          set -uo pipefail
+          # shellcheck source=../scripts/fire-auth-lib.sh
+          source .github/scripts/fire-auth-lib.sh
+
+          if [ "${{ steps.fire.outputs.auth_blocked }}" = "true" ]; then
+            # CF-HANDOFF-FAIL-CLOSED-01: never print the response body for an
+            # auth-classified failure — it may carry the credential itself.
+            COMMENT_BODY="$(fire_auth_blocked_body OWNER "${{ steps.fire.outputs.missing_secret_name }}" "${{ steps.fire.outputs.http_code }}")"
           else
-            SAFE_BODY="$RAW_BODY"
+            RAW_BODY=$(cat /tmp/owner_merge_response.json 2>/dev/null || echo "(no response body — request may not have completed)")
+            if [ -n "${OWNER_FIRE_TOKEN:-}" ]; then
+              SAFE_BODY=$(printf '%s' "$RAW_BODY" | sed "s/${OWNER_FIRE_TOKEN}/[REDACTED]/g")
+            else
+              SAFE_BODY="$RAW_BODY"
+            fi
+            COMMENT_BODY=$(printf 'CF-OWNER-DISPATCH-01: CALBOARD-OWNER merged-PR fire failed (HTTP %s).\n\n```\n%s\n```' "${{ steps.fire.outputs.http_code }}" "$SAFE_BODY")
           fi
 
-          COMMENT_BODY=$(printf 'CF-OWNER-DISPATCH-01: CALBOARD-OWNER merged-PR fire failed (HTTP %s).\n\n```\n%s\n```' "${{ steps.fire.outputs.http_code }}" "$SAFE_BODY")
           gh api --method POST \
             "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
             -f body="$COMMENT_BODY"
