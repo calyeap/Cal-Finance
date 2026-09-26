@@ -101,6 +101,42 @@ driver evidence and valuation review zones:
 - Do not add analysis, surfaces, or signals that do not materially improve
   a core decision job.
 
+## 7. UPDATE workflow mode — reconciled definition (26 Sep 2026)
+
+Opened as the next capability lane per `CALVIN RULING — OPTION B`
+([issue #335](https://github.com/calyeap/Cal-Finance/issues/335),
+[PR #334 comment 5842994023](https://github.com/calyeap/Cal-Finance/pull/334#issuecomment-5842994023)).
+No UPDATE capability is implemented by this record.
+
+- **UPDATE is** the workflow mode that lets an analyst explicitly initiate
+  a fresh look at a company Cal Finance already has a report for, once new
+  evidence exists worth checking against — a single-company, analyst-
+  initiated re-look sitting between M9 and PORTFOLIO REVIEW in the V2
+  delivery order above.
+- **UPDATE is not** a refresh control, a re-run-with-same-facts shortcut, a
+  price- or momentum-triggered surface, a run index/history/listing
+  endpoint, or any verdict-completion/M8/BUY-HOLD-SELL work. Producing a
+  new report still costs a genuine per-fact decision pass, same as a first
+  run — the anti-momentum mechanism in §6 is not optimised away.
+- **Which of the "four workflow modes" (§1) UPDATE is remains unanswered**
+  by current authority — the delivery order names UPDATE, PORTFOLIO REVIEW
+  and SCREEN, and separately names "monitoring," without ever enumerating
+  the four modes or stating where monitoring fits. Not resolved here.
+- **Depends on** an existing accepted Analyzer report (M9/Analyzer V2,
+  accepted and frozen per `docs/analyzer-v2-final-acceptance-freeze.md`)
+  and the existing acquire → verify → compute pipeline; whether it also
+  depends on the snapshot contract above is left open.
+- The `docs/frozen/calboard-stock-analyzer-v1-design.md:110`/`:125`
+  no-refresh / no-history-list constraint is **superseded only for
+  design-contract purposes** (`docs/CURRENT-AUTHORITY.md`,
+  `docs/design/analyzer-v2-design-authority.md`); the underlying
+  anti-momentum principle it states binds UPDATE as a live constraint in
+  its own right, independently restated in §6 above and in
+  `docs/product-decisions.md` item 18. No authority conflict — no
+  `RECONCILIATION REQUIRED`.
+- Full citations, reasoning and a proposed (not started) first bounded
+  UPDATE implementation outcome: [`docs/update-workflow-mode-reconciliation.md`](update-workflow-mode-reconciliation.md).
+
 ## Source-of-truth rule
 
 This file is the current authority for strategic sequencing / runway
