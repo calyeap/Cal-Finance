@@ -49,7 +49,7 @@ main() {
   start="$(find_start "$comments")"
   if [ "$start" = "null" ] || [ -z "$start" ]; then
     echo "::error::terminal-watch(${ACTOR}): missing start receipt for ${ATTEMPT_ID}; refusing to invent liveness." >&2
-    exit 1
+    return 1
   fi
   started_at="$(jq -r '.created_at' <<< "$start")"
   deadline=$(( $(date +%s) + LEASE_MINUTES * 60 ))
@@ -59,7 +59,7 @@ main() {
     status="$(runtime_attempt_status "$comments" "$ACTOR" "$ATTEMPT_ID" "$started_at")"
     if [ "$status" = "complete" ]; then
       echo "terminal-watch(${ACTOR}): ${ATTEMPT_ID} completed."
-      exit 0
+      return 0
     fi
     if [ "$(date +%s)" -ge "$deadline" ]; then
       break
@@ -69,7 +69,7 @@ main() {
 
   post_comment "BLOCKED: AI — ${ACTOR} attempt ${ATTEMPT_ID} produced no correlated terminal receipt inside ${LEASE_MINUTES} minutes. No automatic re-fire was attempted, preserving the one-active-execution invariant. [${TAG_NAME}: ${ATTEMPT_ID}]"
   echo "::error::terminal-watch(${ACTOR}): ${ATTEMPT_ID} timed out; fail closed without recovery fire." >&2
-  exit 1
+  return 1
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
