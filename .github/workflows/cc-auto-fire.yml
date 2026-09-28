@@ -247,6 +247,7 @@ jobs:
           NUMBER: ${{ needs.fire-build.outputs.target_number }}
           OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
           OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           source .github/scripts/terminal-relay.sh
@@ -420,6 +421,7 @@ jobs:
           NUMBER: ${{ needs.fire-review.outputs.target_number }}
           OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
           OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           source .github/scripts/terminal-relay.sh
