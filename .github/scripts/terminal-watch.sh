@@ -68,7 +68,7 @@ main() {
   done
 
   post_comment "BLOCKED: AI — ${ACTOR} attempt ${ATTEMPT_ID} produced no correlated terminal receipt inside ${LEASE_MINUTES} minutes. No automatic re-fire was attempted, preserving the one-active-execution invariant. [${TAG_NAME}: ${ATTEMPT_ID}]"
-  echo "::error::terminal-watch(${ACTOR}): ${ATTEMPT_ID} timed out; fail closed without recovery fire." >&2
+  echo "::error::terminal-watch(${ACTOR}): ${ATTEMPT_ID} timed out; fail closed without starting another worker." >&2
   return 1
 }
 
