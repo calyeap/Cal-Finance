@@ -173,13 +173,17 @@ runtime_parent_terminal_kind() {
   esac
 }
 
+# runtime_slack_kind <line>
+# Slack is an interrupt channel for genuine Calvin action, not a progress
+# feed (CF-SLACK-ACTION-ONLY-01, issue #377): only a real human gate is
+# Slack-eligible. `COMPLETE:` remains a valid parent terminal
+# (runtime_parent_terminal_kind) — it is simply never Slack-eligible.
 runtime_slack_kind() {
   local line
   line="$(runtime_terminal_line "$1")"
   case "$line" in
     "CALVIN REQUIRED:"*) echo calvin_required ;;
     "BLOCKED: ACTIONABLE"*) echo actionable_blocked ;;
-    COMPLETE:*) echo complete ;;
     *) echo none ;;
   esac
 }

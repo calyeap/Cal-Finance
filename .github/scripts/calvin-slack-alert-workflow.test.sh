@@ -96,7 +96,7 @@ CURL_STUB='() { touch "'"$CURL_MARKER"'"; echo -n 200
 rm -f "$CURL_MARKER"
 set +e
 run_step "https://hooks.example/test" \
-  "COMPLETE: workflow proof regression guard" \
+  "BLOCKED: ACTIONABLE — workflow proof regression guard" \
   "o/r" "1" "https://x/1" "2026-09-28T16:00:00Z"
 rc=$?
 set -e

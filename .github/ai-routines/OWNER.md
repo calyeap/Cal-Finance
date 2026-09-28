@@ -47,7 +47,7 @@ Use when the bounded parent/outcome is durably complete and no already-authorise
 Terminal:
 `COMPLETE: <meaningful completed parent/outcome>`
 
-This is the one completion class eligible for Calvin's low-noise Slack completion signal.
+`COMPLETE:` is not Slack-eligible (CF-SLACK-ACTION-ONLY-01): GitHub is the durable record of completion, and Slack interrupts Calvin only for a genuine action gate (`CALVIN REQUIRED:` / `BLOCKED: ACTIONABLE`).
 
 ### BLOCKED
 Use when continuation cannot safely proceed and there is no permitted deterministic next mutation.

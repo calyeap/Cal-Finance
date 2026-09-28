@@ -27,11 +27,14 @@ assert_eq "$(runtime_is_child_terminal 'BLOCKED: AI — parent stopped [OWNER_AT
 assert_eq "$(runtime_parent_terminal_kind 'CONTINUE: existing authorised issue #9 [OWNER_ATTEMPT_ID: O1]')" CONTINUE
 assert_eq "$(runtime_parent_terminal_kind 'COMPLETE: parent outcome done [OWNER_ATTEMPT_ID: O1]')" COMPLETE
 
-# Slack is deliberately low-noise.
+# Slack is an interrupt channel for genuine Calvin action only
+# (CF-SLACK-ACTION-ONLY-01, issue #377): COMPLETE stays a valid parent
+# terminal (GitHub's durable completion record) but is never Slack-eligible.
 assert_eq "$(runtime_slack_kind 'CALVIN REQUIRED: choose A or B')" calvin_required
 assert_eq "$(runtime_slack_kind 'BLOCKED: ACTIONABLE — refresh secret')" actionable_blocked
 assert_eq "$(runtime_slack_kind 'BLOCKED: AI — worker timed out')" none
-assert_eq "$(runtime_slack_kind 'COMPLETE: meaningful parent outcome')" complete
+assert_eq "$(runtime_slack_kind 'COMPLETE: meaningful parent outcome')" none "COMPLETE is Slack-ineligible"
+assert_eq "$(runtime_parent_terminal_kind 'COMPLETE: meaningful parent outcome')" COMPLETE "COMPLETE remains a valid parent terminal"
 assert_eq "$(runtime_slack_kind 'CONTINUE: next child')" none
 
 # CF-WORKFLOW-TERMINAL-NORMALIZE-01 (issue #375): a standalone attempt-
@@ -45,7 +48,7 @@ assert_eq "$(runtime_is_calvin_required $'[BUILD_ATTEMPT_ID: BUILD-1-1]\nCALVIN 
 assert_eq "$(runtime_slack_kind $'[BUILD_ATTEMPT_ID: BUILD-1-1]\nCALVIN REQUIRED: pick A or B')" calvin_required "metadata-first BUILD terminal still Slack-eligible"
 assert_eq "$(runtime_is_correct $'[REVIEW_ATTEMPT_ID: REVIEW-2-1]\nCORRECT: fix one thing')" true "metadata-first REVIEW terminal recognised"
 assert_eq "$(runtime_parent_terminal_kind $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCOMPLETE: parent outcome done')" COMPLETE "metadata-first OWNER terminal recognised"
-assert_eq "$(runtime_slack_kind $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCOMPLETE: parent outcome done')" complete "metadata-first OWNER terminal still Slack-eligible"
+assert_eq "$(runtime_slack_kind $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCOMPLETE: parent outcome done')" none "metadata-first OWNER COMPLETE terminal remains Slack-ineligible"
 assert_eq "$(runtime_is_child_terminal $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCALVIN REQUIRED: needs a call')" false "metadata-first OWNER receipt still excluded from child-terminal routing"
 assert_eq "$(runtime_is_calvin_required $'Some narrative update.\n\nCALVIN REQUIRED: quoted later, not a terminal')" false "prose followed later by CALVIN REQUIRED remains ineligible"
 assert_eq "$(runtime_slack_kind $'Some narrative update.\n\nCALVIN REQUIRED: quoted later, not a terminal')" none "prose followed later by CALVIN REQUIRED remains Slack-ineligible"

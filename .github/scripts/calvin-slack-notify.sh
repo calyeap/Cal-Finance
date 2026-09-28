@@ -29,7 +29,8 @@ source "${SCRIPT_DIR}/runtime-lib.sh"
 # it is internal runtime bookkeeping, not part of the human-facing
 # message. Prints the JSON webhook payload and returns 0 when
 # runtime_slack_kind classifies <line> as Slack-eligible (calvin_required,
-# actionable_blocked, complete); prints nothing and returns 1 otherwise.
+# actionable_blocked — CF-SLACK-ACTION-ONLY-01: genuine Calvin-action gates
+# only, never `complete`); prints nothing and returns 1 otherwise.
 #
 # <comments_json>/<created_at> are optional: when both are given (the
 # thread's prior comments, and this comment's own created_at), an OWNER
@@ -48,7 +49,6 @@ calvin_slack_payload() {
   case "$kind" in
     calvin_required) header="CALVIN REQUIRED" ;;
     actionable_blocked) header="ACTIONABLE BLOCKED" ;;
-    complete) header="COMPLETE" ;;
     *) return 1 ;;
   esac
   if [ -n "$comments_json" ] && [ -n "$created_at" ] \
