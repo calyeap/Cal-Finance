@@ -42,7 +42,7 @@ source "${SCRIPT_DIR}/runtime-lib.sh"
 # OWNER-relay transport-failure receipt.
 calvin_slack_payload() {
   local raw="$1" repo="$2" comment_url="$3" comments_json="${4:-}" created_at="${5:-}" line kind header
-  line="$(runtime_strip_heading "$(runtime_first_line "$raw")")"
+  line="$(runtime_terminal_line "$raw")"
   line="$(printf '%s' "$line" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//')"
   kind="$(runtime_slack_kind "$line")"
   case "$kind" in

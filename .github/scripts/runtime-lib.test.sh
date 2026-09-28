@@ -34,6 +34,23 @@ assert_eq "$(runtime_slack_kind 'BLOCKED: AI — worker timed out')" none
 assert_eq "$(runtime_slack_kind 'COMPLETE: meaningful parent outcome')" complete
 assert_eq "$(runtime_slack_kind 'CONTINUE: next child')" none
 
+# CF-WORKFLOW-TERMINAL-NORMALIZE-01 (issue #375): a standalone attempt-
+# metadata line preceding the real typed terminal must not hide it from
+# classification — for BUILD, REVIEW and OWNER terminal families alike —
+# while a canonical (terminal-first) comment keeps working unchanged, and
+# arbitrary prose followed later by a terminal keyword still never counts.
+assert_eq "$(runtime_is_calvin_required 'CALVIN REQUIRED: pick A or B [BUILD_ATTEMPT_ID: BUILD-1-1]')" true "canonical first-line CALVIN REQUIRED still recognised"
+assert_eq "$(runtime_slack_kind 'CALVIN REQUIRED: pick A or B [BUILD_ATTEMPT_ID: BUILD-1-1]')" calvin_required "canonical first-line CALVIN REQUIRED still Slack-eligible"
+assert_eq "$(runtime_is_calvin_required $'[BUILD_ATTEMPT_ID: BUILD-1-1]\nCALVIN REQUIRED: pick A or B')" true "metadata-first BUILD terminal recognised"
+assert_eq "$(runtime_slack_kind $'[BUILD_ATTEMPT_ID: BUILD-1-1]\nCALVIN REQUIRED: pick A or B')" calvin_required "metadata-first BUILD terminal still Slack-eligible"
+assert_eq "$(runtime_is_correct $'[REVIEW_ATTEMPT_ID: REVIEW-2-1]\nCORRECT: fix one thing')" true "metadata-first REVIEW terminal recognised"
+assert_eq "$(runtime_parent_terminal_kind $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCOMPLETE: parent outcome done')" COMPLETE "metadata-first OWNER terminal recognised"
+assert_eq "$(runtime_slack_kind $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCOMPLETE: parent outcome done')" complete "metadata-first OWNER terminal still Slack-eligible"
+assert_eq "$(runtime_is_child_terminal $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCALVIN REQUIRED: needs a call')" false "metadata-first OWNER receipt still excluded from child-terminal routing"
+assert_eq "$(runtime_is_calvin_required $'Some narrative update.\n\nCALVIN REQUIRED: quoted later, not a terminal')" false "prose followed later by CALVIN REQUIRED remains ineligible"
+assert_eq "$(runtime_slack_kind $'Some narrative update.\n\nCALVIN REQUIRED: quoted later, not a terminal')" none "prose followed later by CALVIN REQUIRED remains Slack-ineligible"
+assert_eq "$(runtime_is_calvin_required $'[BUILD_ATTEMPT_ID: BUILD-1-1] not standalone\nCALVIN REQUIRED: pick A or B')" false "a metadata line with trailing text is not tolerated as metadata-only"
+
 # CF-WORKFLOW-PROOF-SLACK-DEDUPE-01: OWNER restating an already-alerted
 # child blocker is a duplicate; a distinct/new OWNER blocker, or any
 # non-OWNER terminal, is not.
@@ -68,6 +85,21 @@ assert_eq "$(runtime_attempt_status "$COMMENTS" BUILD B1 '2026-09-28T01:00:00Z')
 assert_eq "$(runtime_attempt_status "$COMMENTS" BUILD B2 '2026-09-28T01:00:00Z')" missing "wrong attempt cannot complete"
 assert_eq "$(runtime_outcome_attempt_open "$COMMENTS" CF-ONE-01)" false "terminal closes outcome attempt"
 assert_eq "$(runtime_actor_attempt_open "$COMMENTS" BUILD)" false "closed BUILD attempt admits later bounded work"
+
+# Metadata-first terminals correlate the same way canonical ones do — the
+# real failure #375 fixes: the tag lives on the standalone metadata line,
+# not the typed-terminal line, but attempt correlation still finds it, and
+# a mismatched attempt ID is still never silently accepted.
+META_FIRST_COMMENTS=$(cat <<'JSON'
+[
+  {"body":"BUILD START: OUTCOME-ID=CF-META-01 [BUILD_ATTEMPT_ID: B3]","created_at":"2026-09-28T05:00:00Z"},
+  {"body":"[BUILD_ATTEMPT_ID: B3]\nCALVIN REQUIRED: pick A or B","created_at":"2026-09-28T05:01:00Z"}
+]
+JSON
+)
+assert_eq "$(runtime_attempt_status "$META_FIRST_COMMENTS" BUILD B3 '2026-09-28T05:00:00Z')" complete "metadata-first terminal still correlates the matching attempt"
+assert_eq "$(runtime_attempt_status "$META_FIRST_COMMENTS" BUILD B4 '2026-09-28T05:00:00Z')" missing "metadata-first terminal with a mismatched attempt ID stays uncorrelated"
+assert_eq "$(runtime_outcome_attempt_open "$META_FIRST_COMMENTS" CF-META-01)" false "metadata-first CALVIN REQUIRED still closes the outcome attempt"
 
 OPEN_COMMENTS=$(cat <<'JSON'
 [

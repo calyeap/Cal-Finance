@@ -13,20 +13,89 @@ runtime_trim() {
   printf '%s' "$s"
 }
 
-runtime_first_line() {
-  local body="$1" line
+runtime_nth_nonblank_line() {
+  local body="$1" n="$2" line count=0
   while IFS= read -r line || [ -n "$line" ]; do
     if [[ "$line" =~ [^[:space:]] ]]; then
-      runtime_trim "$line"
-      return 0
+      count=$((count + 1))
+      if [ "$count" -eq "$n" ]; then
+        runtime_trim "$line"
+        return 0
+      fi
     fi
   done <<< "$body"
   printf ''
 }
 
+runtime_first_line() {
+  runtime_nth_nonblank_line "$1" 1
+}
+
 runtime_strip_heading() {
   local line="$1"
   printf '%s' "$line" | sed -E 's/^#{1,6}[[:space:]]+//'
+}
+
+# runtime_is_attempt_meta_line <line>
+# True when <line> (already heading-stripped) is nothing but a standalone
+# attempt-metadata marker, e.g. "[BUILD_ATTEMPT_ID: BUILD-1-1]".
+runtime_is_attempt_meta_line() {
+  [[ "$1" =~ ^\[(BUILD|REVIEW|OWNER)_ATTEMPT_ID:\ [^]]+\]$ ]]
+}
+
+# runtime_terminal_line <body>
+# Shared terminal-line normalization (issue #375 /
+# CF-WORKFLOW-TERMINAL-NORMALIZE-01). A canonical terminal — the typed
+# terminal itself is the first nonblank line — is returned unchanged. The
+# one tolerated exception: when the first nonblank line is nothing but a
+# standalone attempt-metadata marker, the immediately following nonblank
+# line is treated as the semantic terminal instead. This never scans past
+# that second line and never treats arbitrary prose as a terminal — only
+# every classifier below (and Slack eligibility, via runtime_slack_kind)
+# routes through this one function, so they cannot disagree.
+runtime_terminal_line() {
+  local body="$1" line1 line2
+  line1="$(runtime_strip_heading "$(runtime_nth_nonblank_line "$body" 1)")"
+  if runtime_is_attempt_meta_line "$line1"; then
+    line2="$(runtime_strip_heading "$(runtime_nth_nonblank_line "$body" 2)")"
+    if [ -n "$line2" ]; then
+      printf '%s' "$line2"
+      return 0
+    fi
+  fi
+  printf '%s' "$line1"
+}
+
+# runtime_terminal_tag_text <body>
+# Text to search for an attempt-ID tag ("[BUILD_ATTEMPT_ID: X]" etc): the
+# terminal line runtime_terminal_line would classify, plus the standalone
+# metadata line preceding it when one was tolerated — that is where the
+# tag actually lives in that shape. Keeps tag correlation on exactly the
+# same normalization as classification so a mismatched/missing attempt ID
+# is never silently accepted as the watched attempt.
+runtime_terminal_tag_text() {
+  local body="$1" line1 line2
+  line1="$(runtime_strip_heading "$(runtime_nth_nonblank_line "$body" 1)")"
+  if runtime_is_attempt_meta_line "$line1"; then
+    line2="$(runtime_strip_heading "$(runtime_nth_nonblank_line "$body" 2)")"
+    printf '%s %s' "$line1" "$line2"
+    return 0
+  fi
+  printf '%s' "$line1"
+}
+
+# runtime_terminal_is_typed <actor> <line>
+# Same typed-terminal vocabulary each actor's contract file requires,
+# kept in one place so correlation (runtime_attempt_status) can't drift
+# from it.
+runtime_terminal_is_typed() {
+  local actor="$1" line="$2"
+  case "$actor" in
+    BUILD) case "$line" in DONE:*|BLOCKED:*|STOP:*|"CALVIN REQUIRED:"*) return 0 ;; *) return 1 ;; esac ;;
+    REVIEW) case "$line" in ACCEPT:*|CORRECT:*|BLOCKED:*|STOP:*|"CALVIN REQUIRED:"*) return 0 ;; *) return 1 ;; esac ;;
+    OWNER) case "$line" in CONTINUE:*|COMPLETE:*|BLOCKED:*|"CALVIN REQUIRED:"*) return 0 ;; *) return 1 ;; esac ;;
+    *) return 1 ;;
+  esac
 }
 
 runtime_extract_field() {
@@ -60,30 +129,33 @@ runtime_tier() {
 
 runtime_is_correct() {
   local line
-  line="$(runtime_strip_heading "$(runtime_first_line "$1")")"
+  line="$(runtime_terminal_line "$1")"
   case "$line" in CORRECT|CORRECT:*) echo true ;; *) echo false ;; esac
 }
 
 runtime_is_calvin_required() {
   local line
-  line="$(runtime_strip_heading "$(runtime_first_line "$1")")"
+  line="$(runtime_terminal_line "$1")"
   case "$line" in "CALVIN REQUIRED:"*) echo true ;; *) echo false ;; esac
 }
 
 runtime_done_pr_number() {
   local line
-  line="$(runtime_strip_heading "$(runtime_first_line "$1")")"
+  line="$(runtime_terminal_line "$1")"
   case "$line" in DONE:*) ;; *) return 0 ;; esac
   printf '%s' "$line" | grep -oE '/pull/[0-9]+' | head -n1 | grep -oE '[0-9]+' || true
 }
 
 # Child terminals that require parent reconciliation. OWNER receipts carry an
-# OWNER_ATTEMPT_ID and are deliberately excluded so OWNER never wakes itself.
+# OWNER_ATTEMPT_ID (on the terminal line itself, or on a metadata line
+# runtime_terminal_line tolerated ahead of it — runtime_terminal_tag_text
+# covers both) and are deliberately excluded so OWNER never wakes itself.
 runtime_is_child_terminal() {
-  local line
-  line="$(runtime_strip_heading "$(runtime_first_line "$1")")"
+  local body="$1" line tag_text
+  line="$(runtime_terminal_line "$body")"
+  tag_text="$(runtime_terminal_tag_text "$body")"
+  case "$tag_text" in *"[OWNER_ATTEMPT_ID: "*) echo false; return ;; esac
   case "$line" in
-    *"[OWNER_ATTEMPT_ID: "*) echo false ;;
     "DONE: EVIDENCE"*|STOP:*|BLOCKED:*|"CALVIN REQUIRED:"*) echo true ;;
     *) echo false ;;
   esac
@@ -91,7 +163,7 @@ runtime_is_child_terminal() {
 
 runtime_parent_terminal_kind() {
   local line
-  line="$(runtime_strip_heading "$(runtime_first_line "$1")")"
+  line="$(runtime_terminal_line "$1")"
   case "$line" in
     CONTINUE:*) echo CONTINUE ;;
     COMPLETE:*) echo COMPLETE ;;
@@ -103,7 +175,7 @@ runtime_parent_terminal_kind() {
 
 runtime_slack_kind() {
   local line
-  line="$(runtime_strip_heading "$(runtime_first_line "$1")")"
+  line="$(runtime_terminal_line "$1")"
   case "$line" in
     "CALVIN REQUIRED:"*) echo calvin_required ;;
     "BLOCKED: ACTIONABLE"*) echo actionable_blocked ;;
@@ -124,36 +196,33 @@ runtime_slack_kind() {
 # predecessor is never a duplicate, so the first alert for any blocker
 # — and any genuinely new OWNER blocker — always sends.
 runtime_slack_is_duplicate() {
-  local comments_json="$1" before="$2" this_raw="$3" this_line kind
-  this_line="$(runtime_strip_heading "$(runtime_first_line "$this_raw")")"
-  case "$this_line" in *"[OWNER_ATTEMPT_ID: "*) ;; *) echo false; return ;; esac
-  kind="$(runtime_slack_kind "$this_line")"
+  local comments_json="$1" before="$2" this_raw="$3" this_tag_text kind
+  this_tag_text="$(runtime_terminal_tag_text "$this_raw")"
+  case "$this_tag_text" in *"[OWNER_ATTEMPT_ID: "*) ;; *) echo false; return ;; esac
+  kind="$(runtime_slack_kind "$this_raw")"
   if [ "$kind" = none ]; then echo false; return; fi
 
-  local earlier_lines prev_line prev_kind prev_tag
-  earlier_lines="$(jq -r --arg before "$before" '
-    def first_nonblank:
-      (. // "") | split("\n") | map(select(test("[^\\s]"))) | (.[0] // "")
-      | sub("^\\s+"; "") | sub("\\s+$"; "") | sub("^#{1,6}[ \\t]+"; "");
-    [ .[] | select(.created_at < $before) | . + {line: (.body | first_nonblank)} ]
-    | sort_by(.created_at) | reverse | .[].line
+  local earlier_bodies body term k prev_kind="" prev_tag_text="" prev_tag
+  earlier_bodies="$(jq -c --arg before "$before" '
+    [ .[] | select(.created_at < $before) ] | sort_by(.created_at) | reverse | .[].body
   ' <<< "$comments_json")"
 
-  prev_line=""
-  while IFS= read -r line; do
-    [ -z "$line" ] && continue
-    if [ "$(runtime_slack_kind "$line")" != none ]; then
-      prev_line="$line"
+  while IFS= read -r body; do
+    [ -z "$body" ] && continue
+    body="$(jq -r . <<< "$body")"
+    term="$(runtime_terminal_line "$body")"
+    k="$(runtime_slack_kind "$term")"
+    if [ "$k" != none ]; then
+      prev_kind="$k"
+      prev_tag_text="$(runtime_terminal_tag_text "$body")"
       break
     fi
-  done <<< "$earlier_lines"
-  if [ -z "$prev_line" ]; then echo false; return; fi
-
-  prev_kind="$(runtime_slack_kind "$prev_line")"
+  done <<< "$earlier_bodies"
+  if [ -z "$prev_kind" ]; then echo false; return; fi
   if [ "$prev_kind" != "$kind" ]; then echo false; return; fi
 
-  prev_tag="$(printf '%s' "$prev_line" | sed -nE 's/.*\[(BUILD|REVIEW|OWNER)_ATTEMPT_ID: ([^]]+)\].*/\2/p')"
-  if [ -n "$prev_tag" ] && [[ "$this_line" == *"$prev_tag"* ]]; then
+  prev_tag="$(printf '%s' "$prev_tag_text" | sed -nE 's/.*\[(BUILD|REVIEW|OWNER)_ATTEMPT_ID: ([^]]+)\].*/\2/p')"
+  if [ -n "$prev_tag" ] && [[ "$this_tag_text" == *"$prev_tag"* ]]; then
     echo true
   else
     echo false
@@ -218,24 +287,23 @@ runtime_attempt_start_prefix() {
 # Returns complete|missing. A terminal counts only when it is after the start
 # and carries this exact attempt tag.
 runtime_attempt_status() {
-  local comments_json="$1" actor="$2" attempt_id="$3" started_at="$4" tag
+  local comments_json="$1" actor="$2" attempt_id="$3" started_at="$4" tag needle
   tag="$(runtime_attempt_tag "$actor")"
-  jq -r --arg actor "$actor" --arg tag "$tag" --arg id "$attempt_id" --arg started "$started_at" '
-    def first_nonblank:
-      (. // "") | split("\n") | map(select(test("[^\\s]"))) | (.[0] // "")
-      | sub("^\\s+"; "") | sub("\\s+$"; "") | sub("^#{1,6}[ \\t]+"; "");
-    def typed($a):
-      if $a == "BUILD" then test("^(DONE:|BLOCKED:|STOP:|CALVIN REQUIRED:)")
-      elif $a == "REVIEW" then test("^(ACCEPT:|CORRECT:|BLOCKED:|STOP:|CALVIN REQUIRED:)")
-      elif $a == "OWNER" then test("^(CONTINUE:|COMPLETE:|BLOCKED:|CALVIN REQUIRED:)")
-      else false end;
-    [ .[]
-      | select(.created_at > $started)
-      | (. + {line: (.body | first_nonblank)})
-      | select(.line | typed($actor))
-      | select(.line | contains("[" + $tag + ": " + $id + "]"))
-    ] | if length > 0 then "complete" else "missing" end
-  ' <<< "$comments_json"
+  needle="[${tag}: ${attempt_id}]"
+  local rows body term tag_text
+  rows="$(jq -c --arg started "$started_at" '
+    [ .[] | select(.created_at > $started) ] | sort_by(.created_at) | .[].body
+  ' <<< "$comments_json")"
+  while IFS= read -r body; do
+    [ -z "$body" ] && continue
+    body="$(jq -r . <<< "$body")"
+    term="$(runtime_terminal_line "$body")"
+    if runtime_terminal_is_typed "$actor" "$term"; then
+      tag_text="$(runtime_terminal_tag_text "$body")"
+      case "$tag_text" in *"$needle"*) echo complete; return ;; esac
+    fi
+  done <<< "$rows"
+  echo missing
 }
 
 # runtime_actor_attempt_open <comments_json> <actor>
