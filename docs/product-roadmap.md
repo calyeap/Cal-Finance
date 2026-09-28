@@ -168,9 +168,14 @@ build.
   UPDATE in §7 above. Not resolved here.
 - **Depends on** existing position-level data already computed by
   `lib/portfolio.ts` (no new holdings capture needed for that layer) and, per
-  company, whatever Analyzer report already exists — there is no code link
-  between the two today, which a first implementation would need to build.
-  It does **not** depend on the snapshot contract above existing first —
+  company, whatever Analyzer report already exists. **A code link between the
+  two now exists**, added by the first bounded implementation outcome below
+  (`CF-PORTFOLIO-REVIEW-FIRST-OUTCOME-01`): `lib/analyzer/runStore.ts`'s
+  `getLatestRunForHeldTicker`, a narrowly-scoped read-only lookup (at most one
+  run, only for a ticker already in the caller's own positions) — not the
+  general run-listing/browse/search surface `runStore.ts`'s own header
+  comment still refuses. It does **not** depend on the snapshot contract above
+  existing first —
   resolved as an `AI DEFAULT` (not a Calvin ruling); see
   `docs/portfolio-review-workflow-mode-reconciliation.md` §4 for the
   rationale and reversal path. It consumes, and never authors, INVESTING's
