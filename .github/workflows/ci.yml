@@ -41,9 +41,9 @@ jobs:
       - name: Check out pull request head
         uses: actions/checkout@v4
 
-      # Workflow reset replacement coverage. These tests encode the real
-      # duplicate/liveness/terminal/Slack failure classes before legacy guards
-      # are eligible for deletion.
+      # Workflow reset replacement coverage. These tests permanently encode
+      # the real duplicate/liveness/terminal/Slack failure classes for the
+      # lean runtime.
       - name: Run compact runtime unit tests
         run: bash .github/scripts/runtime-lib.test.sh
 
@@ -53,7 +53,7 @@ jobs:
       - name: Run runtime wiring replacement tests
         run: bash .github/scripts/runtime-wiring.test.sh
 
-      # Still-live compact classifiers retained from the previous runtime.
+      # Compact classifiers that are part of the current lean runtime.
       - name: Run fire-auth classification tests
         run: bash .github/scripts/fire-auth-lib.test.sh
 
