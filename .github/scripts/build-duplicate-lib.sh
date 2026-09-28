@@ -1,21 +1,18 @@
 #!/usr/bin/env bash
 # CF-OUTCOME-LOOP-LEAN-01
 #
-# Pure, network-free classification shared by cc-auto-fire.yml's fire-build
-# job and its unit tests (build-duplicate-lib.test.sh). No gh/curl calls
-# happen here, so the duplicate-admission decision can be exercised
-# deterministically in CI.
+# Pure, network-free BUILD admission helpers.
 #
-# Closes issue #188's observed failure: two BUILD sessions fired for the
-# same target within ~30 seconds because nothing checked whether an
-# already-open BUILD attempt existed first. The rule: if the most recent
-# "BUILD FIRED:" receipt on the target has no BUILD terminal marker
-# (DONE:/BLOCKED:/STOP:/CALVIN REQUIRED:) after it, an attempt is still in
-# flight, so a second fire must be suppressed.
+# Two layers protect the one-OUTCOME-ID / one-execution invariant:
+# 1. target-local in-flight detection from BUILD FIRED -> terminal comments;
+# 2. outcome-level open-PR detection so a new issue wake cannot create a
+#    second active PR for an OUTCOME-ID that already has one.
+#
+# Network/API calls stay in cc-auto-fire.yml; this file only classifies the
+# supplied JSON/text so CI can exercise the decision deterministically.
 
 set -uo pipefail
 
-# build_duplicate_first_line <text>
 build_duplicate_first_line() {
   local body="$1"
   printf '%s' "$body" \
@@ -24,10 +21,6 @@ build_duplicate_first_line() {
     | sed -e 's/[[:space:]]*$//'
 }
 
-# build_duplicate_is_terminal_first_line <first_line>
-# True (exit 0) when the first line is one of BUILD's own terminal
-# markers per BUILD.md's "Terminal rule" (DONE:, including DONE: EVIDENCE;
-# BLOCKED:; STOP:; CALVIN REQUIRED:).
 build_duplicate_is_terminal_first_line() {
   local first_line="$1"
   case "$first_line" in
@@ -36,13 +29,6 @@ build_duplicate_is_terminal_first_line() {
   esac
 }
 
-# build_duplicate_status <comments_json>
-# comments_json: a JSON array of {"body":..,"created_at":..} comment
-# objects, already fetched by the caller (oldest/newest order does not
-# matter — this sorts internally).
-# Echoes "duplicate" when the most recent "BUILD FIRED:" receipt has no
-# BUILD terminal marker after it (an attempt is still open); echoes
-# "clear" otherwise, including when no BUILD FIRED receipt exists at all.
 build_duplicate_status() {
   local comments_json="$1"
   local last_fired_at
@@ -73,4 +59,46 @@ build_duplicate_status() {
   done
 
   echo "duplicate"
+}
+
+# build_outcome_id_from_body <markdown>
+# Supports both common repo forms:
+#   OUTCOME-ID: `ABC-01`
+#   ## OUTCOME-ID\n\n`ABC-01`
+build_outcome_id_from_body() {
+  local body="$1" direct after
+
+  direct="$(printf '%s\n' "$body" \
+    | sed -nE 's/.*OUTCOME-ID[[:space:]]*:[[:space:]]*`?([A-Za-z0-9._\/-]+)`?.*/\1/p' \
+    | head -n1)"
+  if [ -n "$direct" ]; then
+    printf '%s\n' "$direct"
+    return
+  fi
+
+  after="$(printf '%s\n' "$body" \
+    | awk '
+      found && $0 !~ /^[[:space:]]*$/ {
+        gsub(/`/, "", $0)
+        gsub(/^[[:space:]]+|[[:space:]]+$/, "", $0)
+        print $0
+        exit
+      }
+      /OUTCOME-ID/ { found=1 }
+    ')"
+  printf '%s\n' "$after"
+}
+
+# build_outcome_open_pr_status <search_json> <current_number>
+# search_json is the GitHub search/issues response for open PRs containing the
+# exact OUTCOME-ID. The current PR is ignored during a correction re-fire.
+build_outcome_open_pr_status() {
+  local search_json="$1" current_number="${2:-}"
+  local count
+  count="$(jq --arg current "$current_number" '[.items[]? | select((.number|tostring) != $current)] | length' <<<"$search_json")"
+  if [ "$count" -gt 0 ]; then
+    echo "duplicate_pr"
+  else
+    echo "clear"
+  fi
 }

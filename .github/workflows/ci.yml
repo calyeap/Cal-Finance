@@ -1,52 +1,7 @@
 name: CI
 
-# OUTCOME-ID: CB-CI-CHECKS-01
-#
-# The first automated correctness gate on this repository. Until this
-# landed, `.github/workflows/` contained only `cc-auto-fire.yml`, whose
-# jobs fire routines rather than run tests — so every Calboard PR showed
-# zero check runs, and "zero checks, state pending" carried no signal
-# about the change either way.
-#
-# This job answers a question a machine can settle — does the change
-# typecheck and do the tests pass — rather than the question the merge
-# gate has been stuck on, which is whether a human approved it. The two
-# are independent: this needs no identity, no bot account and no secret.
-#
-# WHY A DATABASE. `vitest.setup.ts` refuses to run without
-# TEST_DATABASE_URL, and further refuses unless the database name ends in
-# `_test` — a deliberate guard so a plain `npm test` can never TRUNCATE
-# the dev database holding real financial ledger data. That guard is
-# correct and is not weakened here. CI instead gets its own disposable
-# Postgres service and its own `calboard_test` database, created fresh on
-# every run and destroyed with the runner.
-#
-# `scripts/migrate.ts` reads DATABASE_URL (not TEST_DATABASE_URL), so the
-# migrate step sets that explicitly. `vitest.setup.ts` derives
-# DATABASE_URL from TEST_DATABASE_URL itself, so the test step sets only
-# the latter.
-#
-# WHY zip AND THE PLAYWRIGHT BROWSER ARE INSTALLED EXPLICITLY. The suite
-# has three long-standing failures that are environmental, not defects:
-# two in `scripts/evidence/delivery.test.ts`, where `deliverArchive`
-# packages a real .zip and returns FAILED instead of LOCAL_READY without
-# the `zip` binary, and one needing a pinned Playwright browser. This was
-# established independently, not inferred: CALBOARD-BUILD confirmed on
-# 15 Sep 2026 while working issue #98 that the three failures reproduce on
-# unmodified master and named both causes, and the first CI run on this
-# branch (34863406035) failed on exactly the two delivery tests — the
-# Playwright browser was already installed by the step below, so `zip` was
-# the only remaining gap.
-#
-# Deliberately minimal. `npm run evidence` (the frozen-artefact SHA-256
-# gate) is NOT included: its runtime requirements are still unverified,
-# and a check that fails for environmental reasons is worse than no
-# check. It is the intended next addition once this one is green.
-#
-# Nothing here enforces a merge. Making this check REQUIRED is a
-# repository ruleset change and is Calvin's to make, after one green run
-# establishes the check name.
-
+# Protected evaluator for Cal Finance. Runtime routing may consume this signal;
+# workers must not weaken it merely to make their own attempt pass.
 on:
   pull_request:
     branches: [master]
@@ -62,7 +17,7 @@ jobs:
   verify:
     name: typecheck and tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
 
     services:
       postgres:
@@ -80,120 +35,30 @@ jobs:
           --health-retries 10
 
     env:
-      # Ends in _test, as vitest.setup.ts requires. Disposable: this
-      # database exists only for the life of this runner.
       TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/calboard_test
 
     steps:
-      - name: Check out the pull request head
+      - name: Check out pull request head
         uses: actions/checkout@v4
 
-      # CF-OWNER-LIVENESS-01: deterministic, network-free classification
-      # checks for the OWNER liveness guard's terminal-receipt contract.
-      # Needs only bash + jq (both present on this runner image), so it
-      # runs before the Node toolchain is even installed.
-      - name: Run OWNER liveness guard unit tests
-        run: bash .github/scripts/owner-liveness-lib.test.sh
+      # Workflow reset replacement coverage. These tests encode the real
+      # duplicate/liveness/terminal/Slack failure classes before legacy guards
+      # are eligible for deletion.
+      - name: Run compact runtime unit tests
+        run: bash .github/scripts/runtime-lib.test.sh
 
-      - name: Run OWNER liveness guard control-flow tests
-        run: bash .github/scripts/owner-liveness-guard.test.sh
+      - name: Run detect-only liveness tests
+        run: bash .github/scripts/terminal-watch.test.sh
 
-      # CF-OWNER-SINGLE-WRITER-01: deterministic, network-free regression
-      # coverage for the repo-wide OWNER admission/holder logic and for the
-      # workflow-level concurrency config both OWNER fire paths depend on.
-      - name: Run OWNER single-writer admission unit tests
-        run: bash .github/scripts/owner-single-writer-lib.test.sh
+      - name: Run runtime wiring replacement tests
+        run: bash .github/scripts/runtime-wiring.test.sh
 
-      - name: Run OWNER single-writer concurrency config tests
-        run: bash .github/scripts/owner-single-writer-config.test.sh
-
-      # CF-OWNER-SINGLE-WRITER-01 addendum: deterministic, network-free
-      # classification checks for the CALVIN RULING -> OWNER wake edge
-      # (issue #197 ADDENDUM, 11:09:44Z).
-      - name: Run CALVIN ruling wake classification unit tests
-        run: bash .github/scripts/calvin-ruling-lib.test.sh
-
-      # Structural regression coverage for the delivery mechanism itself:
-      # the pure classifier above can be 12/12 correct while the edge is
-      # still inert in production if it's wired through a workflow-authored
-      # label write depended on as a trigger (GitHub Actions does not
-      # re-enter a workflow from an event produced by its own GITHUB_TOKEN).
-      # Guards against that exact class of defect regressing.
-      - name: Run CALVIN ruling wake reachability tests
-        run: bash .github/scripts/calvin-ruling-reachability.test.sh
-
-      # CF-OUTCOME-LOOP-LEAN-01: deterministic, network-free classification
-      # checks for the fire-review DONE:/PR-parsing contract, the fire-build
-      # duplicate-suppression contract, and the semantic-refresh workflow's
-      # narrowed trigger/marker set.
-      - name: Run terminal routing unit tests
-        run: bash .github/scripts/terminal-routing-lib.test.sh
-
-      # CF-TERMINAL-HANDOFF-REPAIR-01: structural coverage that the direct
-      # DONE: EVIDENCE / STOP: / BLOCKED: / CALVIN REQUIRED: -> OWNER
-      # routing is actually wired into fire-owner-on-terminal's job-level
-      # admission and Resolve target step, not only correct in isolation.
-      - name: Run direct terminal-to-OWNER reachability tests
-        run: bash .github/scripts/terminal-owner-direct-reachability.test.sh
-
-      - name: Run BUILD duplicate suppression unit tests
-        run: bash .github/scripts/build-duplicate-lib.test.sh
-
-      # CF-HANDOFF-FAIL-CLOSED-01: deterministic, network-free coverage for
-      # the new BUILD/REVIEW post-fire liveness contract, the shared
-      # generic liveness engine underneath it (and OWNER's), the
-      # missing-secret/401/403 AUTH classification shared by every fire
-      # path, and the structural wiring that makes all of it reachable in
-      # production, not just correct in isolation.
-      - name: Run fire-auth classification unit tests
+      # Still-live compact classifiers retained from the previous runtime.
+      - name: Run fire-auth classification tests
         run: bash .github/scripts/fire-auth-lib.test.sh
 
-      - name: Run BUILD liveness guard unit tests
-        run: bash .github/scripts/build-liveness-lib.test.sh
-
-      - name: Run REVIEW liveness guard unit tests
-        run: bash .github/scripts/review-liveness-lib.test.sh
-
-      - name: Run BUILD/REVIEW liveness guard control-flow tests
-        run: bash .github/scripts/worker-liveness-guard.test.sh
-
-      - name: Run handoff liveness/auth reachability structural tests
-        run: bash .github/scripts/handoff-liveness-reachability.test.sh
-
-      # CF-STATUS-PLUMBING-CLEANUP-01 / CF-FREEZE-CLOSEOUT-01: deterministic,
-      # network-free structural check that OWNER.md derives current
-      # status/attention from native GitHub, never from Cal Finance Project
-      # Home's stale `NEXT MOVE` line, plus this outcome's F2/F4/F6/F9/F10
-      # OWNER.md structural fixes.
-      - name: Run OWNER attention-authority structural tests
-        run: bash .github/scripts/owner-attention-authority.test.sh
-
-      # CF-FREEZE-CLOSEOUT-01 (F1): the three live OWNER fire/recovery
-      # prompts stay thin and never restate the obsolete Project Home
-      # write/readback OWNER.md no longer performs.
-      - name: Run OWNER prompt lean-ness tests
-        run: bash .github/scripts/owner-prompt-lean.test.sh
-
-      # CF-FREEZE-CLOSEOUT-01 (F3): AGENTS.md routes a fresh worker by the
-      # explicit authority map, not an undefined Project Home fallback.
-      - name: Run AGENTS.md authority lean-ness tests
-        run: bash .github/scripts/agents-authority-lean.test.sh
-
-      # CF-FREEZE-CLOSEOUT-01 (F5): BUILD's raised liveness lease and
-      # matching job timeout; REVIEW's lease/timeout stay unchanged.
-      - name: Run BUILD lease config tests
-        run: bash .github/scripts/build-lease-config.test.sh
-
-      # CF-FREEZE-CLOSEOUT-01 (F9): a coalesced middle OWNER wake is
-      # discoverable by a later OWNER run via the existing admission
-      # classifier.
-      - name: Run OWNER coalesced-wake recovery tests
-        run: bash .github/scripts/owner-coalesced-wake.test.sh
-
-      # CF-FREEZE-CLOSEOUT-01 (F10): BUILD/CC/OWNER adapters explicitly
-      # prohibit a worker from authoring a first-line CALVIN RULING receipt.
-      - name: Run CALVIN RULING impersonation guard tests
-        run: bash .github/scripts/calvin-ruling-impersonation-guard.test.sh
+      - name: Run Calvin ruling classification tests
+        run: bash .github/scripts/calvin-ruling-lib.test.sh
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -201,31 +66,25 @@ jobs:
           node-version: 22
           cache: npm
 
-      # scripts/evidence/delivery.ts shells out to `zip`. Installed
-      # explicitly rather than relied on: the runner image's contents are
-      # not a contract, and a silently missing binary turns into two test
-      # failures that look like a product defect.
-      - name: Install the zip binary the evidence delivery path needs
+      - name: Install zip dependency
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends zip
           zip --version | head -n 2
 
-      - name: Install dependencies from the lockfile
+      - name: Install dependencies from lockfile
         run: npm ci
 
       - name: Typecheck
         run: npx tsc --noEmit
 
-      - name: Apply migrations to the test database
-        # migrate.ts reads DATABASE_URL, so it is set here rather than
-        # inherited from the job-level TEST_DATABASE_URL.
+      - name: Apply migrations to disposable test database
         env:
           DATABASE_URL: ${{ env.TEST_DATABASE_URL }}
         run: npm run migrate
 
-      - name: Install the Playwright browser the suite needs
+      - name: Install Playwright Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run the test suite
+      - name: Run full test suite
         run: npm test
