@@ -1,4 +1,4 @@
-name: Fire Cal Finance BUILD, REVIEW, and OWNER
+name: Cal Finance execution routing
 
 on:
   issues:
@@ -6,7 +6,7 @@ on:
   issue_comment:
     types: [created]
   pull_request:
-    types: [labeled, closed]
+    types: [labeled]
 
 permissions:
   contents: read
@@ -14,765 +14,443 @@ permissions:
   pull-requests: write
 
 jobs:
+  # One short repo-wide admission lane. It ends after fire acceptance; liveness
+  # observation is a separate job, so admission is never held for minutes.
   fire-build:
     if: >-
       github.event.label.name == 'needs-build-wake' ||
-      (github.event_name == 'issue_comment' &&
-        github.event.issue.pull_request != null &&
-        github.event.issue.state == 'open' &&
-        contains(github.event.comment.body, 'CORRECT'))
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'CORRECT'))
     runs-on: ubuntu-latest
-    # CF-OUTCOME-LOOP-LEAN-01: serialize per-target so a second near-simultaneous
-    # wake queues behind the first and classifies against a "BUILD FIRED:"
-    # receipt that already exists, instead of both reading "no open attempt".
+    timeout-minutes: 10
     concurrency:
-      group: fire-build-${{ github.event.issue.number || github.event.pull_request.number }}
+      group: cf-build-admission
       cancel-in-progress: false
-    # CF-HANDOFF-FAIL-CLOSED-01 / CF-FREEZE-CLOSEOUT-01 (F5): this job now
-    # legitimately runs up to roughly two liveness lease windows long once
-    # the fire below succeeds, because worker-liveness-guard.sh's bounded
-    # observation window and single recovery run as a later step in this
-    # same job — see that script and BUILD.md's "Liveness correlation" rule
-    # for the full contract. BUILD's own lease is raised to 40 minutes (see
-    # the "Run BUILD liveness guard" step's WORKER_LIVENESS_LEASE_MINUTES
-    # below): issue #352 observed the original 20-minute terminal-only lease
-    # cross before a real product BUILD actually completed, so the one
-    # bounded recovery fired while the original attempt was still live,
-    # producing two live BUILD sessions for one outcome. 90 minutes covers
-    # two bounded 40-minute windows (80m) plus overhead. REVIEW keeps the
-    # unchanged 20-minute default lease and this job's prior 50-minute
-    # timeout — see fire-review below.
-    timeout-minutes: 90
+    outputs:
+      fired: ${{ steps.fire.outputs.ok }}
+      target_number: ${{ steps.resolve.outputs.number }}
+      attempt_id: ${{ steps.resolve.outputs.attempt_id }}
+      outcome_id: ${{ steps.resolve.outputs.outcome_id }}
     steps:
-      # CF-CORRECT-ROUTER-01: moved ahead of "Resolve target" (unconditional
-      # — this job's precise CORRECT match needs terminal-routing-lib.sh on
-      # disk before it can run) so the step below can share the same
-      # network-free, unit-tested marker classification fire-review already
-      # uses, instead of a second hand-rolled copy that can drift out of
-      # sync with it (as the inline case statement did for PR #218's
-      # "## CORRECT" shape).
-      - name: Check out default branch
+      - name: Check out runtime contract
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
 
-      - name: Resolve target
-        id: target
+      - name: Resolve and admit one outcome
+        id: resolve
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           set -uo pipefail
-          # shellcheck source=../scripts/terminal-routing-lib.sh
-          source .github/scripts/terminal-routing-lib.sh
+          source .github/scripts/runtime-lib.sh
 
           if [ "$EVENT_NAME" = "issue_comment" ]; then
-            # Top-level PR conversation comment whose first terminal outcome is
-            # CORRECT. terminal_is_correct_marker drops leading blank/
-            # all-whitespace lines, trims the first non-empty line, and
-            # strips a harmless Markdown heading prefix (e.g. "## CORRECT")
-            # before matching CORRECT/CORRECT:, so an indented/quoted
-            # "CORRECT:" elsewhere in the comment still can't accidentally
-            # match, and resolution stays bound to this exact PR only (no
-            # cross-PR link parsing).
-            if [ "$(terminal_is_correct_marker "$COMMENT_BODY")" != "true" ]; then
+            if [ "$(runtime_is_correct "$COMMENT_BODY")" != "true" ]; then
               echo "skip=true" >> "$GITHUB_OUTPUT"
               exit 0
             fi
             NUMBER="${{ github.event.issue.number }}"
+            KIND=pr
+          elif [ -n "${{ github.event.pull_request.number }}" ]; then
+            NUMBER="${{ github.event.pull_request.number }}"
+            KIND=pr
           else
-            NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+            NUMBER="${{ github.event.issue.number }}"
+            KIND=issue
           fi
+
+          TARGET=$(gh api "repos/${{ github.repository }}/issues/${NUMBER}")
+          BODY=$(jq -r '.body // ""' <<< "$TARGET")
+          OUTCOME_ID="$(runtime_outcome_id "$BODY")"
+          TIER="$(runtime_tier "$BODY")"
+
+          if [ -z "$OUTCOME_ID" ]; then
+            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              -f body="STOP: MISSING OUTCOME-ID — BUILD admission refused; add one stable OUTCOME-ID to the task contract."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ "$TIER" = INVALID ]; then
+            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              -f body="STOP: INVALID TIER — use LIGHT, NORMAL, or HEAVY."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          # Temporary hard hold: while #357 is open, only reset/proof work may run.
+          HOLD_STATE=$(gh api "repos/${{ github.repository }}/issues/357" --jq '.state' 2>/dev/null || echo closed)
+          if [ "$HOLD_STATE" = open ]; then
+            case "$OUTCOME_ID" in
+              CF-WORKFLOW-RESET-*|CF-WORKFLOW-PROOF-*) ;;
+              *)
+                gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+                  -f body="BLOCKED: AI — product work is paused by Calvin ruling #357; no BUILD worker fired for ${OUTCOME_ID}."
+                echo "skip=true" >> "$GITHUB_OUTPUT"
+                exit 0
+                ;;
+            esac
+          fi
+
+          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
+          ATTEMPT_OPEN="$(runtime_outcome_attempt_open "$COMMENTS" "$OUTCOME_ID")"
+
+          OPEN_ITEMS=$(gh api --paginate "repos/${{ github.repository }}/issues?state=open&per_page=100" | jq -s 'add // []')
+          MATCH_ISSUES=""
+          MATCH_PRS=""
+          while IFS= read -r encoded; do
+            ITEM=$(printf '%s' "$encoded" | base64 --decode)
+            ITEM_NUMBER=$(jq -r '.number' <<< "$ITEM")
+            [ "$ITEM_NUMBER" = "$NUMBER" ] && continue
+            ITEM_BODY=$(jq -r '.body // ""' <<< "$ITEM")
+            ITEM_OUTCOME="$(runtime_outcome_id "$ITEM_BODY")"
+            [ "$ITEM_OUTCOME" = "$OUTCOME_ID" ] || continue
+            if [ "$(jq -r 'has("pull_request")' <<< "$ITEM")" = true ]; then
+              MATCH_PRS="${MATCH_PRS:+${MATCH_PRS},}${ITEM_NUMBER}"
+            else
+              MATCH_ISSUES="${MATCH_ISSUES:+${MATCH_ISSUES},}${ITEM_NUMBER}"
+            fi
+          done < <(jq -r '.[] | @base64' <<< "$OPEN_ITEMS")
+
+          DECISION="$(runtime_admission_decision "$KIND" "$NUMBER" "$MATCH_ISSUES" "$MATCH_PRS" "$ATTEMPT_OPEN")"
+          case "$DECISION" in
+            ADMIT) ;;
+            IN_FLIGHT)
+              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+                -f body="BUILD ADMISSION: SUPPRESSED — ${OUTCOME_ID} already has an active BUILD attempt; no second worker fired."
+              echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+            EXISTING_PR:*)
+              PR=${DECISION#EXISTING_PR:}
+              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+                -f body="BUILD ADMISSION: EXISTING PR #${PR} already owns ${OUTCOME_ID}; no second worker/PR fired."
+              echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+            CONFLICT)
+              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+                -f body="STOP: RECONCILIATION REQUIRED — ${OUTCOME_ID} has multiple open issue/PR candidates (issues: ${MATCH_ISSUES:-none}; PRs: ${MATCH_PRS:-none}); no BUILD worker fired."
+              echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+          esac
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "outcome_id=$OUTCOME_ID" >> "$GITHUB_OUTPUT"
+          echo "tier=$TIER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=BUILD-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
-      # CF-OUTCOME-LOOP-LEAN-01
-      # Deterministic BUILD admission guard: issue #188 fired two BUILD
-      # sessions for the same target within ~30 seconds because nothing
-      # checked for an already-open attempt first. build-duplicate-lib.sh's
-      # classification (see that file) is pure/network-free and unit
-      # tested; this step only supplies it the target's current comments.
-      - name: Check for an already-open BUILD attempt
-        id: dedup
-        if: steps.target.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-        run: |
-          set -uo pipefail
-          # shellcheck source=../scripts/build-duplicate-lib.sh
-          source .github/scripts/build-duplicate-lib.sh
-
-          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${TARGET_NUMBER}/comments" \
-            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
-          echo "status=$(build_duplicate_status "$COMMENTS")" >> "$GITHUB_OUTPUT"
-
-      - name: Report duplicate suppression
-        if: steps.target.outputs.skip != 'true' && steps.dedup.outputs.status == 'duplicate'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method POST \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="DUPLICATE SUPPRESSED: an open BUILD attempt already exists for this target with no terminal result yet — not firing a second worker."
-
-      - name: Fire CALBOARD-BUILD
+      - name: Fire BUILD
         id: fire
-        if: steps.target.outputs.skip != 'true' && steps.dedup.outputs.status != 'duplicate'
+        if: steps.resolve.outputs.skip != 'true'
         env:
           BUILD_FIRE_URL: ${{ secrets.BUILD_FIRE_URL }}
           BUILD_FIRE_TOKEN: ${{ secrets.BUILD_FIRE_TOKEN }}
-          TARGET_REPO: ${{ github.repository }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+          NUMBER: ${{ steps.resolve.outputs.number }}
+          OUTCOME_ID: ${{ steps.resolve.outputs.outcome_id }}
+          TIER: ${{ steps.resolve.outputs.tier }}
+          ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
-          # shellcheck source=../scripts/fire-auth-lib.sh
           source .github/scripts/fire-auth-lib.sh
 
           if [ -z "${BUILD_FIRE_URL:-}" ]; then
-            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
-            echo "missing_secret_name=BUILD_FIRE_URL" >> "$GITHUB_OUTPUT"
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
-            exit 0
+            SECRET=BUILD_FIRE_URL; CODE=missing_secret
+          elif [ -z "${BUILD_FIRE_TOKEN:-}" ]; then
+            SECRET=BUILD_FIRE_TOKEN; CODE=missing_secret
+          else
+            PROMPT="Repository ${{ github.repository }}, item #${NUMBER}. Run the current .github/ai-routines/BUILD.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's BUILD_ATTEMPT_ID is ${ATTEMPT_ID}; every terminal first line must carry [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
+            CODE=$(curl -sS -o /tmp/build.json -w '%{http_code}' --request POST "$BUILD_FIRE_URL" \
+              --header "Authorization: Bearer $BUILD_FIRE_TOKEN" \
+              --header "anthropic-version: 2023-06-01" \
+              --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
+              --header "Content-Type: application/json" --data "$REQUEST") || CODE=curl_error
+            SECRET=BUILD_FIRE_TOKEN
           fi
-          if [ -z "${BUILD_FIRE_TOKEN:-}" ]; then
-            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
-            echo "missing_secret_name=BUILD_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
 
-          # CF-HANDOFF-FAIL-CLOSED-01: this run's BUILD_ATTEMPT_ID is echoed
-          # in the fire receipt below (which doubles as this attempt's
-          # liveness start marker — see build-liveness-lib.sh) and must also
-          # come back on BUILD's own terminal comment per BUILD.md's
-          # Liveness correlation rule, so worker-liveness-guard.sh can tell
-          # a completed run apart from a stalled one.
-          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER}. Run CALBOARD-BUILD for this exact target. Always post DONE, BLOCKED, STOP, or CALVIN REQUIRED before ending. This run's BUILD_ATTEMPT_ID is ${ATTEMPT_ID}: per BUILD.md's liveness correlation rule, your terminal comment's first non-empty line must also include the exact tag [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}] on that same line."
-          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
-
-          HTTP_CODE=$(curl -sS -o /tmp/build_response.json -w '%{http_code}' \
-            --request POST "$BUILD_FIRE_URL" \
-            --header "Authorization: Bearer $BUILD_FIRE_TOKEN" \
-            --header "anthropic-version: 2023-06-01" \
-            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
-            --header "Content-Type: application/json" \
-            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
-
-          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
-          if [ "$HTTP_CODE" != "curl_error" ] && [ "$HTTP_CODE" -ge 200 ] 2>/dev/null && [ "$HTTP_CODE" -lt 300 ] 2>/dev/null; then
-            echo "session_id=$(jq -r '.claude_code_session_id // "unknown"' /tmp/build_response.json)" >> "$GITHUB_OUTPUT"
-            echo "session_url=$(jq -r '.claude_code_session_url // "unknown"' /tmp/build_response.json)" >> "$GITHUB_OUTPUT"
+          if [ "$CODE" != curl_error ] && [ "$CODE" -ge 200 ] 2>/dev/null && [ "$CODE" -lt 300 ] 2>/dev/null; then
+            SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/build.json)
+            URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/build.json)
+            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              -f body="BUILD START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
-            echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
           else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            if [ "$(fire_auth_status "$HTTP_CODE")" = "auth" ]; then
-              echo "missing_secret_name=BUILD_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
-              echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
+              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+                -f body="BLOCKED: ACTIONABLE — BUILD transport unavailable (${CODE}); refresh ${SECRET}. No worker started."
             else
-              echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
+              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+                -f body="BLOCKED: AI — BUILD transport failed (${CODE}); no worker started."
             fi
+            echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Report BUILD fire
-        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
+      - name: Clear BUILD wake label
+        if: github.event.label.name == 'needs-build-wake'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method POST \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="BUILD FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }}) [BUILD_ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}]"
+        run: gh api --method DELETE "repos/${{ github.repository }}/issues/${{ github.event.issue.number || github.event.pull_request.number }}/labels/needs-build-wake" || true
 
-      # CF-HANDOFF-FAIL-CLOSED-01: removed on a genuine duplicate suppression
-      # (as before) and now also on an AUTH-classified fire failure — a
-      # missing secret / 401 / 403 must leave the target in a state where
-      # refreshing the secret and re-applying this label deterministically
-      # re-drives it, instead of the label silently going nowhere because it
-      # was still present (issue's observed "stale wake label" failure).
-      - name: Remove BUILD wake label
-        if: >-
-          github.event.label.name == 'needs-build-wake' &&
-          (steps.fire.outputs.ok == 'true' || steps.dedup.outputs.status == 'duplicate' || steps.fire.outputs.auth_blocked == 'true')
+  observe-build:
+    needs: fire-build
+    if: needs.fire-build.outputs.fired == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Watch for BUILD terminal without re-fire
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-build-wake" || true
-
-      - name: Report BUILD fire failure
-        if: >-
-          steps.target.outputs.skip != 'true' &&
-          steps.dedup.outputs.status != 'duplicate' &&
-          steps.fire.outputs.ok != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -uo pipefail
-          # shellcheck source=../scripts/fire-auth-lib.sh
-          source .github/scripts/fire-auth-lib.sh
-
-          if [ "${{ steps.fire.outputs.auth_blocked }}" = "true" ]; then
-            BODY="$(fire_auth_blocked_body BUILD "${{ steps.fire.outputs.missing_secret_name }}" "${{ steps.fire.outputs.http_code }}")"
-          else
-            BODY="BUILD FIRE FAILED: HTTP ${{ steps.fire.outputs.http_code }}"
-          fi
-
-          gh api --method POST \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="$BODY"
-          exit 1
-
-      # CF-HANDOFF-FAIL-CLOSED-01
-      # Only reached once the fire above succeeded and the tagged
-      # "BUILD FIRED:" receipt landed. Watches this exact attempt for a
-      # correlated terminal receipt, fires the one bounded recovery if it
-      # stalls, and posts the durable WORKFLOW BLOCKED — LIVENESS receipt if
-      # the recovery also stalls. See worker-liveness-guard.sh and BUILD.md's
-      # "Liveness correlation" rule for the full contract.
-      - name: Run BUILD liveness guard
-        if: >-
-          steps.target.outputs.skip != 'true' &&
-          steps.dedup.outputs.status != 'duplicate' &&
-          steps.fire.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACTOR: BUILD
-          FIRE_URL: ${{ secrets.BUILD_FIRE_URL }}
-          FIRE_TOKEN: ${{ secrets.BUILD_FIRE_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
-          # CF-FREEZE-CLOSEOUT-01 (F5): BUILD only, raised from the 20-minute
-          # default to cover real observed product-build duration (issue
-          # #352's false-death/double-run). REVIEW below keeps the default.
-          WORKER_LIVENESS_LEASE_MINUTES: "40"
-        run: bash .github/scripts/worker-liveness-guard.sh
+          TARGET_NUMBER: ${{ needs.fire-build.outputs.target_number }}
+          ACTOR: BUILD
+          ATTEMPT_ID: ${{ needs.fire-build.outputs.attempt_id }}
+          TERMINAL_LEASE_MINUTES: '45'
+        run: bash .github/scripts/terminal-watch.sh
 
   fire-review:
     if: >-
       github.event.label.name == 'needs-cc-rereview' ||
       (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'DONE:'))
     runs-on: ubuntu-latest
-    # CF-HANDOFF-FAIL-CLOSED-01: this job now legitimately runs up to
-    # roughly two liveness lease windows long (~40 minutes at the default
-    # 20-minute lease) once the fire below succeeds, because
-    # worker-liveness-guard.sh's bounded observation window and single
-    # recovery run as a later step in this same job — see that script and
-    # CC.md's "Liveness correlation" rule for the full contract.
-    timeout-minutes: 50
+    timeout-minutes: 10
+    concurrency:
+      group: cf-review-${{ github.event.issue.number || github.event.pull_request.number }}
+      cancel-in-progress: false
+    outputs:
+      fired: ${{ steps.fire.outputs.ok }}
+      target_number: ${{ steps.resolve.outputs.number }}
+      attempt_id: ${{ steps.resolve.outputs.attempt_id }}
     steps:
-      # CF-OUTCOME-LOOP-LEAN-01: terminal-routing-lib.sh needs to exist on
-      # disk to bind the PR reference to the terminal/first-line contract
-      # (see that file) and to recognise a DONE: EVIDENCE completion.
-      - name: Check out default branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
 
-      - name: Resolve target
-        id: target
+      - name: Resolve REVIEW target
+        id: resolve
         env:
-          COMMENT_BODY: ${{ github.event.comment.body }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          COMMENT_BODY: ${{ github.event.comment.body }}
         run: |
           set -uo pipefail
-          # shellcheck source=../scripts/terminal-routing-lib.sh
-          source .github/scripts/terminal-routing-lib.sh
+          source .github/scripts/runtime-lib.sh
 
-          if [ "${{ github.event_name }}" = "issue_comment" ]; then
-            # Robust to leading blank/all-whitespace lines: drop them, then
-            # trim leading whitespace on the first non-empty line and require
-            # the terminal marker there. A quoted/example "DONE:" elsewhere
-            # in the comment must not fire this.
-            FIRST_LINE="$(terminal_first_line "$COMMENT_BODY")"
-            case "$FIRST_LINE" in
+          if [ "${{ github.event_name }}" = issue_comment ]; then
+            FIRST="$(runtime_strip_heading "$(runtime_first_line "$COMMENT_BODY")")"
+            case "$FIRST" in
+              "DONE: EVIDENCE"*) echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
               DONE:*) ;;
-              *)
-                echo "skip=true" >> "$GITHUB_OUTPUT"
-                exit 0
-                ;;
+              *) echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
             esac
-
-            case "$FIRST_LINE" in
-              "DONE: EVIDENCE"*)
-                # Evidence-only completion (see BUILD.md): no PR to review.
-                # BUILD applies needs-owner-wake itself for this outcome, so
-                # REVIEW must never fire here and must not post the
-                # "no PR link" skip message either — this is expected, not
-                # an error.
-                echo "skip=true" >> "$GITHUB_OUTPUT"
-                exit 0
-                ;;
-            esac
-
-            # CF-OUTCOME-LOOP-LEAN-01: bound to the terminal line itself —
-            # never scrape a /pull/N from later prose/examples/quoted text.
-            NUMBER="$(terminal_pr_number_from_first_line "$COMMENT_BODY")"
-            if [ -z "$NUMBER" ] && [ -n "${{ github.event.issue.pull_request.url }}" ]; then
-              NUMBER="${{ github.event.issue.number }}"
-            fi
-            if [ -z "$NUMBER" ]; then
-              gh api --method POST "repos/${{ github.repository }}/issues/${{ github.event.issue.number }}/comments" \
-                -f body="REVIEW FIRE SKIPPED: DONE comment carries no PR link"
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+            NUMBER="$(runtime_done_pr_number "$COMMENT_BODY")"
+            if [ -z "$NUMBER" ] && [ -n "${{ github.event.issue.pull_request.url }}" ]; then NUMBER="${{ github.event.issue.number }}"; fi
+            if [ -z "$NUMBER" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           else
-            NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
+            NUMBER="${{ github.event.pull_request.number || github.event.issue.number }}"
+          fi
+
+          PR=$(gh api "repos/${{ github.repository }}/pulls/${NUMBER}" 2>/dev/null || true)
+          if [ -z "$PR" ] || [ "$(jq -r '.state // "closed"' <<< "$PR")" != open ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          BODY=$(jq -r '.body // ""' <<< "$PR")
+          OUTCOME_ID="$(runtime_outcome_id "$BODY")"
+          TIER="$(runtime_tier "$BODY")"
+          if [ -z "$OUTCOME_ID" ]; then
+            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              -f body="STOP: MISSING OUTCOME-ID — REVIEW cannot bind this PR to one task contract."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          [ "$TIER" != INVALID ] || { echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
+
+          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+            --jq '[.[] | {body:.body, created_at:.created_at}]' | jq -s 'add // []')
+          if [ "$(runtime_actor_attempt_open "$COMMENTS" REVIEW)" = true ]; then
+            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              -f body="REVIEW ADMISSION: SUPPRESSED — an active reviewer already owns ${OUTCOME_ID}."
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
+          echo "outcome_id=$OUTCOME_ID" >> "$GITHUB_OUTPUT"
+          echo "tier=$TIER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=REVIEW-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
-      - name: Fire CALBOARD-CC-AUTO / REVIEW
+      - name: Fire REVIEW
         id: fire
-        if: steps.target.outputs.skip != 'true'
+        if: steps.resolve.outputs.skip != 'true'
         env:
           CC_AUTO_FIRE_URL: ${{ secrets.CC_AUTO_FIRE_URL }}
           CC_AUTO_FIRE_TOKEN: ${{ secrets.CC_AUTO_FIRE_TOKEN }}
-          TARGET_REPO: ${{ github.repository }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+          NUMBER: ${{ steps.resolve.outputs.number }}
+          OUTCOME_ID: ${{ steps.resolve.outputs.outcome_id }}
+          TIER: ${{ steps.resolve.outputs.tier }}
+          ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
-          # shellcheck source=../scripts/fire-auth-lib.sh
           source .github/scripts/fire-auth-lib.sh
-
-          if [ -z "${CC_AUTO_FIRE_URL:-}" ]; then
-            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
-            echo "missing_secret_name=CC_AUTO_FIRE_URL" >> "$GITHUB_OUTPUT"
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ -z "${CC_AUTO_FIRE_URL:-}" ]; then SECRET=CC_AUTO_FIRE_URL; CODE=missing_secret
+          elif [ -z "${CC_AUTO_FIRE_TOKEN:-}" ]; then SECRET=CC_AUTO_FIRE_TOKEN; CODE=missing_secret
+          else
+            PROMPT="Repository ${{ github.repository }}, PR #${NUMBER}. Run current .github/ai-routines/CC.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's REVIEW_ATTEMPT_ID is ${ATTEMPT_ID}; terminal first line must carry [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
+            CODE=$(curl -sS -o /tmp/review.json -w '%{http_code}' --request POST "$CC_AUTO_FIRE_URL" \
+              --header "Authorization: Bearer $CC_AUTO_FIRE_TOKEN" --header "anthropic-version: 2023-06-01" \
+              --header "anthropic-beta: experimental-cc-routine-2026-04-01" --header "Content-Type: application/json" --data "$REQUEST") || CODE=curl_error
+            SECRET=CC_AUTO_FIRE_TOKEN
           fi
-          if [ -z "${CC_AUTO_FIRE_TOKEN:-}" ]; then
-            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
-            echo "missing_secret_name=CC_AUTO_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          # CF-HANDOFF-FAIL-CLOSED-01: this run's REVIEW_ATTEMPT_ID is
-          # echoed in the fire receipt below (which doubles as this
-          # attempt's liveness start marker — see review-liveness-lib.sh)
-          # and must also come back on REVIEW's own terminal comment per
-          # CC.md's Liveness correlation rule.
-          PROMPT="Repository ${TARGET_REPO}, PR/item #${TARGET_NUMBER}. Run CALBOARD-CC-AUTO / REVIEW for this exact target. Post a literal ACCEPT:, CORRECT:, CALVIN REQUIRED:, or STOP: as the first non-empty line before ending — no Markdown heading prefix. This run's REVIEW_ATTEMPT_ID is ${ATTEMPT_ID}: per CC.md's liveness correlation rule, that first non-empty line must also include the exact tag [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]."
-          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
-
-          HTTP_CODE=$(curl -sS -o /tmp/review_response.json -w '%{http_code}' \
-            --request POST "$CC_AUTO_FIRE_URL" \
-            --header "Authorization: Bearer $CC_AUTO_FIRE_TOKEN" \
-            --header "anthropic-version: 2023-06-01" \
-            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
-            --header "Content-Type: application/json" \
-            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
-
-          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
-          if [ "$HTTP_CODE" != "curl_error" ] && [ "$HTTP_CODE" -ge 200 ] 2>/dev/null && [ "$HTTP_CODE" -lt 300 ] 2>/dev/null; then
-            echo "session_id=$(jq -r '.claude_code_session_id // "unknown"' /tmp/review_response.json)" >> "$GITHUB_OUTPUT"
-            echo "session_url=$(jq -r '.claude_code_session_url // "unknown"' /tmp/review_response.json)" >> "$GITHUB_OUTPUT"
+          if [ "$CODE" != curl_error ] && [ "$CODE" -ge 200 ] 2>/dev/null && [ "$CODE" -lt 300 ] 2>/dev/null; then
+            SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/review.json)
+            URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/review.json)
+            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              -f body="REVIEW START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
-            echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
           else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            if [ "$(fire_auth_status "$HTTP_CODE")" = "auth" ]; then
-              echo "missing_secret_name=CC_AUTO_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
-              echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
+              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" -f body="BLOCKED: ACTIONABLE — REVIEW transport unavailable (${CODE}); refresh ${SECRET}."
             else
-              echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
+              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" -f body="BLOCKED: AI — REVIEW transport failed (${CODE})."
             fi
+            echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Report REVIEW fire
-        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
+      - name: Clear REVIEW wake label
+        if: github.event.label.name == 'needs-cc-rereview'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method POST \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="REVIEW FIRED: HTTP ${{ steps.fire.outputs.http_code }} · session ${{ steps.fire.outputs.session_id }} (${{ steps.fire.outputs.session_url }}) [REVIEW_ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}]"
+        run: gh api --method DELETE "repos/${{ github.repository }}/issues/${{ github.event.issue.number || github.event.pull_request.number }}/labels/needs-cc-rereview" || true
 
-      # CF-HANDOFF-FAIL-CLOSED-01: also removed on an AUTH-classified fire
-      # failure — see fire-build's "Remove BUILD wake label" step for the
-      # matching rationale (deterministic re-drive after a secret refresh).
-      - name: Remove REVIEW wake label
-        if: >-
-          github.event.label.name == 'needs-cc-rereview' &&
-          (steps.fire.outputs.ok == 'true' || steps.fire.outputs.auth_blocked == 'true')
+  observe-review:
+    needs: fire-review
+    if: needs.fire-review.outputs.fired == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Watch for REVIEW terminal without re-fire
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-cc-rereview" || true
-
-      - name: Report REVIEW fire failure
-        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -uo pipefail
-          # shellcheck source=../scripts/fire-auth-lib.sh
-          source .github/scripts/fire-auth-lib.sh
-
-          if [ "${{ steps.fire.outputs.auth_blocked }}" = "true" ]; then
-            BODY="$(fire_auth_blocked_body REVIEW "${{ steps.fire.outputs.missing_secret_name }}" "${{ steps.fire.outputs.http_code }}")"
-          else
-            BODY="REVIEW FIRE FAILED: HTTP ${{ steps.fire.outputs.http_code }}"
-          fi
-
-          gh api --method POST \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="$BODY"
-          exit 1
-
-      # CF-HANDOFF-FAIL-CLOSED-01
-      # Only reached once the fire above succeeded and the tagged
-      # "REVIEW FIRED:" receipt landed. See fire-build's matching step and
-      # worker-liveness-guard.sh / CC.md's "Liveness correlation" rule for
-      # the full contract.
-      - name: Run REVIEW liveness guard
-        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          ACTOR: REVIEW
-          FIRE_URL: ${{ secrets.CC_AUTO_FIRE_URL }}
-          FIRE_TOKEN: ${{ secrets.CC_AUTO_FIRE_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
-        run: bash .github/scripts/worker-liveness-guard.sh
+          TARGET_NUMBER: ${{ needs.fire-review.outputs.target_number }}
+          ACTOR: REVIEW
+          ATTEMPT_ID: ${{ needs.fire-review.outputs.attempt_id }}
+          TERMINAL_LEASE_MINUTES: '25'
+        run: bash .github/scripts/terminal-watch.sh
 
-  # CF-OWNER-RECONCILE-01
-  # Terminal non-merge OWNER wake: BUILD/REVIEW apply needs-owner-wake only
-  # for a true state-changing terminal outcome (STOP or CALVIN REQUIRED),
-  # never for DONE, ACCEPT, MERGED, BLOCKED, CORRECT, or ordinary chatter.
-  # OWNER itself never applies this label, so its own DISPATCHED/WAIT/
-  # CALVIN REQUIRED output cannot re-fire this job.
-  # CF-OWNER-LIVENESS-01 note: this job runs up to roughly two lease
-  # windows long (~40 minutes at the default 20-minute lease) once the fire
-  # below succeeds, because owner-liveness-guard.sh's bounded observation
-  # window and single recovery run as later steps in this same job. See
-  # that script and OWNER.md's "Liveness correlation" rule for the full
-  # contract; the label-routing comment above this job is otherwise
-  # unchanged.
-  # CF-OWNER-SINGLE-WRITER-01: this job shares the `cf-owner-single-writer`
-  # concurrency group with owner-on-merge.yml's fire-owner-on-merge job
-  # verbatim — see that workflow's header comment for the full rationale
-  # and owner-single-writer-lib.test.sh / owner-single-writer-config.test.sh
-  # for the regression coverage.
-  #
-  # CF-OWNER-SINGLE-WRITER-01 addendum, corrected (issue #197 ADDENDUM):
-  # a genuine human ruling on a current CALVIN REQUIRED gate must produce
-  # exactly one OWNER wake, with no manual label/courier action, and
-  # without triggering OWNER for arbitrary comments. The first version of
-  # this fix ran the classification in a separate fire-owner-on-calvin-ruling
-  # job that only re-applied the needs-owner-wake label, on the assumption
-  # that doing so would re-enter this job's own `labeled`-event trigger.
-  # It doesn't: GitHub Actions does not start a new workflow run from an
-  # event produced by the repository's own GITHUB_TOKEN (the documented
-  # recursion guard), so that label write never actually fired anything —
-  # the ruling path was inert end to end in production even though its
-  # classifier was correct and fully covered by tests.
-  #
-  # Fixed by routing a qualifying `issue_comment` ruling directly into this
-  # job instead of through a label hop it can never itself trigger. The
-  # `Resolve target` step below runs the same calvin-ruling-lib.sh
-  # classification (non-bot author, the comment's own first line is a
-  # CALVIN RULING marker, and the target's current typed gate — its most
-  # recent BUILD/REVIEW/OWNER state-changing terminal marker — is still an
-  # unanswered CALVIN REQUIRED:) and sets skip=true when it doesn't qualify;
-  # every later step is gated on skip != 'true'. A qualifying ruling reaches
-  # the exact same fire, admission guard, and liveness recovery as any other
-  # terminal wake, inside the same cf-owner-single-writer concurrency group,
-  # so "exactly one wake" and duplicate-admission suppression fall out of
-  # the mechanism this job already gives the label-triggered path — no new
-  # decision surface. See calvin-ruling-lib.sh / calvin-ruling-lib.test.sh
-  # for the classification contract and calvin-ruling-reachability.test.sh
-  # for the structural regression coverage that catches this exact class of
-  # defect (an edge whose only effect is a workflow-authored label write
-  # depended on as a trigger).
-  #
-  # Second correction: the job-level `if:` prefilter above originally used
-  # `contains(github.event.comment.body, 'CALVIN RULING')`, a substring
-  # match. Because `skip` is a *step*-level gate, any comment merely
-  # mentioning the marker (e.g. quoting it as evidence in a REVIEW comment)
-  # still started this job and claimed the `cf-owner-single-writer`
-  # concurrency group through checkout and a paginated comments fetch
-  # before exiting — which could evict a genuinely queued OWNER wake for a
-  # different target, violating #197's "a newer wake must not be lost"
-  # requirement (a no-op admission reconciles nothing, so it is not an
-  # interchangeable member of the queue). Fixed by anchoring the prefilter
-  # to `startsWith(...)` so only a comment whose own body opens with the
-  # marker can start the job at all; `calvin_ruling_should_wake` remains
-  # authoritative for author/gate-state classification once it does. See
-  # calvin-ruling-reachability.test.sh for the regression coverage.
   fire-owner-on-terminal:
-    # CF-TERMINAL-HANDOFF-REPAIR-01: the four direct-marker startsWith
-    # checks below give a top-level DONE: EVIDENCE / STOP: / BLOCKED: /
-    # CALVIN REQUIRED: comment its own admission into this job, without
-    # requiring needs-owner-wake — the exact #256 gap (a valid DONE:
-    # EVIDENCE receipt with no label produced no OWNER wake). Anchored with
-    # startsWith, matching the existing CALVIN RULING admission and for the
-    # same reason calvin-ruling-reachability.test.sh already guards: this
-    # job-level `if:` is what claims the cf-owner-single-writer concurrency
-    # group before any step runs, so a bare substring match would let any
-    # comment merely mentioning one of these words evict a genuinely queued
-    # wake. The precise first-line/heading-normalized classification still
-    # happens in `Resolve target` via terminal_is_owner_direct_marker.
     if: >-
       github.event.label.name == 'needs-owner-wake' ||
       (github.event_name == 'issue_comment' &&
-        (startsWith(github.event.comment.body, 'CALVIN RULING') ||
-          startsWith(github.event.comment.body, 'DONE: EVIDENCE') ||
-          startsWith(github.event.comment.body, 'STOP:') ||
-          startsWith(github.event.comment.body, 'BLOCKED:') ||
-          startsWith(github.event.comment.body, 'CALVIN REQUIRED:')))
+        (contains(github.event.comment.body, 'CALVIN RULING') ||
+         contains(github.event.comment.body, 'DONE: EVIDENCE') ||
+         contains(github.event.comment.body, 'STOP:') ||
+         contains(github.event.comment.body, 'BLOCKED:') ||
+         contains(github.event.comment.body, 'CALVIN REQUIRED:')))
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 10
     concurrency:
-      group: cf-owner-single-writer
+      group: cf-owner-admission
       cancel-in-progress: false
+    outputs:
+      fired: ${{ steps.fire.outputs.ok }}
+      target_number: ${{ steps.resolve.outputs.number }}
+      attempt_id: ${{ steps.resolve.outputs.attempt_id }}
     steps:
-      # owner-liveness-guard.sh and calvin-ruling-lib.sh need to exist on
-      # disk. Pinned explicitly to the default branch: the label-triggered
-      # path is reached via an `issues`/`pull_request` labeled event, which
-      # has no natural head ref of its own to fall back to.
-      - name: Check out default branch
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
 
-      - name: Resolve target
-        id: target
+      - name: Resolve OWNER wake
+        id: resolve
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          EVENT_NAME: ${{ github.event_name }}
           COMMENT_BODY: ${{ github.event.comment.body }}
           IS_BOT: ${{ github.event.comment.user.type == 'Bot' }}
         run: |
           set -uo pipefail
-          # shellcheck source=../scripts/calvin-ruling-lib.sh
+          source .github/scripts/runtime-lib.sh
           source .github/scripts/calvin-ruling-lib.sh
-          # shellcheck source=../scripts/terminal-routing-lib.sh
-          source .github/scripts/terminal-routing-lib.sh
-
-          if [ "$EVENT_NAME" = "issue_comment" ]; then
-            NUMBER="${{ github.event.issue.number }}"
-          else
-            NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
-          fi
-
-          # CF-TERMINAL-HANDOFF-REPAIR-01: fetched once, up front, since
-          # both the ruling-wake gate check below and the new direct-marker/
-          # needs-owner-wake admission dedupe need the target's current
-          # comments.
+          NUMBER="${{ github.event.issue.number || github.event.pull_request.number }}"
           COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
-            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
+            --jq '[.[] | {body:.body, created_at:.created_at}]' | jq -s 'add // []')
 
-          if [ "$EVENT_NAME" = "issue_comment" ]; then
-            if [ "$(calvin_ruling_should_wake "$COMMENTS" "$COMMENT_BODY" "$IS_BOT")" = "wake" ]; then
-              : # CF-OWNER-SINGLE-WRITER-01 addendum ruling wake — unchanged;
-                # calvin_ruling_should_wake already applies its own gate/
-                # admission check via calvin_ruling_gate_status.
-            elif [ "$(terminal_is_owner_direct_marker "$COMMENT_BODY")" = "true" ]; then
-              # CF-TERMINAL-HANDOFF-REPAIR-01: direct terminal -> OWNER
-              # routing. terminal_owner_admission_status is the shared
-              # dedupe with the needs-owner-wake compatibility path below —
-              # whichever path reaches this job first for a given terminal
-              # transition posts the admission receipt, and the other skips.
-              if [ "$(terminal_owner_admission_status "$COMMENTS")" != "admit" ]; then
-                echo "skip=true" >> "$GITHUB_OUTPUT"
-                exit 0
-              fi
-            else
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
-          else
-            # needs-owner-wake label: kept as manual/recovery compatibility
-            # only (BUILD.md, CC.md, OWNER.md) — no longer required for the
-            # four terminal markers now routed directly above. The same
-            # admission dedupe applies here, so applying this label
-            # alongside an already-handled direct terminal comment does not
-            # fire a second OWNER session for the same transition.
-            #
-            # CORRECT (PR #259 review): "skip" (a genuine already-admitted
-            # duplicate) and "no-marker" (no first-line terminal marker on
-            # this target at all — e.g. a manual label applied for an
-            # outcome stated only in a PR body) used to be indistinguishable
-            # and both fell through to skip, making the label a silent
-            # no-op exactly in the manual/recovery case it exists for. Only
-            # a genuine "skip" duplicate short-circuits here; "no-marker"
-            # falls through and fires as before.
-            LABEL_ADMISSION="$(terminal_owner_admission_status "$COMMENTS")"
-            if [ "$LABEL_ADMISSION" = "skip" ]; then
-              echo "skip=true" >> "$GITHUB_OUTPUT"
-              exit 0
-            fi
+          if [ "${{ github.event_name }}" = issue_comment ]; then
+            if [ "$(calvin_ruling_should_wake "$COMMENTS" "$COMMENT_BODY" "$IS_BOT")" = wake ]; then :
+            elif [ "$(runtime_is_child_terminal "$COMMENT_BODY")" = true ]; then :
+            else echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
           fi
 
+          if [ "$(runtime_actor_attempt_open "$COMMENTS" OWNER)" = true ]; then
+            echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
-          echo "attempt_id=TERMINAL-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+          echo "attempt_id=OWNER-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
 
-      # CF-OWNER-SINGLE-WRITER-01: advisory only — see owner-on-merge.yml's
-      # header comment and owner-single-writer-guard.sh. Never blocks; the
-      # cf-owner-single-writer concurrency group on this job is what
-      # actually prevents overlapping fires.
-      - name: Record OWNER admission context
-        if: steps.target.outputs.skip != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TARGET_REPO: ${{ github.repository }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
-        run: bash .github/scripts/owner-single-writer-guard.sh
-
-      - name: Fire CALBOARD-OWNER API trigger
+      - name: Fire OWNER
         id: fire
-        if: steps.target.outputs.skip != 'true'
+        if: steps.resolve.outputs.skip != 'true'
         env:
           OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
           OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
-          TARGET_REPO: ${{ github.repository }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
+          NUMBER: ${{ steps.resolve.outputs.number }}
+          ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -uo pipefail
-          # shellcheck source=../scripts/fire-auth-lib.sh
           source .github/scripts/fire-auth-lib.sh
-
-          if [ -z "${OWNER_FIRE_URL:-}" ]; then
-            echo "::error::OWNER_FIRE_URL repository secret is missing."
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
-            echo "missing_secret_name=OWNER_FIRE_URL" >> "$GITHUB_OUTPUT"
-            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
-            exit 0
+          if [ -z "${OWNER_FIRE_URL:-}" ]; then SECRET=OWNER_FIRE_URL; CODE=missing_secret
+          elif [ -z "${OWNER_FIRE_TOKEN:-}" ]; then SECRET=OWNER_FIRE_TOKEN; CODE=missing_secret
+          else
+            PROMPT="Repository ${{ github.repository }}, item #${NUMBER}, terminal/ruling wake. Follow current .github/ai-routines/OWNER.md exactly. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}; parent terminal first line must carry [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
+            CODE=$(curl -sS -o /tmp/owner.json -w '%{http_code}' --request POST "$OWNER_FIRE_URL" \
+              --header "Authorization: Bearer $OWNER_FIRE_TOKEN" --header "anthropic-version: 2023-06-01" \
+              --header "anthropic-beta: experimental-cc-routine-2026-04-01" --header "Content-Type: application/json" --data "$REQUEST") || CODE=curl_error
+            SECRET=OWNER_FIRE_TOKEN
           fi
-          if [ -z "${OWNER_FIRE_TOKEN:-}" ]; then
-            echo "::error::OWNER_FIRE_TOKEN repository secret is missing."
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            echo "http_code=missing_secret" >> "$GITHUB_OUTPUT"
-            echo "missing_secret_name=OWNER_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
-            echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-
-          PROMPT="Repository ${TARGET_REPO}, item #${TARGET_NUMBER}. wake_class: TERMINAL — a BUILD/REVIEW terminal STOP, BLOCKED, DONE: EVIDENCE, or CALVIN REQUIRED outcome (or a qualifying CALVIN RULING), not a merge. Follow the current .github/ai-routines/OWNER.md adapter's terminal-wake path exactly from its Process section — read current native GitHub evidence only (including this item's own terminal outcome), then decide. Do not take on any broader orchestration role beyond what OWNER.md defines. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}: per OWNER.md's liveness correlation rule, your terminal receipt's first non-empty line must still be exactly one of the typed forms (DISPATCHED: / WAIT: AI — / WAIT: EXTERNAL — / WAIT: PARKED — / CALVIN REQUIRED:) and must also include the exact tag [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}] on that same line."
-          REQUEST_BODY=$(jq -n --arg text "$PROMPT" '{text: $text}')
-
-          HTTP_CODE=$(curl -sS -o /tmp/owner_terminal_response.json -w '%{http_code}' \
-            --request POST "$OWNER_FIRE_URL" \
-            --header "Authorization: Bearer $OWNER_FIRE_TOKEN" \
-            --header "anthropic-version: 2023-06-01" \
-            --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
-            --header "Content-Type: application/json" \
-            --data "$REQUEST_BODY") || HTTP_CODE="curl_error"
-
-          echo "http_code=$HTTP_CODE" >> "$GITHUB_OUTPUT"
-          if [ "$HTTP_CODE" != "curl_error" ] && [ "$HTTP_CODE" -ge 200 ] 2>/dev/null && [ "$HTTP_CODE" -lt 300 ] 2>/dev/null; then
-            echo "session_id=$(jq -r '.claude_code_session_id // "unknown"' /tmp/owner_terminal_response.json)" >> "$GITHUB_OUTPUT"
-            echo "session_url=$(jq -r '.claude_code_session_url // "unknown"' /tmp/owner_terminal_response.json)" >> "$GITHUB_OUTPUT"
+          if [ "$CODE" != curl_error ] && [ "$CODE" -ge 200 ] 2>/dev/null && [ "$CODE" -lt 300 ] 2>/dev/null; then
+            SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/owner.json)
+            URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/owner.json)
+            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              -f body="OWNER START: wake=TERMINAL · session ${SESSION} (${URL}) [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
-            echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
           else
-            echo "ok=false" >> "$GITHUB_OUTPUT"
-            if [ "$(fire_auth_status "$HTTP_CODE")" = "auth" ]; then
-              echo "missing_secret_name=OWNER_FIRE_TOKEN" >> "$GITHUB_OUTPUT"
-              echo "auth_blocked=true" >> "$GITHUB_OUTPUT"
+            if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
+              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" -f body="BLOCKED: ACTIONABLE — OWNER transport unavailable (${CODE}); refresh ${SECRET}. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             else
-              echo "auth_blocked=false" >> "$GITHUB_OUTPUT"
+              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" -f body="BLOCKED: AI — OWNER transport failed (${CODE}). [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             fi
+            echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
-      - name: Report OWNER terminal-wake fire
-        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
+      - name: Clear OWNER wake label
+        if: github.event.label.name == 'needs-owner-wake'
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method POST \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="$(printf 'OWNER ATTEMPT START: %s\nwake_class: TERMINAL\nCF-OWNER-RECONCILE-01: fired CALBOARD-OWNER (terminal wake) for needs-owner-wake (HTTP %s). session: %s (%s)' \
-              "${{ steps.target.outputs.attempt_id }}" "${{ steps.fire.outputs.http_code }}" "${{ steps.fire.outputs.session_id }}" "${{ steps.fire.outputs.session_url }}")"
+        run: gh api --method DELETE "repos/${{ github.repository }}/issues/${{ github.event.issue.number || github.event.pull_request.number }}/labels/needs-owner-wake" || true
 
-      # CF-HANDOFF-FAIL-CLOSED-01: also removed on an AUTH-classified fire
-      # failure, same deterministic re-drive rationale as fire-build's
-      # "Remove BUILD wake label" step.
-      - name: Remove OWNER terminal-wake label
-        if: >-
-          steps.target.outputs.skip != 'true' &&
-          (steps.fire.outputs.ok == 'true' || steps.fire.outputs.auth_blocked == 'true')
+  observe-owner-terminal:
+    needs: fire-owner-on-terminal
+    if: needs.fire-owner-on-terminal.outputs.fired == 'true'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+      - name: Watch for OWNER terminal without re-fire
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/labels/needs-owner-wake" || true
-
-      # CF-TERMINAL-HANDOFF-REPAIR-01: this label is compatibility-only now
-      # (BUILD.md, CC.md, OWNER.md). If terminal_owner_admission_status
-      # already found an "OWNER ATTEMPT START: " receipt for the current
-      # terminal transition — the direct-comment path got there first —
-      # this event never fires a second OWNER session, but the label
-      # itself must still be cleared so it doesn't linger as a stale
-      # manual marker.
-      #
-      # CORRECT (PR #259 review): this only fires on a genuine "skip"
-      # duplicate now (see the "Resolve target" step above) — a "no-marker"
-      # result no longer reaches here with skip == 'true', so a label
-      # applied where no first-line terminal marker exists still fires
-      # OWNER instead of being silently deleted.
-      - name: Remove already-admitted needs-owner-wake label
-        if: github.event.label.name == 'needs-owner-wake' && steps.target.outputs.skip == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          gh api --method DELETE \
-            "repos/${{ github.repository }}/issues/${{ github.event.issue.number || github.event.pull_request.number }}/labels/needs-owner-wake" || true
-
-      - name: Report OWNER terminal-wake fire failure
-        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok != 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          set -uo pipefail
-          # shellcheck source=../scripts/fire-auth-lib.sh
-          source .github/scripts/fire-auth-lib.sh
-
-          if [ "${{ steps.fire.outputs.auth_blocked }}" = "true" ]; then
-            BODY="$(fire_auth_blocked_body OWNER "${{ steps.fire.outputs.missing_secret_name }}" "${{ steps.fire.outputs.http_code }}")"
-          else
-            BODY="CF-OWNER-RECONCILE-01: CALBOARD-OWNER terminal-wake fire failed (HTTP ${{ steps.fire.outputs.http_code }})."
-          fi
-
-          gh api --method POST \
-            "repos/${{ github.repository }}/issues/${{ steps.target.outputs.number }}/comments" \
-            -f body="$BODY"
-          exit 1
-
-      # CF-OWNER-LIVENESS-01
-      # Only reached once the fire above succeeded and the START receipt
-      # landed. Watches this exact attempt for a correlated terminal
-      # receipt, fires the one bounded recovery if it stalls, and posts the
-      # durable exhaustion receipt if the recovery also stalls. Never
-      # touches BUILD/REVIEW/Project Home itself.
-      - name: Run OWNER liveness guard
-        if: steps.target.outputs.skip != 'true' && steps.fire.outputs.ok == 'true'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
-          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
-          TARGET_NUMBER: ${{ steps.target.outputs.number }}
-          ATTEMPT_ID: ${{ steps.target.outputs.attempt_id }}
-          WAKE_CLASS: TERMINAL
-        run: bash .github/scripts/owner-liveness-guard.sh
+          TARGET_NUMBER: ${{ needs.fire-owner-on-terminal.outputs.target_number }}
+          ACTOR: OWNER
+          ATTEMPT_ID: ${{ needs.fire-owner-on-terminal.outputs.attempt_id }}
+          TERMINAL_LEASE_MINUTES: '25'
+        run: bash .github/scripts/terminal-watch.sh
