@@ -19,7 +19,7 @@ If `OUTCOME-ID` is missing/ambiguous, end `STOP: MISSING OUTCOME-ID — ...`. Do
 3. If an open PR already exists for this `OUTCOME-ID`, resume that PR. Never create a second PR for the same outcome.
 4. Treat the workflow's admission receipt as execution routing only, never product authority.
 
-No Notion/Command Center/tooling inventory is a routine prerequisite. Retrieve an external authority only when the task actually depends on it.
+No broad Notion/Command Center/tooling inventory is a routine prerequisite. A triggered availability check for one specific accepted accelerator whose trigger matches the exact task is fine when applicable; retrieve any other external authority only when the task actually depends on it.
 
 ## Execute + self-correct
 
