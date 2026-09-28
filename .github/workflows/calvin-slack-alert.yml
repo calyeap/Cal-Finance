@@ -28,7 +28,7 @@ jobs:
         run: |
           set -uo pipefail
           source .github/scripts/runtime-lib.sh
-          KIND="$(runtime_slack_kind "$(runtime_strip_heading "$(runtime_first_line "$COMMENT_BODY")")")"
+          KIND="$(runtime_slack_kind "$(runtime_terminal_line "$COMMENT_BODY")")"
           echo "kind=$KIND" >> "$GITHUB_OUTPUT"
 
       # calvin-slack-notify.sh owns payload construction (including

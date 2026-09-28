@@ -76,6 +76,21 @@ payload=$(calvin_slack_payload $'## BLOCKED: ACTIONABLE — refresh secret\nmore
 rc=$?
 assert_status "heading-normalized first line still classifies" 0 "$rc"
 
+# --- issue #375 (CF-WORKFLOW-TERMINAL-NORMALIZE-01): a standalone
+# [BUILD_ATTEMPT_ID: ...] metadata line preceding the real typed terminal
+# must not hide it from Slack eligibility -----------------------------------
+
+payload=$(calvin_slack_payload $'[BUILD_ATTEMPT_ID: BUILD-9-1]\nCALVIN REQUIRED: pick A or B' "o/r" "https://x/1")
+rc=$?
+assert_status "metadata-first CALVIN REQUIRED is still Slack eligible" 0 "$rc"
+assert_eq "metadata-first payload carries the CALVIN REQUIRED header" "CALVIN REQUIRED" "$(jq -r '.text' <<<"$payload" | head -n1 | sed -E 's/ — .*//')"
+
+set +e
+calvin_slack_payload $'Some narrative update.\n\nCALVIN REQUIRED: quoted later, not a terminal' "o/r" "https://x/1" >/dev/null
+rc=$?
+set -e
+assert_status "prose followed later by CALVIN REQUIRED stays ineligible" 1 "$rc"
+
 # --- calvin_slack_send is a silent no-op (rc 0, no request) when the line
 # is not Slack-eligible, so every call site can call it unconditionally ---
 
