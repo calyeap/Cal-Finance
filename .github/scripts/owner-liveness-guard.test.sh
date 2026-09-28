@@ -1,29 +1,12 @@
 #!/usr/bin/env bash
-# CF-OWNER-LIVENESS-01
-#
-# Deterministic, network-free tests for owner-liveness-guard.sh's own
-# control flow — specifically the boundary owner-liveness-lib.test.sh
-# cannot reach: what `main` actually branches on after calling
-# wait_and_check via command substitution, not what owner_liveness_status
-# returns in isolation.
-#
-# This exists because wait_and_check's informational progress line was
-# once written to stdout inside a function whose stdout command
-# substitution captures for the "complete"/"missing" verdict, so the
-# verdict was silently prefixed with that line and every comparison
-# against the bare string "complete" failed — misclassifying every
-# healthy attempt as stalled. owner_liveness_status itself was never
-# wrong, so the existing lib unit tests stayed green throughout.
-#
-# Sets OWNER_LIVENESS_LEASE_MINUTES=0 and stubs fetch_comments so this
-# runs instantly and hits no network, consistent with
-# owner-liveness-lib.test.sh.
+# CF-OWNER-LIVENESS-01 — 28 Sep 2026 reset
+# Deterministic, network-free tests for detection-only OWNER liveness.
 
 set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-
 FAILURES=0
+LAST_COMMENT=""
 
 assert_eq() {
   local desc="$1" expected="$2" actual="$3"
@@ -35,8 +18,26 @@ assert_eq() {
   fi
 }
 
-# Required env for the script's own `: "${VAR:?}"` guards. Values are
-# dummies: fetch_comments/post_comment/curl are stubbed or unreached below.
+assert_contains() {
+  local desc="$1" haystack="$2" needle="$3"
+  if [[ "$haystack" == *"$needle"* ]]; then
+    echo "ok - $desc"
+  else
+    echo "not ok - $desc (missing [$needle])"
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+
+assert_not_contains() {
+  local desc="$1" haystack="$2" needle="$3"
+  if [[ "$haystack" != *"$needle"* ]]; then
+    echo "ok - $desc"
+  else
+    echo "not ok - $desc (unexpected [$needle])"
+    FAILURES=$((FAILURES + 1))
+  fi
+}
+
 export GH_TOKEN=dummy
 export TARGET_REPO=x/y
 export TARGET_NUMBER=1
@@ -46,25 +47,26 @@ export OWNER_LIVENESS_LEASE_MINUTES=0
 
 # shellcheck source=owner-liveness-guard.sh
 source "${SCRIPT_DIR}/owner-liveness-guard.sh"
-
-# --- healthy attempt: wait_and_check must return the bare string
-# "complete", not the progress line + "complete" -----------------------------
+post_comment() { LAST_COMMENT="$1"; }
 
 fetch_comments() {
-  jq -n --arg attempt "$ATTEMPT_ID" '
-    [{body: ("DISPATCHED: https://github.com/x/y/issues/9 [OWNER_ATTEMPT_ID: " + $attempt + "]"), created_at: "2026-09-19T12:05:00Z"}]
-  '
+  jq -n --arg attempt "$ATTEMPT_ID" '[{body: ("DISPATCHED: https://github.com/x/y/issues/9 [OWNER_ATTEMPT_ID: " + $attempt + "]"), created_at: "2026-09-19T12:05:00Z"}]'
 }
 status="$(wait_and_check "$ATTEMPT_ID" "2026-09-19T12:00:00Z")"
-assert_eq "wait_and_check returns bare 'complete' for a healthy attempt (not prefixed with the progress line)" "complete" "$status"
+assert_eq "healthy OWNER attempt completes" "complete" "$status"
 
-# --- stalled attempt: wait_and_check must return the bare string "missing" --
-
-fetch_comments() {
-  echo '[]'
-}
+fetch_comments() { echo '[]'; }
 status="$(wait_and_check "$ATTEMPT_ID" "2026-09-19T12:00:00Z")"
-assert_eq "wait_and_check returns bare 'missing' for a stalled attempt" "missing" "$status"
+assert_eq "stalled OWNER attempt becomes missing" "missing" "$status"
+LAST_COMMENT=""
+post_blocked
+assert_contains "OWNER timeout emits actionable workflow block" "$LAST_COMMENT" "WORKFLOW BLOCKED — LIVENESS"
+assert_contains "OWNER timeout preserves exact attempt" "$LAST_COMMENT" "attempt: MERGE-1000-1"
+assert_contains "OWNER timeout states no automatic recovery" "$LAST_COMMENT" "No automatic OWNER recovery was fired"
+
+SCRIPT_TEXT="$(cat "${SCRIPT_DIR}/owner-liveness-guard.sh")"
+assert_not_contains "guard has no OWNER recovery fire function" "$SCRIPT_TEXT" "fire_owner_recovery()"
+assert_not_contains "guard does not call OWNER_FIRE_URL" "$SCRIPT_TEXT" '"$OWNER_FIRE_URL"'
 
 echo
 if [ "$FAILURES" -eq 0 ]; then
