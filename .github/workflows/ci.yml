@@ -63,6 +63,9 @@ jobs:
       - name: Run Slack terminal notifier tests
         run: bash .github/scripts/calvin-slack-notify.test.sh
 
+      - name: Run Slack alert workflow wiring tests
+        run: bash .github/scripts/calvin-slack-alert-workflow.test.sh
+
       - name: Run workflow-authored terminal relay tests
         run: bash .github/scripts/terminal-relay.test.sh
 
