@@ -20,15 +20,26 @@
 # wake OWNER, but only when the target's current typed gate — its most
 # recent BUILD/REVIEW/OWNER state-changing terminal marker — is still an
 # unanswered `CALVIN REQUIRED:`, so this never fires on arbitrary comments
-# or on an item with no open gate. (An earlier version of this fix routed
-# a qualifying ruling through a re-applied needs-owner-wake label instead
-# of straight into fire-owner-on-terminal; that label write, performed by
-# a workflow step under GITHUB_TOKEN, never actually re-triggered anything
-# — GitHub Actions does not start a new run from an event its own
-# GITHUB_TOKEN produced — so fire-owner-on-terminal now classifies and
-# admits the issue_comment path directly instead.)
+# or on an item with no open gate.
+#
+# CF-WORKFLOW-RESET-TERMINAL-HANDOFF-REPAIR-02: calvin_ruling_gate_status
+# used to hard-code the admission marker as the literal string
+# "OWNER ATTEMPT START: ", a name from an earlier runtime generation. The
+# live runtime's OWNER admission receipt (cc-auto-fire.yml's
+# fire-owner-on-terminal/fire-owner-on-merge "Fire OWNER" steps,
+# owner-on-merge.yml's fire-owner-on-merge step) has always posted
+# "OWNER START: ..." (see runtime_attempt_start_prefix in runtime-lib.sh),
+# so the admission check here could never actually see a real admission
+# receipt and go "closed" — it only ever matched the literal fixture text
+# the old test file typed by hand. Sourcing runtime-lib.sh and asking it
+# for the one canonical marker (instead of re-typing it here) makes the
+# two definitions impossible to drift apart again.
 
 set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck source=runtime-lib.sh
+source "${SCRIPT_DIR}/runtime-lib.sh"
 
 # calvin_ruling_first_line <text>
 # Drops leading blank/all-whitespace lines, then prints the first
@@ -61,14 +72,16 @@ calvin_ruling_is_ruling_first_line() {
 # REVIEW's/OWNER's own state-changing terminal markers (DONE:, BLOCKED:,
 # STOP:, CALVIN REQUIRED: — the same set BUILD.md's terminal rule defines,
 # which REVIEW and OWNER also emit verbatim). Echoes "open" only when that
-# latest terminal marker is CALVIN REQUIRED: and no "OWNER ATTEMPT START: "
-# receipt exists after it (i.e. no admission has fired for this exact gate
-# yet — OWNER's own restated CALVIN REQUIRED: from the original terminal
-# wake is what counts as "current" once it lands). Echoes "closed"
-# otherwise, including when no terminal marker exists at all.
+# latest terminal marker is CALVIN REQUIRED: and no OWNER admission receipt
+# (the canonical "OWNER START:" marker from runtime_attempt_start_prefix)
+# exists after it (i.e. no admission has fired for this exact gate yet —
+# OWNER's own restated CALVIN REQUIRED: from the original terminal wake is
+# what counts as "current" once it lands). Echoes "closed" otherwise,
+# including when no terminal marker exists at all.
 calvin_ruling_gate_status() {
-  local comments_json="$1"
-  jq -r '
+  local comments_json="$1" owner_start_prefix
+  owner_start_prefix="$(runtime_attempt_start_prefix OWNER)"
+  jq -r --arg owner_start_prefix "$owner_start_prefix" '
     def first_nonblank_line:
       (. // "")
       | split("\n")
@@ -88,7 +101,7 @@ calvin_ruling_gate_status() {
         (
           $all
           | map(select(.created_at > $latest_terminal.created_at))
-          | map(select(.first_line | startswith("OWNER ATTEMPT START: ")))
+          | map(select(.first_line | startswith($owner_start_prefix)))
           | length
         ) as $admitted_since
         | if $admitted_since > 0 then "closed" else "open" end

@@ -18,6 +18,8 @@ run_case() {
 
   export GH_TOKEN=dummy TARGET_REPO=x/y TARGET_NUMBER=1 ACTOR="$actor" ATTEMPT_ID="$mock_attempt"
   export TERMINAL_LEASE_MINUTES=0 TERMINAL_POLL_SECONDS=1
+  export TERMINAL_BLOCKED_LINE_FILE="$TMP/blocked-line-$actor.txt"
+  rm -f "$TERMINAL_BLOCKED_LINE_FILE"
   # shellcheck source=terminal-watch.sh
   source "${SCRIPT_DIR}/terminal-watch.sh"
 
@@ -47,8 +49,16 @@ run_case() {
     [ -f "$TMP/block" ] || fail "$actor timeout did not post BLOCKED"
     grep -q '^BLOCKED: AI —' "$TMP/block" || fail "$actor timeout was not AI-owned BLOCKED"
     grep -q 'No automatic re-fire was attempted' "$TMP/block" || fail "$actor timeout does not prove no re-fire"
+    # CF-WORKFLOW-RESET-TERMINAL-HANDOFF-REPAIR-02: a workflow-authored
+    # timeout terminal cannot recursively trigger the caller's own
+    # issue_comment-based relay (see cc-auto-fire.yml's observe-build /
+    # observe-review), so the caller reads the exact posted line back from
+    # this file instead of re-deriving it. The two must always match.
+    [ -f "$TERMINAL_BLOCKED_LINE_FILE" ] || fail "$actor timeout did not write TERMINAL_BLOCKED_LINE_FILE"
+    diff -q "$TMP/block" "$TERMINAL_BLOCKED_LINE_FILE" >/dev/null || fail "$actor TERMINAL_BLOCKED_LINE_FILE does not match the exact posted comment"
   else
     [ ! -f "$TMP/block" ] || fail "$actor healthy completion posted BLOCKED"
+    [ ! -f "$TERMINAL_BLOCKED_LINE_FILE" ] || fail "$actor healthy completion wrote TERMINAL_BLOCKED_LINE_FILE"
   fi
 }
 

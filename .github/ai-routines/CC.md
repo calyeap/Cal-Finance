@@ -57,6 +57,8 @@ Use for ambiguous target, changed head, conflicting authoritative requirements o
 
 ## Terminal contract
 
+**Destination**: post the terminal receipt as a comment on the exact wake target the fire prompt names (its `PR #<N>`) — the PR the runtime is watching for this exact `REVIEW_ATTEMPT_ID`, never a different item. "The reviewer said done somewhere" never counts as completion; only a correlated receipt on the exact watched target does.
+
 Every fired run ends with one first-line terminal and, when supplied, the exact `REVIEW_ATTEMPT_ID` tag on that line:
 
 - `ACCEPT: <head + evidence>`

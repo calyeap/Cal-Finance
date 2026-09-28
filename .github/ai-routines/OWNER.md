@@ -69,6 +69,8 @@ A non-bot first-line `CALVIN RULING` comment may wake OWNER only when the target
 
 ## Terminal / liveness contract
 
+**Destination**: post the parent terminal as a comment on the exact wake target the fire prompt names (its `item #<N>`) — the item the runtime is watching for this exact `OWNER_ATTEMPT_ID`, never a different item.
+
 Every fired OWNER run ends with exactly one first-line terminal and, when supplied, the exact `OWNER_ATTEMPT_ID` tag on that same line:
 
 - `CONTINUE: ...`

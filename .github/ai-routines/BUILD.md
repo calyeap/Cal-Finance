@@ -67,6 +67,8 @@ If LIGHT cannot safely reach an exact-head deterministic pass, fall back to NORM
 
 ## Terminal contract
 
+**Destination**: post the terminal receipt as a comment on the exact wake target the fire prompt names (its `item #<N>` / `PR #<N>`) — the issue or PR the runtime is watching for this exact `BUILD_ATTEMPT_ID`, never a different item (a PR this run opened, a linked issue, a parent outcome). "The worker said done somewhere" never counts as completion; only a correlated receipt on the exact watched target does. `DONE: <PR link>` still names the delivered PR in its body — that PR is what changed, not where the receipt lives.
+
 Every fired run ends with exactly one first-line terminal receipt and, when the wake includes a `BUILD_ATTEMPT_ID`, the exact tag on that same line:
 
 - `DONE: <PR link>` — NORMAL/HEAVY ready for review, or LIGHT fallback review.

@@ -60,6 +60,12 @@ jobs:
       - name: Run Calvin ruling classification tests
         run: bash .github/scripts/calvin-ruling-lib.test.sh
 
+      - name: Run Slack terminal notifier tests
+        run: bash .github/scripts/calvin-slack-notify.test.sh
+
+      - name: Run workflow-authored terminal relay tests
+        run: bash .github/scripts/terminal-relay.test.sh
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

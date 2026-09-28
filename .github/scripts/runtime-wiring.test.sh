@@ -49,9 +49,31 @@ require "$OWNER" '^### CALVIN REQUIRED$' 'CALVIN REQUIRED parent terminal'
 forbid "$OWNER" 'WAIT:|DISPATCHED:' 'legacy parent terminal vocabulary'
 
 # Slack is terminal-driven: genuine ask/actionable block/one parent COMPLETE.
-require "$SLACK" 'runtime_slack_kind' 'shared terminal classifier'
-require "$SLACK" 'ACTIONABLE BLOCKED' 'actionable blocker notification'
-require "$SLACK" 'HEADER="COMPLETE"' 'meaningful parent completion notification'
+require "$SLACK" 'calvin-slack-notify\.sh' 'shared Slack payload/send, reused by direct relay call sites'
 forbid "$SLACK" 'WORKFLOW BLOCKED|OWNER LIVENESS EXHAUSTED' 'legacy liveness-specific notification vocabulary'
+
+# CF-WORKFLOW-RESET-TERMINAL-HANDOFF-REPAIR-02: a workflow-authored
+# (GH_TOKEN-authored) terminal comment cannot recursively trigger the
+# issue_comment-based OWNER wake or Slack notify those paths would
+# otherwise depend on (the #361/#362 defect this outcome repairs). Every
+# place a fire/observe step posts one of its own such comments must relay
+# it directly in the same job instead of only posting and hoping.
+require "$ROUTER" 'terminal-relay\.sh' 'direct in-job OWNER relay for workflow-authored terminals'
+require "$ROUTER" 'terminal_relay_owner' 'OWNER relay actually invoked, not just sourced'
+require "$ROUTER" 'calvin_slack_send' 'direct in-job Slack relay for workflow-authored terminals'
+require "$MERGE" 'calvin-slack-notify\.sh' 'merge-path OWNER fire also relays its own ACTIONABLE failures to Slack'
+
+# The relay must never fire OWNER over OWNER's own transport failure (that
+# would loop a fresh OWNER attempt over infra, not a real child
+# transition) — only Slack, on both admission entry points that can post
+# such a failure.
+forbid "$ROUTER" 'terminal_relay_owner.*OWNER transport' 'OWNER-relay self-loop on OWNER'\''s own transport failure'
+
+# Terminal destination is now an explicit contract, not implied convention
+# (the concrete #361/#362 gap: a BUILD terminal landing somewhere other
+# than the exact watched wake target).
+require "$BUILD" '\*\*Destination\*\*.*exact wake target' 'BUILD terminal destination is explicit'
+require "$REVIEW" '\*\*Destination\*\*.*exact wake target' 'REVIEW terminal destination is explicit'
+require "$OWNER" '\*\*Destination\*\*.*exact wake target' 'OWNER terminal destination is explicit'
 
 echo "runtime-wiring: PASS"
