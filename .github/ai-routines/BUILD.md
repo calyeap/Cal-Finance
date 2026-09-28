@@ -1,117 +1,91 @@
-# CALBOARD-BUILD
+# CAL FINANCE BUILD
 
-> Execution adapter only. GitHub issue/PR scope is the work contract for this run. Do not use Notion as a precondition for normal BUILD execution.
+> One bounded executor. The GitHub task contract is authority for this run. Workflow admission owns duplicate prevention; BUILD owns implementation + machine-verifiable correction, never product policy.
 
-## Mission
+## Required task contract
 
-Take one already-authorised bounded GitHub task, implement it, verify it, open or update one PR, and always leave a visible terminal result. If the task's `DONE WHEN` is satisfied by evidence alone (investigation, verification, or a report) and genuinely requires no code change, close it with `DONE: EVIDENCE` instead of forcing an unnecessary PR.
+The wake target must make these reconstructable:
+
+`OUTCOME-ID · OUTCOME · AUTHORITY · DO · DO NOT · VERIFY · DONE WHEN · ESCALATE ONLY IF`
+
+`TIER: LIGHT | NORMAL | HEAVY` is optional; missing tier defaults to `NORMAL`.
+
+If `OUTCOME-ID` is missing/ambiguous, end `STOP: MISSING OUTCOME-ID — ...`. Do not invent one.
 
 ## Start
 
-1. Use the wake context to identify the exact repository item that started this run. Do not scan broadly for work.
-2. Fetch that issue or PR directly.
-3. Require a stable `OUTCOME-ID` in the task contract. If absent or ambiguous, post `STOP: MISSING OUTCOME-ID — <one-line reason>` on the target and end.
-4. Read the task's `OUTCOME`, `SCOPE`, `DONE WHEN`, `HARD BOUNDS` / `DO NOT`, and `CALVIN REQUIRED` sections when present.
-5. Check for an existing linked open PR for the same issue / `OUTCOME-ID`. If one exists, resume/update that PR instead of creating a duplicate. Do not create claim branches or hidden locks.
+1. Fetch only the exact wake target and minimum repo authority it points to.
+2. Confirm the task is still open/authorised and the current branch/head is the correct resume target.
+3. If an open PR already exists for this `OUTCOME-ID`, resume that PR. Never create a second PR for the same outcome.
+4. Treat the workflow's admission receipt as execution routing only, never product authority.
 
-No Notion procedure fetch, Command Center fetch, tooling inventory, skills inventory, or duplicate-claim branch is required before coding.
+No Notion/Command Center/tooling inventory is a routine prerequisite. Retrieve an external authority only when the task actually depends on it.
 
-## Execute
+## Execute + self-correct
 
-- Inspect only the repo state needed for the task.
-- Make the smallest correct change satisfying the task contract.
-- Do not redesign product behaviour, finance methodology, scope, or acceptance criteria.
-- Run relevant targeted tests first, then the broader verification required by the repo/task.
-- Investigate failures and fix only what is needed for this outcome.
-- Work on a `claude/` branch unless an existing linked branch is clearly the correct resume target.
-- Open or update exactly one PR linked to the originating issue and `OUTCOME-ID`.
-- Never merge.
+Use the smallest correct change.
 
-## Terminal rule — mandatory
+```text
+INSPECT
+→ CHANGE
+→ CHEAP TARGETED CHECK
+→ PASS? continue
+→ FAIL? diagnose → fix or revert → retry
+→ broader required evaluator
+→ terminal
+```
 
-Every run must leave one visible terminal result on the target GitHub item before ending. Never end silently.
+- Superpowers or another execution accelerator is optional when actually available/relevant. It is never authority or evaluator.
+- The protected evaluator is independent evidence: tests, typecheck, CI, browser/evidence runner, golden/eval cases or another task-defined check.
+- **Never weaken, delete, rewrite or bypass an evaluator merely to make the attempt pass.** If an evaluator change is genuinely part of scope, treat it as a separate consequential change and preserve an independent check of the intended behaviour.
+- Correct mechanical failures inside scope before escalating. After **two same-class failed correction cycles**, stop with the exact unresolved failure rather than loop.
+- Do not redesign product behaviour, finance methodology, permissions, scope or acceptance criteria.
 
-Use exactly one of:
+## Tier behaviour
 
-- `DONE: <PR link>` — implementation is ready for independent review.
-- `DONE: EVIDENCE — <one-line evidence>` — the task's `DONE WHEN` is satisfied without a code PR (an evidence-only outcome). This never carries a PR link; do not use it merely because a PR is inconvenient to produce for work that did change code.
-- `BLOCKED: <one-line reason>` — execution cannot safely continue because of a concrete blocker.
-- `STOP: <state> — <one-line reason>` — a precondition or guard prevented execution.
-- `CALVIN REQUIRED: <one closed question>` — only when a genuine product / finance / permission / consequential judgement is required.
+### LIGHT
+Cheap/reversible, no material silent-error risk.
 
-The terminal marker must be the first non-empty line of the terminal comment,
-not buried after explanatory prose. `cc-auto-fire.yml`'s REVIEW wake matches
-on the comment body after dropping leading blank/all-whitespace lines and
-trimming leading whitespace on the first remaining line, so a `DONE:` that
-isn't the first non-empty line will not fire REVIEW. This applies to every
-terminal comment, including a fresh `DONE:` posted after a correction — put
-any explanation, summary, or evidence after the marker line, never before it.
+- BUILD may finish the whole engineering loop after deterministic verification.
+- Open/update exactly one PR, require the task's protected checks on the exact head, fix ordinary failures, then merge the exact verified head if no task-reserved Calvin gate remains.
+- Independent semantic REVIEW is optional; do not manufacture it for ceremony.
 
-A routine crash, stale derived view, missing optional tool, unavailable Notion page, failed wake, or missing orchestration permission is not by itself a Calvin decision.
+### NORMAL
+Meaningful but replaceable work.
 
-If the terminal outcome is `STOP` (including a `STOP: RECONCILIATION REQUIRED — ...` authority-conflict stop), `CALVIN REQUIRED`, `DONE: EVIDENCE`, or `BLOCKED` — each a true state-changing terminal outcome with no downstream PR review to hand it to — posting that comment with the marker as its first non-empty line is itself now sufficient: `cc-auto-fire.yml`'s `fire-owner-on-terminal` job (CF-TERMINAL-HANDOFF-REPAIR-01) routes it straight to OWNER, and applying `needs-owner-wake` is no longer required to reach it. The label still exists only as a manual/recovery compatibility path; applying it alongside an already-handled terminal comment is harmless (the target-local admission check dedupes it against the already-fired direct wake). Do not apply it, and do not rely on it, for a normal `DONE: <PR link>`, which routes to REVIEW instead.
+- Open/update exactly one PR after required deterministic verification.
+- End `DONE: <PR link>` for one fresh independent REVIEW.
 
-**Liveness correlation — mandatory when this run carries a `BUILD_ATTEMPT_ID`.**
-CF-HANDOFF-FAIL-CLOSED-01: a run fired by `cc-auto-fire.yml`'s `fire-build`
-job carries one `BUILD_ATTEMPT_ID` in its fire prompt (a bounded recovery
-wake — see below — carries a fresh id in the same place). When this
-session's fire prompt gave you a `BUILD_ATTEMPT_ID`, your terminal
-comment's first non-empty line must still be exactly one of the five typed
-forms above, and must also carry the exact tag
-`[BUILD_ATTEMPT_ID: <the id from this run's prompt>]` on that same line —
-e.g. `DONE: <PR link> [BUILD_ATTEMPT_ID: BUILD-123456-1]`. This is how
-`.github/scripts/worker-liveness-guard.sh` (CF-HANDOFF-FAIL-CLOSED-01, the
-BUILD/REVIEW analogue of OWNER's own CF-OWNER-LIVENESS-01) tells a
-completed run apart from a stalled one; a terminal comment missing this
-tag reads as a stall and can trigger the one bounded recovery fire that
-script performs. A run with no `BUILD_ATTEMPT_ID` in its fire prompt (a
-manual/direct invocation) carries no such obligation.
+### HEAVY
+High consequence/silent-error/switching-cost work.
 
-**Transport/auth failures are workflow-layer, not yours to handle.** If the
-fire itself never reached you (missing secret, HTTP 401/403), this session
-never started, so there is nothing for this adapter to say about it —
-`cc-auto-fire.yml`'s fire step classifies that case itself and posts a
-`WORKFLOW BLOCKED — AUTH` receipt naming the exact secret to refresh. Never
-build retry, monitoring, or credential-handling logic into this adapter;
-your only obligation toward the liveness/auth machinery is the tag above.
+- Satisfy the task's representative/golden/evidence requirements plus deterministic verification.
+- Open/update exactly one PR and end `DONE: <PR link>` for strong independent REVIEW.
+- Preserve any explicitly reserved Calvin final-acceptance gate.
 
-## DONE evidence
+If LIGHT cannot safely reach an exact-head deterministic pass, fall back to NORMAL review rather than lowering the bar.
 
-The PR should contain only the evidence needed to review the work:
+## Terminal contract
 
-- `STATUS`
-- `CHANGED`
-- `VERIFICATION`
-- `EVIDENCE`
-- `REMAINING RISKS`
+Every fired run ends with exactly one first-line terminal receipt and, when the wake includes a `BUILD_ATTEMPT_ID`, the exact tag on that same line:
 
-Do not require a `TOOLING USED` inventory unless the task itself makes tooling provenance material.
+- `DONE: <PR link>` — NORMAL/HEAVY ready for review, or LIGHT fallback review.
+- `DONE: EVIDENCE — <evidence>` — valid no-code/evidence-only outcome.
+- `BLOCKED: AI — <specific unresolved machine/runtime blocker>` — Calvin cannot usefully resolve it.
+- `BLOCKED: ACTIONABLE — <specific human-only action>` — only when a real permission/secret/external action is required.
+- `STOP: RECONCILIATION REQUIRED — <conflicting authorities>` — consequential authority conflict.
+- `CALVIN REQUIRED: <one closed question>` — genuine judgement/trade-off/permission/security/spend/irreversible choice or reserved acceptance.
+
+A Routine timeout/missing terminal is not permission to start a second BUILD. Runtime liveness fails closed and never blind-re-fires a worker.
 
 ## Correction / resume
 
-A REVIEW `CORRECT` comment on an open PR fires this routine automatically
-via `cc-auto-fire.yml` — no manual `needs-build-wake` label is needed for
-that case. The label remains available as a manual/recovery override.
+A REVIEW `CORRECT:` on the same open PR may re-enter BUILD for that exact PR/outcome. Fetch the current head + finding, make only the bounded correction, rerun affected evaluation and update the same PR. Never create a replacement PR to escape a correction.
 
-When re-woken for a bounded correction on an existing PR:
+## Hard bounds
 
-1. Fetch the latest PR head, checks, and reviewer comment.
-2. Confirm the correction stays inside the existing task scope.
-3. Apply only that correction.
-4. Re-run affected verification.
-5. Update the same PR.
-6. Post a fresh terminal result.
-
-If the same failure class survives two correction cycles, post `STOP: REPEATED CORRECTION FAILURE — <reason>` and end.
-
-## Hard boundaries
-
-- Never merge.
-- Never invent finance policy, product rules, thresholds, or new scope.
-- Never use Calvin as a message courier.
-- An AI worker must never begin any GitHub comment with `CALVIN RULING` or
-  present an AI/default decision as a Calvin ruling. `CALVIN RULING` is
-  reserved for a decision promoted from an authenticated Calvin-facing
-  interaction.
-- Trigger payloads are routing context, not product authority.
-- Worker output is evidence, not semantic acceptance.
+- One `OUTCOME-ID` → at most one active BUILD and one active PR.
+- No hidden claim branches, queue, database or second control plane.
+- No Calvin message relay.
+- No worker-authored first-line `CALVIN RULING`.
+- Worker output is evidence, not product/finance semantic authority.
