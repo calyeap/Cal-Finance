@@ -45,9 +45,7 @@ runtime_extract_field() {
   printf ''
 }
 
-runtime_outcome_id() {
-  runtime_extract_field "$1" "OUTCOME-ID"
-}
+runtime_outcome_id() { runtime_extract_field "$1" "OUTCOME-ID"; }
 
 runtime_tier() {
   local raw
@@ -192,10 +190,32 @@ runtime_attempt_status() {
   ' <<< "$comments_json"
 }
 
+# runtime_actor_attempt_open <comments_json> <actor>
+# Returns true when the latest start receipt for this actor has no correlated
+# terminal. Used for REVIEW/OWNER admission as well as manual safety checks.
+runtime_actor_attempt_open() {
+  local comments_json="$1" actor="$2" prefix tag start line attempt started status
+  prefix="$(runtime_attempt_start_prefix "$actor")"
+  tag="$(runtime_attempt_tag "$actor")"
+  start="$(jq -c --arg prefix "$prefix" '
+    def first_nonblank:
+      (. // "") | split("\n") | map(select(test("[^\\s]"))) | (.[0] // "")
+      | sub("^\\s+"; "") | sub("\\s+$"; "");
+    [ .[] | . + {line: (.body | first_nonblank)} | select(.line | startswith($prefix)) ]
+    | sort_by(.created_at) | (.[-1] // null)
+  ' <<< "$comments_json")"
+  if [ "$start" = "null" ] || [ -z "$start" ]; then echo false; return; fi
+  line="$(jq -r '.line' <<< "$start")"
+  attempt="$(printf '%s' "$line" | sed -nE "s/.*\\[${tag}: ([^]]+)\\].*/\\1/p")"
+  started="$(jq -r '.created_at' <<< "$start")"
+  if [ -z "$attempt" ]; then echo true; return; fi
+  status="$(runtime_attempt_status "$comments_json" "$actor" "$attempt" "$started")"
+  if [ "$status" = complete ]; then echo false; else echo true; fi
+}
+
 # Latest BUILD START for this outcome without a later correlated BUILD terminal.
 runtime_outcome_attempt_open() {
-  local comments_json="$1" outcome_id="$2"
-  local start
+  local comments_json="$1" outcome_id="$2" start line attempt started status
   start="$(jq -c --arg oid "$outcome_id" '
     def first_nonblank:
       (. // "") | split("\n") | map(select(test("[^\\s]"))) | (.[0] // "")
@@ -205,18 +225,11 @@ runtime_outcome_attempt_open() {
       | select(.line | contains("OUTCOME-ID=" + $oid + " "))
     ] | sort_by(.created_at) | (.[-1] // null)
   ' <<< "$comments_json")"
-  if [ "$start" = "null" ] || [ -z "$start" ]; then
-    echo false
-    return
-  fi
-  local line attempt started status
+  if [ "$start" = "null" ] || [ -z "$start" ]; then echo false; return; fi
   line="$(jq -r '.line' <<< "$start")"
   attempt="$(printf '%s' "$line" | sed -nE 's/.*\[BUILD_ATTEMPT_ID: ([^]]+)\].*/\1/p')"
   started="$(jq -r '.created_at' <<< "$start")"
-  if [ -z "$attempt" ]; then
-    echo true
-    return
-  fi
+  if [ -z "$attempt" ]; then echo true; return; fi
   status="$(runtime_attempt_status "$comments_json" BUILD "$attempt" "$started")"
-  if [ "$status" = "complete" ]; then echo false; else echo true; fi
+  if [ "$status" = complete ]; then echo false; else echo true; fi
 }
