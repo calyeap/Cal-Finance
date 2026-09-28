@@ -42,9 +42,27 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           EVENT_NAME: ${{ github.event_name }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          REPO: ${{ github.repository }}
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           source .github/scripts/runtime-lib.sh
+          source .github/scripts/terminal-relay.sh
+
+          # post_and_stop <line> <relay_source> — posts a workflow-authored
+          # (GH_TOKEN-authored) admission-time terminal, then relays it to
+          # OWNER/Slack directly in this same job (see terminal-relay.sh):
+          # GH_TOKEN-authored comments never retrigger the issue_comment
+          # event those paths would otherwise depend on.
+          post_and_stop() {
+            local line="$1" source="$2"
+            gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$line"
+            terminal_relay_owner "$REPO" "$NUMBER" "$line" "$source"
+            calvin_slack_send "$line" "$REPO" "https://github.com/${REPO}/issues/${NUMBER}" || true
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          }
 
           if [ "$EVENT_NAME" = "issue_comment" ]; then
             if [ "$(runtime_is_correct "$COMMENT_BODY")" != "true" ]; then
@@ -61,43 +79,37 @@ jobs:
             KIND=issue
           fi
 
-          TARGET=$(gh api "repos/${{ github.repository }}/issues/${NUMBER}")
+          TARGET=$(gh api "repos/${REPO}/issues/${NUMBER}")
           BODY=$(jq -r '.body // ""' <<< "$TARGET")
           OUTCOME_ID="$(runtime_outcome_id "$BODY")"
           TIER="$(runtime_tier "$BODY")"
 
           if [ -z "$OUTCOME_ID" ]; then
-            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
-              -f body="STOP: MISSING OUTCOME-ID — BUILD admission refused; add one stable OUTCOME-ID to the task contract."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+            post_and_stop "STOP: MISSING OUTCOME-ID — BUILD admission refused; add one stable OUTCOME-ID to the task contract." fire-build-resolve
             exit 0
           fi
           if [ "$TIER" = INVALID ]; then
-            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
-              -f body="STOP: INVALID TIER — use LIGHT, NORMAL, or HEAVY."
-            echo "skip=true" >> "$GITHUB_OUTPUT"
+            post_and_stop "STOP: INVALID TIER — use LIGHT, NORMAL, or HEAVY." fire-build-resolve
             exit 0
           fi
 
           # Temporary hard hold: while #357 is open, only reset/proof work may run.
-          HOLD_STATE=$(gh api "repos/${{ github.repository }}/issues/357" --jq '.state' 2>/dev/null || echo closed)
+          HOLD_STATE=$(gh api "repos/${REPO}/issues/357" --jq '.state' 2>/dev/null || echo closed)
           if [ "$HOLD_STATE" = open ]; then
             case "$OUTCOME_ID" in
               CF-WORKFLOW-RESET-*|CF-WORKFLOW-PROOF-*) ;;
               *)
-                gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
-                  -f body="BLOCKED: AI — product work is paused by Calvin ruling #357; no BUILD worker fired for ${OUTCOME_ID}."
-                echo "skip=true" >> "$GITHUB_OUTPUT"
+                post_and_stop "BLOCKED: AI — product work is paused by Calvin ruling #357; no BUILD worker fired for ${OUTCOME_ID}." fire-build-resolve
                 exit 0
                 ;;
             esac
           fi
 
-          COMMENTS=$(gh api --paginate "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+          COMMENTS=$(gh api --paginate "repos/${REPO}/issues/${NUMBER}/comments" \
             --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
           ATTEMPT_OPEN="$(runtime_outcome_attempt_open "$COMMENTS" "$OUTCOME_ID")"
 
-          OPEN_ITEMS=$(gh api --paginate "repos/${{ github.repository }}/issues?state=open&per_page=100" | jq -s 'add // []')
+          OPEN_ITEMS=$(gh api --paginate "repos/${REPO}/issues?state=open&per_page=100" | jq -s 'add // []')
           MATCH_ISSUES=""
           MATCH_PRS=""
           while IFS= read -r encoded; do
@@ -118,18 +130,17 @@ jobs:
           case "$DECISION" in
             ADMIT) ;;
             IN_FLIGHT)
-              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
                 -f body="BUILD ADMISSION: SUPPRESSED — ${OUTCOME_ID} already has an active BUILD attempt; no second worker fired."
               echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
             EXISTING_PR:*)
               PR=${DECISION#EXISTING_PR:}
-              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+              gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
                 -f body="BUILD ADMISSION: EXISTING PR #${PR} already owns ${OUTCOME_ID}; no second worker/PR fired."
               echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
             CONFLICT)
-              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
-                -f body="STOP: RECONCILIATION REQUIRED — ${OUTCOME_ID} has multiple open issue/PR candidates (issues: ${MATCH_ISSUES:-none}; PRs: ${MATCH_PRS:-none}); no BUILD worker fired."
-              echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0 ;;
+              post_and_stop "STOP: RECONCILIATION REQUIRED — ${OUTCOME_ID} has multiple open issue/PR candidates (issues: ${MATCH_ISSUES:-none}; PRs: ${MATCH_PRS:-none}); no BUILD worker fired." fire-build-resolve
+              exit 0 ;;
           esac
 
           echo "skip=false" >> "$GITHUB_OUTPUT"
@@ -149,16 +160,21 @@ jobs:
           TIER: ${{ steps.resolve.outputs.tier }}
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           source .github/scripts/fire-auth-lib.sh
+          source .github/scripts/terminal-relay.sh
 
           if [ -z "${BUILD_FIRE_URL:-}" ]; then
             SECRET=BUILD_FIRE_URL; CODE=missing_secret
           elif [ -z "${BUILD_FIRE_TOKEN:-}" ]; then
             SECRET=BUILD_FIRE_TOKEN; CODE=missing_secret
           else
-            PROMPT="Repository ${{ github.repository }}, item #${NUMBER}. Run the current .github/ai-routines/BUILD.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's BUILD_ATTEMPT_ID is ${ATTEMPT_ID}; every terminal first line must carry [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            PROMPT="Repository ${REPO}, item #${NUMBER}. Run the current .github/ai-routines/BUILD.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's BUILD_ATTEMPT_ID is ${ATTEMPT_ID}; every terminal first line must carry [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}]."
             REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
             CODE=$(curl -sS -o /tmp/build.json -w '%{http_code}' --request POST "$BUILD_FIRE_URL" \
               --header "Authorization: Bearer $BUILD_FIRE_TOKEN" \
@@ -171,17 +187,22 @@ jobs:
           if [ "$CODE" != curl_error ] && [ "$CODE" -ge 200 ] 2>/dev/null && [ "$CODE" -lt 300 ] 2>/dev/null; then
             SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/build.json)
             URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/build.json)
-            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+            gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
               -f body="BUILD START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
-              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
-                -f body="BLOCKED: ACTIONABLE — BUILD transport unavailable (${CODE}); refresh ${SECRET}. No worker started."
+              LINE="BLOCKED: ACTIONABLE — BUILD transport unavailable (${CODE}); refresh ${SECRET}. No worker started."
             else
-              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
-                -f body="BLOCKED: AI — BUILD transport failed (${CODE}); no worker started."
+              LINE="BLOCKED: AI — BUILD transport failed (${CODE}); no worker started."
             fi
+            gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
+            # A workflow-authored (GH_TOKEN-authored) comment cannot
+            # recursively trigger fire-owner-on-terminal or
+            # calvin-slack-alert.yml's own issue_comment triggers, so relay
+            # both directly in this same job (see terminal-relay.sh).
+            terminal_relay_owner "$REPO" "$NUMBER" "$LINE" fire-build-fire
+            calvin_slack_send "$LINE" "$REPO" "https://github.com/${REPO}/issues/${NUMBER}" || true
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -201,6 +222,8 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
       - name: Watch for BUILD terminal without re-fire
+        id: watch
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
@@ -209,6 +232,30 @@ jobs:
           ATTEMPT_ID: ${{ needs.fire-build.outputs.attempt_id }}
           TERMINAL_LEASE_MINUTES: '45'
         run: bash .github/scripts/terminal-watch.sh
+
+      # terminal-watch.sh's own timeout receipt above ("BLOCKED: AI —
+      # BUILD attempt ... produced no correlated terminal") is posted with
+      # this job's GH_TOKEN, which cannot recursively trigger
+      # fire-owner-on-terminal's issue_comment path (this outcome's own
+      # observed defect: #361's BUILD left PR #362 orphaned this exact
+      # way). Relay it into OWNER directly, in this same job, instead.
+      - name: Relay a workflow-authored BUILD timeout terminal to OWNER
+        if: steps.watch.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ needs.fire-build.outputs.target_number }}
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+        run: |
+          set -uo pipefail
+          source .github/scripts/terminal-relay.sh
+          LINE="$(cat /tmp/terminal-watch-blocked-line.txt)"
+          terminal_relay_owner "$REPO" "$NUMBER" "$LINE" observe-build-timeout
+
+      - name: Fail the job when the terminal watch failed
+        if: steps.watch.outcome == 'failure'
+        run: exit 1
 
   fire-review:
     if: >-
@@ -233,9 +280,14 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           COMMENT_BODY: ${{ github.event.comment.body }}
+          REPO: ${{ github.repository }}
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           source .github/scripts/runtime-lib.sh
+          source .github/scripts/terminal-relay.sh
 
           if [ "${{ github.event_name }}" = issue_comment ]; then
             FIRST="$(runtime_strip_heading "$(runtime_first_line "$COMMENT_BODY")")"
@@ -251,7 +303,7 @@ jobs:
             NUMBER="${{ github.event.pull_request.number || github.event.issue.number }}"
           fi
 
-          PR=$(gh api "repos/${{ github.repository }}/pulls/${NUMBER}" 2>/dev/null || true)
+          PR=$(gh api "repos/${REPO}/pulls/${NUMBER}" 2>/dev/null || true)
           if [ -z "$PR" ] || [ "$(jq -r '.state // "closed"' <<< "$PR")" != open ]; then
             echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
@@ -259,8 +311,10 @@ jobs:
           OUTCOME_ID="$(runtime_outcome_id "$BODY")"
           TIER="$(runtime_tier "$BODY")"
           if [ -z "$OUTCOME_ID" ]; then
-            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
-              -f body="STOP: MISSING OUTCOME-ID — REVIEW cannot bind this PR to one task contract."
+            LINE="STOP: MISSING OUTCOME-ID — REVIEW cannot bind this PR to one task contract."
+            gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
+            # GH_TOKEN-authored; relay directly (see terminal-relay.sh).
+            terminal_relay_owner "$REPO" "$NUMBER" "$LINE" fire-review-resolve
             echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
           [ "$TIER" != INVALID ] || { echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; }
@@ -290,13 +344,18 @@ jobs:
           TIER: ${{ steps.resolve.outputs.tier }}
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           source .github/scripts/fire-auth-lib.sh
+          source .github/scripts/terminal-relay.sh
           if [ -z "${CC_AUTO_FIRE_URL:-}" ]; then SECRET=CC_AUTO_FIRE_URL; CODE=missing_secret
           elif [ -z "${CC_AUTO_FIRE_TOKEN:-}" ]; then SECRET=CC_AUTO_FIRE_TOKEN; CODE=missing_secret
           else
-            PROMPT="Repository ${{ github.repository }}, PR #${NUMBER}. Run current .github/ai-routines/CC.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's REVIEW_ATTEMPT_ID is ${ATTEMPT_ID}; terminal first line must carry [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            PROMPT="Repository ${REPO}, PR #${NUMBER}. Run current .github/ai-routines/CC.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's REVIEW_ATTEMPT_ID is ${ATTEMPT_ID}; terminal first line must carry [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]."
             REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
             CODE=$(curl -sS -o /tmp/review.json -w '%{http_code}' --request POST "$CC_AUTO_FIRE_URL" \
               --header "Authorization: Bearer $CC_AUTO_FIRE_TOKEN" --header "anthropic-version: 2023-06-01" \
@@ -306,15 +365,19 @@ jobs:
           if [ "$CODE" != curl_error ] && [ "$CODE" -ge 200 ] 2>/dev/null && [ "$CODE" -lt 300 ] 2>/dev/null; then
             SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/review.json)
             URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/review.json)
-            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+            gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
               -f body="REVIEW START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
-              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" -f body="BLOCKED: ACTIONABLE — REVIEW transport unavailable (${CODE}); refresh ${SECRET}."
+              LINE="BLOCKED: ACTIONABLE — REVIEW transport unavailable (${CODE}); refresh ${SECRET}."
             else
-              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" -f body="BLOCKED: AI — REVIEW transport failed (${CODE})."
+              LINE="BLOCKED: AI — REVIEW transport failed (${CODE})."
             fi
+            gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
+            # GH_TOKEN-authored; relay directly (see terminal-relay.sh).
+            terminal_relay_owner "$REPO" "$NUMBER" "$LINE" fire-review-fire
+            calvin_slack_send "$LINE" "$REPO" "https://github.com/${REPO}/issues/${NUMBER}" || true
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 
@@ -334,6 +397,8 @@ jobs:
         with:
           ref: ${{ github.event.repository.default_branch }}
       - name: Watch for REVIEW terminal without re-fire
+        id: watch
+        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
@@ -342,6 +407,28 @@ jobs:
           ATTEMPT_ID: ${{ needs.fire-review.outputs.attempt_id }}
           TERMINAL_LEASE_MINUTES: '25'
         run: bash .github/scripts/terminal-watch.sh
+
+      # Same GITHUB_TOKEN-recursion gap as observe-build's equivalent step
+      # (see its comment, and terminal-watch.sh's own header) — relay
+      # directly to OWNER instead of depending on an event that cannot
+      # arrive.
+      - name: Relay a workflow-authored REVIEW timeout terminal to OWNER
+        if: steps.watch.outcome == 'failure'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          NUMBER: ${{ needs.fire-review.outputs.target_number }}
+          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
+          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+        run: |
+          set -uo pipefail
+          source .github/scripts/terminal-relay.sh
+          LINE="$(cat /tmp/terminal-watch-blocked-line.txt)"
+          terminal_relay_owner "$REPO" "$NUMBER" "$LINE" observe-review-timeout
+
+      - name: Fail the job when the terminal watch failed
+        if: steps.watch.outcome == 'failure'
+        run: exit 1
 
   fire-owner-on-terminal:
     if: >-
@@ -402,13 +489,16 @@ jobs:
           NUMBER: ${{ steps.resolve.outputs.number }}
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           source .github/scripts/fire-auth-lib.sh
+          source .github/scripts/calvin-slack-notify.sh
           if [ -z "${OWNER_FIRE_URL:-}" ]; then SECRET=OWNER_FIRE_URL; CODE=missing_secret
           elif [ -z "${OWNER_FIRE_TOKEN:-}" ]; then SECRET=OWNER_FIRE_TOKEN; CODE=missing_secret
           else
-            PROMPT="Repository ${{ github.repository }}, item #${NUMBER}, terminal/ruling wake. Follow current .github/ai-routines/OWNER.md exactly. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}; parent terminal first line must carry [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            PROMPT="Repository ${REPO}, item #${NUMBER}, terminal/ruling wake. Follow current .github/ai-routines/OWNER.md exactly. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}; parent terminal first line must carry [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]."
             REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
             CODE=$(curl -sS -o /tmp/owner.json -w '%{http_code}' --request POST "$OWNER_FIRE_URL" \
               --header "Authorization: Bearer $OWNER_FIRE_TOKEN" --header "anthropic-version: 2023-06-01" \
@@ -418,15 +508,23 @@ jobs:
           if [ "$CODE" != curl_error ] && [ "$CODE" -ge 200 ] 2>/dev/null && [ "$CODE" -lt 300 ] 2>/dev/null; then
             SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/owner.json)
             URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/owner.json)
-            gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" \
+            gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
               -f body="OWNER START: wake=TERMINAL · session ${SESSION} (${URL}) [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
-              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" -f body="BLOCKED: ACTIONABLE — OWNER transport unavailable (${CODE}); refresh ${SECRET}. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
+              LINE="BLOCKED: ACTIONABLE — OWNER transport unavailable (${CODE}); refresh ${SECRET}. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             else
-              gh api --method POST "repos/${{ github.repository }}/issues/${NUMBER}/comments" -f body="BLOCKED: AI — OWNER transport failed (${CODE}). [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
+              LINE="BLOCKED: AI — OWNER transport failed (${CODE}). [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             fi
+            gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
+            # GH_TOKEN-authored; relay to Slack directly (see
+            # calvin-slack-notify.sh). Not relayed to OWNER: OWNER is what
+            # just failed to fire, so there is no BUILD/REVIEW/OWNER
+            # transition here for OWNER to reconcile — only re-firing OWNER
+            # over its own infra failure, which terminal-relay.sh avoids by
+            # design (OWNER's own terminals carry OWNER_ATTEMPT_ID).
+            calvin_slack_send "$LINE" "$REPO" "https://github.com/${REPO}/issues/${NUMBER}" || true
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
 

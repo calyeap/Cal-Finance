@@ -27,41 +27,27 @@ jobs:
         run: |
           set -uo pipefail
           source .github/scripts/runtime-lib.sh
-          KIND="$(runtime_slack_kind "$COMMENT_BODY")"
-          LINE="$(runtime_strip_heading "$(runtime_first_line "$COMMENT_BODY")")"
-          LINE=$(printf '%s' "$LINE" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//')
+          KIND="$(runtime_slack_kind "$(runtime_strip_heading "$(runtime_first_line "$COMMENT_BODY")")")"
           echo "kind=$KIND" >> "$GITHUB_OUTPUT"
-          {
-            echo "line<<EOF"
-            echo "$LINE"
-            echo "EOF"
-          } >> "$GITHUB_OUTPUT"
 
+      # calvin-slack-notify.sh owns payload construction (including
+      # stripping the internal OWNER_ATTEMPT_ID tag) and the actual send,
+      # so this event-triggered path and every direct in-job relay call
+      # (added for CF-WORKFLOW-RESET-TERMINAL-HANDOFF-REPAIR-02, where a
+      # workflow-authored comment cannot recursively reach this trigger)
+      # share exactly one definition of what is Slack-eligible.
       - name: Send Slack terminal
         if: steps.terminal.outputs.kind != 'none'
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
-          KIND: ${{ steps.terminal.outputs.kind }}
-          LINE: ${{ steps.terminal.outputs.line }}
-          REPO: ${{ github.repository }}
-          COMMENT_URL: ${{ github.event.comment.html_url }}
+          SLACK_LINE: ${{ github.event.comment.body }}
+          SLACK_REPO: ${{ github.repository }}
+          SLACK_COMMENT_URL: ${{ github.event.comment.html_url }}
         run: |
           set -euo pipefail
           if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
             echo "::error::CALVIN_SLACK_WEBHOOK_URL is missing"
             exit 1
           fi
-          case "$KIND" in
-            calvin_required) HEADER="CALVIN REQUIRED" ;;
-            actionable_blocked) HEADER="ACTIONABLE BLOCKED" ;;
-            complete) HEADER="COMPLETE" ;;
-            *) exit 0 ;;
-          esac
-          PAYLOAD=$(jq -n --arg h "$HEADER" --arg repo "$REPO" --arg line "$LINE" --arg url "$COMMENT_URL" \
-            '{text: ($h + " — " + $repo + "\n" + $line + "\n" + $url)}')
-          CODE=$(curl -sS -o /tmp/slack.txt -w '%{http_code}' --request POST "$SLACK_WEBHOOK_URL" \
-            --header 'Content-Type: application/json' --data "$PAYLOAD")
-          if [ "$CODE" -lt 200 ] || [ "$CODE" -ge 300 ]; then
-            echo "::error::Slack webhook failed with HTTP $CODE"
-            exit 1
-          fi
+          source .github/scripts/calvin-slack-notify.sh
+          calvin_slack_send "$SLACK_LINE" "$SLACK_REPO" "$SLACK_COMMENT_URL"

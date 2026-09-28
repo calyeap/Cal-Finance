@@ -96,14 +96,28 @@ status=$(calvin_ruling_gate_status "$superseded")
 assert_eq "a later DONE: superseding the old CALVIN REQUIRED reads closed" "closed" "$status"
 
 # --- second ruling while an OWNER attempt already admitted the first one:
-# still exactly one admission — the gate closes once OWNER ATTEMPT START
-# lands after the CALVIN REQUIRED, even before that attempt resolves -----
+# still exactly one admission — the gate closes once the real runtime's
+# "OWNER START:" admission receipt (see runtime_attempt_start_prefix in
+# runtime-lib.sh) lands after the CALVIN REQUIRED, even before that attempt
+# resolves. CF-WORKFLOW-RESET-TERMINAL-HANDOFF-REPAIR-02: this fixture used
+# to spell the marker "OWNER ATTEMPT START:", a name the live runtime has
+# never actually posted (it posts "OWNER START: wake=... · session ...");
+# that drift meant this admission check could never see a real receipt and
+# would stay permanently "open", re-admitting a ruling after every
+# subsequent OWNER attempt. -------------------------------------------
 
-already_admitted=$(jq -c '. + [{body: "OWNER ATTEMPT START: TERMINAL-51-1\nwake_class: TERMINAL", created_at: "2026-09-21T11:05:00Z"}]' <<<"$open_gate")
+already_admitted=$(jq -c '. + [{body: "OWNER START: wake=TERMINAL · session x (https://example)\n[OWNER_ATTEMPT_ID: TERMINAL-51-1]", created_at: "2026-09-21T11:05:00Z"}]' <<<"$open_gate")
 status=$(calvin_ruling_gate_status "$already_admitted")
-assert_eq "an OWNER ATTEMPT START after the CALVIN REQUIRED reads closed" "closed" "$status"
+assert_eq "a real OWNER START receipt after the CALVIN REQUIRED reads closed" "closed" "$status"
 decision=$(calvin_ruling_should_wake "$already_admitted" "CALVIN RULING — APPROVE OPTION B" "false")
 assert_eq "a second ruling once an OWNER attempt is already admitted does not wake again" "skip" "$decision"
+
+# --- the stale "OWNER ATTEMPT START:" spelling is not the live marker and
+# must not be treated as an admission receipt ------------------------------
+
+stale_marker_only=$(jq -c '. + [{body: "OWNER ATTEMPT START: TERMINAL-51-1\nwake_class: TERMINAL", created_at: "2026-09-21T11:05:00Z"}]' <<<"$open_gate")
+status=$(calvin_ruling_gate_status "$stale_marker_only")
+assert_eq "the stale OWNER ATTEMPT START spelling does not close the gate (not the live marker)" "open" "$status"
 
 echo
 if [ "$FAILURES" -eq 0 ]; then
