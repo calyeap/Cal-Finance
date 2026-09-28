@@ -8,27 +8,29 @@ trap 'rm -rf "$TMP"' EXIT
 fail() { echo "FAIL: $*" >&2; exit 1; }
 
 run_case() {
-  local actor="$1" terminal="$2" expect_rc="$3" expect_block="$4"
-  local tag attempt start
+  local actor="$1" mock_terminal="$2" expect_rc="$3" expect_block="$4"
+  local mock_tag mock_attempt mock_start
   case "$actor" in
-    BUILD) tag=BUILD_ATTEMPT_ID; attempt=B1; start='BUILD START:' ;;
-    REVIEW) tag=REVIEW_ATTEMPT_ID; attempt=R1; start='REVIEW START:' ;;
-    OWNER) tag=OWNER_ATTEMPT_ID; attempt=O1; start='OWNER START:' ;;
+    BUILD) mock_tag=BUILD_ATTEMPT_ID; mock_attempt=B1; mock_start='BUILD START:' ;;
+    REVIEW) mock_tag=REVIEW_ATTEMPT_ID; mock_attempt=R1; mock_start='REVIEW START:' ;;
+    OWNER) mock_tag=OWNER_ATTEMPT_ID; mock_attempt=O1; mock_start='OWNER START:' ;;
   esac
 
-  export GH_TOKEN=dummy TARGET_REPO=x/y TARGET_NUMBER=1 ACTOR="$actor" ATTEMPT_ID="$attempt"
+  export GH_TOKEN=dummy TARGET_REPO=x/y TARGET_NUMBER=1 ACTOR="$actor" ATTEMPT_ID="$mock_attempt"
   export TERMINAL_LEASE_MINUTES=0 TERMINAL_POLL_SECONDS=1
   # shellcheck source=terminal-watch.sh
   source "${SCRIPT_DIR}/terminal-watch.sh"
 
+  # mock_* names intentionally avoid terminal-watch main() locals; bash uses
+  # dynamic scope for functions defined here.
   fetch_comments() {
-    if [ -n "$terminal" ]; then
-      jq -n --arg start "$start" --arg tag "$tag" --arg id "$attempt" --arg terminal "$terminal" '[
+    if [ -n "$mock_terminal" ]; then
+      jq -n --arg start "$mock_start" --arg tag "$mock_tag" --arg id "$mock_attempt" --arg terminal "$mock_terminal" '[
         {body: ($start + " OUTCOME-ID=TEST [" + $tag + ": " + $id + "]"), created_at:"2026-09-28T01:00:00Z"},
         {body: ($terminal + " [" + $tag + ": " + $id + "]"), created_at:"2026-09-28T01:00:01Z"}
       ]'
     else
-      jq -n --arg start "$start" --arg tag "$tag" --arg id "$attempt" '[
+      jq -n --arg start "$mock_start" --arg tag "$mock_tag" --arg id "$mock_attempt" '[
         {body: ($start + " OUTCOME-ID=TEST [" + $tag + ": " + $id + "]"), created_at:"2026-09-28T01:00:00Z"}
       ]'
     fi
