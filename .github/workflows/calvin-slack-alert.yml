@@ -12,8 +12,7 @@ jobs:
   notify-calvin:
     if: >-
       contains(github.event.comment.body, 'CALVIN REQUIRED:') ||
-      contains(github.event.comment.body, 'BLOCKED: ACTIONABLE') ||
-      contains(github.event.comment.body, 'COMPLETE:')
+      contains(github.event.comment.body, 'BLOCKED: ACTIONABLE')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
