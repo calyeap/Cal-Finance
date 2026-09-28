@@ -61,6 +61,10 @@ jobs:
           # runtime_slack_is_duplicate (via calvin_slack_send) recognize an
           # OWNER terminal that only restates an already-alerted blocker,
           # instead of double-alerting Calvin for one underlying issue.
+          # A failed fetch must never block the send: calvin_slack_payload
+          # already treats an empty comments_json as "skip the duplicate
+          # check", which is today's always-send behavior, so falling back
+          # to "" here just means the dedupe check is skipped, not the alert.
           comments="$(gh api --paginate "repos/${SLACK_REPO}/issues/${SLACK_NUMBER}/comments" \
-            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')"
+            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')" || comments=""
           calvin_slack_send "$SLACK_LINE" "$SLACK_REPO" "$SLACK_COMMENT_URL" "$comments" "$SLACK_CREATED_AT"
