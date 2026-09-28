@@ -34,6 +34,19 @@ assert_eq "$(runtime_slack_kind 'BLOCKED: AI — worker timed out')" none
 assert_eq "$(runtime_slack_kind 'COMPLETE: meaningful parent outcome')" complete
 assert_eq "$(runtime_slack_kind 'CONTINUE: next child')" none
 
+# CF-WORKFLOW-PROOF-SLACK-DEDUPE-01: OWNER restating an already-alerted
+# child blocker is a duplicate; a distinct/new OWNER blocker, or any
+# non-OWNER terminal, is not.
+CHILD_COMMENTS=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]", created_at: "2026-09-28T15:10:00Z"},
+  {body: "OWNER START: wake=TERMINAL [OWNER_ATTEMPT_ID: O1]", created_at: "2026-09-28T15:11:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — child BUILD run (B1) reports the same sandbox denial [OWNER_ATTEMPT_ID: O1]')" true "OWNER restating the same alerted child blocker is a duplicate"
+assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — separate, unrelated permission is needed for the payments export [OWNER_ATTEMPT_ID: O1]')" false "an OWNER blocker not referencing the alerted attempt is not a duplicate"
+assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:12:00Z" 'CALVIN REQUIRED: child BUILD run (B1) needs a scope decision [OWNER_ATTEMPT_ID: O1]')" false "a different Slack kind (calvin_required vs actionable_blocked) is not a duplicate"
+assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:10:30Z" 'BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]')" false "a non-OWNER (child) terminal is never suppressed as a duplicate"
+assert_eq "$(runtime_slack_is_duplicate '[]' "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — child BUILD run (B1) reports the same sandbox denial [OWNER_ATTEMPT_ID: O1]')" false "no prior Slack-eligible comment means nothing to duplicate"
+
 # Admission regression coverage.
 assert_eq "$(runtime_admission_decision issue 10 '' '' true)" IN_FLIGHT "#188 same-target duplicate build suppressed"
 assert_eq "$(runtime_admission_decision issue 10 '' '12' false)" EXISTING_PR:12 "existing PR suppresses new BUILD"

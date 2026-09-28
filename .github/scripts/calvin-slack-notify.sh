@@ -23,15 +23,25 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=runtime-lib.sh
 source "${SCRIPT_DIR}/runtime-lib.sh"
 
-# calvin_slack_payload <line> <repo> <comment_url>
+# calvin_slack_payload <line> <repo> <comment_url> [<comments_json> <created_at>]
 # Pure. <line> is a raw terminal comment (or just its first line); the
 # OWNER_ATTEMPT_ID tag, if any, is stripped before it reaches Slack since
 # it is internal runtime bookkeeping, not part of the human-facing
 # message. Prints the JSON webhook payload and returns 0 when
 # runtime_slack_kind classifies <line> as Slack-eligible (calvin_required,
 # actionable_blocked, complete); prints nothing and returns 1 otherwise.
+#
+# <comments_json>/<created_at> are optional: when both are given (the
+# thread's prior comments, and this comment's own created_at), an OWNER
+# terminal that runtime_slack_is_duplicate finds merely restates the same
+# already-alerted blocker is also treated as ineligible (return 1) — the
+# #365 class, where BUILD's alert and OWNER's reconciling restatement of
+# the same actionable blocker otherwise both reach Slack. Omitting them
+# skips the duplicate check (always eligible on its own terms), which is
+# correct for a call site with no thread to consult, such as a fresh
+# OWNER-relay transport-failure receipt.
 calvin_slack_payload() {
-  local raw="$1" repo="$2" comment_url="$3" line kind header
+  local raw="$1" repo="$2" comment_url="$3" comments_json="${4:-}" created_at="${5:-}" line kind header
   line="$(runtime_strip_heading "$(runtime_first_line "$raw")")"
   line="$(printf '%s' "$line" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//')"
   kind="$(runtime_slack_kind "$line")"
@@ -41,18 +51,24 @@ calvin_slack_payload() {
     complete) header="COMPLETE" ;;
     *) return 1 ;;
   esac
+  if [ -n "$comments_json" ] && [ -n "$created_at" ] \
+    && [ "$(runtime_slack_is_duplicate "$comments_json" "$created_at" "$raw")" = true ]; then
+    return 1
+  fi
   jq -n --arg h "$header" --arg repo "$repo" --arg line "$line" --arg url "$comment_url" \
     '{text: ($h + " — " + $repo + "\n" + $line + "\n" + $url)}'
 }
 
-# calvin_slack_send <line> <repo> <comment_url> — network I/O. Requires
-# SLACK_WEBHOOK_URL in the environment. A no-op (exit 0, no request sent)
-# when <line> is not Slack-eligible, so every call site — the event
-# path and every direct relay call alike — can call this unconditionally
-# right after posting any workflow-authored terminal comment.
+# calvin_slack_send <line> <repo> <comment_url> [<comments_json> <created_at>]
+# — network I/O. Requires SLACK_WEBHOOK_URL in the environment. A no-op
+# (exit 0, no request sent) when <line> is not Slack-eligible or is a
+# duplicate restatement (see calvin_slack_payload), so every call site —
+# the event path and every direct relay call alike — can call this
+# unconditionally right after posting any workflow-authored terminal
+# comment.
 calvin_slack_send() {
-  local raw="$1" repo="$2" comment_url="$3" payload code
-  payload="$(calvin_slack_payload "$raw" "$repo" "$comment_url")" || return 0
+  local raw="$1" repo="$2" comment_url="$3" comments_json="${4:-}" created_at="${5:-}" payload code
+  payload="$(calvin_slack_payload "$raw" "$repo" "$comment_url" "$comments_json" "$created_at")" || return 0
   : "${SLACK_WEBHOOK_URL:?SLACK_WEBHOOK_URL is required to send a Slack-eligible terminal}"
   code=$(curl -sS -o /tmp/calvin-slack-notify.out -w '%{http_code}' --request POST "$SLACK_WEBHOOK_URL" \
     --header 'Content-Type: application/json' --data "$payload") || code=curl_error

@@ -112,6 +112,58 @@ rc=$?
 set -e
 assert_status "calvin_slack_send succeeds on a 2xx webhook response" 0 "$rc"
 
+# --- CF-WORKFLOW-PROOF-SLACK-DEDUPE-01: an OWNER terminal that merely
+# restates an already-alerted child blocker (the #365 class) is
+# suppressed; a distinct new OWNER blocker still sends -------------------
+#
+# curl runs inside calvin_slack_send's own command substitution
+# (code=$(curl ...)), a subshell, so a plain variable assignment inside
+# the curl() stub never reaches this outer shell (same caveat
+# terminal-relay.test.sh documents for its own mocks) — use a file marker
+# instead.
+
+DEDUPE_TMP="$(mktemp -d)"
+trap 'rm -rf "$DEDUPE_TMP"' EXIT
+
+curl() { touch "$DEDUPE_TMP/curl_called"; echo -n '200'; }
+export -f curl
+export SLACK_WEBHOOK_URL=https://hooks.example/test
+
+CHILD_COMMENTS=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]", created_at: "2026-09-28T15:10:00Z"},
+  {body: "OWNER START: wake=TERMINAL [OWNER_ATTEMPT_ID: O1]", created_at: "2026-09-28T15:11:00Z"}
+]')
+
+rm -f "$DEDUPE_TMP/curl_called"
+calvin_slack_send \
+  'BLOCKED: ACTIONABLE — child BUILD run (B1) reports the same sandbox denial [OWNER_ATTEMPT_ID: O1]' \
+  "o/r" "https://x/2" "$CHILD_COMMENTS" "2026-09-28T15:12:00Z"
+[ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
+assert_eq "OWNER restating an already-alerted child blocker never calls curl" 0 "$CALLED"
+
+rm -f "$DEDUPE_TMP/curl_called"
+calvin_slack_send \
+  'BLOCKED: ACTIONABLE — separate, unrelated permission is needed for the payments export [OWNER_ATTEMPT_ID: O1]' \
+  "o/r" "https://x/2" "$CHILD_COMMENTS" "2026-09-28T15:12:00Z"
+[ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
+assert_eq "a distinct new OWNER blocker still calls curl" 1 "$CALLED"
+
+rm -f "$DEDUPE_TMP/curl_called"
+calvin_slack_send \
+  'BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]' \
+  "o/r" "https://x/1" "$CHILD_COMMENTS" "2026-09-28T15:10:00Z"
+[ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
+assert_eq "the first (child) alert still calls curl even with prior comments supplied" 1 "$CALLED"
+
+rm -f "$DEDUPE_TMP/curl_called"
+calvin_slack_send \
+  'BLOCKED: ACTIONABLE — child BUILD run (B1) reports the same sandbox denial [OWNER_ATTEMPT_ID: O1]' \
+  "o/r" "https://x/2"
+[ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
+assert_eq "omitting comments_json/created_at skips the duplicate check (always eligible)" 1 "$CALLED"
+
+rm -rf "$DEDUPE_TMP"
+trap - EXIT
 unset -f curl
 unset SLACK_WEBHOOK_URL
 

@@ -112,6 +112,54 @@ runtime_slack_kind() {
   esac
 }
 
+# runtime_slack_is_duplicate <comments_json> <this_created_at> <this_raw>
+# Pure. True only for an OWNER terminal (carries [OWNER_ATTEMPT_ID: ...])
+# that restates an already-Slack-alerted child (or prior OWNER) blocker:
+# the most recent earlier comment in <comments_json> that is itself
+# Slack-eligible (runtime_slack_kind != none) has the same kind as
+# <this_raw>, and <this_raw> literally references that earlier comment's
+# own BUILD_/REVIEW_/OWNER_ATTEMPT_ID value — i.e. OWNER is reconciling
+# that exact attempt, not reporting a distinct one. A non-OWNER terminal,
+# an ineligible terminal, or one that doesn't correlate to a same-kind
+# predecessor is never a duplicate, so the first alert for any blocker
+# — and any genuinely new OWNER blocker — always sends.
+runtime_slack_is_duplicate() {
+  local comments_json="$1" before="$2" this_raw="$3" this_line kind
+  this_line="$(runtime_strip_heading "$(runtime_first_line "$this_raw")")"
+  case "$this_line" in *"[OWNER_ATTEMPT_ID: "*) ;; *) echo false; return ;; esac
+  kind="$(runtime_slack_kind "$this_line")"
+  if [ "$kind" = none ]; then echo false; return; fi
+
+  local earlier_lines prev_line prev_kind prev_tag
+  earlier_lines="$(jq -r --arg before "$before" '
+    def first_nonblank:
+      (. // "") | split("\n") | map(select(test("[^\\s]"))) | (.[0] // "")
+      | sub("^\\s+"; "") | sub("\\s+$"; "") | sub("^#{1,6}[ \\t]+"; "");
+    [ .[] | select(.created_at < $before) | . + {line: (.body | first_nonblank)} ]
+    | sort_by(.created_at) | reverse | .[].line
+  ' <<< "$comments_json")"
+
+  prev_line=""
+  while IFS= read -r line; do
+    [ -z "$line" ] && continue
+    if [ "$(runtime_slack_kind "$line")" != none ]; then
+      prev_line="$line"
+      break
+    fi
+  done <<< "$earlier_lines"
+  if [ -z "$prev_line" ]; then echo false; return; fi
+
+  prev_kind="$(runtime_slack_kind "$prev_line")"
+  if [ "$prev_kind" != "$kind" ]; then echo false; return; fi
+
+  prev_tag="$(printf '%s' "$prev_line" | sed -nE 's/.*\[(BUILD|REVIEW|OWNER)_ATTEMPT_ID: ([^]]+)\].*/\2/p')"
+  if [ -n "$prev_tag" ] && [[ "$this_line" == *"$prev_tag"* ]]; then
+    echo true
+  else
+    echo false
+  fi
+}
+
 # runtime_admission_decision <target_kind> <target_number>
 #                            <matching_issue_numbers_csv>
 #                            <matching_pr_numbers_csv> <attempt_open>
