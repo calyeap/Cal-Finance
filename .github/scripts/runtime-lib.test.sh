@@ -35,15 +35,10 @@ assert_eq "$(runtime_slack_kind 'COMPLETE: meaningful parent outcome')" complete
 assert_eq "$(runtime_slack_kind 'CONTINUE: next child')" none
 
 # Admission regression coverage.
-# #188 class: same target already has an active BUILD -> never fire a second.
-assert_eq "$(runtime_admission_decision issue 10 '' '' true)" IN_FLIGHT "same-target duplicate build suppressed"
-# #352/#353/#354 class: one issue/outcome already has one PR -> resume it.
+assert_eq "$(runtime_admission_decision issue 10 '' '' true)" IN_FLIGHT "#188 same-target duplicate build suppressed"
 assert_eq "$(runtime_admission_decision issue 10 '' '12' false)" EXISTING_PR:12 "existing PR suppresses new BUILD"
-# Live duplicate-artifact class: two PRs for one outcome is a conflict, never a third BUILD.
-assert_eq "$(runtime_admission_decision issue 10 '' '12,13' false)" CONFLICT "two PRs for one outcome fail closed"
-# Duplicate issue contracts for one outcome fail closed.
+assert_eq "$(runtime_admission_decision issue 10 '' '12,13' false)" CONFLICT "#352/#353/#354 duplicate PR class fails closed"
 assert_eq "$(runtime_admission_decision issue 10 '11' '' false)" CONFLICT "duplicate issues fail closed"
-# A correction on the canonical PR may proceed; another PR for the same outcome may not.
 assert_eq "$(runtime_admission_decision pr 12 '10' '' false)" ADMIT "same PR correction allowed"
 assert_eq "$(runtime_admission_decision pr 12 '10' '13' false)" CONFLICT "second PR blocks correction fanout"
 
@@ -59,6 +54,7 @@ JSON
 assert_eq "$(runtime_attempt_status "$COMMENTS" BUILD B1 '2026-09-28T01:00:00Z')" complete "exact attempt terminal"
 assert_eq "$(runtime_attempt_status "$COMMENTS" BUILD B2 '2026-09-28T01:00:00Z')" missing "wrong attempt cannot complete"
 assert_eq "$(runtime_outcome_attempt_open "$COMMENTS" CF-ONE-01)" false "terminal closes outcome attempt"
+assert_eq "$(runtime_actor_attempt_open "$COMMENTS" BUILD)" false "closed BUILD attempt admits later bounded work"
 
 OPEN_COMMENTS=$(cat <<'JSON'
 [
@@ -67,6 +63,24 @@ OPEN_COMMENTS=$(cat <<'JSON'
 ]
 JSON
 )
-assert_eq "$(runtime_outcome_attempt_open "$OPEN_COMMENTS" CF-TWO-01)" true "open attempt stays exclusive"
+assert_eq "$(runtime_outcome_attempt_open "$OPEN_COMMENTS" CF-TWO-01)" true "open outcome attempt stays exclusive"
+assert_eq "$(runtime_actor_attempt_open "$OPEN_COMMENTS" BUILD)" true "open BUILD attempt suppresses another worker"
+
+REVIEW_OPEN=$(cat <<'JSON'
+[
+  {"body":"REVIEW START: OUTCOME-ID=CF-TWO-01 [REVIEW_ATTEMPT_ID: R1]","created_at":"2026-09-28T03:00:00Z"}
+]
+JSON
+)
+assert_eq "$(runtime_actor_attempt_open "$REVIEW_OPEN" REVIEW)" true "one active REVIEW"
+
+OWNER_DONE=$(cat <<'JSON'
+[
+  {"body":"OWNER START: wake=MERGE [OWNER_ATTEMPT_ID: O1]","created_at":"2026-09-28T04:00:00Z"},
+  {"body":"COMPLETE: parent done [OWNER_ATTEMPT_ID: O1]","created_at":"2026-09-28T04:01:00Z"}
+]
+JSON
+)
+assert_eq "$(runtime_actor_attempt_open "$OWNER_DONE" OWNER)" false "OWNER terminal releases parent admission"
 
 echo "runtime-lib: PASS"
