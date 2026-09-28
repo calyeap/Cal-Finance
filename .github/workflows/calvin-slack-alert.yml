@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: read
+  issues: read
 
 jobs:
   notify-calvin:
@@ -31,9 +32,12 @@ jobs:
           echo "kind=$KIND" >> "$GITHUB_OUTPUT"
 
       # calvin-slack-notify.sh owns payload construction (including
-      # stripping the internal OWNER_ATTEMPT_ID tag) and the actual send,
-      # so this event-triggered path and every direct in-job relay call
-      # (added for CF-WORKFLOW-RESET-TERMINAL-HANDOFF-REPAIR-02, where a
+      # stripping the internal OWNER_ATTEMPT_ID tag), duplicate detection
+      # (CF-WORKFLOW-PROOF-SLACK-DEDUPE-01: an OWNER terminal that merely
+      # restates an already-alerted child blocker, per the #365 class) and
+      # the actual send, so this event-triggered path and every direct
+      # in-job relay call (added for
+      # CF-WORKFLOW-RESET-TERMINAL-HANDOFF-REPAIR-02, where a
       # workflow-authored comment cannot recursively reach this trigger)
       # share exactly one definition of what is Slack-eligible.
       - name: Send Slack terminal
@@ -42,7 +46,10 @@ jobs:
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
           SLACK_LINE: ${{ github.event.comment.body }}
           SLACK_REPO: ${{ github.repository }}
+          SLACK_NUMBER: ${{ github.event.issue.number }}
           SLACK_COMMENT_URL: ${{ github.event.comment.html_url }}
+          SLACK_CREATED_AT: ${{ github.event.comment.created_at }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
@@ -50,4 +57,14 @@ jobs:
             exit 1
           fi
           source .github/scripts/calvin-slack-notify.sh
-          calvin_slack_send "$SLACK_LINE" "$SLACK_REPO" "$SLACK_COMMENT_URL"
+          # Prior comments on this same thread are what let
+          # runtime_slack_is_duplicate (via calvin_slack_send) recognize an
+          # OWNER terminal that only restates an already-alerted blocker,
+          # instead of double-alerting Calvin for one underlying issue.
+          # A failed fetch must never block the send: calvin_slack_payload
+          # already treats an empty comments_json as "skip the duplicate
+          # check", which is today's always-send behavior, so falling back
+          # to "" here just means the dedupe check is skipped, not the alert.
+          comments="$(gh api --paginate "repos/${SLACK_REPO}/issues/${SLACK_NUMBER}/comments" \
+            --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')" || comments=""
+          calvin_slack_send "$SLACK_LINE" "$SLACK_REPO" "$SLACK_COMMENT_URL" "$comments" "$SLACK_CREATED_AT"
