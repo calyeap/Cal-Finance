@@ -5,10 +5,9 @@
 #
 # Pure, network-free helpers shared by cc-auto-fire.yml's
 # fire-owner-on-terminal job (its `Resolve target` step, on the
-# issue_comment path) and its unit tests (calvin-ruling-lib.test.sh /
-# calvin-ruling-reachability.test.sh). No gh/curl calls happen in this
-# file, so the classification contract can be exercised deterministically
-# in CI.
+# issue_comment path) and its unit tests (calvin-ruling-lib.test.sh). No
+# gh/curl calls happen in this file, so the classification contract can be
+# exercised deterministically in CI.
 #
 # Closes the addendum's observed gap: after Calvin answered #196 with
 # `CALVIN RULING — APPROVE OPTION B`, the ruling was durably recorded on

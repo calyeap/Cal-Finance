@@ -11,13 +11,11 @@
 # fire-owner-on-terminal job consults (in its `Resolve target` step) before
 # admitting a qualifying issue_comment ruling straight into the same fire,
 # single-writer serialization, and duplicate suppression every other
-# terminal wake already gets via the cf-owner-single-writer concurrency
-# group CF-OWNER-SINGLE-WRITER-01 built (see owner-single-writer-lib.test.sh
-# / owner-single-writer-config.test.sh). This file covers the pure
-# classification only; calvin-ruling-reachability.test.sh separately
-# guards that the classification is actually wired to something that fires
-# OWNER, rather than to a workflow-authored label write depended on as a
-# trigger (the defect this edge originally shipped with).
+# terminal wake already gets via the cf-owner-admission concurrency group
+# in cc-auto-fire.yml. This file covers the pure classification only;
+# runtime-wiring.test.sh separately guards that OWNER admission stays
+# wired to this fire path rather than to a workflow-authored label write
+# depended on as a trigger (the defect this edge originally shipped with).
 
 set -uo pipefail
 
