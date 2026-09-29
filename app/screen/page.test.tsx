@@ -7,10 +7,16 @@ import { listAccounts } from "@/lib/accounts";
 import { getPortfolioView } from "@/lib/portfolio";
 import { getLatestRunForCandidateTicker } from "@/lib/analyzer/runStore";
 import { CANDIDATE_UNIVERSE_TICKERS } from "@/lib/screen";
+import { screenVerdictDisplay } from "./verdictDisplay";
 
 vi.mock("@/lib/accounts", () => ({ listAccounts: vi.fn() }));
 vi.mock("@/lib/portfolio", () => ({ getPortfolioView: vi.fn() }));
 vi.mock("@/lib/analyzer/runStore", () => ({ getLatestRunForCandidateTicker: vi.fn() }));
+vi.mock("./verdictDisplay", () => ({
+  screenVerdictDisplay: vi.fn(),
+  gateIncompleteReason: (outstandingFactIds: string[]) =>
+    `mock-gate-incomplete-reason: ${outstandingFactIds.join(", ")}`,
+}));
 vi.mock("next/link", () => ({
   default: ({ href, children }: { href: string; children: React.ReactNode }) => (
     <a href={href}>{children}</a>
@@ -20,6 +26,7 @@ vi.mock("next/link", () => ({
 const listAccountsMock = vi.mocked(listAccounts);
 const getPortfolioViewMock = vi.mocked(getPortfolioView);
 const getLatestRunForCandidateTickerMock = vi.mocked(getLatestRunForCandidateTicker);
+const screenVerdictDisplayMock = vi.mocked(screenVerdictDisplay);
 
 // Re-import after mocks are registered — same pattern as
 // app/portfolio-review/page.test.tsx.
@@ -31,8 +38,17 @@ beforeEach(() => {
   listAccountsMock.mockReset();
   getPortfolioViewMock.mockReset();
   getLatestRunForCandidateTickerMock.mockReset();
+  screenVerdictDisplayMock.mockReset();
   listAccountsMock.mockResolvedValue([{ id: 1, name: "My Portfolio", custodian: null }]);
   getLatestRunForCandidateTickerMock.mockResolvedValue(null);
+  // The realistic default (lib/analyzer/verdict.ts's deriveVerdict returns
+  // INCOMPLETE for every run today — the M8 comparator gap) — tests that
+  // care about a specific status/reason override this explicitly.
+  screenVerdictDisplayMock.mockResolvedValue({
+    kind: "verdict",
+    status: "INCOMPLETE",
+    reason: "Decision-critical analysis is incomplete — default test reason.",
+  });
 });
 
 function position(over: Partial<PositionView> & Pick<PositionView, "symbol">): PositionView {
@@ -141,16 +157,48 @@ describe("Screen page — populated state (VERIFY)", () => {
     expect(order).toEqual(CANDIDATE_UNIVERSE_TICKERS);
   });
 
-  it("never renders any BUY/HOLD/SELL, verdict, score, or ranking content anywhere on the page", async () => {
+  it("an existing INCOMPLETE Analyzer verdict is surfaced honestly, its reason shown word for word", async () => {
+    getPortfolioViewMock.mockResolvedValue(portfolio([]));
+    getLatestRunForCandidateTickerMock.mockImplementation(async (ticker: string) =>
+      ticker === "MSFT"
+        ? { runId: "11111111-1111-1111-1111-111111111111", resolvedCompanyName: "Microsoft Corporation" }
+        : null
+    );
+    const reason =
+      "Decision-critical analysis is incomplete — a fair-value range alone cannot determine " +
+      "BUY / HOLD / SELL.";
+    screenVerdictDisplayMock.mockImplementation(async (runId: string) =>
+      runId === "11111111-1111-1111-1111-111111111111"
+        ? { kind: "verdict", status: "INCOMPLETE", reason }
+        : { kind: "verdict", status: "INCOMPLETE", reason: "unused" }
+    );
+
+    render(await ScreenPage());
+    const table = screen.getByRole("table");
+    expect(table.textContent).toContain("INCOMPLETE");
+    expect(table.textContent).toContain(reason);
+  });
+
+  it("never renders a verdict SCREEN itself would make up — no synthetic VERDICT/SCORE/RANKING text — while allowing the existing report's own BUY/HOLD/SELL state through", async () => {
     getPortfolioViewMock.mockResolvedValue(portfolio([]));
     getLatestRunForCandidateTickerMock.mockResolvedValue({
       runId: "11111111-1111-1111-1111-111111111111",
       resolvedCompanyName: "Microsoft Corporation",
     });
+    // A non-INCOMPLETE status is a legitimate value deriveVerdict can return
+    // (lib/analyzer/verdict.ts's VerdictStatus) — it is the existing report's
+    // own already-computed state, not something SCREEN synthesises, so it is
+    // allowed through even though it says "BUY".
+    screenVerdictDisplayMock.mockResolvedValue({
+      kind: "verdict",
+      status: "BUY",
+      reason: "existing report reason",
+    });
 
     const { container } = render(await ScreenPage());
     const text = (container.textContent ?? "").toUpperCase();
-    for (const forbidden of ["BUY", "SELL", " HOLD ", "VERDICT", "SCORE", "RANKING"]) {
+    expect(text).toContain("BUY");
+    for (const forbidden of ["VERDICT", "SCORE", "RANKING"]) {
       expect(text).not.toContain(forbidden);
     }
   });

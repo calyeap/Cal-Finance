@@ -2,6 +2,7 @@ import { listAccounts } from "@/lib/accounts";
 import { getPortfolioView } from "@/lib/portfolio";
 import { CANDIDATE_UNIVERSE_TICKERS, buildScreenCandidates } from "@/lib/screen";
 import { getLatestRunForCandidateTicker, type LatestRunSummary } from "@/lib/analyzer/runStore";
+import { screenVerdictDisplay } from "./verdictDisplay";
 import { ScreenTable } from "../components/ScreenTable";
 
 // SCREEN — first bounded outcome (CF-SCREEN-FIRST-OUTCOME-01, issue #379).
@@ -44,7 +45,12 @@ export default async function ScreenPage() {
     ])
   );
   const runsByTicker = new Map(lookups);
-  const candidates = buildScreenCandidates(heldSymbols, runsByTicker);
+  const candidates = await Promise.all(
+    buildScreenCandidates(heldSymbols, runsByTicker).map(async (candidate) => ({
+      ...candidate,
+      verdict: await screenVerdictDisplay(candidate.analyzerRun.runId),
+    }))
+  );
 
   return (
     <main className="page-shell">
