@@ -17,6 +17,16 @@ import { getPool } from "../db";
 // only for a ticker that is already a symbol in the caller's own current
 // positions; and no route accepts an arbitrary ticker and forwards it here —
 // there is still no way to browse, search, or page through analyzer_runs.
+//
+// A second, equally narrow, explicitly authorised exception:
+// `getLatestRunForCandidateTicker` below (CF-SCREEN-FIRST-OUTCOME-01, issue
+// #379 — the "not-held equivalent" anticipated by
+// docs/screen-workflow-mode-reconciliation.md §3). Same shape as the
+// exception above — at most ONE run, never a list — and callers pass only a
+// ticker from SCREEN's own fixed, reconciliation-bounded candidate universe
+// (lib/screen.ts's `CANDIDATE_UNIVERSE_TICKERS`), never an arbitrary or
+// user-supplied ticker. Still no way to browse, search, or page through
+// analyzer_runs.
 // ---------------------------------------------------------------------------
 
 // The vocabulary lives in ./decisions, which has no server dependency, so
@@ -349,21 +359,15 @@ export interface LatestRunSummary {
 
 /**
  * The single most recent run for one ticker, or null if none exists.
- *
- * CF-PORTFOLIO-REVIEW-FIRST-OUTCOME-01 (issue #352, SCOPE 6): Portfolio
- * Review links a holding to its existing Analyzer report, where one exists.
- * `ticker` is stored uppercase (lib/analyzer/identity.ts's
- * `rawTicker.trim().toUpperCase()`), matching `assets.primary_symbol`'s own
- * uppercase convention, so an exact match against a held position's symbol
- * is correct without a second normalisation step.
- *
- * Callers MUST only pass a ticker already present in the caller's own
- * holdings — see the module-header note above for why this does not reopen
- * R7's no-listing boundary. `LIMIT 1` plus this doc comment are the only
- * enforcement; there is no route that lets an arbitrary ticker reach this
- * function.
+ * Shared by both narrow exceptions below — `ticker` is stored uppercase
+ * (lib/analyzer/identity.ts's `rawTicker.trim().toUpperCase()`), matching
+ * `assets.primary_symbol`'s own uppercase convention, so an exact match
+ * against either a held position's or a candidate universe's symbol is
+ * correct without a second normalisation step. `LIMIT 1` plus each public
+ * wrapper's own doc comment are the only enforcement of who may call it with
+ * what ticker; there is no route that lets an arbitrary ticker reach this.
  */
-export async function getLatestRunForHeldTicker(ticker: string): Promise<LatestRunSummary | null> {
+async function latestRunForTicker(ticker: string): Promise<LatestRunSummary | null> {
   const { rows } = await getPool().query(
     `SELECT run_id, resolved_company_name
        FROM analyzer_runs
@@ -374,6 +378,31 @@ export async function getLatestRunForHeldTicker(ticker: string): Promise<LatestR
   );
   if (rows.length === 0) return null;
   return { runId: rows[0].run_id, resolvedCompanyName: rows[0].resolved_company_name };
+}
+
+/**
+ * CF-PORTFOLIO-REVIEW-FIRST-OUTCOME-01 (issue #352, SCOPE 6): Portfolio
+ * Review links a holding to its existing Analyzer report, where one exists.
+ *
+ * Callers MUST only pass a ticker already present in the caller's own
+ * holdings — see the module-header note above for why this does not reopen
+ * R7's no-listing boundary.
+ */
+export async function getLatestRunForHeldTicker(ticker: string): Promise<LatestRunSummary | null> {
+  return latestRunForTicker(ticker);
+}
+
+/**
+ * The not-held equivalent of `getLatestRunForHeldTicker` above
+ * (CF-SCREEN-FIRST-OUTCOME-01, issue #379): SCREEN links a not-currently-held
+ * candidate to its existing Analyzer report, where one exists.
+ *
+ * Callers MUST only pass a ticker from SCREEN's own fixed candidate universe
+ * (`lib/screen.ts`'s `CANDIDATE_UNIVERSE_TICKERS`) — never an arbitrary
+ * ticker, and never used to browse or search analyzer_runs.
+ */
+export async function getLatestRunForCandidateTicker(ticker: string): Promise<LatestRunSummary | null> {
+  return latestRunForTicker(ticker);
 }
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
