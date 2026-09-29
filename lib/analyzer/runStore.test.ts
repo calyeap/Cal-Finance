@@ -9,6 +9,7 @@ import {
   recordJudgment,
   getJudgments,
   recordProfileDecision,
+  getLatestRunForCandidateTicker,
 } from "./runStore";
 
 describe("runStore", () => {
@@ -245,12 +246,36 @@ describe("runStore", () => {
   });
 
   // R7: lose the URL and the run is gone. There is no listing surface, so
-  // this is asserted against the module's own exports.
+  // this is asserted against the module's own exports. Both narrow exceptions
+  // (getLatestRunForHeldTicker, getLatestRunForCandidateTicker) return at
+  // most one run for one already-known ticker, so neither trips this check.
   it("exposes no way to list or search runs", async () => {
     const store = await import("./runStore");
     const listingLike = Object.keys(store).filter((k) =>
       /list|all|search|find|recent|history|index/i.test(k)
     );
     expect(listingLike).toEqual([]);
+  });
+
+  // CF-SCREEN-FIRST-OUTCOME-01 (issue #379) — the not-held equivalent of
+  // getLatestRunForHeldTicker.
+  describe("getLatestRunForCandidateTicker", () => {
+    it("returns null when no run exists for the ticker", async () => {
+      expect(await getLatestRunForCandidateTicker("MSFT")).toBeNull();
+    });
+
+    it("returns the most recent run for the ticker", async () => {
+      await createRun("MSFT", "Microsoft Corporation");
+      const second = await createRun("MSFT", "Microsoft Corporation");
+      expect(await getLatestRunForCandidateTicker("MSFT")).toEqual({
+        runId: second,
+        resolvedCompanyName: "Microsoft Corporation",
+      });
+    });
+
+    it("keeps different tickers apart", async () => {
+      await createRun("OKLO", "Oklo Inc.");
+      expect(await getLatestRunForCandidateTicker("MSFT")).toBeNull();
+    });
   });
 });
