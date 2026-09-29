@@ -188,6 +188,51 @@ build.
   PORTFOLIO REVIEW implementation outcome:
   [`docs/portfolio-review-workflow-mode-reconciliation.md`](portfolio-review-workflow-mode-reconciliation.md).
 
+## 9. SCREEN workflow mode — reconciled definition (28 Sep 2026)
+
+Opened as the next capability lane per `CALVIN RULING — SCREEN = OPTION A,
+DEFINITION NOW; BUILD NARROWLY LATER`
+([issue #373 comment 5875241672](https://github.com/calyeap/Cal-Finance/issues/373#issuecomment-5875241672)).
+This record itself implements no SCREEN capability — it defines and
+reconciles the mode; see the proposed first implementation outcome in the
+linked document for what a later, separately authorised dispatch could
+build.
+
+- **SCREEN is** the pre-portfolio candidate-evaluation capability for
+  companies Cal Finance does not currently hold — helping decide which
+  outside companies are worth a full Analyzer pass or further portfolio
+  consideration, sitting between PORTFOLIO REVIEW and monitoring in the V2
+  delivery order above. Unlike UPDATE and PORTFOLIO REVIEW, this job was not
+  independently corroborated by current authority beyond the bare
+  delivery-order mention — it was settled by the ruling above, not read out
+  of pre-existing text.
+- **SCREEN is not** autonomous trading or an action generator, a universal
+  score or ranking, a price- or momentum-triggered surface, an authoring
+  surface for portfolio-policy numbers (item 14), the Analyzer redesigned, a
+  general new-ticker acquisition capability, a watchlist/candidate schema,
+  or any of PORTFOLIO REVIEW, monitoring, Research Memory, Sector
+  Intelligence, What Changed?, Decision Logic or Action Candidates. The
+  ruling's own text is explicit that it does not author or approve a broad
+  screener, ranking engine, watchlist, monitoring system, provider
+  expansion, acquisition expansion, scoring policy, or finance threshold —
+  each remains a separate, explicit future gate.
+- **Which of the "four workflow modes" (§1) SCREEN is remains unanswered**
+  by current authority, for the same reason recorded for UPDATE in §7 and
+  PORTFOLIO REVIEW in §8 above. Not resolved here.
+- **Depends on** existing position-level data already computed by
+  `lib/portfolio.ts` (used only to exclude already-held symbols from
+  candidates) and existing Analyzer reports, which today only exist for
+  three fixture-backed companies (MSFT, OKLO, NVDA) — there is no general
+  "run any ticker" capability, so SCREEN's first bounded outcome is limited
+  to whichever of those three are not, at query time, already a current
+  holding. It does **not** depend on the snapshot contract above.
+- No SCREEN implementation has landed under this lane yet — the proposed
+  first bounded outcome below is a proposal only, not authorised or started
+  by this record.
+- Full citations, reasoning, and the proposed (not authorised) first bounded
+  SCREEN implementation outcome:
+  [`docs/screen-workflow-mode-reconciliation.md`](screen-workflow-mode-reconciliation.md).
+
 ## Source-of-truth rule
 
 This file is the current authority for strategic sequencing / runway
