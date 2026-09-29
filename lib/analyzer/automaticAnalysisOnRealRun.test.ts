@@ -6,6 +6,7 @@ import { getPool } from "../db";
 import {
   createRun,
   getFactDecisions,
+  getJudgments,
   getRun,
   recordAutomaticFactDecisions,
   recordFactDecision,
@@ -127,6 +128,12 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       // reach it). Asserted rather than described, because the whole claim is
       // about which facts the software answered.
       expectedQueue: ["current-operating-margin", "price"],
+      // CF-ANALYZER-FINAL-CLOSEOUT-01 (issue #383) — migration 007 seeds
+      // Calvin's own already-published §4.4 ruling for MSFT (issue #188,
+      // 2026-09-21T08:19:14Z), so the automatic pass now carries it onto
+      // every fresh MSFT run too (lib/analyzer/autoRun.ts). OKLO has no
+      // recorded judgment and stays exactly as before.
+      hasRecordedNonOperatingJudgment: true,
     },
     {
       ticker: "OKLO",
@@ -135,6 +142,7 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       capturedClose: "41.27",
       expectedProfile: "PRE_REVENUE_UNPROFITABLE",
       expectedQueue: ["price"],
+      hasRecordedNonOperatingJudgment: false,
     },
   ])("$ticker", ({
     ticker,
@@ -143,6 +151,7 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
     capturedClose,
     expectedProfile,
     expectedQueue,
+    hasRecordedNonOperatingJudgment,
   }) => {
     it("reaches a rendered analysis from the run alone — no fact decision, judgment or profile decision was recorded by a human", async () => {
       const { runId, result } = await analyzeAutomatically(ticker, companyName);
@@ -204,26 +213,59 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       expect(human.origin).not.toBe(automatic.origin);
     });
 
-    it("produces exactly the finance state a hand-worked run produces — the automatic path changes no number", async () => {
+    it("produces exactly the finance state a hand-worked run produces, for whatever §4.4 state each starts from", async () => {
       const { result: automatic } = await analyzeAutomatically(ticker, companyName);
       const byHand = await analyzeByHand(ticker, companyName);
 
-      expect(financeStateOf(automatic)).toEqual(financeStateOf(byHand));
+      if (hasRecordedNonOperatingJudgment) {
+        // CF-ANALYZER-FINAL-CLOSEOUT-01 (issue #383) — the one place the two
+        // paths are now allowed to differ, and exactly why: analyzeByHand
+        // simulates the run as an analyst would have produced it BEFORE
+        // CF-ANALYZER-AUTORUN-01 (its own doc comment, above), so it never
+        // calls advanceRunAutomatically and never receives the recorded §4.4
+        // carry-forward either. The automatic path now reaches leverage PASS
+        // on its own; the hand-worked comparison path, deliberately frozen
+        // to its pre-autorun shape, still does not.
+        expect(financeStateOf(automatic).leverage).toBe("PASS");
+        expect(financeStateOf(byHand).leverage).toBe("LEVERAGE UNSUPPORTED IN v1");
+        const { leverage: _a, trust: _at, fairValueRange: _ar, verdictReason: _avr, ...automaticRest } =
+          financeStateOf(automatic);
+        const { leverage: _b, trust: _bt, fairValueRange: _br, verdictReason: _bvr, ...byHandRest } =
+          financeStateOf(byHand);
+        expect(automaticRest).toEqual(byHandRest);
+      } else {
+        expect(financeStateOf(automatic)).toEqual(financeStateOf(byHand));
+      }
     });
 
-    it("still reads INCOMPLETE, for the upstream reason it already read INCOMPLETE for", async () => {
+    it("still reads INCOMPLETE, for the upstream reason it already read INCOMPLETE for — unless a human has already judged this ticker (§4.4)", async () => {
       const { result } = await analyzeAutomatically(ticker, companyName);
       const verdict = deriveVerdict(result);
 
       // 22 Sep 02:24:07Z (B) — deriveVerdict stays honestly INCOMPLETE, and
-      // this outcome neither fixes that nor is entitled to.
+      // this outcome neither fixes that nor is entitled to, whichever branch
+      // below applies.
       expect(verdict.status).toBe("INCOMPLETE");
-      // The state docs/m9-real-company-validation-findings.md records for a
-      // run carrying no §4.4 judgment, unchanged.
-      expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
-      expect(result.trust.status).toBe("UNUSABLE");
-      expect(result.fairValueRange.kind).toBe("suppressed");
-      expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
+
+      if (hasRecordedNonOperatingJudgment) {
+        // CF-ANALYZER-FINAL-CLOSEOUT-01 (issue #383) — Calvin's live-use
+        // finding: a fresh run of a company someone has already judged must
+        // not re-hit the same suppression that judgment already resolved.
+        // §4.4 itself is unaffected (see lib/analyzer/autoRun.ts) — the run
+        // still fails closed on whatever the judgment does not answer.
+        expect(result.gates.leverage.result).toBe("PASS");
+        expect(result.trust.status).not.toBe("UNUSABLE");
+        expect(result.fairValueRange.kind).toBe("range");
+        expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
+      } else {
+        // The state docs/m9-real-company-validation-findings.md records for
+        // a run carrying no §4.4 judgment, unchanged for a ticker nobody has
+        // ever recorded one for.
+        expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
+        expect(result.trust.status).toBe("UNUSABLE");
+        expect(result.fairValueRange.kind).toBe("suppressed");
+        expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
+      }
     });
 
     it("running the automatic pass again writes nothing and changes nothing", async () => {
@@ -252,12 +294,35 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       expect(theirs.decision).toBe("NOT CONFIRMED");
       expect(theirs.reasonCode).toBe("NOT LOCATED");
     });
+
+    // CF-ANALYZER-FINAL-CLOSEOUT-01 (issue #383) — the §4.4 analogue of the
+    // fact-decision case just above: a human's own decision on THIS run
+    // always wins over whatever is recorded for the ticker, whether or not
+    // one is recorded at all.
+    it("never overwrites a §4.4 judgment an analyst has already made on this run", async () => {
+      const runId = await createRun(ticker, companyName);
+      await recordJudgment(runId, "NON-OPERATING INVESTMENTS", "None of these are non-operating", null);
+
+      await advanceRunAutomatically(runId);
+
+      const judgments = await getJudgments(runId);
+      const theirs = judgments.find((j) => j.judgmentKey === "NON-OPERATING INVESTMENTS")!;
+      expect(theirs.selection).toBe("None of these are non-operating");
+    });
   });
 
   // -------------------------------------------------------------------------
   // The one company-specific claim, kept out of the shared block because it
   // is MSFT's alone: the §4.4 ruling's recorded state is still reachable, and
   // still the same state, on top of an automatically analyzed run.
+  //
+  // CF-ANALYZER-FINAL-CLOSEOUT-01 (issue #383) made advanceRunAutomatically
+  // itself carry MSFT's recorded ruling onto a fresh run (see the shared
+  // "still reads INCOMPLETE" case above), so re-recording the identical
+  // selection here is now a no-op update rather than the only way MSFT
+  // reaches PASS/PARTIAL/range. Kept, unchanged in what it proves, as the
+  // regression test for the Screen 2 detail route still working the same
+  // way it always did — an analyst can still visit it and (re-)decide.
   // -------------------------------------------------------------------------
   it("MSFT's recorded §4.4 state (CF-S44-RECORD-01) is unchanged — recording the ruling on the detail route still reaches PASS / PARTIAL / range", async () => {
     const runId = await createRun("MSFT", "Microsoft Corporation");

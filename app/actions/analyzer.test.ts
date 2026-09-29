@@ -38,11 +38,12 @@ vi.mock("@/lib/analyzer/identity", () => ({
 
 const getRun = vi.fn();
 const createRun = vi.fn();
+const recordJudgment = vi.fn();
 vi.mock("@/lib/analyzer/runStore", () => ({
   getRun: (...args: unknown[]) => getRun(...args),
   createRun: (...args: unknown[]) => createRun(...args),
   recordFactDecision: vi.fn(),
-  recordJudgment: vi.fn(),
+  recordJudgment: (...args: unknown[]) => recordJudgment(...args),
   recordProfileDecision: vi.fn(),
   REASON_CODES: ["CONTRADICTED BY SOURCE", "NOT LOCATED"],
   JUDGMENT_KEYS: [
@@ -62,11 +63,16 @@ vi.mock("@/lib/analyzer/autoRun", () => ({
   advanceRunAutomatically: (...args: unknown[]) => advanceRunAutomatically(...args),
 }));
 
+const recordCompanyJudgment = vi.fn();
+vi.mock("@/lib/analyzer/acquisition/recordedJudgments", () => ({
+  recordCompanyJudgment: (...args: unknown[]) => recordCompanyJudgment(...args),
+}));
+
 vi.mock("@/lib/analyzer/snapshotAnalysis", () => ({ createDeepSnapshot: vi.fn() }));
 
 vi.mock("@/lib/marketdata", () => ({ activeProvider: () => "TEST_PROVIDER" }));
 
-const { beginUpdateRunAction, beginAnalysisAction } = await import("./analyzer");
+const { beginUpdateRunAction, beginAnalysisAction, recordJudgmentAction } = await import("./analyzer");
 
 function formDataWith(fields: Record<string, string>): FormData {
   const fd = new FormData();
@@ -168,5 +174,76 @@ describe("beginUpdateRunAction (CF-UPDATE-FIRST-OUTCOME-01)", () => {
       beginAnalysisAction(formDataWith({ ticker: "SPY" }))
     ).rejects.toThrow("REDIRECT:/analyzer");
     expect(createRun).not.toHaveBeenCalled();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CF-ANALYZER-FINAL-CLOSEOUT-01 (issue #383) — recordJudgmentAction's own
+// control flow, the same isolation this file already applies to the two
+// actions above: every dependency mocked, proving what the action calls and
+// with what, not the pipeline behind it (that is recordedJudgments.test.ts
+// and automaticAnalysisOnRealRun.test.ts, against the real store).
+// ---------------------------------------------------------------------------
+describe("recordJudgmentAction (CF-ANALYZER-FINAL-CLOSEOUT-01)", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("records the judgment on this run, then also records it as this ticker's recorded judgment", async () => {
+    getRun.mockResolvedValue({ runId: "run-1", ticker: "MSFT" });
+
+    await recordJudgmentAction(
+      formDataWith({
+        runId: "run-1",
+        judgmentKey: "NON-OPERATING INVESTMENTS",
+        selection: "us-gaap:LongTermInvestments",
+        reason: "test reason",
+      })
+    );
+
+    expect(recordJudgment).toHaveBeenCalledWith(
+      "run-1",
+      "NON-OPERATING INVESTMENTS",
+      "us-gaap:LongTermInvestments",
+      "test reason"
+    );
+    expect(getRun).toHaveBeenCalledWith("run-1");
+    expect(recordCompanyJudgment).toHaveBeenCalledWith(
+      "MSFT",
+      "NON-OPERATING INVESTMENTS",
+      "us-gaap:LongTermInvestments",
+      "test reason"
+    );
+  });
+
+  it("still records the per-run judgment even where the run cannot be found for the per-ticker write", async () => {
+    getRun.mockResolvedValue(null);
+
+    await recordJudgmentAction(
+      formDataWith({
+        runId: "does-not-exist",
+        judgmentKey: "NON-OPERATING INVESTMENTS",
+        selection: "None of these are non-operating",
+      })
+    );
+
+    expect(recordJudgment).toHaveBeenCalledWith(
+      "does-not-exist",
+      "NON-OPERATING INVESTMENTS",
+      "None of these are non-operating",
+      null
+    );
+    expect(recordCompanyJudgment).not.toHaveBeenCalled();
+  });
+
+  it("refuses an unknown judgment key before writing anything", async () => {
+    await expect(
+      recordJudgmentAction(
+        formDataWith({ runId: "run-1", judgmentKey: "NOT A REAL JUDGMENT", selection: "x" })
+      )
+    ).rejects.toThrow("Unknown judgment (§4.4 defines three)");
+
+    expect(recordJudgment).not.toHaveBeenCalled();
+    expect(recordCompanyJudgment).not.toHaveBeenCalled();
   });
 });

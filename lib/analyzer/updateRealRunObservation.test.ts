@@ -64,6 +64,13 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
       expectedPriceTimestamp: "2026-09-04",
       expectedEnterpriseValueCause: "missing REQUIRED input(s): nonOperatingEquityInvestmentsAtBook",
       expectedFactIds: ["current-operating-margin", "price"],
+      // CF-ANALYZER-FINAL-CLOSEOUT-01 (issue #383) — migration 007 seeds
+      // Calvin's own already-published §4.4 ruling for MSFT (issue #188),
+      // so both the first run and the re-look now carry it forward
+      // automatically (lib/analyzer/autoRun.ts) rather than each reaching
+      // the same suppressed state on their own. OKLO has no recorded
+      // judgment and is unaffected.
+      hasRecordedNonOperatingJudgment: true,
     },
     {
       ticker: "OKLO",
@@ -74,6 +81,7 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
       expectedEnterpriseValueCause:
         "missing REQUIRED input(s): treasuryMethodDilution, nonOperatingEquityInvestmentsAtBook",
       expectedFactIds: ["price"],
+      hasRecordedNonOperatingJudgment: false,
     },
   ])(
     "$ticker",
@@ -85,6 +93,7 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
       expectedPriceTimestamp,
       expectedEnterpriseValueCause,
       expectedFactIds,
+      hasRecordedNonOperatingJudgment,
     }) => {
       it("the re-look's own AnalysisResult is byte-identical to the first run's, field for field — zero cells differ", async () => {
         const first = await openObservedRun(ticker, companyName);
@@ -133,14 +142,27 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
         expect(result.price.timestamp).toBe(expectedPriceTimestamp);
 
         expect(verdict.status).toBe("INCOMPLETE");
-        expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
-        expect(result.trust.status).toBe("UNUSABLE");
-        expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
-        expect(result.fairValueRange.kind).toBe("suppressed");
 
-        const ev = result.diagnostics.enterpriseValue;
-        expect(ev.suppressed).toBe(true);
-        if (ev.suppressed) expect(ev.cause).toBe(expectedEnterpriseValueCause);
+        if (hasRecordedNonOperatingJudgment) {
+          // CF-ANALYZER-FINAL-CLOSEOUT-01 (issue #383) — a fresh run of a
+          // company someone has already judged reaches the leverage-PASS
+          // state directly; see automaticAnalysisOnRealRun.test.ts for the
+          // full regression coverage of the mechanism itself.
+          expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
+          expect(result.trust.status).not.toBe("UNUSABLE");
+          expect(result.gates.leverage.result).toBe("PASS");
+          expect(result.fairValueRange.kind).toBe("range");
+          expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
+        } else {
+          expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
+          expect(result.trust.status).toBe("UNUSABLE");
+          expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
+          expect(result.fairValueRange.kind).toBe("suppressed");
+
+          const ev = result.diagnostics.enterpriseValue;
+          expect(ev.suppressed).toBe(true);
+          if (ev.suppressed) expect(ev.cause).toBe(expectedEnterpriseValueCause);
+        }
       });
 
       it("both the first run and the re-look decide their own queue automatically, with no fact left undecided", async () => {

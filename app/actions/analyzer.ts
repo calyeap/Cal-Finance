@@ -23,6 +23,7 @@ import {
 } from "@/lib/analyzer/runStore";
 import { fixtureForTicker } from "@/lib/analyzer/gate";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
+import { recordCompanyJudgment } from "@/lib/analyzer/acquisition/recordedJudgments";
 import type { ResolveState } from "@/lib/analyzer/resolveState";
 import { createDeepSnapshot } from "@/lib/analyzer/snapshotAnalysis";
 
@@ -168,6 +169,15 @@ export async function recordFactDecisionAction(formData: FormData): Promise<void
   revalidatePath(`/analyzer/${runId}/facts`);
 }
 
+/**
+ * Records one §4.4 judgment on this run, and — CF-ANALYZER-FINAL-CLOSEOUT-01
+ * (issue #383) — also as this ticker's recorded judgment, so a later run of
+ * the same company carries it forward automatically (lib/analyzer/
+ * autoRun.ts) instead of asking the same question again. The per-run write
+ * is unchanged and still the one this run's own report reads; the per-ticker
+ * write only sets what a FUTURE run with no judgment of its own will start
+ * from, and a future analyst can still answer differently on their own run.
+ */
 export async function recordJudgmentAction(formData: FormData): Promise<void> {
   const runId = String(formData.get("runId") ?? "");
   const judgmentKey = String(formData.get("judgmentKey") ?? "") as JudgmentKey;
@@ -181,7 +191,14 @@ export async function recordJudgmentAction(formData: FormData): Promise<void> {
     throw new Error("A judgment records the selection that was made (§4.4)");
   }
 
-  await recordJudgment(runId, judgmentKey, selection, rawReason === "" ? null : rawReason);
+  const reason = rawReason === "" ? null : rawReason;
+  await recordJudgment(runId, judgmentKey, selection, reason);
+
+  const run = await getRun(runId);
+  if (run !== null) {
+    await recordCompanyJudgment(run.ticker, judgmentKey, selection, reason);
+  }
+
   revalidatePath(`/analyzer/${runId}/facts`);
 }
 
