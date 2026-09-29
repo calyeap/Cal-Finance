@@ -1,5 +1,5 @@
 import YahooFinance from "yahoo-finance2";
-import type { MarketDataProvider, EodPricePoint, InstrumentResolution } from "./provider";
+import type { MarketDataProvider, EodPricePoint, EquityFundamentals, InstrumentResolution } from "./provider";
 import type { AssetClass } from "../assets";
 import { lookupCrypto, UnsupportedCryptoError } from "./cryptoSymbols";
 
@@ -105,5 +105,24 @@ export const yahooProvider: MarketDataProvider = {
         close: q.close!,
         adjustedClose: q.adjclose ?? q.close!,
       }));
+  },
+  // Same call shape as resolveInstrument's identity quote, read for its
+  // trailing/forward EPS fields instead. A missing quote or a thrown error
+  // (network, timeout, unknown symbol) returns null for the whole record —
+  // never a partial guess — exactly like resolveInstrument's own "unavailable"
+  // treatment of a provider failure.
+  async fetchFundamentals(ticker: string): Promise<EquityFundamentals | null> {
+    const symbol = ticker.trim().toUpperCase();
+    let result;
+    try {
+      result = await yahooFinance.quote(symbol);
+    } catch {
+      return null;
+    }
+    if (!result) return null;
+    return {
+      epsTrailing: result.epsTrailingTwelveMonths ?? null,
+      epsForward: result.epsForward ?? null,
+    };
   },
 };

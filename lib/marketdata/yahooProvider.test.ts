@@ -184,3 +184,35 @@ describe("yahooProvider.resolveInstrument — identity resolution, independent o
     expect(mockQuote).toHaveBeenCalledWith("NVDA");
   });
 });
+
+describe("yahooProvider.fetchFundamentals — CF-ANALYZER-LEAN-MSFT-PROOF-01's EPS surface", () => {
+  it("reads trailing and forward EPS off the same quote() call as identity resolution", async () => {
+    mockQuote.mockResolvedValue({
+      symbol: "MSFT",
+      quoteType: "EQUITY",
+      epsTrailingTwelveMonths: 13.11,
+      epsForward: 15.42,
+    });
+
+    const result = await yahooProvider.fetchFundamentals!("msft");
+
+    expect(mockQuote).toHaveBeenCalledWith("MSFT");
+    expect(result).toEqual({ epsTrailing: 13.11, epsForward: 15.42 });
+  });
+
+  it("carries a missing half as null rather than inventing a value", async () => {
+    mockQuote.mockResolvedValue({ symbol: "MSFT", quoteType: "EQUITY", epsTrailingTwelveMonths: 13.11 });
+    const result = await yahooProvider.fetchFundamentals!("MSFT");
+    expect(result).toEqual({ epsTrailing: 13.11, epsForward: null });
+  });
+
+  it("returns null for the whole record when Yahoo has no quote for the symbol", async () => {
+    mockQuote.mockResolvedValue(undefined);
+    await expect(yahooProvider.fetchFundamentals!("DSADASD")).resolves.toBeNull();
+  });
+
+  it("returns null, never throws, on a network/timeout failure", async () => {
+    mockQuote.mockRejectedValue(new Error("network timeout"));
+    await expect(yahooProvider.fetchFundamentals!("MSFT")).resolves.toBeNull();
+  });
+});

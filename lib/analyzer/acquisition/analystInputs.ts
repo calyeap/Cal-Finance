@@ -31,7 +31,10 @@ import type { AnalystSuppliedRange } from "../modules/sensitivity";
 // ---------------------------------------------------------------------------
 
 export interface AnalystInputBundle {
-  inputs: Omit<AnalystInputs, "nonOperatingInvestments" | "gate0" | "fiftyTwoWeek" | "trustInputs">;
+  inputs: Omit<
+    AnalystInputs,
+    "nonOperatingInvestments" | "gate0" | "fiftyTwoWeek" | "epsTrailing" | "epsForward" | "trustInputs"
+  >;
   /** Rendered to the analyst. Not a comment — a disclosure. */
   note: string;
 }

@@ -198,6 +198,39 @@ export async function latestPrice(
   }
 }
 
+interface Fundamentals {
+  epsTrailing: Decimal | null;
+  epsForward: Decimal | null;
+}
+
+/**
+ * Trailing/forward EPS, off the same feed `latestPrice` reads — a provider
+ * field, not a filing tag (§4.4's mapping version never gained one; see
+ * companyInputs.ts). Feeds P/E only; nothing else in this run depends on it.
+ *
+ * Same shape as `latestPrice`/`fiftyTwoWeekRange`: offline mode never calls
+ * the provider (there is no committed EPS capture, so an offline run keeps
+ * P/E INCOMPLETE, same as it already keeps M3 INCOMPLETE), and a provider
+ * failure or a provider with no fundamentals surface returns null rather than
+ * throwing — losing EPS must return INCOMPLETE for P/E (§5.2), never take
+ * down a run whose filing facts acquired fine.
+ */
+export async function fundamentals(ticker: string): Promise<Fundamentals | null> {
+  if (isOffline()) return null;
+
+  try {
+    const provider = activeProvider();
+    const result = (await provider.fetchFundamentals?.(ticker)) ?? null;
+    if (result === null) return null;
+    return {
+      epsTrailing: result.epsTrailing === null ? null : new Decimal(result.epsTrailing),
+      epsForward: result.epsForward === null ? null : new Decimal(result.epsForward),
+    };
+  } catch {
+    return null;
+  }
+}
+
 const MS_PER_DAY = 86_400_000;
 // Comfortably more than the 364-day window fiftyTwoWeekRangeFrom actually
 // uses. The extra slack costs nothing — the pure helper filters to its own
@@ -324,10 +357,11 @@ export async function loadGateState(runId: string): Promise<GateState> {
     throw new RunNotFoundError(runId);
   }
 
-  const [decisions, judgments, price] = await Promise.all([
+  const [decisions, judgments, price, eps] = await Promise.all([
     getFactDecisions(runId),
     getJudgments(runId),
     latestPrice(run.ticker),
+    fundamentals(run.ticker),
   ]);
 
   // §7.2 M3's 52-week range, fetched once here and passed to BOTH
@@ -344,19 +378,37 @@ export async function loadGateState(runId: string): Promise<GateState> {
   // EV-based output is INCOMPLETE. That is the correct state — no tag says
   // which of a company's investments are non-operating.
   const source = isOffline() ? ("CAPTURE" as const) : undefined;
-  const withoutJudgment = await buildAcquiredRun({ ticker: run.ticker, price, fiftyTwoWeek, source });
+  const epsTrailing = eps?.epsTrailing ?? null;
+  const epsForward = eps?.epsForward ?? null;
+  const withoutJudgment = await buildAcquiredRun({
+    ticker: run.ticker,
+    price,
+    fiftyTwoWeek,
+    epsTrailing,
+    epsForward,
+    source,
+  });
   const nonOperatingInvestments = selectionToNonOperatingInvestments(
     judgments.find((j) => j.judgmentKey === "NON-OPERATING INVESTMENTS")?.selection,
     withoutJudgment.acquired.acquisition.candidateNonOperatingInvestments
   );
 
   // The second call is served from the acquisition cache, so this costs no
-  // additional EDGAR request — and fiftyTwoWeek is the SAME value fetched
-  // once above, so it costs no additional market-data request either.
+  // additional EDGAR request — and fiftyTwoWeek/epsTrailing/epsForward are the
+  // SAME values fetched once above, so it costs no additional market-data
+  // request either.
   const acquired =
     nonOperatingInvestments === null
       ? withoutJudgment
-      : await buildAcquiredRun({ ticker: run.ticker, price, fiftyTwoWeek, nonOperatingInvestments, source });
+      : await buildAcquiredRun({
+          ticker: run.ticker,
+          price,
+          fiftyTwoWeek,
+          epsTrailing,
+          epsForward,
+          nonOperatingInvestments,
+          source,
+        });
 
   const crossCheckFailedFactIds = acquired.acquired.crossCheckFailedFactIds;
   const fixture = acquired.fixture;
