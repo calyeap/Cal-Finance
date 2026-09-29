@@ -116,6 +116,29 @@ runtime_extract_field() {
 
 runtime_outcome_id() { runtime_extract_field "$1" "OUTCOME-ID"; }
 
+# runtime_target_body <target_json>
+# Shared body extraction for a fetched GitHub issue/PR JSON object. BUILD's
+# and REVIEW's admission each resolve OUTCOME-ID/TIER from a task contract
+# body — this is the one seam both read it through, so the two can never
+# quietly diverge (CF-REVIEW-OUTCOME-RESOLVE-01, issue #381: REVIEW's own
+# resolve step fetched its target via a second, PR-only endpoint instead of
+# reusing this shared body-extraction primitive, and could read a body that
+# BUILD's identical extraction on the same object would have parsed fine).
+runtime_target_body() {
+  jq -r '.body // ""' <<< "$1" 2>/dev/null
+}
+
+# runtime_pr_is_open <target_json>
+# True only when <target_json> (a GitHub issues-endpoint object — the one
+# retrieval path this repo now uses for any issue OR PR target) both
+# genuinely names a pull request (carries a `pull_request` key, so a plain
+# issue number can never be admitted as REVIEW's PR target) and is open.
+runtime_pr_is_open() {
+  local target_json="$1"
+  [ "$(jq -r 'has("pull_request")' <<< "$target_json" 2>/dev/null)" = true ] || return 1
+  [ "$(jq -r '.state // "closed"' <<< "$target_json" 2>/dev/null)" = open ]
+}
+
 runtime_tier() {
   local raw
   raw="$(runtime_extract_field "$1" "TIER")"

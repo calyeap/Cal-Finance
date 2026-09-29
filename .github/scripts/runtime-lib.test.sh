@@ -131,4 +131,27 @@ JSON
 )
 assert_eq "$(runtime_actor_attempt_open "$OWNER_DONE" OWNER)" false "OWNER terminal releases parent admission"
 
+
+# CF-REVIEW-OUTCOME-RESOLVE-01 (issue #381): REVIEW's target resolution
+# reads state/body through the same shared primitives BUILD's already does,
+# fetched from the same issues-endpoint shape — a representative PR-shaped
+# object (open, carries a `pull_request` key, body backtick-wraps its
+# OUTCOME-ID first line exactly like a real PR description) must resolve
+# its OUTCOME-ID through this seam, generically — not by naming any one
+# outcome or PR number.
+PR_TARGET=$(jq -n --arg body $'OUTCOME-ID: `CF-EXAMPLE-OUTCOME-01`\n\nCloses #1. TIER: NORMAL.\n\n## What this does\n' '
+  {state: "open", body: $body, pull_request: {url: "https://example/pulls/1"}}
+')
+runtime_pr_is_open "$PR_TARGET" || fail "representative open PR target should report open"
+assert_eq "$(runtime_outcome_id "$(runtime_target_body "$PR_TARGET")")" "CF-EXAMPLE-OUTCOME-01" "shared body extraction resolves a backtick-wrapped OUTCOME-ID from a PR-shaped target"
+
+CLOSED_PR_TARGET=$(jq -n '{state: "closed", body: "OUTCOME-ID: `X`", pull_request: {url: "https://example/pulls/1"}}')
+runtime_pr_is_open "$CLOSED_PR_TARGET" && fail "closed PR target must not be treated as open"
+
+ISSUE_TARGET=$(jq -n '{state: "open", body: "OUTCOME-ID: `X`"}')
+runtime_pr_is_open "$ISSUE_TARGET" && fail "a plain issue (no pull_request key) must never be admitted as REVIEW's PR target"
+
+MISSING_BODY_TARGET=$(jq -n '{state: "open", pull_request: {url: "https://example/pulls/1"}}')
+assert_eq "$(runtime_outcome_id "$(runtime_target_body "$MISSING_BODY_TARGET")")" "" "a target with no body still fails closed rather than erroring"
+
 echo "runtime-lib: PASS"

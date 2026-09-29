@@ -80,7 +80,7 @@ jobs:
           fi
 
           TARGET=$(gh api "repos/${REPO}/issues/${NUMBER}")
-          BODY=$(jq -r '.body // ""' <<< "$TARGET")
+          BODY="$(runtime_target_body "$TARGET")"
           OUTCOME_ID="$(runtime_outcome_id "$BODY")"
           TIER="$(runtime_tier "$BODY")"
 
@@ -304,11 +304,15 @@ jobs:
             NUMBER="${{ github.event.pull_request.number || github.event.issue.number }}"
           fi
 
-          PR=$(gh api "repos/${REPO}/pulls/${NUMBER}" 2>/dev/null || true)
-          if [ -z "$PR" ] || [ "$(jq -r '.state // "closed"' <<< "$PR")" != open ]; then
+          # Fetch via the issues endpoint — the same shared retrieval path
+          # BUILD's admission already resolves task contracts through —
+          # rather than the PR-only pulls endpoint (CF-REVIEW-OUTCOME-
+          # RESOLVE-01, issue #381).
+          PR=$(gh api "repos/${REPO}/issues/${NUMBER}" 2>/dev/null || true)
+          if [ -z "$PR" ] || ! runtime_pr_is_open "$PR"; then
             echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
           fi
-          BODY=$(jq -r '.body // ""' <<< "$PR")
+          BODY="$(runtime_target_body "$PR")"
           OUTCOME_ID="$(runtime_outcome_id "$BODY")"
           TIER="$(runtime_tier "$BODY")"
           if [ -z "$OUTCOME_ID" ]; then
