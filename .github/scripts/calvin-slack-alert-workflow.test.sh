@@ -122,19 +122,25 @@ assert_eq "step does not abort when the prior-comments fetch succeeds" 0 "$rc"
 [ -f "$CURL_MARKER" ] && CALLED=1 || CALLED=0
 assert_eq "a successful fetch still lets duplicate suppression block the send" 0 "$CALLED"
 
-# --- scenario 3: same successful fetch, but a genuinely distinct new
-# blocker -- suppression must not be over-broad; the send must go out ----
+# --- scenario 3 (CF-SLACK-DEDUPE-02, issue #391): same successful fetch,
+# but the fetched thread also carries a Calvin ruling/resolution after the
+# original blocker -- that resolves the prior gate, so a later blocker of
+# the same kind is a genuinely new gate and suppression must not be
+# over-broad; the send must go out ----------------------------------------
+
+GH_STUB='() { echo '"'"'[{"body": "BLOCKED: ACTIONABLE - sandbox denies commit [BUILD_ATTEMPT_ID: B1]", "created_at": "2026-09-28T15:10:00Z"}, {"body": "CALVIN RULING - approve the workaround", "created_at": "2026-09-28T15:11:00Z"}]'"'"'
+}'
 
 rm -f "$CURL_MARKER"
 set +e
 run_step "https://hooks.example/test" \
-  'BLOCKED: ACTIONABLE — separate, unrelated permission is needed for the payments export [OWNER_ATTEMPT_ID: O1]' \
+  'BLOCKED: ACTIONABLE — a new, later permission is needed for the payments export' \
   "o/r" "2" "https://x/2" "2026-09-28T15:12:00Z"
 rc=$?
 set -e
 assert_eq "step does not abort for a distinct new blocker" 0 "$rc"
 [ -f "$CURL_MARKER" ] && CALLED=1 || CALLED=0
-assert_eq "a distinct new blocker still sends through the live wiring" 1 "$CALLED"
+assert_eq "a genuinely new gate, opened after a Calvin ruling resolved the prior one, still sends through the live wiring" 1 "$CALLED"
 
 rm -rf "$MARKER_DIR"
 trap - EXIT

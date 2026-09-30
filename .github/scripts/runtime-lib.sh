@@ -188,25 +188,48 @@ runtime_slack_kind() {
   esac
 }
 
+# runtime_is_calvin_ruling_line <line>
+# True when <line> is a CALVIN RULING marker: "CALVIN RULING" followed by a
+# colon, or an em dash / hyphen separator (with optional leading spaces) —
+# e.g. "CALVIN RULING — APPROVE OPTION B" or "CALVIN RULING: approve".
+# Mirrors calvin-ruling-lib.sh's own marker check (which delegates here so
+# the two can't drift apart); kept in runtime-lib.sh, not sourced from
+# calvin-ruling-lib.sh, because that file itself sources this one and a
+# cycle would loop. Used by runtime_slack_is_duplicate to find the most
+# recent Calvin resolution on a thread (CF-SLACK-DEDUPE-02).
+runtime_is_calvin_ruling_line() {
+  printf '%s' "$1" | grep -Eq '^CALVIN RULING(:| *[—-])'
+}
+
 # runtime_slack_is_duplicate <comments_json> <this_created_at> <this_raw>
-# Pure. True only for an OWNER terminal (carries [OWNER_ATTEMPT_ID: ...])
-# that restates an already-Slack-alerted child (or prior OWNER) blocker:
-# the most recent earlier comment in <comments_json> that is itself
-# Slack-eligible (runtime_slack_kind != none) has the same kind as
-# <this_raw>, and <this_raw> literally references that earlier comment's
-# own BUILD_/REVIEW_/OWNER_ATTEMPT_ID value — i.e. OWNER is reconciling
-# that exact attempt, not reporting a distinct one. A non-OWNER terminal,
-# an ineligible terminal, or one that doesn't correlate to a same-kind
-# predecessor is never a duplicate, so the first alert for any blocker
-# — and any genuinely new OWNER blocker — always sends.
+# Pure. CF-SLACK-DEDUPE-02: dedupes by the underlying still-open Calvin
+# gate — a deterministic key of (canonical item, implicit in <comments_json>
+# already being scoped to one thread; Slack kind; current open-gate state)
+# — never by a worker BUILD_/REVIEW_/OWNER_ATTEMPT_ID or by which actor or
+# wording restated it (the structural gap issue #391 reports: the previous
+# version required <this_raw> to literally reference an earlier alerted
+# comment's own attempt ID, which is not a guaranteed convention).
+#
+# True only when <this_raw> is itself Slack-eligible (runtime_slack_kind !=
+# none) and, scanning <comments_json> for comments strictly before
+# <this_created_at> in most-recent-first order, the first comment that is
+# either a Calvin resolution (runtime_is_calvin_ruling_line) or itself
+# Slack-eligible decides the outcome:
+#   - hitting a resolution first means any prior gate was already closed,
+#     so <this_raw> opens a fresh gate — not a duplicate, whatever its kind;
+#   - hitting a same-kind alert first means an unresolved alert for this
+#     exact gate already reached Slack — a duplicate, regardless of which
+#     actor authored either comment or how either is worded;
+#   - hitting a different-kind alert first is a distinct gate; it neither
+#     resolves nor restates this one, so the scan continues past it.
+# No earlier resolution or alert at all (including an empty/omitted
+# history) means this is the first alert for the gate: not a duplicate.
 runtime_slack_is_duplicate() {
-  local comments_json="$1" before="$2" this_raw="$3" this_tag_text kind
-  this_tag_text="$(runtime_terminal_tag_text "$this_raw")"
-  case "$this_tag_text" in *"[OWNER_ATTEMPT_ID: "*) ;; *) echo false; return ;; esac
+  local comments_json="$1" before="$2" this_raw="$3" kind
   kind="$(runtime_slack_kind "$this_raw")"
   if [ "$kind" = none ]; then echo false; return; fi
 
-  local earlier_bodies body term k prev_kind="" prev_tag_text="" prev_tag
+  local earlier_bodies body term k
   earlier_bodies="$(jq -c --arg before "$before" '
     [ .[] | select(.created_at < $before) ] | sort_by(.created_at) | reverse | .[].body
   ' <<< "$comments_json")"
@@ -214,23 +237,18 @@ runtime_slack_is_duplicate() {
   while IFS= read -r body; do
     [ -z "$body" ] && continue
     body="$(jq -r . <<< "$body")"
+    if runtime_is_calvin_ruling_line "$(runtime_first_line "$body")"; then
+      echo false
+      return
+    fi
     term="$(runtime_terminal_line "$body")"
     k="$(runtime_slack_kind "$term")"
-    if [ "$k" != none ]; then
-      prev_kind="$k"
-      prev_tag_text="$(runtime_terminal_tag_text "$body")"
-      break
+    if [ "$k" = "$kind" ]; then
+      echo true
+      return
     fi
   done <<< "$earlier_bodies"
-  if [ -z "$prev_kind" ]; then echo false; return; fi
-  if [ "$prev_kind" != "$kind" ]; then echo false; return; fi
-
-  prev_tag="$(printf '%s' "$prev_tag_text" | sed -nE 's/.*\[(BUILD|REVIEW|OWNER)_ATTEMPT_ID: ([^]]+)\].*/\2/p')"
-  if [ -n "$prev_tag" ] && [[ "$this_tag_text" == *"$prev_tag"* ]]; then
-    echo true
-  else
-    echo false
-  fi
+  echo false
 }
 
 # runtime_admission_decision <target_kind> <target_number>

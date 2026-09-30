@@ -130,9 +130,10 @@ rc=$?
 set -e
 assert_status "calvin_slack_send succeeds on a 2xx webhook response" 0 "$rc"
 
-# --- CF-WORKFLOW-PROOF-SLACK-DEDUPE-01: an OWNER terminal that merely
-# restates an already-alerted child blocker (the #365 class) is
-# suppressed; a distinct new OWNER blocker still sends -------------------
+# --- CF-SLACK-DEDUPE-02 (issue #391): dedupe by the underlying still-open
+# Calvin gate — canonical item + Slack kind + open/resolved state — never
+# by a worker BUILD_/REVIEW_/OWNER_ATTEMPT_ID or by which actor/wording
+# restated it -------------------------------------------------------------
 #
 # curl runs inside calvin_slack_send's own command substitution
 # (code=$(curl ...)), a subshell, so a plain variable assignment inside
@@ -147,35 +148,83 @@ curl() { touch "$DEDUPE_TMP/curl_called"; echo -n '200'; }
 export -f curl
 export SLACK_WEBHOOK_URL=https://hooks.example/test
 
-CHILD_COMMENTS=$(jq -n '[
-  {body: "BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]", created_at: "2026-09-28T15:10:00Z"},
-  {body: "OWNER START: wake=TERMINAL [OWNER_ATTEMPT_ID: O1]", created_at: "2026-09-28T15:11:00Z"}
+# 1) child alert + restatement, with no attempt-ID tag shared at all (the
+# exact structural gap #391 reports) — still deduped, for both eligible
+# kinds.
+ACTIONABLE_CHILD=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — sandbox denies commit", created_at: "2026-09-28T15:10:00Z"}
 ]')
 
 rm -f "$DEDUPE_TMP/curl_called"
 calvin_slack_send \
-  'BLOCKED: ACTIONABLE — child BUILD run (B1) reports the same sandbox denial [OWNER_ATTEMPT_ID: O1]' \
-  "o/r" "https://x/2" "$CHILD_COMMENTS" "2026-09-28T15:12:00Z"
+  'BLOCKED: ACTIONABLE — the sandbox still denies the commit' \
+  "o/r" "https://x/2" "$ACTIONABLE_CHILD" "2026-09-28T15:12:00Z"
 [ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
-assert_eq "OWNER restating an already-alerted child blocker never calls curl" 0 "$CALLED"
+assert_eq "BLOCKED: ACTIONABLE restated with no shared attempt-ID tag is still deduped" 0 "$CALLED"
+
+CALVIN_REQUIRED_CHILD=$(jq -n '[
+  {body: "CALVIN REQUIRED: pick A or B for the export path", created_at: "2026-09-28T15:10:00Z"}
+]')
 
 rm -f "$DEDUPE_TMP/curl_called"
 calvin_slack_send \
-  'BLOCKED: ACTIONABLE — separate, unrelated permission is needed for the payments export [OWNER_ATTEMPT_ID: O1]' \
-  "o/r" "https://x/2" "$CHILD_COMMENTS" "2026-09-28T15:12:00Z"
+  'CALVIN REQUIRED: pick A or B for the export path (restated)' \
+  "o/r" "https://x/2" "$CALVIN_REQUIRED_CHILD" "2026-09-28T15:12:00Z"
 [ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
-assert_eq "a distinct new OWNER blocker still calls curl" 1 "$CALLED"
+assert_eq "CALVIN REQUIRED restated with no shared attempt-ID tag is still deduped" 0 "$CALLED"
+
+# 2) the first alert for a gate still calls curl even with prior
+# (unrelated) comments supplied.
+rm -f "$DEDUPE_TMP/curl_called"
+calvin_slack_send \
+  'BLOCKED: ACTIONABLE — sandbox denies commit' \
+  "o/r" "https://x/1" "$ACTIONABLE_CHILD" "2026-09-28T15:09:59Z"
+[ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
+assert_eq "the first alert for a gate still calls curl even with prior comments supplied" 1 "$CALLED"
+
+# 3) a Calvin ruling/resolution closes the prior gate; the same kind
+# afterwards is a genuinely new gate and alerts again.
+RESOLVED_THEN_NEW=$(jq -n '[
+  {body: "CALVIN REQUIRED: pick A or B for the export path", created_at: "2026-09-28T15:10:00Z"},
+  {body: "CALVIN RULING - approve option B", created_at: "2026-09-28T15:11:00Z"}
+]')
 
 rm -f "$DEDUPE_TMP/curl_called"
 calvin_slack_send \
-  'BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]' \
-  "o/r" "https://x/1" "$CHILD_COMMENTS" "2026-09-28T15:10:00Z"
+  'CALVIN REQUIRED: pick a retention window for the export logs' \
+  "o/r" "https://x/3" "$RESOLVED_THEN_NEW" "2026-09-28T15:12:00Z"
 [ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
-assert_eq "the first (child) alert still calls curl even with prior comments supplied" 1 "$CALLED"
+assert_eq "a new CALVIN REQUIRED after a Calvin ruling resolves the prior gate is not deduped" 1 "$CALLED"
+
+# 4) without a resolution in between, a *different* Slack kind on the same
+# item is its own distinct gate and still sends...
+rm -f "$DEDUPE_TMP/curl_called"
+calvin_slack_send \
+  'BLOCKED: ACTIONABLE — separate permission needed for the export path' \
+  "o/r" "https://x/4" "$CALVIN_REQUIRED_CHILD" "2026-09-28T15:12:00Z"
+[ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
+assert_eq "a different Slack kind on the same item is a distinct gate and still sends" 1 "$CALLED"
+
+# ...but restating the *original* kind again afterwards, still with no
+# resolution posted, is deduped against the original open gate (the
+# different-kind alert in between neither resolves nor restates it).
+MIXED_KIND_NO_RESOLUTION=$(jq -n '[
+  {body: "CALVIN REQUIRED: pick A or B for the export path", created_at: "2026-09-28T15:10:00Z"},
+  {body: "BLOCKED: ACTIONABLE — separate permission needed for the export path", created_at: "2026-09-28T15:11:00Z"}
+]')
 
 rm -f "$DEDUPE_TMP/curl_called"
 calvin_slack_send \
-  'BLOCKED: ACTIONABLE — child BUILD run (B1) reports the same sandbox denial [OWNER_ATTEMPT_ID: O1]' \
+  'CALVIN REQUIRED: pick A or B for the export path (still open)' \
+  "o/r" "https://x/5" "$MIXED_KIND_NO_RESOLUTION" "2026-09-28T15:12:00Z"
+[ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
+assert_eq "restating the original kind past an unrelated different-kind alert is still deduped" 0 "$CALLED"
+
+# 5) omitting comments_json/created_at skips the duplicate check entirely
+# (always eligible on its own terms).
+rm -f "$DEDUPE_TMP/curl_called"
+calvin_slack_send \
+  'BLOCKED: ACTIONABLE — child BUILD run reports the same sandbox denial' \
   "o/r" "https://x/2"
 [ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
 assert_eq "omitting comments_json/created_at skips the duplicate check (always eligible)" 1 "$CALLED"
