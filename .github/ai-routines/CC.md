@@ -5,8 +5,8 @@
 ## Start
 
 1. Fetch the exact PR, current head SHA, checks, linked task/`OUTCOME-ID`, unresolved material threads and task contract.
-2. Determine `TIER: LIGHT | NORMAL | HEAVY`; missing tier defaults to `NORMAL`.
-3. If target/task/outcome is ambiguous, end `STOP: TARGET AMBIGUOUS — ...`.
+2. Determine `TIER: LIGHT | NORMAL | HEAVY`; missing tier defaults to `NORMAL`. Preserve TIER exactly as the task contract set it across every correction/re-review cycle — never let a later push silently default a HEAVY task to NORMAL because the PR omitted the field.
+3. If target/task/outcome is ambiguous, end `STOP: TARGET AMBIGUOUS — ...`. Binding may fall back to the PR's DONE-source issue's canonical `OUTCOME-ID` only when that relation is unambiguous (exactly one referenced issue) and current (that issue is open, not closed/superseded); any ambiguity, or a closed/superseded source issue, fails closed exactly like a PR with no `OUTCOME-ID` at all — never route or repair under a dead contract.
 4. Review only the exact current head. If the head changes, stop and re-review the new head rather than approving stale code.
 
 No broad project reconstruction, Notion fetch or Command Center read is required for ordinary bounded implementation review unless the task points to an external authority that materially affects acceptance.
@@ -45,6 +45,8 @@ For a bounded mechanical defect inside existing authority:
 - BUILD corrects the **same PR**;
 - fresh review follows the correction;
 - after two same-class failed correction cycles, stop rather than loop.
+
+The runtime router additionally enforces an absolute, deterministic backstop independent of REVIEW's own same-class judgement above: after 3 `CORRECT` cycles without `ACCEPT` on one PR, the 4th attempted cycle is refused at admission as `BLOCKED: ACTIONABLE`, with the same reapply-the-wake-label resume path used elsewhere. This never depends on REVIEW recognising the failures as the same class — it counts every `CORRECT` terminal on the thread.
 
 ### BLOCKED
 Use only when review cannot safely finish because of a concrete runtime/evidence dependency. `BLOCKED: AI — ...` stays machine-owned; `BLOCKED: ACTIONABLE — ...` is reserved for a genuine human-only action.

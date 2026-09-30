@@ -94,4 +94,37 @@ require "$BUILD" '\*\*Destination\*\*.*exact wake target' 'BUILD terminal destin
 require "$REVIEW" '\*\*Destination\*\*.*exact wake target' 'REVIEW terminal destination is explicit'
 require "$OWNER" '\*\*Destination\*\*.*exact wake target' 'OWNER terminal destination is explicit'
 
+
+# CF-REVIEW-BIND-01: PR-body contract fields are BUILD's own responsibility,
+# not only inherited from the source issue — REVIEW/runtime binding is
+# deterministic only when the PR body itself carries them, and TIER must
+# survive correction rather than silently defaulting.
+require "$BUILD" 'must itself carry' 'BUILD writes canonical OUTCOME-ID/TIER into every PR body it opens/updates'
+require "$BUILD" '^OUTCOME-ID: `<value>`$' 'BUILD PR-body contract names the exact OUTCOME-ID field shape'
+require "$BUILD" '^TIER: <LIGHT\|NORMAL\|HEAVY>$' 'BUILD PR-body contract names the exact TIER field shape'
+require "$BUILD" 'TIER must stay exactly' 'TIER preserved verbatim across correction, never silently defaulted'
+
+# REVIEW may bind to the DONE-source issue's OUTCOME-ID only when that
+# relation is unambiguous and current; ambiguity or a closed/superseded
+# source issue fails closed rather than guessing — and the router actually
+# implements that fallback and its dead-contract guard.
+require "$REVIEW" 'unambiguous .*and current' 'source-issue OUTCOME-ID fallback is explicitly bounded, not a blind lookup'
+require "$ROUTER" 'runtime_closing_issue_number' 'source-issue fallback resolution wired into REVIEW admission'
+require "$ROUTER" 'DEAD CONTRACT' 'closed/superseded contract guard stops routing/repair under a dead contract'
+
+# The dead-contract guard must cover the PR-scoped repair/review paths too,
+# not only an issue-kind BUILD wake — a bare 'DEAD CONTRACT' string match
+# would pass even if only the issue-kind path checked it.
+require "$ROUTER" 'PR-scoped dead-contract guard \(KIND=pr\)' 'fire-build dead-contract guard also covers KIND=pr (CORRECT-triggered repair), not only KIND=issue wakes'
+require "$ROUTER" 'PR-scoped dead-contract guard covers a PR that carries its own OUTCOME-ID' 'fire-review dead-contract guard also covers a PR carrying its own OUTCOME-ID, not only the source-issue fallback'
+
+# CF-REVIEW-BIND-01: the already-approved bounded-repair intent (3 CORRECT
+# cycles without ACCEPT) is enforced at BUILD admission, not left to
+# REVIEW's own prose discipline alone.
+require "$ROUTER" 'runtime_correct_cycles_exhausted' 'runtime enforces the approved 3-CORRECT-cycle repair bound'
+require "$REVIEW" '3 .CORRECT. cycles without .ACCEPT' 'REVIEW documents the deterministic runtime repair-cycle backstop'
+
+# An unreproduced ordinary failure is never manufactured into Calvin work.
+require "$BUILD" 'cannot be reproduced' 'unreproduced bounded diagnosis completes without manufacturing CALVIN REQUIRED'
+
 echo "runtime-wiring: PASS"

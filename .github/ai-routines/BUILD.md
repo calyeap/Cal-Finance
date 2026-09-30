@@ -40,6 +40,18 @@ INSPECT
 - **Never weaken, delete, rewrite or bypass an evaluator merely to make the attempt pass.** If an evaluator change is genuinely part of scope, treat it as a separate consequential change and preserve an independent check of the intended behaviour.
 - Correct mechanical failures inside scope before escalating. After **two same-class failed correction cycles**, stop with the exact unresolved failure rather than loop.
 - Do not redesign product behaviour, finance methodology, permissions, scope or acceptance criteria.
+- If a reported failure cannot be reproduced after bounded diagnosis and there is no current evidence of a defect, close/complete without speculative repair. An unreproduced failure is an ordinary diagnostic outcome, not a genuine Calvin decision — never raise `CALVIN REQUIRED` merely because it did not reproduce.
+
+## PR contract
+
+Every PR BUILD opens or updates for this outcome must itself carry, as parseable fields (not only inherited from the source issue), its own canonical contract:
+
+```
+OUTCOME-ID: `<value>`
+TIER: <LIGHT|NORMAL|HEAVY>
+```
+
+This is what REVIEW and the runtime router bind to — a PR body missing these fields cannot be resolved deterministically. Never omit or rewrite these fields away on a later correction push: TIER must stay exactly what the task contract set across every correction/re-review cycle, so a HEAVY task is never silently treated as NORMAL because a later push dropped the field.
 
 ## Tier behaviour
 
