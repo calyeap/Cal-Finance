@@ -205,4 +205,39 @@ assert_eq "$(runtime_closing_issue_number 'No linking keyword here, just #390 me
 assert_eq "$(runtime_closing_issue_number 'Resolved #77')" 77 "past-tense Resolved keyword recognised"
 assert_eq "$(runtime_closing_issue_number 'Closes #77, closes #77')" 77 "repeated identical reference stays unambiguous"
 
+
+# CF-CONTRACT-FENCE-01 (issue #384): a worker must not route, merge or
+# alert once the canonical contract it loaded at START no longer matches
+# the current one.
+ORIGINAL_BODY=$'OUTCOME-ID: `CF-FENCE-01`\nTIER: NORMAL\n## OUTCOME\nOriginal.'
+EDITED_BODY=$'OUTCOME-ID: `CF-FENCE-01`\nTIER: NORMAL\n## OUTCOME\nCalvin materially changed this.'
+LOADED_HASH="$(runtime_contract_hash "$ORIGINAL_BODY")"
+assert_eq "$(runtime_contract_hash "$ORIGINAL_BODY")" "$LOADED_HASH" "hashing is deterministic"
+assert_eq "${#LOADED_HASH}" 12 "fingerprint is a short 12-char hash"
+assert_eq "$(runtime_contract_is_stale "$LOADED_HASH" "$ORIGINAL_BODY")" false "same body -> normal route proceeds"
+assert_eq "$(runtime_contract_is_stale "$LOADED_HASH" "$EDITED_BODY")" true "changed body before route -> stale"
+assert_eq "$(runtime_contract_is_stale "" "$EDITED_BODY")" false "no recorded fingerprint never manufactures staleness"
+
+# A fenced stale exit reuses the existing BLOCKED: AI vocabulary — never a
+# literal CALVIN REQUIRED / BLOCKED: ACTIONABLE — so it is Slack-ineligible
+# by construction, whatever the underlying gate would otherwise have been,
+# and still a valid, correlatable typed terminal for every actor.
+STALE_LINE='BLOCKED: AI — STALE_CONTRACT: canonical contract changed since START (loaded abc123def456, current 999999999999); no route/merge/alert taken. [BUILD_ATTEMPT_ID: B9]'
+assert_eq "$(runtime_slack_kind "$STALE_LINE")" none "stale exit never reaches Slack, even for a would-be CALVIN REQUIRED/ACTIONABLE gate"
+runtime_terminal_is_typed BUILD "$(runtime_terminal_line "$STALE_LINE")" || fail "stale exit is a typed BUILD terminal"
+assert_eq "$(runtime_is_child_terminal "$STALE_LINE")" true "stale BUILD/REVIEW exit still reaches OWNER for reconciliation"
+
+# Closing a stale attempt with this terminal releases it exactly like any
+# other typed terminal — existing admission/resume machinery then resumes
+# the same outcome once, with duplicate suppression intact.
+STALE_COMMENTS=$(jq -n '[
+  {body: "BUILD START: OUTCOME-ID=CF-FENCE-01 TIER=NORMAL [BUILD_ATTEMPT_ID: B9] [CONTRACT: abc123def456]", created_at: "2026-09-30T09:00:00Z"},
+  {body: "BLOCKED: AI — STALE_CONTRACT: canonical contract changed since START (loaded abc123def456, current 999999999999); no route/merge/alert taken. [BUILD_ATTEMPT_ID: B9]", created_at: "2026-09-30T09:05:00Z"}
+]')
+assert_eq "$(runtime_attempt_status "$STALE_COMMENTS" BUILD B9 '2026-09-30T09:00:00Z')" complete "stale exit correlates and closes its own attempt"
+assert_eq "$(runtime_outcome_attempt_open "$STALE_COMMENTS" CF-FENCE-01)" false "closed stale attempt frees the outcome for fresh admission"
+assert_eq "$(runtime_admission_decision issue 384 '' '' false)" ADMIT "fresh admission after a stale exit resumes the same outcome"
+assert_eq "$(runtime_admission_decision issue 384 '' '' true)" IN_FLIGHT "duplicate suppression stays intact while the stale attempt is still open"
+assert_eq "$(runtime_admission_decision issue 384 '' '30' false)" EXISTING_PR:30 "an already-open PR/branch from before the stale exit is still reused, not duplicated"
+
 echo "runtime-lib: PASS"

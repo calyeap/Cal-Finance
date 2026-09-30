@@ -12,6 +12,18 @@ OWNER may wake from exactly these transition classes:
 
 Wake payload is routing context only. Re-read current native GitHub evidence before acting.
 
+## Stale contract fence
+
+CF-CONTRACT-FENCE-01 (issue #384, corrected on #397): once the canonical contract OWNER is reconciling changes after this attempt's START, OWNER must not route, complete a merge-adjacent acceptance, or alert on the old understanding — it terminates safely and lets existing admission/resume machinery continue the same outcome from current authority. When the wake/merge target is a PR, the canonical body this fence fingerprints is that PR's unambiguous Closes/Fixes/Resolves source issue body whenever one exists, open or closed — merging a closing PR closes that issue, so requiring it to still be open here (unlike REVIEW's own binding, which is correct to require it) would make every post-merge OWNER wake fingerprint the PR body instead and read as stale against `START.contract`'s issue-body hash even though nobody edited the contract. A PR body does not change when Calvin edits the issue contract mid-run (and a merged PR body cannot change at all), so hashing it would never detect that edit. Fall back to the wake target's own body (issue or PR alike) only when there is no such source issue.
+
+- **Fingerprint.** The fire prompt carries this attempt's loaded contract fingerprint as `CONTRACT: <sha12>` — the deterministic SHA-256 (first 12 hex chars) of the canonical issue body as fetched at START — and the same marker is on this attempt's own `OWNER START:` receipt. Record it as `START.contract`. V1 deliberately hashes the whole body; no section-level parsing.
+- **Fence.** Immediately before taking a `CONTINUE` routing mutation, or escalating `CALVIN REQUIRED`, re-fetch the canonical issue body and recompute its fingerprint. If it no longer matches `START.contract`:
+  1. take no `CONTINUE` mutation and do not escalate `CALVIN REQUIRED`;
+  2. end instead with `BLOCKED: AI — STALE_CONTRACT: canonical contract changed since START (loaded <START.contract>, current <hash>); no route/merge/alert taken.`, carrying this attempt's `OWNER_ATTEMPT_ID` tag — the ordinary typed `BLOCKED: AI` terminal, which is never Slack-eligible and still closes/releases this attempt through the existing terminal machinery;
+  3. never raise `CALVIN REQUIRED` for a stale contract — a gate that no longer reflects current authority is not a genuine Calvin decision.
+- A child terminal that is itself a stale-contract fence exit (its body contains `STALE_CONTRACT`) carries no product signal about the outcome — do not treat it as a real `BLOCKED` needing Calvin attention; reconcile it the same way, restating `BLOCKED: AI` rather than inventing a `CONTINUE`/`CALVIN REQUIRED` this fence would itself refuse.
+- Do not add artifact stamps, section-level parsing, restart counters or contract-thrash machinery beyond this — V1 is deliberately this narrow.
+
 ## Process
 
 1. Fetch the exact wake target and only the minimum current GitHub evidence needed to understand its `OUTCOME-ID`, linked task, PR/merge/terminal state and any current Calvin gate.
@@ -42,7 +54,7 @@ Terminal:
 ### BLOCKED
 Use when continuation cannot safely proceed and there is no permitted deterministic next mutation.
 
-- `BLOCKED: AI — ...` for machine/runtime/evidence problems Calvin cannot usefully resolve.
+- `BLOCKED: AI — ...` for machine/runtime/evidence problems Calvin cannot usefully resolve — includes a stale contract fence exit (`BLOCKED: AI — STALE_CONTRACT: ...`, see Stale contract fence).
 - `BLOCKED: EXTERNAL — ...` when a third party is the real dependency and Calvin need not chase.
 - `BLOCKED: ACTIONABLE — ...` only for a concrete human-only action such as permission/credential access. This class may alert Calvin.
 
@@ -81,3 +93,4 @@ Runtime liveness is detect-only. No blind OWNER recovery fire.
 - No duplicate worker/PR creation.
 - No worker-authored first-line `CALVIN RULING`.
 - Calvin attention only for the explicit exception classes above.
+- Never route (`CONTINUE`) or Slack-escalate under a canonical contract this attempt knows to be stale (see Stale contract fence).

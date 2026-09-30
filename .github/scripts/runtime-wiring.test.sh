@@ -127,4 +127,45 @@ require "$REVIEW" '3 .CORRECT. cycles without .ACCEPT' 'REVIEW documents the det
 # An unreproduced ordinary failure is never manufactured into Calvin work.
 require "$BUILD" 'cannot be reproduced' 'unreproduced bounded diagnosis completes without manufacturing CALVIN REQUIRED'
 
+# CF-CONTRACT-FENCE-01 (issue #384): a worker must not route, merge or
+# alert once the canonical contract it loaded at START no longer matches
+# the current one — documented in each actor's own contract, and the
+# CONTRACT fingerprint is actually threaded through the router that fires
+# BUILD/REVIEW/OWNER, not only described in prose.
+require "$BUILD" 'Stale contract fence' 'BUILD documents the stale-contract fence'
+require "$REVIEW" 'Stale contract fence' 'REVIEW documents the stale-contract fence'
+require "$OWNER" 'Stale contract fence' 'OWNER documents the stale-contract fence'
+require "$BUILD" 'STALE_CONTRACT' 'BUILD names the typed stale-contract exit'
+require "$REVIEW" 'STALE_CONTRACT' 'REVIEW names the typed stale-contract exit'
+require "$OWNER" 'STALE_CONTRACT' 'OWNER names the typed stale-contract exit'
+require "$ROUTER" 'runtime_contract_hash' 'router computes the contract fingerprint for BUILD/REVIEW/OWNER fires'
+require "$MERGE" 'runtime_contract_hash' 'merge-path OWNER fire also stamps a contract fingerprint'
+require "$ROUTER" '\[CONTRACT: \$\{CONTRACT\}\]' 'START receipts carry the CONTRACT fingerprint marker'
+
+# CF-CONTRACT-FENCE-01 (CORRECT on #397): a PR body never changes when
+# Calvin edits the issue contract mid-run, so a PR-scoped fire must bind
+# CONTRACT_BODY to the PR's unambiguous, currently-open source issue body
+# (not only describe that in prose) whenever one exists, not only when the
+# PR lacks its own OUTCOME-ID.
+require "$ROUTER" 'CONTRACT_BODY="\$\(jq -r .*<<< "\$SRC"\)"' 'fire-review binds CONTRACT_BODY to the source issue body, not only the PR body'
+require "$ROUTER" 'CONTRACT_BODY="\$\(jq -r .*<<< "\$TARGET"\)"' 'fire-owner-on-terminal starts CONTRACT_BODY from the fetched wake-target body'
+require "$MERGE" 'CONTRACT_BODY="\$\(jq -r .*<<< "\$TARGET"\)"' 'merge-path OWNER fire starts CONTRACT_BODY from the fetched PR body'
+require "$ROUTER" 'has\("pull_request"\)' 'fire-owner-on-terminal distinguishes a PR wake target before preferring its source issue body'
+
+# CF-CONTRACT-FENCE-01 (CORRECT #2 on #397): merging a Closes/Fixes/Resolves
+# PR closes its source issue, so OWNER's post-merge fence must bind the same
+# body whether that issue is open or closed — requiring it to stay open (as
+# REVIEW correctly does, since REVIEW runs before merge) would make every
+# ordinary merge read as a false STALE_CONTRACT even though nobody edited
+# the contract. Only OWNER.md's fence carries this open-or-closed rule.
+forbid "$OWNER" 'currently-open' "OWNER's fence does not require the source issue to stay open"
+
+# CF-CONTRACT-FENCE-01 (CORRECT #2 on #397): a transient failure fetching
+# the source issue must emit an empty CONTRACT, not silently fall back to
+# hashing the PR/target body — that fallback would make the fingerprint
+# depend on the fetch's luck rather than on the canonical body, and could
+# itself manufacture a spurious mismatch on a later successful fetch.
+require "$ROUTER" 'CONTRACT_FETCH_FAILED' 'fire-review and fire-owner-on-terminal emit an empty CONTRACT on a failed source-issue fetch, not the PR-body fallback'
+require "$MERGE" 'CONTRACT_FETCH_FAILED' 'merge-path OWNER fire emits an empty CONTRACT on a failed source-issue fetch, not the PR-body fallback'
+
 echo "runtime-wiring: PASS"

@@ -167,6 +167,11 @@ jobs:
           echo "outcome_id=$OUTCOME_ID" >> "$GITHUB_OUTPUT"
           echo "tier=$TIER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=BUILD-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+          # CF-CONTRACT-FENCE-01: this attempt's loaded contract fingerprint,
+          # stamped into the START receipt and handed to the worker so it can
+          # fence a later route/merge/alert against a canonical contract that
+          # changed mid-run (see BUILD.md's Stale contract fence).
+          echo "contract=$(runtime_contract_hash "$BODY")" >> "$GITHUB_OUTPUT"
 
       - name: Fire BUILD
         id: fire
@@ -178,6 +183,7 @@ jobs:
           OUTCOME_ID: ${{ steps.resolve.outputs.outcome_id }}
           TIER: ${{ steps.resolve.outputs.tier }}
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
+          CONTRACT: ${{ steps.resolve.outputs.contract }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
@@ -191,7 +197,7 @@ jobs:
           elif [ -z "${BUILD_FIRE_TOKEN:-}" ]; then
             SECRET=BUILD_FIRE_TOKEN; CODE=missing_secret
           else
-            PROMPT="Repository ${REPO}, item #${NUMBER}. Run the current .github/ai-routines/BUILD.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's BUILD_ATTEMPT_ID is ${ATTEMPT_ID}; every terminal first line must carry [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            PROMPT="Repository ${REPO}, item #${NUMBER}. Run the current .github/ai-routines/BUILD.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's BUILD_ATTEMPT_ID is ${ATTEMPT_ID} and its loaded contract fingerprint is CONTRACT: ${CONTRACT} (see BUILD.md's Stale contract fence); every terminal first line must carry [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}]."
             CODE=$(fire_post "$BUILD_FIRE_URL" "$BUILD_FIRE_TOKEN" "$PROMPT" /tmp/build.json)
             SECRET=BUILD_FIRE_TOKEN
           fi
@@ -200,7 +206,7 @@ jobs:
             SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/build.json)
             URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/build.json)
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
-              -f body="BUILD START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}]"
+              -f body="BUILD START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}] [CONTRACT: ${CONTRACT}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
@@ -325,6 +331,12 @@ jobs:
           BODY=$(jq -r '.body // ""' <<< "$PR")
           OUTCOME_ID="$(runtime_outcome_id "$BODY")"
           TIER="$(runtime_tier "$BODY")"
+          # CF-CONTRACT-FENCE-01: the canonical body REVIEW's contract
+          # fingerprint is taken from — starts as the PR body, switched to
+          # the source issue below only when that fallback actually supplies
+          # OUTCOME_ID, so the fingerprint always matches whichever body
+          # this attempt actually bound its contract to.
+          CONTRACT_BODY="$BODY"
 
           # CF-REVIEW-BIND-01: PR-scoped dead-contract guard covers a PR that carries its own OUTCOME-ID
           # too, not only the source-issue fallback below (which already
@@ -332,6 +344,7 @@ jobs:
           # supplying OUTCOME-ID). Same fail-closed rule either way: an
           # unambiguous Closes/Fixes/Resolves source issue that is
           # closed/superseded stops REVIEW under a dead contract.
+          CONTRACT_FETCH_FAILED=false
           if [ -n "$OUTCOME_ID" ]; then
             SRC_NUMBER="$(runtime_closing_issue_number "$BODY")"
             if [ -n "$SRC_NUMBER" ]; then
@@ -341,6 +354,23 @@ jobs:
                 gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
                 terminal_relay_owner "$REPO" "$NUMBER" "$LINE" fire-review-resolve
                 echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+              fi
+              # CF-CONTRACT-FENCE-01 (CORRECT on #397): fingerprint the same
+              # unambiguous, currently-open source issue body this guard
+              # already fetched, not the PR body — the PR body does not
+              # change when Calvin edits the issue contract mid-run, so
+              # hashing it would never detect that edit. Fall back to the PR
+              # body (set above) only when there is no such source issue. A
+              # transient failure fetching that source issue must not fall
+              # back to the PR body silently — it emits an empty CONTRACT
+              # instead (see the matching empty-CONTRACT handling in
+              # fire-owner-on-terminal/owner-on-merge below), since
+              # runtime_contract_is_stale already treats an empty
+              # fingerprint as never stale.
+              if [ -n "$SRC" ]; then
+                CONTRACT_BODY="$(jq -r '.body // ""' <<< "$SRC")"
+              else
+                CONTRACT_FETCH_FAILED=true
               fi
             fi
           fi
@@ -364,6 +394,7 @@ jobs:
                 if [ -n "$SRC_OUTCOME_ID" ]; then
                   OUTCOME_ID="$SRC_OUTCOME_ID"
                   TIER="$(runtime_tier "$SRC_BODY")"
+                  CONTRACT_BODY="$SRC_BODY"
                 fi
               fi
             fi
@@ -391,6 +422,15 @@ jobs:
           echo "outcome_id=$OUTCOME_ID" >> "$GITHUB_OUTPUT"
           echo "tier=$TIER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=REVIEW-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+          # CF-CONTRACT-FENCE-01: see the matching fire-build comment above.
+          # A failed source-issue fetch emits an empty CONTRACT rather than
+          # hashing the PR-body fallback, so it can never manufacture
+          # staleness (see CONTRACT_FETCH_FAILED above).
+          if [ "$CONTRACT_FETCH_FAILED" = true ]; then
+            echo "contract=" >> "$GITHUB_OUTPUT"
+          else
+            echo "contract=$(runtime_contract_hash "$CONTRACT_BODY")" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Fire REVIEW
         id: fire
@@ -402,6 +442,7 @@ jobs:
           OUTCOME_ID: ${{ steps.resolve.outputs.outcome_id }}
           TIER: ${{ steps.resolve.outputs.tier }}
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
+          CONTRACT: ${{ steps.resolve.outputs.contract }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
@@ -412,7 +453,7 @@ jobs:
           if [ -z "${CC_AUTO_FIRE_URL:-}" ]; then SECRET=CC_AUTO_FIRE_URL; CODE=missing_secret
           elif [ -z "${CC_AUTO_FIRE_TOKEN:-}" ]; then SECRET=CC_AUTO_FIRE_TOKEN; CODE=missing_secret
           else
-            PROMPT="Repository ${REPO}, PR #${NUMBER}. Run current .github/ai-routines/CC.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's REVIEW_ATTEMPT_ID is ${ATTEMPT_ID}; terminal first line must carry [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            PROMPT="Repository ${REPO}, PR #${NUMBER}. Run current .github/ai-routines/CC.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's REVIEW_ATTEMPT_ID is ${ATTEMPT_ID} and its loaded contract fingerprint is CONTRACT: ${CONTRACT} (see CC.md's Stale contract fence); terminal first line must carry [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]."
             CODE=$(fire_post "$CC_AUTO_FIRE_URL" "$CC_AUTO_FIRE_TOKEN" "$PROMPT" /tmp/review.json)
             SECRET=CC_AUTO_FIRE_TOKEN
           fi
@@ -420,7 +461,7 @@ jobs:
             SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/review.json)
             URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/review.json)
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
-              -f body="REVIEW START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]"
+              -f body="REVIEW START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}] [CONTRACT: ${CONTRACT}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
@@ -539,6 +580,41 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=OWNER-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+          # CF-CONTRACT-FENCE-01 (CORRECT on #397): fingerprint the wake
+          # target's unambiguous Closes/Fixes/Resolves source issue body,
+          # open or closed, when the target is a PR carrying one — a PR
+          # body does not change when Calvin edits the issue contract
+          # mid-run, so hashing it would never detect that edit. This wake
+          # can fire after the source issue closes on merge, so (unlike
+          # REVIEW's own binding) it must not require the issue to still be
+          # open. Fall back to the wake target's own body (issue or PR
+          # alike) otherwise. An empty CONTRACT means the fetch itself
+          # failed, never that the body was empty — runtime_contract_is_stale
+          # treats an empty fingerprint as never stale, so a failed fetch
+          # must not manufacture staleness by hashing an empty string.
+          TARGET="$(gh api "repos/${{ github.repository }}/issues/${NUMBER}" 2>/dev/null || true)"
+          if [ -n "$TARGET" ]; then
+            CONTRACT_BODY="$(jq -r '.body // ""' <<< "$TARGET")"
+            CONTRACT_FETCH_FAILED=false
+            if [ "$(jq -r 'has("pull_request")' <<< "$TARGET")" = true ]; then
+              SRC_NUMBER="$(runtime_closing_issue_number "$CONTRACT_BODY")"
+              if [ -n "$SRC_NUMBER" ]; then
+                SRC="$(gh api "repos/${{ github.repository }}/issues/${SRC_NUMBER}" 2>/dev/null || true)"
+                if [ -n "$SRC" ]; then
+                  CONTRACT_BODY="$(jq -r '.body // ""' <<< "$SRC")"
+                else
+                  CONTRACT_FETCH_FAILED=true
+                fi
+              fi
+            fi
+            if [ "$CONTRACT_FETCH_FAILED" = true ]; then
+              echo "contract=" >> "$GITHUB_OUTPUT"
+            else
+              echo "contract=$(runtime_contract_hash "$CONTRACT_BODY")" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "contract=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Fire OWNER
         id: fire
@@ -548,6 +624,7 @@ jobs:
           OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
           NUMBER: ${{ steps.resolve.outputs.number }}
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
+          CONTRACT: ${{ steps.resolve.outputs.contract }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
@@ -558,7 +635,7 @@ jobs:
           if [ -z "${OWNER_FIRE_URL:-}" ]; then SECRET=OWNER_FIRE_URL; CODE=missing_secret
           elif [ -z "${OWNER_FIRE_TOKEN:-}" ]; then SECRET=OWNER_FIRE_TOKEN; CODE=missing_secret
           else
-            PROMPT="Repository ${REPO}, item #${NUMBER}, terminal/ruling wake. Follow current .github/ai-routines/OWNER.md exactly. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}; parent terminal first line must carry [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            PROMPT="Repository ${REPO}, item #${NUMBER}, terminal/ruling wake. Follow current .github/ai-routines/OWNER.md exactly. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID} and its loaded contract fingerprint is CONTRACT: ${CONTRACT} (see OWNER.md's Stale contract fence); parent terminal first line must carry [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]."
             CODE=$(fire_post "$OWNER_FIRE_URL" "$OWNER_FIRE_TOKEN" "$PROMPT" /tmp/owner.json)
             SECRET=OWNER_FIRE_TOKEN
           fi
@@ -566,7 +643,7 @@ jobs:
             SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/owner.json)
             URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/owner.json)
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
-              -f body="OWNER START: wake=TERMINAL · session ${SESSION} (${URL}) [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
+              -f body="OWNER START: wake=TERMINAL · session ${SESSION} (${URL}) [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}] [CONTRACT: ${CONTRACT}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then

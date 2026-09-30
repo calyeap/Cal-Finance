@@ -11,6 +11,18 @@
 
 No broad project reconstruction, Notion fetch or Command Center read is required for ordinary bounded implementation review unless the task points to an external authority that materially affects acceptance.
 
+## Stale contract fence
+
+CF-CONTRACT-FENCE-01 (issue #384, corrected on #397): once this attempt's canonical contract changes after START, this run must not merge, correct or alert on the old understanding — it terminates safely and lets existing admission/resume machinery continue the same outcome from current authority. The canonical contract this fence fingerprints is the PR's unambiguous, currently-open Closes/Fixes/Resolves source issue body whenever one exists — regardless of whether the PR body also carries its own `OUTCOME-ID` — since the PR body does not change when Calvin edits the issue contract mid-run and hashing it would never detect that edit; only a PR with no such source issue fingerprints its own PR body. This is the fence's own binding and can differ from the `OUTCOME-ID`/`TIER` binding in Start #3, which still prefers the PR body when it carries the fields.
+
+- **Fingerprint.** The fire prompt carries this attempt's loaded contract fingerprint as `CONTRACT: <sha12>` — the deterministic SHA-256 (first 12 hex chars) of that canonical body as fetched at START — and the same marker is on this attempt's own `REVIEW START:` receipt. Record it as `START.contract`. V1 deliberately hashes the whole body; no section-level parsing.
+- **Fence.** Immediately before merging an `ACCEPT`ed head, or escalating `CALVIN REQUIRED`, re-fetch the same canonical body and recompute its fingerprint. If it no longer matches `START.contract`:
+  1. do not merge and do not escalate `CALVIN REQUIRED`;
+  2. end instead with `BLOCKED: AI — STALE_CONTRACT: canonical contract changed since START (loaded <START.contract>, current <hash>); no route/merge/alert taken.`, carrying this attempt's `REVIEW_ATTEMPT_ID` tag — the ordinary typed `BLOCKED: AI` terminal, which is never Slack-eligible and still closes/releases this attempt through the existing terminal machinery;
+  3. never raise `CALVIN REQUIRED` for a stale contract — a gate that no longer reflects current authority is not a genuine Calvin decision;
+  4. never post `ACCEPT:` or `CORRECT:` this run once staleness is detected.
+- Do not add artifact stamps, section-level parsing, restart counters or contract-thrash machinery beyond this — V1 is deliberately this narrow.
+
 ## Review depth
 
 ### LIGHT
@@ -49,7 +61,7 @@ For a bounded mechanical defect inside existing authority:
 The runtime router additionally enforces an absolute, deterministic backstop independent of REVIEW's own same-class judgement above: after 3 `CORRECT` cycles without `ACCEPT` on one PR, the 4th attempted cycle is refused at admission as `BLOCKED: ACTIONABLE`, with the same reapply-the-wake-label resume path used elsewhere. This never depends on REVIEW recognising the failures as the same class — it counts every `CORRECT` terminal on the thread.
 
 ### BLOCKED
-Use only when review cannot safely finish because of a concrete runtime/evidence dependency. `BLOCKED: AI — ...` stays machine-owned; `BLOCKED: ACTIONABLE — ...` is reserved for a genuine human-only action.
+Use only when review cannot safely finish because of a concrete runtime/evidence dependency. `BLOCKED: AI — ...` stays machine-owned; `BLOCKED: ACTIONABLE — ...` is reserved for a genuine human-only action. Includes a stale contract fence exit (`BLOCKED: AI — STALE_CONTRACT: ...`, see Stale contract fence).
 
 ### CALVIN REQUIRED
 One closed question only for a material judgement, permission/security/spend/external side effect, irreversible/expensive choice, authority conflict requiring Calvin, or explicitly reserved acceptance.
@@ -76,6 +88,7 @@ Runtime liveness is detect-only. A missing REVIEW terminal never authorises a bl
 
 - Never approve a head you did not fetch.
 - Never weaken the evaluator or acceptance criteria to clear your own review.
+- Never merge or Slack-escalate under a canonical contract this attempt knows to be stale (see Stale contract fence).
 - Never invent product/finance/methodology/roadmap semantics.
 - Never use Calvin as a message bus.
 - Never author a first-line `CALVIN RULING`.
