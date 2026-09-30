@@ -112,6 +112,12 @@ require "$REVIEW" 'unambiguous .*and current' 'source-issue OUTCOME-ID fallback 
 require "$ROUTER" 'runtime_closing_issue_number' 'source-issue fallback resolution wired into REVIEW admission'
 require "$ROUTER" 'DEAD CONTRACT' 'closed/superseded contract guard stops routing/repair under a dead contract'
 
+# The dead-contract guard must cover the PR-scoped repair/review paths too,
+# not only an issue-kind BUILD wake — a bare 'DEAD CONTRACT' string match
+# would pass even if only the issue-kind path checked it.
+require "$ROUTER" 'PR-scoped dead-contract guard \(KIND=pr\)' 'fire-build dead-contract guard also covers KIND=pr (CORRECT-triggered repair), not only KIND=issue wakes'
+require "$ROUTER" 'PR-scoped dead-contract guard covers a PR that carries its own OUTCOME-ID' 'fire-review dead-contract guard also covers a PR carrying its own OUTCOME-ID, not only the source-issue fallback'
+
 # CF-REVIEW-BIND-01: the already-approved bounded-repair intent (3 CORRECT
 # cycles without ACCEPT) is enforced at BUILD admission, not left to
 # REVIEW's own prose discipline alone.

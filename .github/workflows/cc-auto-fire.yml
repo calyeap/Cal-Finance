@@ -98,6 +98,21 @@ jobs:
             post_and_stop "STOP: DEAD CONTRACT — ${OUTCOME_ID}'s contract issue #${NUMBER} is closed/superseded; no BUILD worker fired under a dead contract." fire-build-resolve
             exit 0
           fi
+          # CF-REVIEW-BIND-01: PR-scoped dead-contract guard (KIND=pr) —
+          # a CORRECT-triggered repair fire-build wake resolves to the PR
+          # itself, so the issue-kind guard above never runs for it. Fail
+          # closed the same way when the PR's own unambiguous Closes/Fixes/
+          # Resolves source issue is closed/superseded.
+          if [ "$KIND" = pr ]; then
+            SRC_NUMBER="$(runtime_closing_issue_number "$BODY")"
+            if [ -n "$SRC_NUMBER" ]; then
+              SRC=$(gh api "repos/${REPO}/issues/${SRC_NUMBER}" 2>/dev/null || true)
+              if [ -n "$SRC" ] && [ "$(jq -r '.state // "open"' <<< "$SRC")" = closed ]; then
+                post_and_stop "STOP: DEAD CONTRACT — ${OUTCOME_ID}'s source issue #${SRC_NUMBER} is closed/superseded; no BUILD worker fired under a dead contract." fire-build-resolve
+                exit 0
+              fi
+            fi
+          fi
 
           COMMENTS=$(gh api --paginate "repos/${REPO}/issues/${NUMBER}/comments" \
             --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
@@ -310,6 +325,25 @@ jobs:
           BODY=$(jq -r '.body // ""' <<< "$PR")
           OUTCOME_ID="$(runtime_outcome_id "$BODY")"
           TIER="$(runtime_tier "$BODY")"
+
+          # CF-REVIEW-BIND-01: PR-scoped dead-contract guard covers a PR that carries its own OUTCOME-ID
+          # too, not only the source-issue fallback below (which already
+          # fails closed on a closed source issue when it's the one
+          # supplying OUTCOME-ID). Same fail-closed rule either way: an
+          # unambiguous Closes/Fixes/Resolves source issue that is
+          # closed/superseded stops REVIEW under a dead contract.
+          if [ -n "$OUTCOME_ID" ]; then
+            SRC_NUMBER="$(runtime_closing_issue_number "$BODY")"
+            if [ -n "$SRC_NUMBER" ]; then
+              SRC=$(gh api "repos/${REPO}/issues/${SRC_NUMBER}" 2>/dev/null || true)
+              if [ -n "$SRC" ] && [ "$(jq -r '.state // "open"' <<< "$SRC")" = closed ]; then
+                LINE="STOP: DEAD CONTRACT — ${OUTCOME_ID}'s source issue #${SRC_NUMBER} is closed/superseded; no REVIEW worker fired under a dead contract."
+                gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
+                terminal_relay_owner "$REPO" "$NUMBER" "$LINE" fire-review-resolve
+                echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
+              fi
+            fi
+          fi
 
           # CF-REVIEW-BIND-01: when the PR body itself carries no canonical
           # OUTCOME-ID, REVIEW may fall back to the PR's own Closes/Fixes/
