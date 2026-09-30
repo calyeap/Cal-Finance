@@ -92,9 +92,25 @@ jobs:
             post_and_stop "STOP: INVALID TIER — use LIGHT, NORMAL, or HEAVY." fire-build-resolve
             exit 0
           fi
+          # CF-REVIEW-BIND-01: a closed/superseded contract issue can no
+          # longer keep routing/repair alive under a dead contract.
+          if [ "$KIND" = issue ] && [ "$(jq -r '.state // "open"' <<< "$TARGET")" = closed ]; then
+            post_and_stop "STOP: DEAD CONTRACT — ${OUTCOME_ID}'s contract issue #${NUMBER} is closed/superseded; no BUILD worker fired under a dead contract." fire-build-resolve
+            exit 0
+          fi
 
           COMMENTS=$(gh api --paginate "repos/${REPO}/issues/${NUMBER}/comments" \
             --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
+
+          # CF-REVIEW-BIND-01: enforce the already-approved bounded-repair
+          # intent at runtime — a 4th CORRECT cycle without ACCEPT stops the
+          # loop as BLOCKED: ACTIONABLE with the existing deterministic
+          # resume path, instead of correcting indefinitely.
+          if [ "$EVENT_NAME" = "issue_comment" ] && [ "$(runtime_correct_cycles_exhausted "$COMMENTS")" = true ]; then
+            post_and_stop "BLOCKED: ACTIONABLE — ${OUTCOME_ID} repair loop exceeded 3 CORRECT cycles without ACCEPT; reapply the \`needs-build-wake\` label to #${NUMBER} to deliberately re-drive." fire-build-resolve
+            exit 0
+          fi
+
           ATTEMPT_OPEN="$(runtime_outcome_attempt_open "$COMMENTS" "$OUTCOME_ID")"
 
           OPEN_ITEMS=$(gh api --paginate "repos/${REPO}/issues?state=open&per_page=100" | jq -s 'add // []')
@@ -294,8 +310,33 @@ jobs:
           BODY=$(jq -r '.body // ""' <<< "$PR")
           OUTCOME_ID="$(runtime_outcome_id "$BODY")"
           TIER="$(runtime_tier "$BODY")"
+
+          # CF-REVIEW-BIND-01: when the PR body itself carries no canonical
+          # OUTCOME-ID, REVIEW may fall back to the PR's own Closes/Fixes/
+          # Resolves source issue's OUTCOME-ID — but only when that relation
+          # is unambiguous (exactly one referenced issue) and current (that
+          # issue is still open, not closed/superseded). Any ambiguity or a
+          # closed/superseded source issue is never used and falls through
+          # to the same fail-closed STOP below as a PR with no OUTCOME-ID
+          # at all — this is also the closed/superseded contract guard for
+          # REVIEW's own resolution path.
           if [ -z "$OUTCOME_ID" ]; then
-            LINE="STOP: MISSING OUTCOME-ID — REVIEW cannot bind this PR to one task contract."
+            SRC_NUMBER="$(runtime_closing_issue_number "$BODY")"
+            if [ -n "$SRC_NUMBER" ]; then
+              SRC=$(gh api "repos/${REPO}/issues/${SRC_NUMBER}" 2>/dev/null || true)
+              if [ -n "$SRC" ] && [ "$(jq -r '.state // "closed"' <<< "$SRC")" = open ]; then
+                SRC_BODY=$(jq -r '.body // ""' <<< "$SRC")
+                SRC_OUTCOME_ID="$(runtime_outcome_id "$SRC_BODY")"
+                if [ -n "$SRC_OUTCOME_ID" ]; then
+                  OUTCOME_ID="$SRC_OUTCOME_ID"
+                  TIER="$(runtime_tier "$SRC_BODY")"
+                fi
+              fi
+            fi
+          fi
+
+          if [ -z "$OUTCOME_ID" ]; then
+            LINE="STOP: MISSING OUTCOME-ID — REVIEW cannot bind this PR to one task contract (no PR-body OUTCOME-ID and no unambiguous, current source-issue fallback)."
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
             # GH_TOKEN-authored; relay directly (see terminal-relay.sh).
             terminal_relay_owner "$REPO" "$NUMBER" "$LINE" fire-review-resolve

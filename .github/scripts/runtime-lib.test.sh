@@ -131,4 +131,35 @@ JSON
 )
 assert_eq "$(runtime_actor_attempt_open "$OWNER_DONE" OWNER)" false "OWNER terminal releases parent admission"
 
+# CF-REVIEW-BIND-01: deterministic bounded-repair count/threshold — 3
+# CORRECT cycles are admitted, a 4th is exhausted.
+NO_CORRECT=$(jq -n '[{body:"REVIEW START: OUTCOME-ID=CF-X [REVIEW_ATTEMPT_ID: R1]", created_at:"2026-09-30T00:00:00Z"}]')
+assert_eq "$(runtime_correct_cycle_count "$NO_CORRECT")" 0 "no CORRECT terminals yet"
+assert_eq "$(runtime_correct_cycles_exhausted "$NO_CORRECT")" false "zero cycles never exhausted"
+
+THREE_CORRECT=$(jq -n '[
+  {body:"CORRECT: fix one [REVIEW_ATTEMPT_ID: R1]", created_at:"2026-09-30T00:01:00Z"},
+  {body:"CORRECT: fix two [REVIEW_ATTEMPT_ID: R2]", created_at:"2026-09-30T00:02:00Z"},
+  {body:"CORRECT: fix three [REVIEW_ATTEMPT_ID: R3]", created_at:"2026-09-30T00:03:00Z"}
+]')
+assert_eq "$(runtime_correct_cycle_count "$THREE_CORRECT")" 3 "third CORRECT counted"
+assert_eq "$(runtime_correct_cycles_exhausted "$THREE_CORRECT")" false "third CORRECT cycle is allowed"
+
+FOUR_CORRECT=$(jq -n '[
+  {body:"CORRECT: fix one [REVIEW_ATTEMPT_ID: R1]", created_at:"2026-09-30T00:01:00Z"},
+  {body:"CORRECT: fix two [REVIEW_ATTEMPT_ID: R2]", created_at:"2026-09-30T00:02:00Z"},
+  {body:"CORRECT: fix three [REVIEW_ATTEMPT_ID: R3]", created_at:"2026-09-30T00:03:00Z"},
+  {body:"CORRECT: fix four [REVIEW_ATTEMPT_ID: R4]", created_at:"2026-09-30T00:04:00Z"}
+]')
+assert_eq "$(runtime_correct_cycle_count "$FOUR_CORRECT")" 4 "fourth CORRECT counted"
+assert_eq "$(runtime_correct_cycles_exhausted "$FOUR_CORRECT")" true "fourth attempted cycle is exhausted"
+
+# CF-REVIEW-BIND-01: source-issue fallback resolution is bounded to exactly
+# one unambiguous reference; zero or multiple distinct numbers fail closed.
+assert_eq "$(runtime_closing_issue_number 'Closes #390')" 390 "single Closes reference resolves"
+assert_eq "$(runtime_closing_issue_number 'Fixes #12 and #34')" "" "ambiguous multi-issue reference fails closed"
+assert_eq "$(runtime_closing_issue_number 'No linking keyword here, just #390 mentioned')" "" "a bare issue mention without a closing keyword is not a fallback source"
+assert_eq "$(runtime_closing_issue_number 'Resolved #77')" 77 "past-tense Resolved keyword recognised"
+assert_eq "$(runtime_closing_issue_number 'Closes #77, closes #77')" 77 "repeated identical reference stays unambiguous"
+
 echo "runtime-lib: PASS"

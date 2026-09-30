@@ -333,6 +333,49 @@ runtime_actor_attempt_open() {
   if [ "$status" = complete ]; then echo false; else echo true; fi
 }
 
+# runtime_correct_cycle_count <comments_json>
+# CF-REVIEW-BIND-01: total REVIEW `CORRECT:` terminal receipts already
+# posted on this thread, derived purely from durable comments/receipts —
+# no separate state store. Used to enforce the already-approved bounded-
+# repair intent (3 CORRECT cycles without ACCEPT) deterministically at
+# admission time instead of resting on REVIEW's own prose discipline.
+runtime_correct_cycle_count() {
+  local comments_json="$1" body term count=0
+  while IFS= read -r body; do
+    [ -z "$body" ] && continue
+    body="$(jq -r . <<< "$body")"
+    term="$(runtime_terminal_line "$body")"
+    case "$term" in CORRECT|CORRECT:*) count=$((count + 1)) ;; esac
+  done < <(jq -c '.[].body' <<< "$comments_json")
+  printf '%s' "$count"
+}
+
+# runtime_correct_cycles_exhausted <comments_json>
+# True once a 4th CORRECT cycle is being attempted (the comment that
+# triggered this admission is already included in <comments_json>, so 3
+# prior CORRECT terminals plus this one is exactly the bound: the 3rd
+# CORRECT is admitted, the 4th is refused).
+runtime_correct_cycles_exhausted() {
+  local count
+  count="$(runtime_correct_cycle_count "$1")"
+  if [ "$count" -gt 3 ]; then echo true; else echo false; fi
+}
+
+# runtime_closing_issue_number <body>
+# The single issue number a PR body's Closes/Fixes/Resolves keyword names,
+# or empty when there is none or more than one distinct number. Ambiguity
+# must fail closed rather than guess among candidates — this is the only
+# safe input to a source-issue OUTCOME-ID fallback.
+runtime_closing_issue_number() {
+  local body="$1" nums count
+  nums="$(printf '%s' "$body" \
+    | grep -inoE '(close[sd]?|fix(e[sd])?|resolve[sd]?)[[:space:]]+#[0-9]+.*' \
+    | grep -oE '#[0-9]+' | grep -oE '[0-9]+' | sort -u)"
+  count=0
+  [ -n "$nums" ] && count=$(printf '%s\n' "$nums" | grep -c '.')
+  if [ "$count" -eq 1 ]; then printf '%s' "$nums"; else printf ''; fi
+}
+
 # Latest BUILD START for this outcome without a later correlated BUILD terminal.
 runtime_outcome_attempt_open() {
   local comments_json="$1" outcome_id="$2" start line attempt started status
