@@ -64,10 +64,7 @@ jobs:
           elif [ -z "${OWNER_FIRE_TOKEN:-}" ]; then SECRET=OWNER_FIRE_TOKEN; CODE=missing_secret
           else
             PROMPT="Repository ${REPO}, PR #${NUMBER} merged at ${{ github.event.pull_request.merge_commit_sha }}. Follow current .github/ai-routines/OWNER.md exactly for this MERGE wake. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}; parent terminal first line must carry [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]."
-            REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
-            CODE=$(curl -sS -o /tmp/owner.json -w '%{http_code}' --request POST "$OWNER_FIRE_URL" \
-              --header "Authorization: Bearer $OWNER_FIRE_TOKEN" --header "anthropic-version: 2023-06-01" \
-              --header "anthropic-beta: experimental-cc-routine-2026-04-01" --header "Content-Type: application/json" --data "$REQUEST") || CODE=curl_error
+            CODE=$(fire_post "$OWNER_FIRE_URL" "$OWNER_FIRE_TOKEN" "$PROMPT" /tmp/owner.json)
             SECRET=OWNER_FIRE_TOKEN
           fi
           if [ "$CODE" != curl_error ] && [ "$CODE" -ge 200 ] 2>/dev/null && [ "$CODE" -lt 300 ] 2>/dev/null; then
@@ -79,6 +76,8 @@ jobs:
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
               LINE="BLOCKED: ACTIONABLE — OWNER transport unavailable (${CODE}); refresh ${SECRET}. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
+            elif [ "$(fire_transient_status "$CODE")" = true ]; then
+              LINE="BLOCKED: ACTIONABLE — OWNER transport did not recover after 4 attempts (${CODE}); reapply the \`needs-owner-wake\` label to PR #${NUMBER} to re-drive. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             else
               LINE="BLOCKED: AI — OWNER transport failed (${CODE}). [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             fi

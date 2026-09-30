@@ -69,6 +69,8 @@ _terminal_relay_owner_blocked() {
   local repo="$1" number="$2" attempt_id="$3" secret="$4" code="$5" body
   if [ "$(fire_auth_status "$code")" = auth ]; then
     body="BLOCKED: ACTIONABLE — OWNER relay transport unavailable (${code}); refresh ${secret}. No worker started. [OWNER_ATTEMPT_ID: ${attempt_id}]"
+  elif [ "$(fire_transient_status "$code")" = true ]; then
+    body="BLOCKED: ACTIONABLE — OWNER relay transport did not recover after 4 attempts (${code}); reapply the \`needs-owner-wake\` label to #${number} to re-drive. No worker started. [OWNER_ATTEMPT_ID: ${attempt_id}]"
   else
     body="BLOCKED: AI — OWNER relay transport failed (${code}). [OWNER_ATTEMPT_ID: ${attempt_id}]"
   fi
@@ -114,13 +116,9 @@ terminal_relay_owner() {
     return 0
   fi
 
-  local prompt request code
+  local prompt code
   prompt="Repository ${repo}, item #${number}, relay wake: a workflow-authored terminal (\"${line}\") could not recursively trigger the event path. Follow current .github/ai-routines/OWNER.md exactly for this wake. This run's OWNER_ATTEMPT_ID is ${attempt_id}; parent terminal first line must carry [OWNER_ATTEMPT_ID: ${attempt_id}]."
-  request=$(jq -n --arg text "$prompt" '{text:$text}')
-  code=$(curl -sS -o /tmp/terminal-relay-owner.json -w '%{http_code}' --request POST "$OWNER_FIRE_URL" \
-    --header "Authorization: Bearer $OWNER_FIRE_TOKEN" --header "anthropic-version: 2023-06-01" \
-    --header "anthropic-beta: experimental-cc-routine-2026-04-01" --header "Content-Type: application/json" \
-    --data "$request") || code=curl_error
+  code=$(fire_post "$OWNER_FIRE_URL" "$OWNER_FIRE_TOKEN" "$prompt" /tmp/terminal-relay-owner.json)
 
   if [ "$code" != curl_error ] && [ "$code" -ge 200 ] 2>/dev/null && [ "$code" -lt 300 ] 2>/dev/null; then
     local session url
