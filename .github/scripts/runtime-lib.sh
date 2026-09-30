@@ -201,6 +201,22 @@ runtime_is_calvin_ruling_line() {
   printf '%s' "$1" | grep -Eq '^CALVIN RULING(:| *[—-])'
 }
 
+# runtime_is_gate_reset_line <line>
+# True when <line> is an admission receipt that Calvin's own re-drive action
+# produces: reapplying a wake label posts a fresh "BUILD START:" / "REVIEW
+# START:" comment with no CALVIN RULING text at all (the documented recovery
+# path for a transport-failure BLOCKED: ACTIONABLE — see CC.md's CORRECT
+# backstop). That re-drive is itself evidence the prior gate was cleared, so
+# it resets the gate exactly like a CALVIN RULING would. "OWNER START:" is
+# deliberately excluded: that marks the #365 reconciliation wake, which does
+# not indicate the underlying gate was resolved.
+runtime_is_gate_reset_line() {
+  case "$1" in
+    "BUILD START:"*|"REVIEW START:"*) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
 # runtime_slack_is_duplicate <comments_json> <this_created_at> <this_raw>
 # Pure. CF-SLACK-DEDUPE-02: dedupes by the underlying still-open Calvin
 # gate — a deterministic key of (canonical item, implicit in <comments_json>
@@ -213,23 +229,26 @@ runtime_is_calvin_ruling_line() {
 # True only when <this_raw> is itself Slack-eligible (runtime_slack_kind !=
 # none) and, scanning <comments_json> for comments strictly before
 # <this_created_at> in most-recent-first order, the first comment that is
-# either a Calvin resolution (runtime_is_calvin_ruling_line) or itself
-# Slack-eligible decides the outcome:
-#   - hitting a resolution first means any prior gate was already closed,
-#     so <this_raw> opens a fresh gate — not a duplicate, whatever its kind;
+# a Calvin resolution (runtime_is_calvin_ruling_line), a gate-reset re-drive
+# receipt (runtime_is_gate_reset_line), or itself Slack-eligible decides the
+# outcome:
+#   - hitting a resolution or re-drive receipt first means any prior gate
+#     was already closed, so <this_raw> opens a fresh gate — not a
+#     duplicate, whatever its kind;
 #   - hitting a same-kind alert first means an unresolved alert for this
 #     exact gate already reached Slack — a duplicate, regardless of which
 #     actor authored either comment or how either is worded;
 #   - hitting a different-kind alert first is a distinct gate; it neither
 #     resolves nor restates this one, so the scan continues past it.
-# No earlier resolution or alert at all (including an empty/omitted
-# history) means this is the first alert for the gate: not a duplicate.
+# No earlier resolution, re-drive receipt, or alert at all (including an
+# empty/omitted history) means this is the first alert for the gate: not a
+# duplicate.
 runtime_slack_is_duplicate() {
   local comments_json="$1" before="$2" this_raw="$3" kind
   kind="$(runtime_slack_kind "$this_raw")"
   if [ "$kind" = none ]; then echo false; return; fi
 
-  local earlier_bodies body term k
+  local earlier_bodies body term first k
   earlier_bodies="$(jq -c --arg before "$before" '
     [ .[] | select(.created_at < $before) ] | sort_by(.created_at) | reverse | .[].body
   ' <<< "$comments_json")"
@@ -237,7 +256,8 @@ runtime_slack_is_duplicate() {
   while IFS= read -r body; do
     [ -z "$body" ] && continue
     body="$(jq -r . <<< "$body")"
-    if runtime_is_calvin_ruling_line "$(runtime_first_line "$body")"; then
+    first="$(runtime_first_line "$body")"
+    if runtime_is_calvin_ruling_line "$first" || runtime_is_gate_reset_line "$first"; then
       echo false
       return
     fi

@@ -87,6 +87,24 @@ MIXED_KIND_NO_RESOLUTION=$(jq -n '[
 ]')
 assert_eq "$(runtime_slack_is_duplicate "$MIXED_KIND_NO_RESOLUTION" "2026-09-28T15:12:00Z" 'CALVIN REQUIRED: pick A or B for the export path (still open)')" true "restating the original kind past an unrelated different-kind alert, with no resolution, is still deduped"
 
+# A re-driven BUILD START:/REVIEW START: admission receipt is the documented
+# "reapply the wake label" recovery Calvin uses for a transport-failure
+# BLOCKED: ACTIONABLE, and leaves no CALVIN RULING comment behind. It must
+# still reset the gate — otherwise every genuinely new BLOCKED: ACTIONABLE
+# on the same item is silently dropped forever after one re-drive.
+REDRIVEN_THEN_NEW=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — BUILD transport did not recover; reapply `needs-build-wake` to retry [BUILD_ATTEMPT_ID: B1]", created_at: "2026-09-20T10:00:00Z"},
+  {body: "BUILD START: OUTCOME-ID=CF-X TIER=NORMAL [BUILD_ATTEMPT_ID: B2]", created_at: "2026-09-21T10:00:00Z"},
+  {body: "DONE: EVIDENCE — resolved on retry [BUILD_ATTEMPT_ID: B2]", created_at: "2026-09-22T10:00:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REDRIVEN_THEN_NEW" "2026-09-29T10:00:00Z" 'BLOCKED: ACTIONABLE — Supabase service-role key must be granted by Calvin')" false "a re-driven BUILD START: resets the gate; a later genuinely new BLOCKED: ACTIONABLE still sends"
+
+REDRIVEN_VIA_REVIEW=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — same still-open gate [BUILD_ATTEMPT_ID: B1]", created_at: "2026-09-20T10:00:00Z"},
+  {body: "REVIEW START: OUTCOME-ID=CF-X TIER=NORMAL [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-09-21T10:00:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REDRIVEN_VIA_REVIEW" "2026-09-22T10:00:00Z" 'BLOCKED: ACTIONABLE — a new, later gate')" false "a re-driven REVIEW START: also resets the gate"
+
 runtime_is_calvin_ruling_line 'CALVIN RULING — APPROVE OPTION B' || fail "em-dash CALVIN RULING marker recognised"
 runtime_is_calvin_ruling_line 'CALVIN RULING: approve' || fail "colon CALVIN RULING marker recognised"
 runtime_is_calvin_ruling_line 'quoting: CALVIN RULING — APPROVE OPTION B was mentioned earlier' && fail "CALVIN RULING not at line start is not a marker"
