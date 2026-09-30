@@ -142,4 +142,14 @@ require "$ROUTER" 'runtime_contract_hash' 'router computes the contract fingerpr
 require "$MERGE" 'runtime_contract_hash' 'merge-path OWNER fire also stamps a contract fingerprint'
 require "$ROUTER" '\[CONTRACT: \$\{CONTRACT\}\]' 'START receipts carry the CONTRACT fingerprint marker'
 
+# CF-CONTRACT-FENCE-01 (CORRECT on #397): a PR body never changes when
+# Calvin edits the issue contract mid-run, so a PR-scoped fire must bind
+# CONTRACT_BODY to the PR's unambiguous, currently-open source issue body
+# (not only describe that in prose) whenever one exists, not only when the
+# PR lacks its own OUTCOME-ID.
+require "$ROUTER" 'CONTRACT_BODY="\$\(jq -r .*<<< "\$SRC"\)"' 'fire-review binds CONTRACT_BODY to the source issue body, not only the PR body'
+require "$ROUTER" 'CONTRACT_BODY="\$\(jq -r .*<<< "\$TARGET"\)"' 'fire-owner-on-terminal starts CONTRACT_BODY from the fetched wake-target body'
+require "$MERGE" 'CONTRACT_BODY="\$\(jq -r .*<<< "\$TARGET"\)"' 'merge-path OWNER fire starts CONTRACT_BODY from the fetched PR body'
+require "$ROUTER" 'has\("pull_request"\)' 'fire-owner-on-terminal distinguishes a PR wake target before preferring its source issue body'
+
 echo "runtime-wiring: PASS"

@@ -354,6 +354,15 @@ jobs:
                 terminal_relay_owner "$REPO" "$NUMBER" "$LINE" fire-review-resolve
                 echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0
               fi
+              # CF-CONTRACT-FENCE-01 (CORRECT on #397): fingerprint the same
+              # unambiguous, currently-open source issue body this guard
+              # already fetched, not the PR body — the PR body does not
+              # change when Calvin edits the issue contract mid-run, so
+              # hashing it would never detect that edit. Fall back to the PR
+              # body (set above) only when there is no such source issue.
+              if [ -n "$SRC" ]; then
+                CONTRACT_BODY="$(jq -r '.body // ""' <<< "$SRC")"
+              fi
             fi
           fi
 
@@ -555,10 +564,30 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=OWNER-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
-          # CF-CONTRACT-FENCE-01: fingerprint the wake target's own body
-          # (issue or PR alike) as this attempt's loaded canonical contract.
-          TARGET_BODY=$(gh api "repos/${{ github.repository }}/issues/${NUMBER}" --jq '.body // ""' 2>/dev/null || true)
-          echo "contract=$(runtime_contract_hash "$TARGET_BODY")" >> "$GITHUB_OUTPUT"
+          # CF-CONTRACT-FENCE-01 (CORRECT on #397): fingerprint the wake
+          # target's unambiguous, currently-open Closes/Fixes/Resolves
+          # source issue body when the target is a PR carrying one — a PR
+          # body does not change when Calvin edits the issue contract
+          # mid-run, so hashing it would never detect that edit. Fall back
+          # to the wake target's own body (issue or PR alike) otherwise. An
+          # empty CONTRACT means the fetch itself failed, never that the
+          # body was empty — runtime_contract_is_stale treats an empty
+          # fingerprint as never stale, so a failed fetch must not
+          # manufacture staleness by hashing an empty string.
+          TARGET="$(gh api "repos/${{ github.repository }}/issues/${NUMBER}" 2>/dev/null || true)"
+          if [ -n "$TARGET" ]; then
+            CONTRACT_BODY="$(jq -r '.body // ""' <<< "$TARGET")"
+            if [ "$(jq -r 'has("pull_request")' <<< "$TARGET")" = true ]; then
+              SRC_NUMBER="$(runtime_closing_issue_number "$CONTRACT_BODY")"
+              if [ -n "$SRC_NUMBER" ]; then
+                SRC="$(gh api "repos/${{ github.repository }}/issues/${SRC_NUMBER}" 2>/dev/null || true)"
+                [ -n "$SRC" ] && CONTRACT_BODY="$(jq -r '.body // ""' <<< "$SRC")"
+              fi
+            fi
+            echo "contract=$(runtime_contract_hash "$CONTRACT_BODY")" >> "$GITHUB_OUTPUT"
+          else
+            echo "contract=" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Fire OWNER
         id: fire
