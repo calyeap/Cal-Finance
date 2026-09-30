@@ -127,6 +127,35 @@ runtime_tier() {
   esac
 }
 
+
+# runtime_contract_hash <body>
+# CF-CONTRACT-FENCE-01: deterministic fingerprint (SHA-256, first 12 hex
+# chars) of a canonical task-contract body. V1 deliberately hashes the
+# whole body — no section-level parsing. Stamped into an attempt's own
+# START receipt (CONTRACT: <hash>) and recomputed later, at a consequential
+# routing/merge/Slack seam, against the current canonical body to detect a
+# contract that changed after this attempt loaded it.
+runtime_contract_hash() {
+  printf '%s' "$1" | sha256sum | cut -c1-12
+}
+
+# runtime_contract_is_stale <loaded_hash> <current_body>
+# True when <current_body>'s fingerprint no longer matches <loaded_hash> —
+# the canonical contract changed since this attempt's own START. An empty
+# <loaded_hash> (no fingerprint was recorded for this attempt) is never
+# treated as stale: there is nothing to compare against, so the fence only
+# fails closed on an actual, evidenced mismatch.
+runtime_contract_is_stale() {
+  local loaded_hash="$1" current_body="$2"
+  if [ -z "$loaded_hash" ]; then
+    echo false
+  elif [ "$loaded_hash" = "$(runtime_contract_hash "$current_body")" ]; then
+    echo false
+  else
+    echo true
+  fi
+}
+
 runtime_is_correct() {
   local line
   line="$(runtime_terminal_line "$1")"

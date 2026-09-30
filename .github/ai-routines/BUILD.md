@@ -21,6 +21,19 @@ If `OUTCOME-ID` is missing/ambiguous, end `STOP: MISSING OUTCOME-ID — ...`. Do
 
 No broad Notion/Command Center/tooling inventory is a routine prerequisite. A triggered availability check for one specific accepted accelerator whose trigger matches the exact task is fine when applicable; retrieve any other external authority only when the task actually depends on it.
 
+## Stale contract fence
+
+CF-CONTRACT-FENCE-01 (issue #384): once this attempt's canonical contract (the wake target's issue body) changes after START, this run must not route, merge or alert on the old understanding — it terminates safely and lets existing admission/resume machinery continue the same outcome from current authority.
+
+- **Fingerprint.** The fire prompt carries this attempt's loaded contract fingerprint as `CONTRACT: <sha12>` — the deterministic SHA-256 (first 12 hex chars) of the canonical issue body as fetched at START — and the same marker is on this attempt's own `BUILD START:` receipt. Record it as `START.contract`. V1 deliberately hashes the whole body; no section-level parsing.
+- **Fence.** Immediately before any of these three actions — merging a LIGHT-tier head, escalating `CALVIN REQUIRED`, or escalating `BLOCKED: ACTIONABLE` — re-fetch the canonical issue body and recompute its fingerprint. If it no longer matches `START.contract`:
+  1. take none of that action — no merge, no `CALVIN REQUIRED`, no `BLOCKED: ACTIONABLE`;
+  2. end instead with `BLOCKED: AI — STALE_CONTRACT: canonical contract changed since START (loaded <START.contract>, current <hash>); no route/merge/alert taken.`, carrying this attempt's `BUILD_ATTEMPT_ID` tag — the ordinary typed `BLOCKED: AI` terminal, which is never Slack-eligible and still closes/releases this attempt through the existing terminal machinery;
+  3. never raise `CALVIN REQUIRED` for a stale contract — a gate that no longer reflects current authority is not a genuine Calvin decision;
+  4. take no other consequential action this run.
+- An ordinary `DONE:` hand-off to REVIEW is unaffected by this fence — REVIEW independently re-fetches and re-binds the contract on its own exact head, so it is not a fenced seam here.
+- Do not add artifact stamps, section-level parsing, restart counters or contract-thrash machinery beyond this — V1 is deliberately this narrow.
+
 ## Execute + self-correct
 
 Use the smallest correct change.
@@ -85,7 +98,7 @@ Every fired run ends with exactly one first-line terminal receipt and, when the 
 
 - `DONE: <PR link>` — NORMAL/HEAVY ready for review, or LIGHT fallback review.
 - `DONE: EVIDENCE — <evidence>` — valid no-code/evidence-only outcome.
-- `BLOCKED: AI — <specific unresolved machine/runtime blocker>` — Calvin cannot usefully resolve it.
+- `BLOCKED: AI — <specific unresolved machine/runtime blocker>` — Calvin cannot usefully resolve it. Includes a stale contract fence exit (`BLOCKED: AI — STALE_CONTRACT: ...`, see Stale contract fence).
 - `BLOCKED: ACTIONABLE — <specific human-only action>` — only when a real permission/secret/external action is required.
 - `STOP: RECONCILIATION REQUIRED — <conflicting authorities>` — consequential authority conflict.
 - `CALVIN REQUIRED: <one closed question>` — genuine judgement/trade-off/permission/security/spend/irreversible choice or reserved acceptance.
@@ -99,6 +112,7 @@ A REVIEW `CORRECT:` on the same open PR may re-enter BUILD for that exact PR/out
 ## Hard bounds
 
 - One `OUTCOME-ID` → at most one active BUILD and one active PR.
+- Never merge or Slack-escalate under a canonical contract this attempt knows to be stale (see Stale contract fence).
 - No hidden claim branches, queue, database or second control plane.
 - No Calvin message relay.
 - No worker-authored first-line `CALVIN RULING`.

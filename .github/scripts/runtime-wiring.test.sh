@@ -127,4 +127,19 @@ require "$REVIEW" '3 .CORRECT. cycles without .ACCEPT' 'REVIEW documents the det
 # An unreproduced ordinary failure is never manufactured into Calvin work.
 require "$BUILD" 'cannot be reproduced' 'unreproduced bounded diagnosis completes without manufacturing CALVIN REQUIRED'
 
+# CF-CONTRACT-FENCE-01 (issue #384): a worker must not route, merge or
+# alert once the canonical contract it loaded at START no longer matches
+# the current one — documented in each actor's own contract, and the
+# CONTRACT fingerprint is actually threaded through the router that fires
+# BUILD/REVIEW/OWNER, not only described in prose.
+require "$BUILD" 'Stale contract fence' 'BUILD documents the stale-contract fence'
+require "$REVIEW" 'Stale contract fence' 'REVIEW documents the stale-contract fence'
+require "$OWNER" 'Stale contract fence' 'OWNER documents the stale-contract fence'
+require "$BUILD" 'STALE_CONTRACT' 'BUILD names the typed stale-contract exit'
+require "$REVIEW" 'STALE_CONTRACT' 'REVIEW names the typed stale-contract exit'
+require "$OWNER" 'STALE_CONTRACT' 'OWNER names the typed stale-contract exit'
+require "$ROUTER" 'runtime_contract_hash' 'router computes the contract fingerprint for BUILD/REVIEW/OWNER fires'
+require "$MERGE" 'runtime_contract_hash' 'merge-path OWNER fire also stamps a contract fingerprint'
+require "$ROUTER" '\[CONTRACT: \$\{CONTRACT\}\]' 'START receipts carry the CONTRACT fingerprint marker'
+
 echo "runtime-wiring: PASS"

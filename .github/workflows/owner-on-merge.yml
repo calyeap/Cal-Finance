@@ -44,6 +44,11 @@ jobs:
           echo "skip=false" >> "$GITHUB_OUTPUT"
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=OWNER-MERGE-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
+          # CF-CONTRACT-FENCE-01: fingerprint the merged PR's own body as
+          # this attempt's loaded canonical contract (see cc-auto-fire.yml's
+          # matching fire-owner-on-terminal comment).
+          TARGET_BODY=$(gh api "repos/${{ github.repository }}/issues/${NUMBER}" --jq '.body // ""' 2>/dev/null || true)
+          echo "contract=$(runtime_contract_hash "$TARGET_BODY")" >> "$GITHUB_OUTPUT"
 
       - name: Fire OWNER
         id: fire
@@ -53,6 +58,7 @@ jobs:
           OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
           NUMBER: ${{ steps.resolve.outputs.number }}
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
+          CONTRACT: ${{ steps.resolve.outputs.contract }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
@@ -63,7 +69,7 @@ jobs:
           if [ -z "${OWNER_FIRE_URL:-}" ]; then SECRET=OWNER_FIRE_URL; CODE=missing_secret
           elif [ -z "${OWNER_FIRE_TOKEN:-}" ]; then SECRET=OWNER_FIRE_TOKEN; CODE=missing_secret
           else
-            PROMPT="Repository ${REPO}, PR #${NUMBER} merged at ${{ github.event.pull_request.merge_commit_sha }}. Follow current .github/ai-routines/OWNER.md exactly for this MERGE wake. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}; parent terminal first line must carry [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]."
+            PROMPT="Repository ${REPO}, PR #${NUMBER} merged at ${{ github.event.pull_request.merge_commit_sha }}. Follow current .github/ai-routines/OWNER.md exactly for this MERGE wake. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID} and its loaded contract fingerprint is CONTRACT: ${CONTRACT} (see OWNER.md's Stale contract fence); parent terminal first line must carry [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]."
             CODE=$(fire_post "$OWNER_FIRE_URL" "$OWNER_FIRE_TOKEN" "$PROMPT" /tmp/owner.json)
             SECRET=OWNER_FIRE_TOKEN
           fi
@@ -71,7 +77,7 @@ jobs:
             SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/owner.json)
             URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/owner.json)
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
-              -f body="OWNER START: wake=MERGE · session ${SESSION} (${URL}) [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
+              -f body="OWNER START: wake=MERGE · session ${SESSION} (${URL}) [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}] [CONTRACT: ${CONTRACT}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
