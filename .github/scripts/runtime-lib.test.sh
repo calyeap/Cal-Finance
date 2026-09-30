@@ -54,18 +54,61 @@ assert_eq "$(runtime_is_calvin_required $'Some narrative update.\n\nCALVIN REQUI
 assert_eq "$(runtime_slack_kind $'Some narrative update.\n\nCALVIN REQUIRED: quoted later, not a terminal')" none "prose followed later by CALVIN REQUIRED remains Slack-ineligible"
 assert_eq "$(runtime_is_calvin_required $'[BUILD_ATTEMPT_ID: BUILD-1-1] not standalone\nCALVIN REQUIRED: pick A or B')" false "a metadata line with trailing text is not tolerated as metadata-only"
 
-# CF-WORKFLOW-PROOF-SLACK-DEDUPE-01: OWNER restating an already-alerted
-# child blocker is a duplicate; a distinct/new OWNER blocker, or any
-# non-OWNER terminal, is not.
+# CF-SLACK-DEDUPE-02 (issue #391): dedupe keys on the still-open Calvin
+# gate — canonical item (implicit: one thread) + Slack kind + open/resolved
+# state — never on a worker BUILD_/REVIEW_/OWNER_ATTEMPT_ID or on which
+# actor/wording restated it. The prior CF-WORKFLOW-PROOF-SLACK-DEDUPE-01
+# version required the later comment to literally reference an earlier
+# alerted comment's own attempt ID, which is not a guaranteed convention —
+# these cases have no shared attempt ID at all and must still dedupe.
 CHILD_COMMENTS=$(jq -n '[
   {body: "BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]", created_at: "2026-09-28T15:10:00Z"},
   {body: "OWNER START: wake=TERMINAL [OWNER_ATTEMPT_ID: O1]", created_at: "2026-09-28T15:11:00Z"}
 ]')
-assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — child BUILD run (B1) reports the same sandbox denial [OWNER_ATTEMPT_ID: O1]')" true "OWNER restating the same alerted child blocker is a duplicate"
-assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — separate, unrelated permission is needed for the payments export [OWNER_ATTEMPT_ID: O1]')" false "an OWNER blocker not referencing the alerted attempt is not a duplicate"
-assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:12:00Z" 'CALVIN REQUIRED: child BUILD run (B1) needs a scope decision [OWNER_ATTEMPT_ID: O1]')" false "a different Slack kind (calvin_required vs actionable_blocked) is not a duplicate"
-assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:10:30Z" 'BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]')" false "a non-OWNER (child) terminal is never suppressed as a duplicate"
-assert_eq "$(runtime_slack_is_duplicate '[]' "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — child BUILD run (B1) reports the same sandbox denial [OWNER_ATTEMPT_ID: O1]')" false "no prior Slack-eligible comment means nothing to duplicate"
+assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — child BUILD run reports the same sandbox denial')" true "restating the same still-open gate is a duplicate, with no shared attempt-ID tag at all"
+assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:12:00Z" 'CALVIN REQUIRED: child BUILD run needs a scope decision')" false "a different Slack kind (calvin_required vs actionable_blocked) is a distinct gate, not a duplicate"
+assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:09:59Z" 'BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]')" false "the first alert for a gate is never itself a duplicate"
+assert_eq "$(runtime_slack_is_duplicate '[]' "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — child BUILD run reports the same sandbox denial')" false "no prior Slack-eligible comment means nothing to duplicate"
+
+# A Calvin ruling/resolution closes the prior gate: the same textual kind
+# afterwards is a genuinely new gate and is eligible again.
+RESOLVED_THEN_NEW=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]", created_at: "2026-09-28T15:10:00Z"},
+  {body: "CALVIN RULING - approve the workaround", created_at: "2026-09-28T15:11:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$RESOLVED_THEN_NEW" "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — a new, later sandbox denial')" false "a Calvin ruling resolves the prior gate; the same kind afterwards is a new gate"
+
+# Without a resolution in between, an intervening different-kind alert
+# neither resolves nor restates the original gate: the original kind is
+# still deduped against its own still-open predecessor.
+MIXED_KIND_NO_RESOLUTION=$(jq -n '[
+  {body: "CALVIN REQUIRED: pick A or B for the export path", created_at: "2026-09-28T15:10:00Z"},
+  {body: "BLOCKED: ACTIONABLE — separate permission needed for the export path", created_at: "2026-09-28T15:11:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$MIXED_KIND_NO_RESOLUTION" "2026-09-28T15:12:00Z" 'CALVIN REQUIRED: pick A or B for the export path (still open)')" true "restating the original kind past an unrelated different-kind alert, with no resolution, is still deduped"
+
+# A re-driven BUILD START:/REVIEW START: admission receipt is the documented
+# "reapply the wake label" recovery Calvin uses for a transport-failure
+# BLOCKED: ACTIONABLE, and leaves no CALVIN RULING comment behind. It must
+# still reset the gate — otherwise every genuinely new BLOCKED: ACTIONABLE
+# on the same item is silently dropped forever after one re-drive.
+REDRIVEN_THEN_NEW=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — BUILD transport did not recover; reapply `needs-build-wake` to retry [BUILD_ATTEMPT_ID: B1]", created_at: "2026-09-20T10:00:00Z"},
+  {body: "BUILD START: OUTCOME-ID=CF-X TIER=NORMAL [BUILD_ATTEMPT_ID: B2]", created_at: "2026-09-21T10:00:00Z"},
+  {body: "DONE: EVIDENCE — resolved on retry [BUILD_ATTEMPT_ID: B2]", created_at: "2026-09-22T10:00:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REDRIVEN_THEN_NEW" "2026-09-29T10:00:00Z" 'BLOCKED: ACTIONABLE — Supabase service-role key must be granted by Calvin')" false "a re-driven BUILD START: resets the gate; a later genuinely new BLOCKED: ACTIONABLE still sends"
+
+REDRIVEN_VIA_REVIEW=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — same still-open gate [BUILD_ATTEMPT_ID: B1]", created_at: "2026-09-20T10:00:00Z"},
+  {body: "REVIEW START: OUTCOME-ID=CF-X TIER=NORMAL [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-09-21T10:00:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REDRIVEN_VIA_REVIEW" "2026-09-22T10:00:00Z" 'BLOCKED: ACTIONABLE — a new, later gate')" false "a re-driven REVIEW START: also resets the gate"
+
+runtime_is_calvin_ruling_line 'CALVIN RULING — APPROVE OPTION B' || fail "em-dash CALVIN RULING marker recognised"
+runtime_is_calvin_ruling_line 'CALVIN RULING: approve' || fail "colon CALVIN RULING marker recognised"
+runtime_is_calvin_ruling_line 'quoting: CALVIN RULING — APPROVE OPTION B was mentioned earlier' && fail "CALVIN RULING not at line start is not a marker"
+true
 
 # Admission regression coverage.
 assert_eq "$(runtime_admission_decision issue 10 '' '' true)" IN_FLIGHT "#188 same-target duplicate build suppressed"

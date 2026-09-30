@@ -58,10 +58,12 @@ calvin_ruling_first_line() {
 # True (exit 0) when the first line is a CALVIN RULING marker: "CALVIN
 # RULING" followed by a colon, or an em dash / hyphen separator (with
 # optional leading spaces) — e.g. "CALVIN RULING — APPROVE OPTION B" (the
-# live #196 evidence) or "CALVIN RULING: approve".
+# live #196 evidence) or "CALVIN RULING: approve". Delegates to
+# runtime-lib.sh's runtime_is_calvin_ruling_line (CF-SLACK-DEDUPE-02 also
+# needs this exact marker, to find a thread's most recent Calvin
+# resolution) so the two definitions can't drift apart.
 calvin_ruling_is_ruling_first_line() {
-  local first_line="$1"
-  printf '%s' "$first_line" | grep -Eq '^CALVIN RULING(:| *[—-])'
+  runtime_is_calvin_ruling_line "$1"
 }
 
 # calvin_ruling_gate_status <comments_json>

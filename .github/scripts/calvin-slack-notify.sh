@@ -33,14 +33,17 @@ source "${SCRIPT_DIR}/runtime-lib.sh"
 # only, never `complete`); prints nothing and returns 1 otherwise.
 #
 # <comments_json>/<created_at> are optional: when both are given (the
-# thread's prior comments, and this comment's own created_at), an OWNER
-# terminal that runtime_slack_is_duplicate finds merely restates the same
-# already-alerted blocker is also treated as ineligible (return 1) — the
-# #365 class, where BUILD's alert and OWNER's reconciling restatement of
-# the same actionable blocker otherwise both reach Slack. Omitting them
-# skips the duplicate check (always eligible on its own terms), which is
-# correct for a call site with no thread to consult, such as a fresh
-# OWNER-relay transport-failure receipt.
+# thread's prior comments, and this comment's own created_at), a terminal
+# that runtime_slack_is_duplicate finds restates the same still-open Calvin
+# gate — keyed by canonical item + Slack kind + open/resolved state, per
+# CF-SLACK-DEDUPE-02, never by a worker attempt ID — is also treated as
+# ineligible (return 1). This covers both the #365 class (BUILD's alert and
+# OWNER's reconciling restatement of the same actionable blocker) and any
+# other actor restating the same unresolved gate, without depending on one
+# comment literally referencing another's attempt ID. Omitting them skips
+# the duplicate check (always eligible on its own terms), which is correct
+# for a call site with no thread to consult, such as a fresh OWNER-relay
+# transport-failure receipt.
 calvin_slack_payload() {
   local raw="$1" repo="$2" comment_url="$3" comments_json="${4:-}" created_at="${5:-}" line kind header
   line="$(runtime_terminal_line "$raw")"
