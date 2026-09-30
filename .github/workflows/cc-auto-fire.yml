@@ -344,6 +344,7 @@ jobs:
           # supplying OUTCOME-ID). Same fail-closed rule either way: an
           # unambiguous Closes/Fixes/Resolves source issue that is
           # closed/superseded stops REVIEW under a dead contract.
+          CONTRACT_FETCH_FAILED=false
           if [ -n "$OUTCOME_ID" ]; then
             SRC_NUMBER="$(runtime_closing_issue_number "$BODY")"
             if [ -n "$SRC_NUMBER" ]; then
@@ -359,9 +360,17 @@ jobs:
               # already fetched, not the PR body — the PR body does not
               # change when Calvin edits the issue contract mid-run, so
               # hashing it would never detect that edit. Fall back to the PR
-              # body (set above) only when there is no such source issue.
+              # body (set above) only when there is no such source issue. A
+              # transient failure fetching that source issue must not fall
+              # back to the PR body silently — it emits an empty CONTRACT
+              # instead (see the matching empty-CONTRACT handling in
+              # fire-owner-on-terminal/owner-on-merge below), since
+              # runtime_contract_is_stale already treats an empty
+              # fingerprint as never stale.
               if [ -n "$SRC" ]; then
                 CONTRACT_BODY="$(jq -r '.body // ""' <<< "$SRC")"
+              else
+                CONTRACT_FETCH_FAILED=true
               fi
             fi
           fi
@@ -414,7 +423,14 @@ jobs:
           echo "tier=$TIER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=REVIEW-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
           # CF-CONTRACT-FENCE-01: see the matching fire-build comment above.
-          echo "contract=$(runtime_contract_hash "$CONTRACT_BODY")" >> "$GITHUB_OUTPUT"
+          # A failed source-issue fetch emits an empty CONTRACT rather than
+          # hashing the PR-body fallback, so it can never manufacture
+          # staleness (see CONTRACT_FETCH_FAILED above).
+          if [ "$CONTRACT_FETCH_FAILED" = true ]; then
+            echo "contract=" >> "$GITHUB_OUTPUT"
+          else
+            echo "contract=$(runtime_contract_hash "$CONTRACT_BODY")" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Fire REVIEW
         id: fire
@@ -565,26 +581,37 @@ jobs:
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=OWNER-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
           # CF-CONTRACT-FENCE-01 (CORRECT on #397): fingerprint the wake
-          # target's unambiguous, currently-open Closes/Fixes/Resolves
-          # source issue body when the target is a PR carrying one — a PR
+          # target's unambiguous Closes/Fixes/Resolves source issue body,
+          # open or closed, when the target is a PR carrying one — a PR
           # body does not change when Calvin edits the issue contract
-          # mid-run, so hashing it would never detect that edit. Fall back
-          # to the wake target's own body (issue or PR alike) otherwise. An
-          # empty CONTRACT means the fetch itself failed, never that the
-          # body was empty — runtime_contract_is_stale treats an empty
-          # fingerprint as never stale, so a failed fetch must not
-          # manufacture staleness by hashing an empty string.
+          # mid-run, so hashing it would never detect that edit. This wake
+          # can fire after the source issue closes on merge, so (unlike
+          # REVIEW's own binding) it must not require the issue to still be
+          # open. Fall back to the wake target's own body (issue or PR
+          # alike) otherwise. An empty CONTRACT means the fetch itself
+          # failed, never that the body was empty — runtime_contract_is_stale
+          # treats an empty fingerprint as never stale, so a failed fetch
+          # must not manufacture staleness by hashing an empty string.
           TARGET="$(gh api "repos/${{ github.repository }}/issues/${NUMBER}" 2>/dev/null || true)"
           if [ -n "$TARGET" ]; then
             CONTRACT_BODY="$(jq -r '.body // ""' <<< "$TARGET")"
+            CONTRACT_FETCH_FAILED=false
             if [ "$(jq -r 'has("pull_request")' <<< "$TARGET")" = true ]; then
               SRC_NUMBER="$(runtime_closing_issue_number "$CONTRACT_BODY")"
               if [ -n "$SRC_NUMBER" ]; then
                 SRC="$(gh api "repos/${{ github.repository }}/issues/${SRC_NUMBER}" 2>/dev/null || true)"
-                [ -n "$SRC" ] && CONTRACT_BODY="$(jq -r '.body // ""' <<< "$SRC")"
+                if [ -n "$SRC" ]; then
+                  CONTRACT_BODY="$(jq -r '.body // ""' <<< "$SRC")"
+                else
+                  CONTRACT_FETCH_FAILED=true
+                fi
               fi
             fi
-            echo "contract=$(runtime_contract_hash "$CONTRACT_BODY")" >> "$GITHUB_OUTPUT"
+            if [ "$CONTRACT_FETCH_FAILED" = true ]; then
+              echo "contract=" >> "$GITHUB_OUTPUT"
+            else
+              echo "contract=$(runtime_contract_hash "$CONTRACT_BODY")" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "contract=" >> "$GITHUB_OUTPUT"
           fi

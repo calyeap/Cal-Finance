@@ -152,4 +152,20 @@ require "$ROUTER" 'CONTRACT_BODY="\$\(jq -r .*<<< "\$TARGET"\)"' 'fire-owner-on-
 require "$MERGE" 'CONTRACT_BODY="\$\(jq -r .*<<< "\$TARGET"\)"' 'merge-path OWNER fire starts CONTRACT_BODY from the fetched PR body'
 require "$ROUTER" 'has\("pull_request"\)' 'fire-owner-on-terminal distinguishes a PR wake target before preferring its source issue body'
 
+# CF-CONTRACT-FENCE-01 (CORRECT #2 on #397): merging a Closes/Fixes/Resolves
+# PR closes its source issue, so OWNER's post-merge fence must bind the same
+# body whether that issue is open or closed — requiring it to stay open (as
+# REVIEW correctly does, since REVIEW runs before merge) would make every
+# ordinary merge read as a false STALE_CONTRACT even though nobody edited
+# the contract. Only OWNER.md's fence carries this open-or-closed rule.
+forbid "$OWNER" 'currently-open' "OWNER's fence does not require the source issue to stay open"
+
+# CF-CONTRACT-FENCE-01 (CORRECT #2 on #397): a transient failure fetching
+# the source issue must emit an empty CONTRACT, not silently fall back to
+# hashing the PR/target body — that fallback would make the fingerprint
+# depend on the fetch's luck rather than on the canonical body, and could
+# itself manufacture a spurious mismatch on a later successful fetch.
+require "$ROUTER" 'CONTRACT_FETCH_FAILED' 'fire-review and fire-owner-on-terminal emit an empty CONTRACT on a failed source-issue fetch, not the PR-body fallback'
+require "$MERGE" 'CONTRACT_FETCH_FAILED' 'merge-path OWNER fire emits an empty CONTRACT on a failed source-issue fetch, not the PR-body fallback'
+
 echo "runtime-wiring: PASS"

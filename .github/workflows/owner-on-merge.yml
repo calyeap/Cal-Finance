@@ -45,22 +45,33 @@ jobs:
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "attempt_id=OWNER-MERGE-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
           # CF-CONTRACT-FENCE-01 (CORRECT on #397): fingerprint the merged
-          # PR's unambiguous, currently-open Closes/Fixes/Resolves source
-          # issue body when it has one — the merged PR body cannot change
-          # afterward, so hashing it would never detect a Calvin edit made
-          # to the issue contract during REVIEW. Fall back to the PR's own
-          # body otherwise. An empty CONTRACT means the fetch itself
-          # failed, never that the body was empty (see cc-auto-fire.yml's
-          # matching fire-owner-on-terminal comment).
+          # PR's unambiguous Closes/Fixes/Resolves source issue body when
+          # it has one — the merged PR body cannot change afterward, so
+          # hashing it would never detect a Calvin edit made to the issue
+          # contract during REVIEW. This wake always fires after merge, so
+          # the source issue is normally already closed by then; do not
+          # require it to be open (unlike REVIEW's own binding). Fall back
+          # to the PR's own body otherwise. An empty CONTRACT means the
+          # fetch itself failed, never that the body was empty (see
+          # cc-auto-fire.yml's matching fire-owner-on-terminal comment).
           TARGET="$(gh api "repos/${{ github.repository }}/issues/${NUMBER}" 2>/dev/null || true)"
           if [ -n "$TARGET" ]; then
             CONTRACT_BODY="$(jq -r '.body // ""' <<< "$TARGET")"
+            CONTRACT_FETCH_FAILED=false
             SRC_NUMBER="$(runtime_closing_issue_number "$CONTRACT_BODY")"
             if [ -n "$SRC_NUMBER" ]; then
               SRC="$(gh api "repos/${{ github.repository }}/issues/${SRC_NUMBER}" 2>/dev/null || true)"
-              [ -n "$SRC" ] && CONTRACT_BODY="$(jq -r '.body // ""' <<< "$SRC")"
+              if [ -n "$SRC" ]; then
+                CONTRACT_BODY="$(jq -r '.body // ""' <<< "$SRC")"
+              else
+                CONTRACT_FETCH_FAILED=true
+              fi
             fi
-            echo "contract=$(runtime_contract_hash "$CONTRACT_BODY")" >> "$GITHUB_OUTPUT"
+            if [ "$CONTRACT_FETCH_FAILED" = true ]; then
+              echo "contract=" >> "$GITHUB_OUTPUT"
+            else
+              echo "contract=$(runtime_contract_hash "$CONTRACT_BODY")" >> "$GITHUB_OUTPUT"
+            fi
           else
             echo "contract=" >> "$GITHUB_OUTPUT"
           fi
