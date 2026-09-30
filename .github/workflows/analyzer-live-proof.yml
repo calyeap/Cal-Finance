@@ -1,0 +1,82 @@
+name: Analyzer live proof
+
+# Manual only. Issue #392's ACCEPTANCE GATE requires proof, on fresh MSFT and
+# NVDA runs, that model interpretation actually ran — which needs a real
+# ANTHROPIC_API_KEY. That key exists only as this repository's GitHub Actions
+# secret (per the CALVIN RULING on PR #399), never in a local/session
+# environment, so this is the one place it is used: passed only to the two
+# steps below that call `npm run ai-run`, never echoed, logged, or persisted
+# anywhere else. It is not wired into `ci.yml` and does not run on every push,
+# so it never turns into recurring per-PR spend — it runs only when someone
+# dispatches it to produce this specific proof.
+on:
+  workflow_dispatch:
+    inputs:
+      ticker:
+        description: "Ticker to prove (MSFT or NVDA); leave blank to run both"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  live-proof:
+    name: fresh live run proof
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: calboard_proof
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://postgres:postgres@localhost:5432/calboard_proof
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies from lockfile
+        run: npm ci
+
+      - name: Apply migrations
+        run: npm run migrate
+
+      - name: Fresh live run — MSFT
+        if: ${{ inputs.ticker == '' || inputs.ticker == 'MSFT' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run ai-run -- MSFT --slots | tee msft-fresh-run-proof.txt
+
+      - name: Fresh live run — NVDA
+        if: ${{ inputs.ticker == '' || inputs.ticker == 'NVDA' }}
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: npm run ai-run -- NVDA --slots | tee nvda-fresh-run-proof.txt
+
+      - name: Upload proof artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: analyzer-live-proof
+          path: |
+            msft-fresh-run-proof.txt
+            nvda-fresh-run-proof.txt
+          if-no-files-found: warn
+          retention-days: 90
