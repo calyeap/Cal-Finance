@@ -69,6 +69,9 @@ jobs:
       - name: Run workflow-authored terminal relay tests
         run: bash .github/scripts/terminal-relay.test.sh
 
+      - name: Run OWNER CONTINUE wake-verification tests
+        run: bash .github/scripts/owner-continue-wake-verify.test.sh
+
       - name: Set up Node
         uses: actions/setup-node@v4
         with:

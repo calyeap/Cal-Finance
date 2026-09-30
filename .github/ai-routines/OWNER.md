@@ -37,10 +37,16 @@ CF-CONTRACT-FENCE-01 (issue #384, corrected on #397): once the canonical contrac
 ### CONTINUE
 Use only when a **pre-existing, already-authorised** next GitHub issue in this same parent sequence is unambiguously ready.
 
-- Apply its normal BUILD wake once after rechecking admission state.
+CF-CONTINUE-WAKE-VERIFY-01 (issue #396): after PR #395 merged, OWNER emitted `CONTINUE: #384` and reported applying #384's normal BUILD wake, but the `needs-build-wake` label mutation never actually landed — no BUILD start, no wake event, no actionable terminal, a silent stall until the wake was manually re-applied. OWNER must never claim a `CONTINUE` handoff succeeded unless the intended wake mutation is verified on the target.
+
+- Apply its normal BUILD wake after rechecking admission state: apply the `needs-build-wake` label to the target via the existing wake-label mutation path (`gh api` on the target's labels).
+- **Read back before claiming success.** Re-fetch the target's current labels and confirm `needs-build-wake` (or its live consequence — an already-open BUILD attempt for the target's `OUTCOME-ID`) is actually present. Only once that readback confirms the wake landed may the `CONTINUE` terminal be emitted.
+- If the apply/readback does not confirm the label on the first attempt, retry on the same bounded schedule `fire_post` already uses for fire transport (CF-FIRE-RETRY-01: immediate attempt, then 10s/30s/60s — 4 attempts total). Reuse that existing bounded retry schedule; do not invent a new retry system.
+- Before each retry, re-read the target's current label/attempt state first. If `needs-build-wake` or an already-open BUILD attempt for that `OUTCOME-ID` is already present, treat the wake as landed and stop — never re-apply the label once it is confirmed present. This keeps an ambiguous or already-landed first mutation idempotent: verification must not create a second wake when the first mutation actually landed, and existing duplicate suppression/one-active-execution admission (BUILD's own `ADMIT`/`IN_FLIGHT` check) remains the backstop either way.
+- If bounded retry exhausts without a confirmed readback, take no `CONTINUE` mutation. End instead with `BLOCKED: ACTIONABLE — CONTINUE wake mutation to <target> could not be verified after 4 attempts; reapply the \`needs-build-wake\` label to <target> to deterministically re-drive.` This is an ordinary `BLOCKED: ACTIONABLE` exit (Slack-eligible per the existing rule); AI-owned retry/progress up to that point stays silent.
 - Do not create new scope, infer a roadmap item or manufacture a successor task.
 
-Terminal:
+Terminal (only after a verified wake):
 `CONTINUE: <exact existing target / OUTCOME-ID>`
 
 ### COMPLETE
