@@ -146,7 +146,33 @@ case "$POSTED" in
     ;;
 esac
 
-unset -f curl calvin_slack_send terminal_relay_fetch_comments terminal_relay_post_comment
+# --- CF-FIRE-RETRY-01: a transient failure retries through fire_post,
+# and only names the needs-owner-wake re-drive label once exhausted,
+# never recursing into another relay fire over its own transport -------
+
+POSTED=""
+SLACK_CALLED=0
+CURL_LOG="$TMP/curl.log"; : > "$CURL_LOG"
+curl() { echo call >> "$CURL_LOG"; echo -n '503'; }
+export -f curl
+sleep() { :; }
+export -f sleep
+calvin_slack_send() { SLACK_CALLED=1; }
+
+terminal_relay_owner "o/r" 7 "BLOCKED: AI — BUILD attempt B1 timed out [BUILD_ATTEMPT_ID: B1]" fire-build-fire
+assert_eq "a transient relay failure retries 4 times total before giving up" 4 "$(wc -l < "$CURL_LOG" | tr -d ' ')"
+assert_eq "an exhausted transient relay failure relays to Slack" 1 "$SLACK_CALLED"
+case "$POSTED" in
+  "BLOCKED: ACTIONABLE — OWNER relay transport did not recover after 4 attempts (503)"*"needs-owner-wake"*)
+    echo "ok - an exhausted transient relay failure posts a typed ACTIONABLE receipt naming the re-drive label"
+    ;;
+  *)
+    echo "not ok - an exhausted transient relay failure posts a typed ACTIONABLE receipt naming the re-drive label (got [$POSTED])"
+    FAILURES=$((FAILURES + 1))
+    ;;
+esac
+
+unset -f curl sleep calvin_slack_send terminal_relay_fetch_comments terminal_relay_post_comment
 unset OWNER_FIRE_URL OWNER_FIRE_TOKEN
 
 # --- structural tripwire: relaying OWNER must never itself be reachable

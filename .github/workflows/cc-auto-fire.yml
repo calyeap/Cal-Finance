@@ -93,18 +93,6 @@ jobs:
             exit 0
           fi
 
-          # Temporary hard hold: while #357 is open, only reset/proof work may run.
-          HOLD_STATE=$(gh api "repos/${REPO}/issues/357" --jq '.state' 2>/dev/null || echo closed)
-          if [ "$HOLD_STATE" = open ]; then
-            case "$OUTCOME_ID" in
-              CF-WORKFLOW-RESET-*|CF-WORKFLOW-PROOF-*) ;;
-              *)
-                post_and_stop "BLOCKED: AI — product work is paused by Calvin ruling #357; no BUILD worker fired for ${OUTCOME_ID}." fire-build-resolve
-                exit 0
-                ;;
-            esac
-          fi
-
           COMMENTS=$(gh api --paginate "repos/${REPO}/issues/${NUMBER}/comments" \
             --jq '[.[] | {body: .body, created_at: .created_at}]' | jq -s 'add // []')
           ATTEMPT_OPEN="$(runtime_outcome_attempt_open "$COMMENTS" "$OUTCOME_ID")"
@@ -161,13 +149,11 @@ jobs:
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
-          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           source .github/scripts/fire-auth-lib.sh
-          source .github/scripts/terminal-relay.sh
+          source .github/scripts/calvin-slack-notify.sh
 
           if [ -z "${BUILD_FIRE_URL:-}" ]; then
             SECRET=BUILD_FIRE_URL; CODE=missing_secret
@@ -175,12 +161,7 @@ jobs:
             SECRET=BUILD_FIRE_TOKEN; CODE=missing_secret
           else
             PROMPT="Repository ${REPO}, item #${NUMBER}. Run the current .github/ai-routines/BUILD.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's BUILD_ATTEMPT_ID is ${ATTEMPT_ID}; every terminal first line must carry [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}]."
-            REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
-            CODE=$(curl -sS -o /tmp/build.json -w '%{http_code}' --request POST "$BUILD_FIRE_URL" \
-              --header "Authorization: Bearer $BUILD_FIRE_TOKEN" \
-              --header "anthropic-version: 2023-06-01" \
-              --header "anthropic-beta: experimental-cc-routine-2026-04-01" \
-              --header "Content-Type: application/json" --data "$REQUEST") || CODE=curl_error
+            CODE=$(fire_post "$BUILD_FIRE_URL" "$BUILD_FIRE_TOKEN" "$PROMPT" /tmp/build.json)
             SECRET=BUILD_FIRE_TOKEN
           fi
 
@@ -193,15 +174,17 @@ jobs:
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
               LINE="BLOCKED: ACTIONABLE — BUILD transport unavailable (${CODE}); refresh ${SECRET}. No worker started."
+            elif [ "$(fire_transient_status "$CODE")" = true ]; then
+              LINE="BLOCKED: ACTIONABLE — BUILD transport did not recover after 4 attempts (${CODE}); reapply the \`needs-build-wake\` label to #${NUMBER} to re-drive. No worker started."
             else
               LINE="BLOCKED: AI — BUILD transport failed (${CODE}); no worker started."
             fi
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
-            # A workflow-authored (GH_TOKEN-authored) comment cannot
-            # recursively trigger fire-owner-on-terminal or
-            # calvin-slack-alert.yml's own issue_comment triggers, so relay
-            # both directly in this same job (see terminal-relay.sh).
-            terminal_relay_owner "$REPO" "$NUMBER" "$LINE" fire-build-fire
+            # This is the fire call's own transport failure, not a genuine
+            # BUILD/REVIEW/OWNER transition — relaying it into OWNER (which
+            # fires over the same kind of transport) is exactly the #387
+            # double-fire dead end this outcome closes, so it goes to Slack
+            # only, never to terminal_relay_owner.
             calvin_slack_send "$LINE" "$REPO" "https://github.com/${REPO}/issues/${NUMBER}" || true
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
@@ -346,21 +329,16 @@ jobs:
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
-          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
-          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: |
           set -uo pipefail
           source .github/scripts/fire-auth-lib.sh
-          source .github/scripts/terminal-relay.sh
+          source .github/scripts/calvin-slack-notify.sh
           if [ -z "${CC_AUTO_FIRE_URL:-}" ]; then SECRET=CC_AUTO_FIRE_URL; CODE=missing_secret
           elif [ -z "${CC_AUTO_FIRE_TOKEN:-}" ]; then SECRET=CC_AUTO_FIRE_TOKEN; CODE=missing_secret
           else
             PROMPT="Repository ${REPO}, PR #${NUMBER}. Run current .github/ai-routines/CC.md for exact OUTCOME-ID ${OUTCOME_ID}, TIER ${TIER}. This run's REVIEW_ATTEMPT_ID is ${ATTEMPT_ID}; terminal first line must carry [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}]."
-            REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
-            CODE=$(curl -sS -o /tmp/review.json -w '%{http_code}' --request POST "$CC_AUTO_FIRE_URL" \
-              --header "Authorization: Bearer $CC_AUTO_FIRE_TOKEN" --header "anthropic-version: 2023-06-01" \
-              --header "anthropic-beta: experimental-cc-routine-2026-04-01" --header "Content-Type: application/json" --data "$REQUEST") || CODE=curl_error
+            CODE=$(fire_post "$CC_AUTO_FIRE_URL" "$CC_AUTO_FIRE_TOKEN" "$PROMPT" /tmp/review.json)
             SECRET=CC_AUTO_FIRE_TOKEN
           fi
           if [ "$CODE" != curl_error ] && [ "$CODE" -ge 200 ] 2>/dev/null && [ "$CODE" -lt 300 ] 2>/dev/null; then
@@ -372,12 +350,17 @@ jobs:
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
               LINE="BLOCKED: ACTIONABLE — REVIEW transport unavailable (${CODE}); refresh ${SECRET}."
+            elif [ "$(fire_transient_status "$CODE")" = true ]; then
+              LINE="BLOCKED: ACTIONABLE — REVIEW transport did not recover after 4 attempts (${CODE}); reapply the \`needs-cc-rereview\` label to PR #${NUMBER} to re-drive."
             else
               LINE="BLOCKED: AI — REVIEW transport failed (${CODE})."
             fi
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
-            # GH_TOKEN-authored; relay directly (see terminal-relay.sh).
-            terminal_relay_owner "$REPO" "$NUMBER" "$LINE" fire-review-fire
+            # This is the fire call's own transport failure, not a genuine
+            # BUILD/REVIEW/OWNER transition — relaying it into OWNER (which
+            # fires over the same kind of transport) is exactly the #387
+            # double-fire dead end this outcome closes, so it goes to Slack
+            # only, never to terminal_relay_owner.
             calvin_slack_send "$LINE" "$REPO" "https://github.com/${REPO}/issues/${NUMBER}" || true
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi
@@ -501,10 +484,7 @@ jobs:
           elif [ -z "${OWNER_FIRE_TOKEN:-}" ]; then SECRET=OWNER_FIRE_TOKEN; CODE=missing_secret
           else
             PROMPT="Repository ${REPO}, item #${NUMBER}, terminal/ruling wake. Follow current .github/ai-routines/OWNER.md exactly. This run's OWNER_ATTEMPT_ID is ${ATTEMPT_ID}; parent terminal first line must carry [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]."
-            REQUEST=$(jq -n --arg text "$PROMPT" '{text:$text}')
-            CODE=$(curl -sS -o /tmp/owner.json -w '%{http_code}' --request POST "$OWNER_FIRE_URL" \
-              --header "Authorization: Bearer $OWNER_FIRE_TOKEN" --header "anthropic-version: 2023-06-01" \
-              --header "anthropic-beta: experimental-cc-routine-2026-04-01" --header "Content-Type: application/json" --data "$REQUEST") || CODE=curl_error
+            CODE=$(fire_post "$OWNER_FIRE_URL" "$OWNER_FIRE_TOKEN" "$PROMPT" /tmp/owner.json)
             SECRET=OWNER_FIRE_TOKEN
           fi
           if [ "$CODE" != curl_error ] && [ "$CODE" -ge 200 ] 2>/dev/null && [ "$CODE" -lt 300 ] 2>/dev/null; then
@@ -516,6 +496,8 @@ jobs:
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
               LINE="BLOCKED: ACTIONABLE — OWNER transport unavailable (${CODE}); refresh ${SECRET}. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
+            elif [ "$(fire_transient_status "$CODE")" = true ]; then
+              LINE="BLOCKED: ACTIONABLE — OWNER transport did not recover after 4 attempts (${CODE}); reapply the \`needs-owner-wake\` label to #${NUMBER} to re-drive. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             else
               LINE="BLOCKED: AI — OWNER transport failed (${CODE}). [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             fi
@@ -524,8 +506,8 @@ jobs:
             # calvin-slack-notify.sh). Not relayed to OWNER: OWNER is what
             # just failed to fire, so there is no BUILD/REVIEW/OWNER
             # transition here for OWNER to reconcile — only re-firing OWNER
-            # over its own infra failure, which terminal-relay.sh avoids by
-            # design (OWNER's own terminals carry OWNER_ATTEMPT_ID).
+            # over its own infra failure, which this outcome's ban on
+            # relaying a transport failure into OWNER forbids outright.
             calvin_slack_send "$LINE" "$REPO" "https://github.com/${REPO}/issues/${NUMBER}" || true
             echo "ok=false" >> "$GITHUB_OUTPUT"
           fi

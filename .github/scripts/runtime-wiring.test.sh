@@ -20,7 +20,12 @@ OWNER=.github/ai-routines/OWNER.md
 require "$ROUTER" 'group: cf-build-admission' 'repo-wide BUILD admission serialization'
 require "$ROUTER" 'runtime_admission_decision' 'OUTCOME-ID admission classifier'
 require "$ROUTER" 'issues\?state=open' 'repo-wide open artifact inventory'
-require "$ROUTER" 'product work is paused by Calvin ruling #357' 'canonical reset hold enforcement'
+
+# CF-FIRE-RETRY-01: the #357 workflow-reset hold (issue #357, closed
+# 2026-09-28) is over; its temporary gate must not linger in the router
+# or in OWNER's own prose.
+forbid "$ROUTER" '#357' 'obsolete reset-hold enforcement removed'
+forbid "$OWNER" '#357' 'obsolete reset-hold prose removed'
 
 # Liveness is detect-only: live workflows may watch but never call the old
 # automatic recovery guards.
@@ -70,6 +75,17 @@ require "$MERGE" 'calvin-slack-notify\.sh' 'merge-path OWNER fire also relays it
 # transition) — only Slack, on both admission entry points that can post
 # such a failure.
 forbid "$ROUTER" 'terminal_relay_owner.*OWNER transport' 'OWNER-relay self-loop on OWNER'\''s own transport failure'
+
+# CF-FIRE-RETRY-01: every fire transport call goes through one shared,
+# bounded-retry primitive instead of duplicated one-shot curl blocks, and
+# a BUILD/REVIEW fire step's own transport failure is never relayed into
+# OWNER — that double-fire-over-infra is exactly the #387 dead end this
+# outcome closes (OWNER is still reachable through Slack and, once BUILD/
+# REVIEW exhaust their own retries, a deterministic re-drive label).
+require "$ROUTER" 'fire_post' 'shared bounded-retry fire transport primitive'
+require "$MERGE" 'fire_post' 'merge-path OWNER fire also uses the shared retry primitive'
+forbid "$ROUTER" 'terminal_relay_owner "\$REPO" "\$NUMBER" "\$LINE" fire-build-fire' 'BUILD transport failure no longer relays into OWNER'
+forbid "$ROUTER" 'terminal_relay_owner "\$REPO" "\$NUMBER" "\$LINE" fire-review-fire' 'REVIEW transport failure no longer relays into OWNER'
 
 # Terminal destination is now an explicit contract, not implied convention
 # (the concrete #361/#362 gap: a BUILD terminal landing somewhere other

@@ -12,15 +12,6 @@ OWNER may wake from exactly these transition classes:
 
 Wake payload is routing context only. Re-read current native GitHub evidence before acting.
 
-## Temporary product hold
-
-While issue **#357** (`CF-WORKFLOW-RESET-HOLD-01`) is open, Cal Finance product work is **PAUSED**.
-
-- Do not dispatch or resume product BUILD.
-- Do not merge/resume #353 or #354.
-- Only the authorised workflow-reset / workflow-proof sequence may continue.
-- The hold is lifted only by a later explicit Calvin ruling after the reset proofs/freeze gate.
-
 ## Process
 
 1. Fetch the exact wake target and only the minimum current GitHub evidence needed to understand its `OUTCOME-ID`, linked task, PR/merge/terminal state and any current Calvin gate.
@@ -36,7 +27,6 @@ Use only when a **pre-existing, already-authorised** next GitHub issue in this s
 
 - Apply its normal BUILD wake once after rechecking admission state.
 - Do not create new scope, infer a roadmap item or manufacture a successor task.
-- During #357's product hold, CONTINUE is allowed only for workflow-reset / workflow-proof work.
 
 Terminal:
 `CONTINUE: <exact existing target / OUTCOME-ID>`
