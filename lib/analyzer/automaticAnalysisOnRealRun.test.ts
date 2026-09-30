@@ -211,19 +211,37 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       expect(financeStateOf(automatic)).toEqual(financeStateOf(byHand));
     });
 
-    it("still reads INCOMPLETE, for the upstream reason it already read INCOMPLETE for", async () => {
+    it("still reads INCOMPLETE, for the upstream reason it now reads INCOMPLETE for", async () => {
       const { result } = await analyzeAutomatically(ticker, companyName);
       const verdict = deriveVerdict(result);
 
       // 22 Sep 02:24:07Z (B) — deriveVerdict stays honestly INCOMPLETE, and
       // this outcome neither fixes that nor is entitled to.
       expect(verdict.status).toBe("INCOMPLETE");
-      // The state docs/m9-real-company-validation-findings.md records for a
-      // run carrying no §4.4 judgment, unchanged.
-      expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
-      expect(result.trust.status).toBe("UNUSABLE");
-      expect(result.fairValueRange.kind).toBe("suppressed");
-      expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
+
+      if (ticker === "MSFT") {
+        // CF-ANALYZER-V1-SETTLE-01 — migration 007's durable §4.4 override
+        // (Calvin ruling 2) now resolves MSFT's enterprise value/leverage
+        // on a fresh run automatically, carrying forward the exact same
+        // ruling "MSFT's recorded §4.4 state" below records explicitly.
+        // This run still carries no human profile confirmation
+        // (analyzeAutomatically records none), so PROFILE NOT CONFIRMED —
+        // a real, different, still honest cause — is what INCOMPLETE now
+        // reads for here, not the old leverage/EV gap MSFT no longer has.
+        expect(result.gates.leverage.result).toBe("PASS");
+        expect(result.trust.status).toBe("PARTIAL");
+        expect(result.fairValueRange.kind).toBe("range");
+        expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
+        expect(verdict.reason).toContain("PROFILE NOT CONFIRMED");
+      } else {
+        // OKLO has zero tagged non-operating-investment candidates
+        // (docs/m9-real-company-validation-findings.md), so no override —
+        // durable or per-run — was ever possible for it; unchanged.
+        expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
+        expect(result.trust.status).toBe("UNUSABLE");
+        expect(result.fairValueRange.kind).toBe("suppressed");
+        expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
+      }
     });
 
     it("running the automatic pass again writes nothing and changes nothing", async () => {

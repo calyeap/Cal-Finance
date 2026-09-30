@@ -41,36 +41,52 @@ function StructuralSlot({ id, label }: { id: string; label: string }) {
 // this component adds no prose of its own (contract §3, `EditorialProseBlock`
 // boundary). `pageOne` is null until the interpretation call has run, or
 // where the AI layer's all-or-nothing failure policy refused its output
-// (lib/analyzer/reportAnalysis.ts); that null path reuses Section I's own
-// "not yet available" note and `AiLayerNote`'s cause line (issue #160 SCOPE
-// item 6) rather than a second vocabulary for the same three causes.
+// (lib/analyzer/reportAnalysis.ts).
+//
+// CF-ANALYZER-V1-SETTLE-01 — the four slots share one underlying cause
+// (`pageOne === null`), so they no longer each restate the full "not yet
+// available" sentence plus the AI layer's cause line: that was up to four
+// repeated failure-state markers for one fact. `AnalyzerOverview` now
+// renders that explanation once, in `InterpretationUnavailableNote` below;
+// each affected slot instead renders a plain "—" in place of its sentence,
+// the same missing-value convention `ValuationStrip` already uses.
 function EditorialProseSlot({
   id,
   label,
   statement,
-  aiLayer,
   extra,
 }: {
   id: string;
   label: string;
   statement: InterpretationStatement | null;
-  aiLayer: AiLayerReport | undefined;
   extra?: ReactNode;
 }) {
   return (
     <div className="ovslot editorial" id={id}>
       <h3>{label}</h3>
       {statement === null ? (
-        <>
-          <p className="note">Not yet available — the interpretation call has not run for this analysis.</p>
-          <AiLayerNote aiLayer={aiLayer} />
-        </>
+        <p className="note">—</p>
       ) : (
         <>
           <p>{statement.statement}</p>
           {extra}
         </>
       )}
+    </div>
+  );
+}
+
+// The one shared explanation for all four editorial slots' missing content
+// — rendered once, not per-slot, so a run with no model interpretation
+// shows one inline marker for this cause rather than four.
+function InterpretationUnavailableNote({ aiLayer }: { aiLayer: AiLayerReport | undefined }) {
+  return (
+    <div className="ovnote" id="interpretation-unavailable">
+      <p className="note">
+        Not yet available — the interpretation call has not run for this analysis. Why invest, Why be cautious, What
+        matters most and Biggest risk below show &ldquo;—&rdquo; until it does.
+      </p>
+      <AiLayerNote aiLayer={aiLayer} />
     </div>
   );
 }
@@ -149,12 +165,16 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
       {/* Slot 5 — no approved content source (issue #160 SCOPE item 7). */}
       <StructuralSlot {...STRUCTURAL_SLOTS[0]} />
 
+      {/* One shared explanation for slots 6, 7, 9, 10's missing content —
+          CF-ANALYZER-V1-SETTLE-01, replacing four repeated markers with
+          one. */}
+      {pageOne === null && <InterpretationUnavailableNote aiLayer={aiLayer} />}
+
       {/* Slot 6 — "Why invest." */}
       <EditorialProseSlot
         id="slot-6"
         label="Why invest"
         statement={pageOne === null ? null : pageOne.whatSupportsTheCase}
-        aiLayer={aiLayer}
       />
 
       {/* Slot 7 — "Why be cautious," symmetric to slot 6. May surface the
@@ -165,7 +185,6 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
         id="slot-7"
         label="Why be cautious"
         statement={pageOne === null ? null : pageOne.whatWorriesCalboard}
-        aiLayer={aiLayer}
         extra={
           challengerSelection === null ? null : (
             <>
@@ -184,7 +203,6 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
         id="slot-9"
         label="What matters most"
         statement={pageOne === null ? null : pageOne.mainFinding}
-        aiLayer={aiLayer}
       />
 
       {/* Slot 10 — "Biggest risk." */}
@@ -192,7 +210,6 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
         id="slot-10"
         label="Biggest risk"
         statement={pageOne === null ? null : pageOne.biggestUncertainty}
-        aiLayer={aiLayer}
       />
 
       {/* Slot 11 — no approved content source (issue #160 SCOPE item 7). */}

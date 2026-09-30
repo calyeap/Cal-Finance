@@ -73,7 +73,14 @@ export function ScenarioRangeStrip({
 
   return (
     <div className="scenariorangestrip">
-      <ValuationStrip result={result} />
+      {/* CF-ANALYZER-V1-SETTLE-01 — Calvin ruling 1: a decision-useful
+          range-vs-price / valuation-position presentation beside the
+          (possibly still INCOMPLETE) verdict, wherever a defensible range
+          exists. `showLocation` already computes this from
+          scenarioOutputs.priceLocationWithinRange — the same figure Quick
+          Read's own call site already shows — so this is the existing
+          figure surfaced one place earlier, not a new computation. */}
+      <ValuationStrip result={result} showLocation />
 
       {fairValueRange.kind === "suppressed" ? (
         <div className="state" style={{ marginTop: 14 }}>

@@ -73,6 +73,14 @@ export interface AnalystInputs {
   nonOperatingInvestments: NonOperatingInvestmentSelection | null;
   /** 52-week range, from the price feed. Null where not fetched. */
   fiftyTwoWeek: { low: Decimal; high: Decimal } | null;
+  /**
+   * Trailing/forward EPS, from the same market-data feed as the price/
+   * 52-week range — a provider field, not a filing tag. Null where not
+   * fetched or where the provider does not carry it; P/E reports INCOMPLETE
+   * exactly as it already does for a missing filing input.
+   */
+  epsTrailing: Decimal | null;
+  epsForward: Decimal | null;
   /** Step 7. Not facts, not acquired. */
   scenarios: CompanyFixture["scenarios"];
   scenarioValues: CompanyFixture["scenarioValues"];
@@ -337,6 +345,12 @@ export function buildCompanyInputs(
           })),
         };
 
+  // Read once, reused for enterpriseValue.sharesOutstanding below and for
+  // deriving marketCap (§4.4's mapping version has no market-cap tag of its
+  // own — price × shares outstanding is a computation over two already-
+  // acquired REQUIRED inputs, not a third acquisition).
+  const sharesOutstandingSourced = get("shares-outstanding");
+
   const fixture: CompanyFixture = {
     schemaVersion: "v1.0.2",
     runId: `acquired-${acquisition.ticker.toLowerCase()}`,
@@ -363,7 +377,7 @@ export function buildCompanyInputs(
     profile: analyst.profile,
 
     enterpriseValue: {
-      sharesOutstanding: track("sharesOutstanding", get("shares-outstanding")),
+      sharesOutstanding: track("sharesOutstanding", sharesOutstandingSourced),
       treasuryMethodDilution: track("treasuryMethodDilution", get("treasury-method-dilution")),
       // CF-NOPRICE-HONESTY-RECON-01. The only one of these seven REQUIRED
       // inputs that used to reach computeEnterpriseValue as a flattened $0
@@ -405,17 +419,42 @@ export function buildCompanyInputs(
       // simpleMultiple (multiples.ts) already returns INCOMPLETE for a null
       // operand — nothing new is built for the suppressed case.
       price: track("price", price === null ? null : { value: price.value, provenance: CLEAN_PROVENANCE }),
-      // EPS is not in this mapping version: the tagged element exists but the
-      // §3.5 basis question (GAAP vs the I5 non-operating-items adjustment) is
-      // a per-company decision this milestone does not make. Null, so P/E is
-      // INCOMPLETE rather than computed on an unstated basis.
-      epsTrailing: track("epsTrailing", null),
-      epsForward: track("epsForward", null),
+      // §4.4's SEC tag mapping has no EPS element (the §3.5 GAAP-vs-I5-
+      // adjusted basis question is a per-company decision this milestone
+      // still does not make from a filing tag), but a lean/CF-ANALYZER-
+      // LEAN-MSFT-PROOF-01 run reads trailing/forward EPS straight off the
+      // market-data feed instead (gate.ts's `fundamentals`, threaded through
+      // AnalystInputs exactly like the price/52-week range already are) —
+      // real, sourced, provenance-carrying, and never a filing-basis claim.
+      // MARKET_DATA_PROVENANCE, not CLEAN_PROVENANCE: like fiftyTwoWeek below,
+      // this value is supplied straight into an AnalystInputs slot outside the
+      // acquired fact array, so it can never reach a human spot-check
+      // decision (provenance.ts's own documented rule for this exact case).
+      epsTrailing: track(
+        "epsTrailing",
+        analyst.epsTrailing === null ? null : { value: analyst.epsTrailing, provenance: MARKET_DATA_PROVENANCE }
+      ),
+      epsForward: track(
+        "epsForward",
+        analyst.epsForward === null ? null : { value: analyst.epsForward, provenance: MARKET_DATA_PROVENANCE }
+      ),
       enterpriseValue: null,
       ebit: get("operating-income"),
       ebitda: track("ebitda", null),
       cashFcf: get("cash-fcf"),
-      marketCap: null,
+      // Price × shares outstanding — both already acquired REQUIRED inputs
+      // (the price feed and the SEC-tagged share count above), never a third
+      // acquisition. Weakest-wins over the two inputs' own provenance (§3.3),
+      // matching how every other derived figure in this file is qualified.
+      marketCap: track(
+        "marketCap",
+        price === null || sharesOutstandingSourced === null
+          ? null
+          : {
+              value: price.value.mul(sharesOutstandingSourced.value),
+              provenance: combineProvenance(CLEAN_PROVENANCE, sharesOutstandingSourced.provenance),
+            }
+      ),
       bookValue: track("bookValue", null),
       revenue: track("revenue", get("current-revenue")),
       impliedMarginForNormalMultiple: new Decimal("0.20"),

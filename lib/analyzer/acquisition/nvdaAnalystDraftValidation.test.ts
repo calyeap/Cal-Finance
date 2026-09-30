@@ -38,11 +38,16 @@ import { isSupportedTicker } from "../gate";
 //      store refuses to record this bundle until Calvin closes the gap —
 //      which is the point being pinned below, not a defect in the store.
 //
-//   2. Pins that nothing in the runtime resolution path moved: MSFT and
-//      OKLO still resolve from their committed bundles, the committed-
-//      ticker list is unchanged, and NVDA itself — the real ticker, never
-//      written here — still has no recorded bundle and still fails closed
-//      at gate.ts.
+//   2. Pins that nothing else in the runtime resolution path moved: MSFT
+//      and OKLO still resolve from their committed bundles, and the
+//      committed-ticker list is unchanged. NVDA itself is not written by
+//      THIS file — but CF-ANALYZER-V1-SETTLE-01 (issue #392, Calvin ruling
+//      3) has since durably recorded the real ticker's already-approved
+//      scenario values (migration 008, transcribed byte-faithful from this
+//      same draft's later "CALVIN RULING — APPROVE AS DRAFTED" outcome,
+//      PR #295) so a fresh run no longer needs the per-run human act
+//      CF-NVDA-RUN-OBSERVE-01's own HARD BOUNDS previously required —
+//      pinned below as the current, intentional state, not a regression.
 // ---------------------------------------------------------------------------
 
 const DRAFT_TICKER = "ZZZNVDADRAFT";
@@ -144,11 +149,20 @@ describe("CF-ANALYST-DRAFT-NVDA-SCENARIO-02 — the drafted scenario-value gap b
     expect(bundle?.inputs.preRevenue).toBeNull();
   });
 
+  // CF-ANALYZER-V1-SETTLE-01 (issue #392) — NVDA itself now durably
+  // resolves (migration 008), so this no longer proves the throwaway row's
+  // absence from NVDA by NVDA having no bundle at all; it proves the same
+  // non-leak directly, by content — the throwaway's placeholder "$1"
+  // scenario values never reach the real ticker's own, differently-sourced
+  // (and differently valued) recorded bundle.
   it("the throwaway row is never presented as the real NVDA ticker's bundle", async () => {
     const input = { ...nvdaDraftInput(), scenarioValues: { bear: "1", base: "1", bull: "1" } };
     await recordAnalystBundle(DRAFT_TICKER, input);
-    expect(await hasRecordedAnalystBundle("NVDA")).toBe(false);
-    expect(await recordedAnalystInputBundle("NVDA")).toBeNull();
+
+    const nvda = await recordedAnalystInputBundle("NVDA");
+    expect(nvda).not.toBeNull();
+    expect(nvda?.inputs.scenarioValues.bear.toString()).not.toBe("1");
+    expect(nvda?.inputs.scenarioValues.bear.toString()).toBe("28.08");
   });
 });
 
@@ -163,7 +177,15 @@ const SKIP_DIRS = new Set(["node_modules", ".git", "dist", "build", "coverage", 
 // a prose citation, never an import of the artefact itself (it hand-copies
 // the field values as string literals). Allowed here for the same reason
 // THIS_FILE is.
-const ALLOWED_DRAFT_REFERENCES = new Set([THIS_FILE, "lib/analyzer/nvdaRealRunObservation.test.ts"]);
+const ALLOWED_DRAFT_REFERENCES = new Set([
+  THIS_FILE,
+  "lib/analyzer/nvdaRealRunObservation.test.ts",
+  // CF-ANALYZER-V1-SETTLE-01 (issue #392) — same class of provenance
+  // citation as the two entries above: names the draft's path in a comment
+  // explaining where the durably-seeded values came from, never imports or
+  // reads the artefact file itself at runtime.
+  "migrations/008_nvda_recorded_bundle_seed.sql",
+]);
 
 function findDraftReferences(dir: string, results: string[]): void {
   for (const entry of readdirSync(dir)) {
@@ -208,13 +230,25 @@ describe("CF-ANALYST-DRAFT-NVDA-01 — the runtime resolution path is unchanged 
     expect(oklo?.inputs.profile.confirmedOrOverridden).toBe("PRE_REVENUE_UNPROFITABLE");
   });
 
-  it("NVDA itself has no recorded bundle and analystInputsFor(\"NVDA\") is null", async () => {
-    expect(await hasRecordedAnalystBundle("NVDA")).toBe(false);
-    expect(await analystInputsFor("NVDA")).toBeNull();
+  // CF-ANALYZER-V1-SETTLE-01 (issue #392) — migration 008 durably records
+  // NVDA's already Calvin-approved scenario bundle (PR #295, "CALVIN
+  // RULING — APPROVE AS DRAFTED"), the same content
+  // nvdaRealRunObservation.test.ts already proved end to end through the
+  // gated pipeline, transcribed byte-faithful rather than recorded fresh by
+  // this file. NVDA resolving now is the intentional effect of that
+  // migration, not a drift this file failed to catch.
+  it("NVDA now has a durably recorded bundle (migration 008) and analystInputsFor(\"NVDA\") resolves it", async () => {
+    expect(await hasRecordedAnalystBundle("NVDA")).toBe(true);
+    const bundle = await analystInputsFor("NVDA");
+    expect(bundle).not.toBeNull();
+    expect(bundle?.inputs.profile.confirmedOrOverridden).toBe("HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY");
+    expect(bundle?.inputs.scenarioValues.bear.toString()).toBe("28.08");
+    expect(bundle?.inputs.scenarioValues.base.toString()).toBe("102.38");
+    expect(bundle?.inputs.scenarioValues.bull.toString()).toBe("296.44");
   });
 
-  it("a run for NVDA still fails closed: isSupportedTicker(\"NVDA\") is false", async () => {
-    expect(await isSupportedTicker("NVDA")).toBe(false);
+  it("a run for NVDA no longer fails closed: isSupportedTicker(\"NVDA\") is true", async () => {
+    expect(await isSupportedTicker("NVDA")).toBe(true);
   });
 
   afterAll(async () => {

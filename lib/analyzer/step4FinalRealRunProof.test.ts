@@ -110,8 +110,14 @@ function approvedNvdaBundle(): RecordedAnalystBundleInput {
   };
 }
 
-async function deleteRecordedNvdaBundle(): Promise<void> {
-  await getPool().query("DELETE FROM analyzer_recorded_analyst_bundles WHERE ticker = 'NVDA'");
+// CF-ANALYZER-V1-SETTLE-01 (issue #392) — migration 008 now durably seeds
+// this exact bundle for NVDA. A bare DELETE would erase that durable seed
+// for any other test file expecting it, for the whole rest of the test
+// run; re-recording the same approved content (recordAnalystBundle's own
+// ON CONFLICT upsert) leaves NVDA exactly where migration 008 puts it,
+// both between this file's own tests and after the whole file finishes.
+async function seedApprovedNvdaBundle(): Promise<void> {
+  await recordAnalystBundle("NVDA", approvedNvdaBundle());
 }
 
 async function openNvdaObservationRun(): Promise<AnalysisResult> {
@@ -134,11 +140,11 @@ function forecastDispersionOf(result: AnalysisResult): Step4ForecastDispersionRe
 describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-run proof (MSFT, OKLO, NVDA)", () => {
   beforeEach(async () => {
     await getPool().query("TRUNCATE analyzer_run_fact_decisions, analyzer_run_judgments, analyzer_runs CASCADE");
-    await deleteRecordedNvdaBundle();
+    await seedApprovedNvdaBundle();
   });
 
   afterAll(async () => {
-    await deleteRecordedNvdaBundle();
+    await seedApprovedNvdaBundle();
     await getPool().end();
   });
 

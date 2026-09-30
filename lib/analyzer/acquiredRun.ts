@@ -91,6 +91,14 @@ export interface BuildAcquiredRunOptions {
    */
   nonOperatingInvestments?: NonOperatingInvestmentSelection | null;
   fiftyTwoWeek?: { low: Decimal; high: Decimal } | null;
+  /**
+   * Trailing/forward EPS, off the same market-data feed as `price` — a
+   * provider field, never a filing tag (see companyInputs.ts's own comment
+   * on why EPS has no §4.4 tag mapping). Null where not fetched; P/E reports
+   * INCOMPLETE exactly as it already does for a missing filing input.
+   */
+  epsTrailing?: Decimal | null;
+  epsForward?: Decimal | null;
   source?: AcquisitionSource;
   acquiredAt?: string;
   /**
@@ -134,6 +142,8 @@ export async function buildAcquiredRun(
       ...bundle.inputs,
       nonOperatingInvestments: options.nonOperatingInvestments ?? null,
       fiftyTwoWeek: options.fiftyTwoWeek ?? null,
+      epsTrailing: options.epsTrailing ?? null,
+      epsForward: options.epsForward ?? null,
       gate0: gate0InputsFrom(acquired),
       // §9.6 rule 2. The cross-check outcomes come off the acquisition that
       // just ran, so trust reads this run's own failures rather than a

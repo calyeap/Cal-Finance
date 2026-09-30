@@ -59,26 +59,47 @@ describe("AnalyzerOverview — fixed slot order (slots 5-11)", () => {
     }
   });
 
-  it("slots 6, 7, 9, 10 render the pageOne === null path honestly, since interpretation has not run in this fixture", () => {
+  // CF-ANALYZER-V1-SETTLE-01 — slots 6, 7, 9, 10 share one underlying cause
+  // (pageOne === null), so they no longer each restate the full sentence:
+  // that was up to four repeated failure-state markers on Overview for one
+  // fact, over #392's "no more than 3 inline missing-data markers" bar.
+  // Each slot instead shows a plain "—" and the one shared note above them
+  // carries the explanation, once.
+  it("slots 6, 7, 9, 10 render a plain placeholder, not a repeated failure-state sentence, when pageOne is null", () => {
     const { container } = render(<AnalyzerOverview result={result} />);
     for (const id of ["slot-6", "slot-7", "slot-9", "slot-10"]) {
       const slot = container.querySelector(`#${id}`);
       expect(slot).not.toBeNull();
-      expect(slot!.textContent).toMatch(/the interpretation call has not run/);
+      expect(slot!.querySelector(".note")!.textContent).toBe("—");
     }
   });
 
-  it("slots 6, 7, 9, 10 surface the AI layer's cause line when one is passed", () => {
+  it("renders exactly one shared note explaining why, for all four affected slots together", () => {
+    const { container } = render(<AnalyzerOverview result={result} />);
+    const note = container.querySelector("#interpretation-unavailable");
+    expect(note).not.toBeNull();
+    expect(note!.textContent).toMatch(/the interpretation call has not run/);
+    expect(container.querySelectorAll("#interpretation-unavailable").length).toBe(1);
+  });
+
+  it("the shared note surfaces the AI layer's cause line when one is passed", () => {
     const { container } = render(
       <AnalyzerOverview
         result={result}
         aiLayer={{ status: "NOT CONFIGURED", model: null, detail: "No ANTHROPIC_API_KEY is configured." }}
       />
     );
-    for (const id of ["slot-6", "slot-7", "slot-9", "slot-10"]) {
-      const slot = container.querySelector(`#${id}`);
-      expect(slot!.textContent).toContain("No ANTHROPIC_API_KEY is configured.");
-    }
+    expect(container.querySelector("#interpretation-unavailable")!.textContent).toContain(
+      "No ANTHROPIC_API_KEY is configured."
+    );
+  });
+
+  it("Overview shows no more than 3 inline missing-data markers when interpretation has not run", () => {
+    const { container } = render(<AnalyzerOverview result={result} />);
+    // The structural slots (5, 11) plus the one shared interpretation note —
+    // never one marker per affected editorial slot.
+    const markers = container.querySelectorAll("#slot-5 .note, #slot-11 .note, #interpretation-unavailable .note");
+    expect(markers.length).toBeLessThanOrEqual(3);
   });
 
   it("slot 8 restates Section E's steady-state EV, PVGO share and implied growth — the same figures, no second computation", () => {

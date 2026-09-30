@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
-import { describe, it, expect, beforeEach, afterEach, afterAll } from "vitest";
-import { readFileSync } from "node:fs";
+import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll } from "vitest";
+import { readFileSync, copyFileSync, rmSync } from "node:fs";
 import path from "node:path";
 import { render, cleanup } from "@testing-library/react";
 import { getPool } from "../db";
@@ -17,23 +17,43 @@ import AnalystInputsTickerPage from "@/app/analyzer/inputs/[ticker]/page";
 // end to end, against an already-committed capture, without authoring a
 // real company's finance view.
 //
-// NVDA is used because lib/analyzer/acquisition/captures/nvda-companyfacts.json
-// is ALREADY committed (M8-a's own acquisition acceptance runs) and NVDA
-// carries no analyst-input bundle, committed or recorded — the exact
-// "otherwise unsupported real company" this outcome's authority targets, and
-// the same ticker AnalyzerEntry.test.tsx and acquiredRun.test.ts already use
-// as their own "no bundle" example. No new capture and no prices.json row is
-// added (HARD BOUNDS) — NVDA has none, so its run proceeds with price null,
-// the same honest "no price was available" state buildAcquiredRun already
-// gives any run with none.
+// A ticker with a real committed capture and no analyst-input bundle is
+// what this file needs — originally NVDA itself
+// (lib/analyzer/acquisition/captures/nvda-companyfacts.json, from M8-a's
+// own acquisition acceptance runs). CF-ANALYZER-V1-SETTLE-01 (issue #392)
+// has since durably recorded NVDA's own real, Calvin-approved bundle
+// (migration 008), so NVDA is no longer "unsupported" and this file's own
+// free deleting/re-recording of a throwaway bundle — including moments
+// with nothing recorded at all — can no longer safely share that row with
+// every other test file that now expects NVDA's durable content to hold.
+// `TEST_TICKER` is a synthetic symbol instead; `beforeAll`/`afterAll` below
+// copy the exact same already-committed real capture bytes to that
+// symbol's own filename for this file's exclusive use — no new SEC fetch,
+// no new prices.json row (HARD BOUNDS unchanged: this ticker's run
+// proceeds with price null, the same honest "no price was available" state
+// buildAcquiredRun already gives any run with none) and no product-facing
+// ticker is added anywhere.
 //
 // The scenario values, drivers and constants recorded below are TEST INPUTS,
 // chosen only to exercise the entry path end to end and to leave specific
-// drivers absent on purpose — they are not NVDA's authored analyst view and
-// are never committed as one (SCOPE item 7's own requirement).
+// drivers absent on purpose — they are not an authored analyst view for any
+// real company and are never committed as one (SCOPE item 7's own
+// requirement).
 // ---------------------------------------------------------------------------
 
-const TEST_TICKER = "NVDA";
+const TEST_TICKER = "ZZZENTRYTEST";
+const NVDA_CAPTURE_PATH = path.resolve(
+  __dirname,
+  "acquisition",
+  "captures",
+  "nvda-companyfacts.json"
+);
+const TEST_CAPTURE_PATH = path.resolve(
+  __dirname,
+  "acquisition",
+  "captures",
+  `${TEST_TICKER.toLowerCase()}-companyfacts.json`
+);
 
 const TEST_INPUT = {
   profile: "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY" as const,
@@ -100,6 +120,20 @@ async function recordNoNonOperatingInvestments(runId: string): Promise<void> {
 }
 
 describe("CF-ANALYST-INPUT-ENTRY-01 — the recorded entry path, end to end on a real capture", () => {
+  beforeAll(() => {
+    // CF-ANALYZER-V1-SETTLE-01 (issue #392) — migration 008 durably
+    // records the real "NVDA" ticker's own Calvin-approved bundle, so this
+    // file (which needs to freely record and delete a THROWAWAY bundle
+    // against a ticker with a real committed capture, including moments
+    // with no bundle recorded at all) can no longer safely share that row.
+    // `TEST_TICKER` is a synthetic symbol instead; this copies the same
+    // already-committed real NVDA capture JSON under that symbol's
+    // filename so acquisition still reads real filing data — no new SEC
+    // fetch, no new company, the identical bytes captureFor("NVDA") already
+    // reads, just also reachable by a ticker this file owns exclusively.
+    copyFileSync(NVDA_CAPTURE_PATH, TEST_CAPTURE_PATH);
+  });
+
   beforeEach(async () => {
     await getPool().query(
       "TRUNCATE analyzer_run_fact_decisions, analyzer_run_judgments, analyzer_runs CASCADE"
@@ -110,6 +144,8 @@ describe("CF-ANALYST-INPUT-ENTRY-01 — the recorded entry path, end to end on a
   afterEach(cleanup);
 
   afterAll(async () => {
+    await getPool().query("DELETE FROM analyzer_recorded_analyst_bundles WHERE ticker = $1", [TEST_TICKER]);
+    rmSync(TEST_CAPTURE_PATH, { force: true });
     await getPool().end();
   });
 

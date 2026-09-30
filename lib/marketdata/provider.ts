@@ -16,6 +16,15 @@ export type InstrumentResolution =
   | { outcome: "unsupported" }
   | { outcome: "unavailable" };
 
+// Trailing/forward EPS off the same feed as the identity quote — a provider
+// field, not a filing tag. Either half may be null where the provider does
+// not carry it for this instrument; that is not the same as the provider
+// call failing (which returns null for the whole record instead).
+export interface EquityFundamentals {
+  epsTrailing: number | null;
+  epsForward: number | null;
+}
+
 export interface MarketDataProvider {
   readonly sourceName: string; // must match a row in the `sources` table
   // Crypto is never resolved here — lib/marketdata/cryptoSymbols.ts is the
@@ -30,4 +39,10 @@ export interface MarketDataProvider {
     from: string,
     to: string
   ): Promise<EodPricePoint[]>;
+  // Optional: a provider whose plan has no fundamentals surface (EODHD's
+  // /eod-only endpoints) simply omits this method. Callers must treat a
+  // missing method exactly like a null result — never a reason to fail the
+  // run — since this is a "nice to have when available" input, not a
+  // REQUIRED one any provider must supply.
+  fetchFundamentals?(ticker: string): Promise<EquityFundamentals | null>;
 }
