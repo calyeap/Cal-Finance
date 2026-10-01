@@ -38,7 +38,52 @@ import { computeAnalysisForRun } from "@/lib/analyzer/gate";
 //      show their own state.
 //   5. Evidence's fact register carries source/as-of/provenance for a real
 //      fact, not placeholder columns.
+//   6. CF-ANALYZER-V1-SETTLE-01 correction (REVIEW's `CORRECT:`, comment
+//      5931716147) — no raw gate/trust/spot-check state code (the right
+//      rail's Leverage row, the hero's suppressed slots, the Financials
+//      Leverage precondition row, and Overview's price-implied restatement)
+//      appears outside Evidence on a fresh automatic run, for either
+//      ticker. The rail and hero are part of the shared shell
+//      (AnalyzerReportFrame), so any one tab render already exercises them.
 // ---------------------------------------------------------------------------
+
+// Every forbidden raw code #392's ACCEPTANCE GATE and REVIEW's `CORRECT:`
+// name, checked against exactly the surfaces that correction named — the
+// right rail, the hero (ScenarioRangeStrip), the Financials Leverage
+// precondition row, and Overview's price-implied restatement — never the
+// whole page. `DominantVerdictSlot`'s verdict.reason is rendered verbatim
+// one `.verdictslot` over, by explicit, separately-pinned contract (this
+// PR's own body: "doesn't touch DominantVerdictSlot's pinned verbatim-
+// verdict.reason contract") — it legitimately quotes these same state names
+// as explanatory prose, so a whole-page text search would wrongly flag
+// protected, out-of-scope content. Not a bare "SUPPRESSED": that substring
+// also appears inside the unrelated, pre-existing, legitimately-still-
+// outside-Evidence seasonality state "SEASONAL — RUN-RATE SUPPRESSED"
+// (stateCatalogue.ts) and the human-composed "Valuation position —
+// suppressed" label this correction keeps.
+const FORBIDDEN_RAW_STATE_TEXT = [
+  "LEVERAGE UNSUPPORTED IN v1",
+  "UNSUPPORTED PROFILE",
+  "PROFILE NOT CONFIRMED",
+  "TRUST STATUS UNUSABLE",
+];
+
+// The non-Evidence surfaces this correction touched — right rail (every
+// tab), hero (every tab), Financials' Gate-results section, Overview's
+// price-implied slot — queried by the selectors their own components
+// already use elsewhere in this suite / their own source.
+const CORRECTED_SURFACE_SELECTORS = [".az-keystats", ".scenariorangestrip", "#C", ".ovtab"];
+
+function assertNoRawStateTextOnCorrectedSurfaces(container: HTMLElement) {
+  for (const selector of CORRECTED_SURFACE_SELECTORS) {
+    const surface = container.querySelector(selector);
+    if (surface === null) continue; // not every tab render includes every surface
+    const text = surface.textContent ?? "";
+    for (const forbidden of FORBIDDEN_RAW_STATE_TEXT) {
+      expect(text).not.toContain(forbidden);
+    }
+  }
+}
 
 vi.mock("next/navigation", () => ({
   redirect: (url: string) => {
@@ -146,6 +191,12 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       );
       expect(markers.length).toBeLessThanOrEqual(3);
     });
+
+    it("no raw gate/trust/spot-check state code appears outside Evidence (rail and hero included)", async () => {
+      const runId = await analyze("MSFT", "Microsoft Corporation");
+      const { container } = await renderTab(runId);
+      assertNoRawStateTextOnCorrectedSurfaces(container);
+    });
   });
 
   describe("NVDA", () => {
@@ -170,7 +221,18 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       expect(financialsText).toContain("13 filed years");
       expect(financialsText).toContain("CLEAN (75.2%)");
       expect(financialsText).toContain("Leverage precondition");
-      expect(financialsText).toContain("LEVERAGE UNSUPPORTED IN v1");
+      // CF-ANALYZER-V1-SETTLE-01 correction (REVIEW's `CORRECT:`, comment
+      // 5931716147) — the precondition's own raw code must not render
+      // outside Evidence; a local marker takes its place, and the raw code
+      // still reaches Evidence via `states.suppressing` (assemble.ts).
+      expect(financialsText).toContain("Unavailable — see Evidence");
+      assertNoRawStateTextOnCorrectedSurfaces(financials.container);
+    });
+
+    it("no raw gate/trust/spot-check state code appears outside Evidence (rail and hero included)", async () => {
+      const runId = await analyze("NVDA", "NVIDIA Corporation");
+      const { container } = await renderTab(runId, "overview");
+      assertNoRawStateTextOnCorrectedSurfaces(container);
     });
 
     it("Overview never exceeds 3 inline missing-data markers, same local-degradation rule as MSFT", async () => {

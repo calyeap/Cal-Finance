@@ -598,7 +598,13 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
               <tr>
                 <th scope="row">Leverage precondition{preRevenue && " — company today"}</th>
                 <td>
-                  <span className="v">{gates.leverage.result}</span>
+                  {/* CF-ANALYZER-V1-SETTLE-01 correction — Financials is not
+                      Evidence; #392's ACCEPTANCE GATE forbids the raw
+                      "LEVERAGE UNSUPPORTED IN v1" banner here. "PASS" is not
+                      one of the forbidden banners, so it still renders
+                      as-is; the raw code reaches Evidence via
+                      `states.suppressing` regardless. */}
+                  <span className="v">{gates.leverage.result === "PASS" ? "PASS" : "Unavailable — see Evidence"}</span>
                   {gates.leverage.netDebtRatio !== null && <div className="sub">net debt ratio {pct(gates.leverage.netDebtRatio)}</div>}
                   {gates.leverage.operatingLeaseInclusiveMemo !== null && (
                     <div className="sub">operating-lease-inclusive memo {pct(gates.leverage.operatingLeaseInclusiveMemo)}</div>

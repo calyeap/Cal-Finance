@@ -113,9 +113,15 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
     <div className="ovslot" id="slot-8">
       <h3>What today&apos;s price assumes</h3>
       <p className="sub2">Restated in full from Section E — the same figures, no second computation.</p>
+      {/* CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE
+          forbids raw gate/trust state codes (e.g. "LEVERAGE UNSUPPORTED IN
+          v1") outside Evidence; Overview is a non-Evidence tab. The raw
+          code still reaches Evidence via `states.suppressing`
+          (assemble.ts) — this is the same state, restated as a local
+          marker, not a new computation. */}
       {priceImplied.steadyStateEv.suppressed ? (
         <div className="state">
-          <span className="name">{priceImplied.steadyStateEv.state}</span>
+          <span className="name">Unavailable — see Evidence</span>
           <span className="cause">{humanizeCause(priceImplied.steadyStateEv.cause)}</span>
         </div>
       ) : (
@@ -126,7 +132,7 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
       )}
       {priceImplied.pvgoShareOfEv.suppressed ? (
         <div className="state">
-          <span className="name">{priceImplied.pvgoShareOfEv.state}</span>
+          <span className="name">Unavailable — see Evidence</span>
           <span className="cause">{humanizeCause(priceImplied.pvgoShareOfEv.cause)}</span>
         </div>
       ) : (
@@ -138,7 +144,7 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
       {baseRateCell &&
         (baseRateCell.fiveYearGrowth.suppressed ? (
           <div className="state">
-            <span className="name">{baseRateCell.fiveYearGrowth.state}</span>
+            <span className="name">Unavailable — see Evidence</span>
             <span className="cause">{humanizeCause(baseRateCell.fiveYearGrowth.cause)}</span>
           </div>
         ) : (

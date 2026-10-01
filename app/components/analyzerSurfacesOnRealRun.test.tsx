@@ -177,12 +177,16 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       const pvgoShareOfEv = priceImplied.pvgoShareOfEv;
 
       if (steadyStateEv.suppressed) {
-        expect(slot8.textContent).toContain(steadyStateEv.state);
+        // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE
+        // forbids the raw state code outside Evidence; Overview renders a
+        // plain local marker instead (the raw code still reaches Evidence
+        // via `states.suppressing`, assemble.ts).
+        expect(slot8.textContent).toContain("Unavailable — see Evidence");
       } else {
         expect(slot8.textContent).toContain(`$${steadyStateEv.value.toFixed(0)}`);
       }
       if (pvgoShareOfEv.suppressed) {
-        expect(slot8.textContent).toContain(pvgoShareOfEv.state);
+        expect(slot8.textContent).toContain("Unavailable — see Evidence");
       } else {
         expect(slot8.textContent).toContain(`${pvgoShareOfEv.value.mul(100).toFixed(1)}%`);
       }

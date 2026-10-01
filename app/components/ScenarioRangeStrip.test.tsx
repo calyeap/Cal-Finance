@@ -45,8 +45,17 @@ describe("ScenarioRangeStrip — the normal range case", () => {
   it("suppresses the valuation-position slot when the profile is not human-confirmed (§10.6.3), without hiding the range", () => {
     render(<ScenarioRangeStrip result={result} profileNotConfirmed={true} />);
     expect(screen.getByText("Valuation position — suppressed")).not.toBeNull();
-    expect(screen.getByText("PROFILE NOT CONFIRMED")).not.toBeNull();
+    expect(screen.getByText("Unavailable — see Evidence")).not.toBeNull();
     expect(screen.getByText("Fair-value range")).not.toBeNull();
+  });
+
+  // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE forbids
+  // raw trust-status/profile code text on the hero, which renders on every
+  // non-Evidence tab; the identical text already reaches the Evidence tab
+  // via `TrustAndProfileNote`.
+  it("never prints the raw trust-status/profile code itself — only the local marker", () => {
+    render(<ScenarioRangeStrip result={result} profileNotConfirmed={true} />);
+    expect(screen.queryByText("PROFILE NOT CONFIRMED")).toBeNull();
   });
 
   it("does not render the valuation-position slot when nothing suppresses it", () => {
@@ -59,9 +68,18 @@ describe("ScenarioRangeStrip — §10.6.3 suppression (trust UNUSABLE)", () => {
   it("renders the suppressing state in place of the range, never a bear/bull bound", () => {
     const result = assembleAnalysisResult(leveredMsft());
     render(<ScenarioRangeStrip result={result} profileNotConfirmed={false} />);
-    expect(screen.getByText("LEVERAGE UNSUPPORTED IN v1")).not.toBeNull();
+    expect(screen.getByText("Unavailable — see Evidence")).not.toBeNull();
     expect(screen.queryByText("Fair-value range")).toBeNull();
     expect(screen.queryByText(/Driven by:/)).toBeNull();
+  });
+
+  // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE forbids
+  // raw gate/trust state codes (e.g. "LEVERAGE UNSUPPORTED IN v1") on the
+  // hero, which is shared-shell and renders on every non-Evidence tab.
+  it("never prints the raw suppressing state code itself — only the local marker", () => {
+    const result = assembleAnalysisResult(leveredMsft());
+    render(<ScenarioRangeStrip result={result} profileNotConfirmed={false} />);
+    expect(screen.queryByText("LEVERAGE UNSUPPORTED IN v1")).toBeNull();
   });
 
   it("still renders the ValuationStrip grid — the strip is never collapsed or hidden", () => {

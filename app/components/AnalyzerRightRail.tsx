@@ -75,7 +75,14 @@ export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
               {gates.leverage.result === "PASS" && gates.leverage.netDebtRatio !== null ? (
                 `Net debt ${pct(gates.leverage.netDebtRatio)}`
               ) : (
-                <span className="name">{gates.leverage.result}</span>
+                // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE
+                // GATE forbids raw gate/trust/spot-check state codes
+                // (e.g. "LEVERAGE UNSUPPORTED IN v1") outside Evidence; the
+                // right rail is part of the shared shell and renders on
+                // every tab. The raw code still reaches Evidence via
+                // `states.suppressing` (assemble.ts) — this is the same
+                // figure, restated as a local marker, not a new state.
+                <span className="name">Unavailable — see Evidence</span>
               )}
             </dd>
           </div>
