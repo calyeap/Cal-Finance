@@ -114,6 +114,12 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
   describe.each([
     { ticker: "MSFT", companyName: "Microsoft Corporation", queuedFactName: "Price" },
     { ticker: "OKLO", companyName: "Oklo Inc.", queuedFactName: "Price" },
+    // CF-ANALYZER-V1-SETTLE-01 — migration 008's durably-seeded bundle
+    // (lib/analyzer/nvdaRealRunObservation.test.ts) makes NVDA reachable
+    // through this same automatic path with no human act; NVDA's queue has
+    // no Price fact (FINAL OWNER RULING #205 — no price row for this
+    // filer), so its one outstanding fact is Current operating margin.
+    { ticker: "NVDA", companyName: "NVIDIA Corporation", queuedFactName: "Current operating margin" },
   ])("$ticker", ({ ticker, companyName, queuedFactName }) => {
     it("Overview renders a report from the run alone, with no redirect to Screen 2 or Screen 3", async () => {
       const runId = await analyze(ticker, companyName);

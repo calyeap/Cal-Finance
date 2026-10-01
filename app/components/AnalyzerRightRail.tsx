@@ -23,7 +23,7 @@ function usd(v: import("decimal.js").default): string {
 }
 
 export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
-  const { diagnostics, marketContext } = result;
+  const { diagnostics, marketContext, gates } = result;
 
   return (
     <aside className="az-rightrail" aria-label="Key stats, market context and upcoming events">
@@ -59,6 +59,23 @@ export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
                 <span className="name">{diagnostics.marginHistory.state}</span>
               ) : (
                 `${usd(diagnostics.marginHistory.value.fiftyTwoWeekRange[0])} – ${usd(diagnostics.marginHistory.value.fiftyTwoWeekRange[1])}`
+              )}
+            </dd>
+          </div>
+          {/* CF-ANALYZER-V1-SETTLE-01 — #392's V1 Key Stats list names "one
+              compact balance-sheet/leverage metric" alongside market cap,
+              P/E and FCF yield; this rail had the other three but not this
+              one. Same figure Section D's "Leverage precondition" row
+              already reads (gates.leverage, one figure one computation),
+              restated here in the same suppressed/value shape the three
+              stats above already use — no new computation, no new state. */}
+          <div>
+            <dt>Leverage</dt>
+            <dd>
+              {gates.leverage.result === "PASS" && gates.leverage.netDebtRatio !== null ? (
+                `Net debt ${pct(gates.leverage.netDebtRatio)}`
+              ) : (
+                <span className="name">{gates.leverage.result}</span>
               )}
             </dd>
           </div>
