@@ -13,17 +13,29 @@ import { evidenceStatusLabel } from "@/lib/analyzer/trustCopy";
 // report/page.tsx already uses for every other suppressing state in the
 // product.
 //
-// verdict.reason is rendered verbatim as the cause line in every case
-// (contract §4). It is also the only textual field VerdictResult carries at
-// all — for a completed verdict there is no separate "rationale" field in
-// the type, so the same reason string is what RationaleLine renders too.
-// This is not an invented substitute: it is literally the one sentence
-// deriveVerdict's caller has to explain the verdict, whichever status it
-// carries. Three of VerdictResult's four INCOMPLETE branches state a cause
-// only, one (COMPARATOR_NOT_YET_AVAILABLE) embeds its own recovery clause
-// inside that same string (lib/analyzer/verdict.ts) — rendering the string
-// verbatim, unsplit, already satisfies "render a recovery statement only
-// where the derivation supplies one" without this component parsing it.
+// verdict.reason was originally specified to render verbatim as the cause
+// line in every case (contract §4). CF-ANALYZER-V1-SETTLE-01 — CALVIN
+// RULING — A (PR #399, comment 5933170464): verdict.reason is deriveVerdict's
+// one explanatory sentence, and several of its branches embed a raw
+// trust/gate state code (lib/analyzer/verdict.ts — e.g. the UNUSABLE
+// trust's `detail`, a suppressed range's `cause`, or the literal "PROFILE
+// NOT CONFIRMED"). This hero is part of the shared shell and renders on
+// every tab (design authority doc, shell invariants), so rendering it
+// verbatim everywhere was exactly the raw-code-outside-Evidence leak #392's
+// ACCEPTANCE GATE forbids. Calvin's ruling: outside Evidence, replace it
+// with a plain local marker; keep the full verbatim reason on the Evidence
+// tab only. deriveVerdict itself is unchanged — this is presentation-only.
+// `isEvidenceTab` defaults to false so a call site that omits it fails
+// toward the marker, never toward leaking the raw reason.
+//
+// It is also the only textual field VerdictResult carries at all — for a
+// completed verdict there is no separate "rationale" field in the type, so
+// the same reason string is what RationaleLine renders too. Three of
+// VerdictResult's four INCOMPLETE branches state a cause only, one
+// (COMPARATOR_NOT_YET_AVAILABLE) embeds its own recovery clause inside that
+// same string — rendering the string verbatim, unsplit, on Evidence already
+// satisfies "render a recovery statement only where the derivation supplies
+// one" without this component parsing it.
 //
 // deriveVerdict returns INCOMPLETE on every run today (the M8 comparator
 // gap recorded in docs/design/m9-contract-reconciliation.md §5-§6). The
@@ -31,18 +43,24 @@ import { evidenceStatusLabel } from "@/lib/analyzer/trustCopy";
 // exercised render path — not a hypothetical — per the M9 outcome's
 // instruction not to build or test only the INCOMPLETE-always world.
 
+const REASON_UNAVAILABLE_MARKER = "Unavailable — see Evidence";
+
 export function DominantVerdictSlot({
   verdict,
   trustStatus,
+  isEvidenceTab = false,
 }: {
   verdict: VerdictResult;
   trustStatus: TrustStatus;
+  isEvidenceTab?: boolean;
 }) {
+  const reason = isEvidenceTab ? verdict.reason : REASON_UNAVAILABLE_MARKER;
+
   if (verdict.status === "INCOMPLETE") {
     return (
       <div className="verdictslot state incomplete">
         <span className="name">INCOMPLETE</span>
-        <span className="cause">{verdict.reason}</span>
+        <span className="cause">{reason}</span>
       </div>
     );
   }
@@ -51,7 +69,7 @@ export function DominantVerdictSlot({
     <div className="verdictslot completed">
       <span className="verdictword">{verdict.status}</span>
       <ConfidenceIndicator status={trustStatus} />
-      <RationaleLine text={verdict.reason} />
+      <RationaleLine text={reason} />
     </div>
   );
 }

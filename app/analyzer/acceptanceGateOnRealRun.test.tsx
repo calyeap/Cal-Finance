@@ -49,18 +49,20 @@ import { computeAnalysisForRun } from "@/lib/analyzer/gate";
 
 // Every forbidden raw code #392's ACCEPTANCE GATE and REVIEW's `CORRECT:`
 // name, checked against exactly the surfaces that correction named — the
-// right rail, the hero (ScenarioRangeStrip), the Financials Leverage
-// precondition row, and Overview's price-implied restatement — never the
-// whole page. `DominantVerdictSlot`'s verdict.reason is rendered verbatim
-// one `.verdictslot` over, by explicit, separately-pinned contract (this
-// PR's own body: "doesn't touch DominantVerdictSlot's pinned verbatim-
-// verdict.reason contract") — it legitimately quotes these same state names
-// as explanatory prose, so a whole-page text search would wrongly flag
-// protected, out-of-scope content. Not a bare "SUPPRESSED": that substring
-// also appears inside the unrelated, pre-existing, legitimately-still-
-// outside-Evidence seasonality state "SEASONAL — RUN-RATE SUPPRESSED"
-// (stateCatalogue.ts) and the human-composed "Valuation position —
-// suppressed" label this correction keeps.
+// right rail, the hero (ScenarioRangeStrip and, per CALVIN RULING — A below,
+// DominantVerdictSlot too), the Financials Leverage precondition row, and
+// Overview's price-implied restatement — never the whole page.
+//
+// CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399, comment
+// 5933170464) supersedes the earlier carve-out for `DominantVerdictSlot`:
+// `verdict.reason` is no longer rendered verbatim outside Evidence (several
+// of `deriveVerdict`'s branches embed exactly these raw codes), so
+// `.verdictslot` is now one of the corrected surfaces too, not an exemption.
+// Not a bare "SUPPRESSED": that substring also appears inside the
+// unrelated, pre-existing, legitimately-still-outside-Evidence seasonality
+// state "SEASONAL — RUN-RATE SUPPRESSED" (stateCatalogue.ts) and the
+// human-composed "Valuation position — suppressed" label this correction
+// keeps.
 const FORBIDDEN_RAW_STATE_TEXT = [
   "LEVERAGE UNSUPPORTED IN v1",
   "UNSUPPORTED PROFILE",
@@ -69,10 +71,11 @@ const FORBIDDEN_RAW_STATE_TEXT = [
 ];
 
 // The non-Evidence surfaces this correction touched — right rail (every
-// tab), hero (every tab), Financials' Gate-results section, Overview's
-// price-implied slot — queried by the selectors their own components
-// already use elsewhere in this suite / their own source.
-const CORRECTED_SURFACE_SELECTORS = [".az-keystats", ".scenariorangestrip", "#C", ".ovtab"];
+// tab), hero (every tab, including the verdict slot per CALVIN RULING — A),
+// Financials' Gate-results section, Overview's price-implied slot — queried
+// by the selectors their own components already use elsewhere in this
+// suite / their own source.
+const CORRECTED_SURFACE_SELECTORS = [".az-keystats", ".scenariorangestrip", ".verdictslot", "#C", ".ovtab"];
 
 function assertNoRawStateTextOnCorrectedSurfaces(container: HTMLElement) {
   for (const selector of CORRECTED_SURFACE_SELECTORS) {
@@ -196,6 +199,26 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       const runId = await analyze("MSFT", "Microsoft Corporation");
       const { container } = await renderTab(runId);
       assertNoRawStateTextOnCorrectedSurfaces(container);
+    });
+
+    // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399, comment
+    // 5933170464): the verdict slot's raw code must disappear outside
+    // Evidence, but the full verbatim verdict.reason — this ruling's other
+    // half — must still reach the Evidence tab, unmasked. Both sides
+    // asserted against the same fresh automatic run, not assumed from the
+    // component test alone.
+    it("the verdict slot's raw PROFILE NOT CONFIRMED code is hidden on Overview and verbatim on Evidence", async () => {
+      const runId = await analyze("MSFT", "Microsoft Corporation");
+
+      const overview = await renderTab(runId, "overview");
+      const overviewVerdict = overview.container.querySelector(".verdictslot") as HTMLElement;
+      expect(overviewVerdict.textContent).not.toContain("PROFILE NOT CONFIRMED");
+      expect(overviewVerdict.textContent).toContain("Unavailable — see Evidence");
+      cleanup();
+
+      const evidence = await renderTab(runId, "evidence");
+      const evidenceVerdict = evidence.container.querySelector(".verdictslot") as HTMLElement;
+      expect(evidenceVerdict.textContent).toContain("PROFILE NOT CONFIRMED");
     });
 
     // REVIEW's `CORRECT:` (comment 5932208513) — a fresh automatic run

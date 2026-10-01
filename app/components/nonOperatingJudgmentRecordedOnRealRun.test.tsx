@@ -75,7 +75,7 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     expect(ids).toEqual(OVERVIEW_TAB_SLOT_ORDER);
   });
 
-  it("the shared hero still renders INCOMPLETE — verdict.reason verbatim as the cause line, no confidence figure", async () => {
+  it("the shared hero still renders INCOMPLETE — a plain marker (not verdict.reason) outside Evidence, no confidence figure", async () => {
     const { result } = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
     expect(verdict.status).toBe("INCOMPLETE");
@@ -87,7 +87,11 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     );
     const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
     expect(hero.textContent).toContain("INCOMPLETE");
-    expect(hero.textContent).toContain(verdict.reason);
+    // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399): outside
+    // Evidence the hero shows the plain marker, never verdict.reason — see
+    // DominantVerdictSlot.tsx and the design contract's §4 V1 narrowing.
+    expect(hero.textContent).not.toContain(verdict.reason);
+    expect(hero.textContent).toContain("Unavailable — see Evidence");
     // §2.1 slot 2 — confidence only when the analysis is not INCOMPLETE.
     expect(hero.querySelector(".confidence")).toBeNull();
   });

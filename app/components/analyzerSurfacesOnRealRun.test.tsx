@@ -145,7 +145,7 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       expect(ids).toEqual(OVERVIEW_TAB_SLOT_ORDER);
     });
 
-    it("the shared hero renders the INCOMPLETE presentation — state name, verdict.reason verbatim as the cause line, and no confidence figure", async () => {
+    it("the shared hero renders the INCOMPLETE presentation — state name, a plain marker (not verdict.reason) outside Evidence, and no confidence figure", async () => {
       const { result } = await openRealRun(ticker, companyName);
       const verdict = deriveVerdict(result);
       // verdict.ts is unchanged (m9RealCompanyValidationGuards.test.ts pins
@@ -162,9 +162,30 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       );
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
       expect(hero.textContent).toContain("INCOMPLETE");
-      expect(hero.textContent).toContain(verdict.reason);
+      // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399): outside
+      // Evidence, the design contract's §4 "verbatim in every case" rule is
+      // narrowed — the hero shows the plain marker, never verdict.reason,
+      // since several of deriveVerdict's branches embed a raw trust/gate
+      // state code (#392's ACCEPTANCE GATE forbids that outside Evidence).
+      expect(hero.textContent).not.toContain(verdict.reason);
+      expect(hero.textContent).toContain("Unavailable — see Evidence");
       // §2.1 slot 2 — confidence only when the analysis is not INCOMPLETE.
       expect(hero.querySelector(".confidence")).toBeNull();
+    });
+
+    it("the shared hero renders verdict.reason verbatim on the Evidence tab only", async () => {
+      const { result } = await openRealRun(ticker, companyName);
+      const verdict = deriveVerdict(result);
+      expect(verdict.status).toBe("INCOMPLETE");
+
+      const { container } = render(
+        <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="evidence">
+          <div />
+        </AnalyzerReportFrame>
+      );
+      const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
+      expect(hero.textContent).toContain("INCOMPLETE");
+      expect(hero.textContent).toContain(verdict.reason);
     });
 
     it("no slot renders a numeral the Analysis Result does not carry — the price-implied restatement (slot 8) shows its suppression state, not a figure, wherever the result itself is suppressed", async () => {

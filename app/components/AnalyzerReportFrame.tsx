@@ -99,7 +99,11 @@ export function AnalyzerReportFrame({
             mock's own invention (never shipped by ScenarioRangeStrip). */}
         <div className="az-hero" data-tab={activeTab}>
           <div className="az-hero-verdict">
-            <DominantVerdictSlot verdict={verdict} trustStatus={trust.status} />
+            <DominantVerdictSlot
+              verdict={verdict}
+              trustStatus={trust.status}
+              isEvidenceTab={activeTab === "evidence"}
+            />
             <UncertaintyBadge status={trust.status} />
           </div>
           <div className="az-hero-price">
