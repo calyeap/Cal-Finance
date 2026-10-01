@@ -79,8 +79,11 @@ export function ScenarioRangeStrip({
           exists. `showLocation` already computes this from
           scenarioOutputs.priceLocationWithinRange — the same figure Quick
           Read's own call site already shows — so this is the existing
-          figure surfaced one place earlier, not a new computation. */}
-      <ValuationStrip result={result} showLocation />
+          figure surfaced one place earlier, not a new computation. Gated on
+          `positionSuppressedBy === null`: §10.6.3 never renders the
+          position where suppression rules say it must not, and the
+          location line is that same position restated as a percentage. */}
+      <ValuationStrip result={result} showLocation={positionSuppressedBy === null} />
 
       {fairValueRange.kind === "suppressed" ? (
         // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE

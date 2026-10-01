@@ -197,6 +197,18 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       const { container } = await renderTab(runId);
       assertNoRawStateTextOnCorrectedSurfaces(container);
     });
+
+    // REVIEW's `CORRECT:` (comment 5932208513) — a fresh automatic run
+    // records no profile decision, so §10.6.3 suppresses the valuation
+    // position; the hero must not show its percentage restatement either.
+    it("never shows the bear-to-bull location percentage on a fresh automatic run (profile not yet confirmed)", async () => {
+      const runId = await analyze("MSFT", "Microsoft Corporation");
+      const { container } = await renderTab(runId);
+      const hero = container.querySelector(".scenariorangestrip") as HTMLElement;
+      expect(hero).not.toBeNull();
+      expect(hero.textContent ?? "").not.toMatch(/of the way from bear to bull/);
+      expect(hero.textContent ?? "").toContain("Valuation position — suppressed");
+    });
   });
 
   describe("NVDA", () => {
