@@ -129,10 +129,11 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
       // runs land on INCOMPLETE — the honest, unchanged upstream state.
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
       expect(hero.textContent).toContain("INCOMPLETE");
-      // All seven Overview tab slots, in the fixed §2.1 order — the route
-      // still renders the whole Overview tab body, not a reduced one.
+      // All eight Overview tab slots (5-11 plus the new slot 12, REQUIRED
+      // OVERVIEW CONTENT item 9), in the fixed order — the route still
+      // renders the whole Overview tab body, not a reduced one.
       const slots = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
-      expect(slots).toHaveLength(7);
+      expect(slots).toHaveLength(8);
     });
 
     it("the Evidence tab renders Sections B and J from the run alone, with no redirect", async () => {

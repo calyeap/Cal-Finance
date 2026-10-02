@@ -11,6 +11,7 @@ import {
   trustConsequenceLine,
   uncertaintyLevel,
   incompleteVerdictExplanation,
+  priceVsRangeHeadline,
 } from "@/lib/analyzer/trustCopy";
 import { createDeepSnapshotAction, beginUpdateRunAction } from "@/app/actions/analyzer";
 import { boundState, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
@@ -111,6 +112,12 @@ export function AnalyzerReportFrame({
               incompleteExplanation={incompleteVerdictExplanation({
                 trustStatus: trust.status,
                 fairValueRangeKind: result.fairValueRange.kind,
+                profileNotConfirmed,
+              })}
+              priceVsRangeHeadline={priceVsRangeHeadline({
+                fairValueRange: result.fairValueRange,
+                priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
+                trustStatus: trust.status,
                 profileNotConfirmed,
               })}
             />

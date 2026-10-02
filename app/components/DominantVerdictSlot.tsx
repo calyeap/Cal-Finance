@@ -50,6 +50,7 @@ export function DominantVerdictSlot({
   trustStatus,
   isEvidenceTab = false,
   incompleteExplanation,
+  priceVsRangeHeadline,
 }: {
   verdict: VerdictResult;
   trustStatus: TrustStatus;
@@ -63,8 +64,26 @@ export function DominantVerdictSlot({
   // fails toward naming only that a verdict is missing, never toward
   // leaking the raw reason.
   incompleteExplanation?: string;
+  // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
+  // COMPLETE RM-BRIEF PROOF (PR #399, comment 5952716764), REMOVE/BYPASS
+  // item 1: outside Evidence, a defensible fair-value range must not be
+  // reduced to the literal word "INCOMPLETE" — the already-computed
+  // price-vs-range position (lib/analyzer/trustCopy.ts's
+  // `priceVsRangeHeadline`) takes over the slot's bottom line instead.
+  // Null exactly where no defensible range exists to describe a position
+  // within (the existing `incompleteExplanation` fallback still applies
+  // there) — never a fabricated position on a priceless or suppressed run.
+  priceVsRangeHeadline?: string | null;
 }) {
   if (verdict.status === "INCOMPLETE") {
+    if (!isEvidenceTab && priceVsRangeHeadline != null) {
+      return (
+        <div className="verdictslot completed">
+          <ConfidenceIndicator status={trustStatus} />
+          <RationaleLine text={priceVsRangeHeadline} />
+        </div>
+      );
+    }
     const reason = isEvidenceTab ? verdict.reason : incompleteExplanation ?? REASON_UNAVAILABLE_MARKER;
     return (
       <div className="verdictslot state incomplete">

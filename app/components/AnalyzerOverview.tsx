@@ -188,6 +188,35 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
 // analyst-supplied sensitivity range exists for this ticker (NVDA today —
 // `sensitivityRangesFor` has no entry), this keeps the same honest
 // structural frame slot 11 used before this correction.
+// Slot 12 — "Latest material developments." CALVIN RULING — REJECT CURRENT
+// PRODUCT SURFACE; BUILD ONE SIMPLE COMPLETE RM-BRIEF PROOF (PR #399,
+// comment 5952716764), REQUIRED OVERVIEW CONTENT item 9. No earnings-
+// transcript or guidance pipeline exists anywhere in this codebase (HARD
+// BOUNDS forbids a "giant SEC-tag expansion project" to build one), so this
+// states the one real, already-sourced fact this run does carry about what
+// is new: the filer's own most recent SEC filing — the same
+// `BusinessSectionNarrative` the Business tab and slot 5 already read
+// (one figure, one computation). Honest and bounded, never a fabricated
+// headline or guidance figure.
+function RecentDevelopmentsSlot({ result }: { result: AnalysisResult }) {
+  const narrative = result.business.narrative;
+  return (
+    <div className="ovslot" id="slot-12">
+      <h3>Latest material development</h3>
+      {narrative === null ? (
+        <p className="note">
+          Not yet available — {result.business.unavailableReason ?? "no filing has been acquired for this analysis."}
+        </p>
+      ) : (
+        <p>
+          The most recent filing acquired for this analysis is a {narrative.filingForm}, filed {narrative.filingDate}
+          . See the Business and Evidence tabs for its content and accession number.
+        </p>
+      )}
+    </div>
+  );
+}
+
 function ChangeTriggerSlot({ reading }: { reading: Step4ForecastDispersionReading }) {
   return (
     <div className="ovslot structural" id="slot-11">
@@ -269,6 +298,10 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
       {/* Slot 11 — the strongest existing sensitivity signal, where one
           exists (CF-ANALYZER-V1-SETTLE-01, CALVIN RULING — A). */}
       <ChangeTriggerSlot reading={forecastDispersion} />
+
+      {/* Slot 12 — the most recent filing acquired, as the honest answer to
+          "latest material developments" (REQUIRED OVERVIEW CONTENT item 9). */}
+      <RecentDevelopmentsSlot result={result} />
     </div>
   );
 }

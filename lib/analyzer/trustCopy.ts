@@ -1,3 +1,4 @@
+import type Decimal from "decimal.js";
 import type { FairValueRange, TrustStatus } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -142,4 +143,58 @@ export function incompleteVerdictExplanation({
     return "Nobody has confirmed which financial profile fits this company yet, so a verdict can't render until that happens.";
   }
   return "A fair-value range is available, but a full verdict also requires comparing this company's actual growth against what today's price assumes — that comparison isn't built yet. See Evidence for detail.";
+}
+
+// ---------------------------------------------------------------------------
+// CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE COMPLETE
+// RM-BRIEF PROOF (PR #399, comment 5952716764), REMOVE/BYPASS item 1: "
+// deriveVerdict / hero INCOMPLETE must not block or dominate the normal
+// report. Use existing price-vs-range / current-price interpretation
+// instead. Do not invent BUY/HOLD/SELL."
+//
+// `scenarioOutputs.priceLocationWithinRange` (modules/scenarioOutputs.ts)
+// already computes exactly this — the same "X% of the way from bear to
+// bull" figure Quick Read's ValuationStrip already states in words
+// (`showLocation`). This restates that already-computed figure as the
+// hero's own bottom-line sentence, in place of the literal "INCOMPLETE"
+// label, whenever a defensible range exists. It states where the price
+// sits, never whether that is good or bad — no BUY/HOLD/SELL word, no new
+// computation.
+// ---------------------------------------------------------------------------
+
+/**
+ * The hero's price-vs-range bottom line, or null where no defensible range
+ * exists to describe a position within, OR where §10.6.3's existing
+ * valuation-position suppression applies — trust UNUSABLE, or the profile
+ * not yet human-confirmed (the same `positionSuppressedBy` gate
+ * ScenarioRangeStrip already enforces, REVIEW's own `CORRECT:` on this PR,
+ * comment 5932208513: "a fresh automatic run records no profile decision,
+ * so §10.6.3 suppresses the valuation position; the hero must not show its
+ * percentage restatement either"). This function reuses that exact gate
+ * rather than loosening it — §10.6.3 itself is untouched by this outcome.
+ * The caller falls back to `incompleteVerdictExplanation` in either case,
+ * which already states the suppression's own plain-English cause.
+ */
+export function priceVsRangeHeadline({
+  fairValueRange,
+  priceLocationWithinRange,
+  trustStatus,
+  profileNotConfirmed,
+}: {
+  fairValueRange: FairValueRange;
+  priceLocationWithinRange: Decimal | null;
+  trustStatus: TrustStatus;
+  profileNotConfirmed: boolean;
+}): string | null {
+  if (fairValueRange.kind !== "range" || priceLocationWithinRange === null) return null;
+  if (trustStatus === "UNUSABLE" || profileNotConfirmed) return null;
+
+  const pct = priceLocationWithinRange.mul(100);
+  if (pct.lte(0)) {
+    return "Trading at or below the bear case modeled for this company — the current price is already at or beyond the most pessimistic scenario in the range below.";
+  }
+  if (pct.gte(100)) {
+    return "Trading at or above the bull case modeled for this company — the current price is already at or beyond the most optimistic scenario in the range below.";
+  }
+  return `Trading ${pct.toFixed(0)}% of the way from the bear case to the bull case modeled for this company.`;
 }
