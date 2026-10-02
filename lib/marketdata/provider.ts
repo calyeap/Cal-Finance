@@ -25,6 +25,18 @@ export interface EquityFundamentals {
   epsForward: number | null;
 }
 
+// CF-ANALYZER-V1-SETTLE-01 — a FALLBACK source for §4.4's non-operating-
+// investments candidates, consulted only where a filer's own SEC tags
+// surface none (acquire.ts's candidateNonOperatingInvestments comes back
+// empty). It is never a filing fact and never overrides one — the acquired
+// SEC candidates always win when they exist (see acquiredRun.ts). asOfDate
+// is the provider's own balance-sheet period end, so the figure keeps a
+// real as-of date rather than borrowing the price quote's.
+export interface NonOperatingInvestmentsFigure {
+  value: number;
+  asOfDate: string; // YYYY-MM-DD
+}
+
 export interface MarketDataProvider {
   readonly sourceName: string; // must match a row in the `sources` table
   // Crypto is never resolved here — lib/marketdata/cryptoSymbols.ts is the
@@ -45,4 +57,8 @@ export interface MarketDataProvider {
   // run — since this is a "nice to have when available" input, not a
   // REQUIRED one any provider must supply.
   fetchFundamentals?(ticker: string): Promise<EquityFundamentals | null>;
+  // Optional, same contract as fetchFundamentals: omit where the provider
+  // has no balance-sheet surface; callers treat a missing method exactly
+  // like a null result.
+  fetchNonOperatingInvestments?(ticker: string): Promise<NonOperatingInvestmentsFigure | null>;
 }

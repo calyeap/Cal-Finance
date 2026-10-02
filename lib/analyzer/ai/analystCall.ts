@@ -4,9 +4,21 @@
 // §13.1.1 forbids building "a generic Intelligence Layer... a reusable
 // service, a shared abstraction, or a layer other Calboard modules are
 // expected to call. Build the two calls this spec describes and no framework
-// around them." So this is not a framework: it is a single function type, with
-// exactly two callers — interpretation.ts and challenger.ts — and one
-// implementation, anthropicCall.ts.
+// around them." So this is not a framework: it is a single function type,
+// with one implementation (anthropicCall.ts) and one caller per label below.
+//
+// CF-ANALYZER-V1-SETTLE-01's CALVIN RULING — REJECT CURRENT PRODUCT SURFACE;
+// BUILD ONE SIMPLE COMPLETE RM-BRIEF PROOF (issue #399) amends §13.1.1's count
+// for an untuned ticker with no durable analyst-authored scenario bundle: "AI
+// may propose initial Bear/Base/Bull scenario drivers from sourced
+// facts/anchors" is its own new, bounded purpose — scenarioProposal.ts — never
+// a second vote against an analyst's own recorded scenarios (analystInputs.ts
+// is still the one resolver; this call is consulted only where it returns
+// null). The ruling's own second call ("one brief-writer call may synthesize
+// the sourced facts + computed outputs into the human-readable Overview") is
+// already met by the existing, ticker-agnostic interpretation call —
+// reportAnalysis.ts runs it for any assembled AnalysisResult, this ticker's
+// scenario source included — so it is not a fourth label here.
 //
 // It exists for one reason: §8.5 requires the challenger's payload to be
 // isolated BY CONSTRUCTION, and a test cannot prove isolation against a
@@ -15,8 +27,8 @@
 // ---------------------------------------------------------------------------
 
 export interface AnalystCallRequest {
-  /** Which of the two calls this is. Carried for logging and for the tests. */
-  label: "interpretation" | "challenger";
+  /** Which call this is. Carried for logging and for the tests. */
+  label: "interpretation" | "challenger" | "scenarioProposal";
   system: string;
   user: string;
   /** JSON Schema the response must satisfy. */
@@ -33,7 +45,7 @@ export type AnalystCall = (request: AnalystCallRequest) => Promise<unknown>;
 export class AnalystCallUnavailableError extends Error {
   constructor(reason: string) {
     super(
-      `The interpretation and challenger calls cannot run: ${reason}. ` +
+      `The analyst AI call cannot run: ${reason}. ` +
         `The deterministic analysis is unaffected — §8.1's boundary means the numbers do not depend on this.`
     );
     this.name = "AnalystCallUnavailableError";
