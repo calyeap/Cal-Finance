@@ -19,20 +19,55 @@ import { formatCompactUsd } from "@/lib/formatUsd";
 // boundary, m9-analyzer-design-contract.md §3).
 
 const STRUCTURAL_SLOTS: { id: string; label: string }[] = [
-  { id: "slot-5", label: "What the business does" },
   { id: "slot-11", label: "What would change the verdict" },
 ];
 
 // design.md:464 — "a section is never absent... it renders its state."
-// Slots 5 and 11 have no editorial content source (SCOPE item 7), so each
-// renders as a real, labelled, present frame naming that honestly, the same
-// "Not yet available" convention Sections I/I2 already use for content that
-// has not been built yet (AnalyzerReport.tsx).
+// Slot 11 has no editorial content source (SCOPE item 7), so it renders as
+// a real, labelled, present frame naming that honestly, the same "Not yet
+// available" convention Sections I/I2 already use for content that has not
+// been built yet (AnalyzerReport.tsx).
 function StructuralSlot({ id, label }: { id: string; label: string }) {
   return (
     <div className="ovslot structural" id={id}>
       <h3>{label}</h3>
       <p className="note">Not yet available — editorial content for this slot is a later build item.</p>
+    </div>
+  );
+}
+
+// First 2-3 sentences of an already-extracted, verbatim excerpt — a string
+// cut, not a rewrite (EditorialProseBlock boundary, m9-analyzer-design-
+// contract.md §3: no fact, ranking or portfolio-action language added).
+// Falls back to the whole excerpt when it has 3 or fewer sentences.
+function firstSentences(text: string, count: number): string {
+  const sentences = text.match(/[^.!?]+[.!?]+(?:\s+|$)/g);
+  if (sentences === null || sentences.length <= count) return text.trim();
+  return sentences.slice(0, count).join("").trim();
+}
+
+// Slot 5 — "What the business does." CF-ANALYZER-V1-SETTLE-01 correction:
+// the Business tab (AnalyzerReport.tsx's BusinessSection) already carries
+// the filer's own 10-K Item 1 excerpt for this exact run; this slot restates
+// its first 2-3 sentences rather than a second "not yet available" marker
+// for content that, in fact, already exists. Mechanical restatement only —
+// no new extraction, no second computation (same discipline as slot 8's
+// PriceAssumptionSlot restating Section E).
+function BusinessDescriptionSlot({ result }: { result: AnalysisResult }) {
+  const narrative = result.business.narrative;
+  return (
+    <div className="ovslot" id="slot-5">
+      <h3>What the business does</h3>
+      {narrative === null ? (
+        <p className="note">
+          Not yet available — {result.business.unavailableReason ?? "Business section content has not been built for this analysis."}
+        </p>
+      ) : (
+        <>
+          <p>{firstSentences(narrative.text, 3)}</p>
+          <p className="note">Full description on the Business tab.</p>
+        </>
+      )}
     </div>
   );
 }
@@ -169,8 +204,8 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
 
   return (
     <div className="ovtab overview">
-      {/* Slot 5 — no approved content source (issue #160 SCOPE item 7). */}
-      <StructuralSlot {...STRUCTURAL_SLOTS[0]} />
+      {/* Slot 5 — restated from the Business tab's own excerpt. */}
+      <BusinessDescriptionSlot result={result} />
 
       {/* One shared explanation for slots 6, 7, 9, 10's missing content —
           CF-ANALYZER-V1-SETTLE-01, replacing four repeated markers with
@@ -220,7 +255,7 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
       />
 
       {/* Slot 11 — no approved content source (issue #160 SCOPE item 7). */}
-      <StructuralSlot {...STRUCTURAL_SLOTS[1]} />
+      <StructuralSlot {...STRUCTURAL_SLOTS[0]} />
     </div>
   );
 }

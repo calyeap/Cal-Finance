@@ -577,20 +577,26 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
         {/* ============ C ============ */}
         <section id="C">
           <div className="sechead">
-            <h2>C — Gate results</h2>
+            {/* CF-ANALYZER-V1-SETTLE-01 correction — Financials is not
+                Evidence; Calvin's product-completion ruling forbids
+                "Gate 0/1 terminology" as main-product language here. The
+                heading and row labels below are plain English; the raw
+                "Gate 0"/"Gate 1" names still identify these same checks in
+                Evidence (QuickRead / challenger payload) and in code. */}
+            <h2>C — Data sufficiency checks</h2>
             <span className="k">No remedy is offered anywhere</span>
           </div>
           <hr />
           <table className="t">
             <tbody>
               <tr>
-                <th scope="row">Gate 0 — supported profile</th>
+                <th scope="row">Business classification check</th>
                 <td>
                   <span className="v">{gates.gate0.result}</span>
                 </td>
               </tr>
               <tr>
-                <th scope="row">Gate 1 — history sufficiency</th>
+                <th scope="row">Filing history sufficiency check</th>
                 <td>
                   <span className="v">{gates.gate1.state ?? `${gates.gate1.filedYearsCount} filed years`}</span>
                 </td>
@@ -630,7 +636,10 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
         <section id="D">
           <div className="sechead">
             <h2>D — Deterministic diagnostics</h2>
-            <span className="k">M1–M14 · extract shown</span>
+            {/* CF-ANALYZER-V1-SETTLE-01 correction — plain English; "M1-M14"
+                is the internal diagnostic numbering, not main-product
+                language (Calvin's product-completion ruling, item 2). */}
+            <span className="k">Figures below are extracted directly from the filed financial statements</span>
           </div>
           <hr />
           <table className="t">

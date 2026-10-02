@@ -51,13 +51,50 @@ describe("AnalyzerOverview — fixed slot order (slots 5-11)", () => {
     expect(ids).toEqual(["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11"]);
   });
 
-  it("slots 5 and 11 remain honest structural frames — no approved content source (issue #160 SCOPE item 7)", () => {
+  it("slot 11 remains an honest structural frame — no approved content source (issue #160 SCOPE item 7)", () => {
     const { container } = render(<AnalyzerOverview result={result} />);
-    for (const id of ["slot-5", "slot-11"]) {
-      const slot = container.querySelector(`#${id}`);
-      expect(slot).not.toBeNull();
-      expect(slot!.textContent).toMatch(/Not yet available/);
-    }
+    const slot = container.querySelector("#slot-11");
+    expect(slot).not.toBeNull();
+    expect(slot!.textContent).toMatch(/Not yet available/);
+  });
+
+  // CF-ANALYZER-V1-SETTLE-01 correction (REVIEW's `CORRECT:`, comment
+  // 5945267878) — slot 5 is no longer a second "not yet available" marker
+  // for content the Business tab already carries; it falls back to the
+  // honest frame only where the business narrative itself is unavailable,
+  // the same condition BusinessSection (AnalyzerReport.tsx) renders on.
+  it("slot 5 falls back to the honest structural frame when the business narrative is unavailable", () => {
+    const { container } = render(<AnalyzerOverview result={result} />);
+    const slot = container.querySelector("#slot-5");
+    expect(slot).not.toBeNull();
+    expect(slot!.textContent).toMatch(/Not yet available/);
+  });
+
+  it("slot 5 restates the business narrative's first sentences, verbatim, when one is available", () => {
+    const withNarrative: AnalysisResult = {
+      ...result,
+      business: {
+        narrative: {
+          text:
+            "Microsoft develops, licenses and supports software, services, devices and solutions. " +
+            "The company operates through three segments. " +
+            "It serves customers worldwide. " +
+            "This fourth sentence must not appear in the restated excerpt.",
+          filingForm: "10-K",
+          filingDate: "2024-07-30",
+          accessionNumber: "0000789019-24-000123",
+          ruleVersion: "item1-2026-09-1",
+        },
+        unavailableReason: null,
+      },
+    };
+    const { container } = render(<AnalyzerOverview result={withNarrative} />);
+    const slot = container.querySelector("#slot-5") as HTMLElement;
+    expect(slot.textContent).toMatch(/develops, licenses and supports software/);
+    expect(slot.textContent).toContain("It serves customers worldwide.");
+    expect(slot.textContent).not.toContain("This fourth sentence must not appear");
+    expect(slot.textContent).not.toMatch(/Not yet available/);
+    expect(slot.textContent).toContain("Full description on the Business tab.");
   });
 
   // CF-ANALYZER-V1-SETTLE-01 — slots 6, 7, 9, 10 share one underlying cause
@@ -147,11 +184,14 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
     expect(slot9.querySelectorAll("li, ol, ul").length).toBe(0);
   });
 
-  it("slots 5 and 11 still render as structural frames when pageOne is filled — they have no content source regardless", () => {
+  it("slot 11 still renders as a structural frame when pageOne is filled — it has no content source regardless", () => {
     const { container } = render(<AnalyzerOverview result={result} />);
-    for (const id of ["slot-5", "slot-11"]) {
-      expect(container.querySelector(`#${id}`)!.textContent).toMatch(/Not yet available/);
-    }
+    expect(container.querySelector("#slot-11")!.textContent).toMatch(/Not yet available/);
+  });
+
+  it("slot 5 still falls back to its honest frame when pageOne is filled but the business narrative is not available", () => {
+    const { container } = render(<AnalyzerOverview result={result} />);
+    expect(container.querySelector("#slot-5")!.textContent).toMatch(/Not yet available/);
   });
 
   it("the slot-5-through-11 fixed order holds unchanged with pageOne filled", () => {

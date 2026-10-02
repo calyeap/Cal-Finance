@@ -595,11 +595,12 @@ describe("AnalyzerReport — profile renders as a human label, not the raw enum 
   });
 });
 
-describe("AnalyzerReport — Section D header qualifier restored (defect C5)", () => {
-  it("shows 'extract shown' beside the M1-M14 range, matching the MSFT mock", () => {
+describe("AnalyzerReport — Section D header qualifier is plain English (CF-ANALYZER-V1-SETTLE-01 correction)", () => {
+  it("shows the plain-English filed-statements qualifier, not the internal M1-M14 diagnostic numbering", () => {
     const result = assembleAnalysisResult(MSFT_FIXTURE);
     render(<AnalyzerReport result={result} />);
-    expect(screen.getByText(/M1.M14 · extract shown/)).not.toBeNull();
+    expect(screen.getByText(/Figures below are extracted directly from the filed financial statements/)).not.toBeNull();
+    expect(screen.queryByText(/M1.M14/)).toBeNull();
   });
 });
 
