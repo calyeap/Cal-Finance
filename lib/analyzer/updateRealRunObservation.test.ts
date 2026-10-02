@@ -139,10 +139,14 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
           // value/leverage on this automatically-driven run, exactly as
           // automaticAnalysisOnRealRun.test.ts's "still reads INCOMPLETE"
           // case independently proves. `openObservedRun` records no human
-          // profile confirmation, so PROFILE NOT CONFIRMED — a real,
-          // different, still honest cause — is this run's own INCOMPLETE
-          // reason now, not the old leverage/EV gap MSFT no longer has.
-          expect(verdict.reason).toContain("PROFILE NOT CONFIRMED");
+          // profile confirmation, but the RM-brief ruling's automatic-
+          // profile-confirmation fix (item 2) means this run's Gate 0 PASS
+          // now stands in for one, so PROFILE NOT CONFIRMED no longer fires
+          // either — this run's own INCOMPLETE reason is now the one real
+          // gap that remains: M8's required-versus-achieved growth
+          // comparator has not been acquired.
+          expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
+          expect(verdict.reason).toContain("growth comparator");
           expect(result.trust.status).toBe("PARTIAL");
           expect(result.gates.leverage.result).toBe("PASS");
           expect(result.fairValueRange.kind).toBe("range");

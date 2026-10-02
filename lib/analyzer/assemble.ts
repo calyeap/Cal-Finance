@@ -57,6 +57,7 @@ import type {
   BusinessSectionContent,
   FactRecord,
   Figure,
+  LatestFiling,
   MarketContextSectionContent,
   OverrideRecord,
   Profile,
@@ -120,6 +121,9 @@ export interface CompanyFixture {
   // (acquiredRun.ts) always sets both, from the fact set it already acquired.
   business?: BusinessSectionContent;
   marketContext?: MarketContextSectionContent;
+  // CF-ANALYZER-V1-SETTLE-01 — see `LatestFiling`'s own doc comment. Same
+  // optionality reasoning as `business`/`marketContext` above.
+  latestFiling?: LatestFiling | null;
 
   gate0: Gate0Input;
   gate1: Gate1Input;
@@ -186,6 +190,12 @@ export interface CompanyFixture {
   trustInputs: {
     profileHumanConfirmed: boolean;
     crossCheckFailedFactIds: readonly string[];
+    // CF-ANALYZER-V1-SETTLE-01 — non-null only on the pure automatic path
+    // (autoRun.ts Step 6, never a human decision). Combined below with Gate
+    // 0 PASS to decide whether this run's profile is unambiguous enough to
+    // stand in for a human confirmation on the V1 presentation path — see
+    // the comment at its one use below.
+    profileAutoResolved: string | null;
   };
 
   // §10.6.2/§13 (CF-VERDICT-NONPOLICY-GAPS-01) — Step 7's achieved-history
@@ -972,6 +982,22 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       diagnostics,
       profileHumanConfirmed: fixture.trustInputs.profileHumanConfirmed,
       crossCheckFailedFactIds: fixture.trustInputs.crossCheckFailedFactIds,
+      // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
+      // COMPLETE RM-BRIEF PROOF (PR #399): "[manual profile confirmation]
+      // must not block obvious supported operating companies... Classify
+      // them deterministically/automatically." Gate 0 (§6.1) is already the
+      // deterministic, fail-closed test for "is this company's profile
+      // unambiguous" — it refuses every asset-based/financial/insurance/
+      // reserve-extraction row, which is exactly the set the old PROFILE NOT
+      // CONFIRMED qualifier existed to catch a human rubber-stamp for. So:
+      // on the pure automatic path (profileAutoResolved set, never a human
+      // decision — autoRun.ts Step 6) AND Gate 0 PASS, no new human act adds
+      // information this run does not already have, and §6.3's own *Cannot
+      // judge* escape hatch (a real human decision) still raises the
+      // qualifier normally, because that path never sets profileAutoResolved
+      // (autoRun.ts only resolves automatically where no decision exists).
+      profileAutomaticallyUnambiguous:
+        fixture.trustInputs.profileAutoResolved !== null && gate0.result === "PASS",
     }),
     achievedRevenueCagr: fixture.achievedRevenueCagr,
     preRevenue,
@@ -992,6 +1018,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       unavailableReason: "Business section content has not been built for this analysis.",
     },
     marketContext: fixture.marketContext ?? { sic: null, sicDescription: null },
+    latestFiling: fixture.latestFiling ?? null,
     policy: {
       constants: POLICY,
       undefinedConstants: fixture.configuredConstants,

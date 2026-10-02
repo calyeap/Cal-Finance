@@ -125,10 +125,23 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
       const runId = await analyze(ticker, companyName);
       const { container } = await renderTab(runId);
 
-      // The shared hero is #118's most prominent element, and both real
-      // runs land on INCOMPLETE — the honest, unchanged upstream state.
+      // The shared hero is #118's most prominent element. CF-ANALYZER-
+      // V1-SETTLE-01's automatic-profile-confirmation fix (RM-brief ruling
+      // item 2: "classify [unambiguous operating companies]
+      // deterministically/automatically") means MSFT's Gate 0 PASS plus its
+      // automatic profile resolution now stand in for a human confirmation,
+      // so its hero shows the price-vs-range headline instead of raw
+      // INCOMPLETE. OKLO (suppressed range, pre-revenue) and NVDA
+      // (suppressed range, known treasuryMethodDilution/
+      // financeLeaseLiabilities gaps) have no defensible range regardless of
+      // profile confirmation, so their hero is unchanged.
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
-      expect(hero.textContent).toContain("INCOMPLETE");
+      if (ticker === "MSFT") {
+        expect(hero.textContent).not.toContain("INCOMPLETE");
+        expect(hero.textContent).toContain("the way from the bear case to the bull case");
+      } else {
+        expect(hero.textContent).toContain("INCOMPLETE");
+      }
       // All eight Overview tab slots (5-11 plus the new slot 12, REQUIRED
       // OVERVIEW CONTENT item 9), in the fixed order — the route still
       // renders the whole Overview tab body, not a reduced one.

@@ -509,6 +509,7 @@ export async function loadGateState(runId: string): Promise<GateState> {
       trustInputs: {
         profileHumanConfirmed: run.profileHumanConfirmed,
         crossCheckFailedFactIds: [...crossCheckFailedFactIds],
+        profileAutoResolved: run.profileAutoResolved,
       },
     },
     decidedFactIds,

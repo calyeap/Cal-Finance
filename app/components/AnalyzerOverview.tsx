@@ -198,19 +198,31 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
 // `BusinessSectionNarrative` the Business tab and slot 5 already read
 // (one figure, one computation). Honest and bounded, never a fabricated
 // headline or guidance figure.
+// CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE COMPLETE
+// RM-BRIEF PROOF (PR #399, comment 5952716764), REQUIRED OVERVIEW CONTENT
+// item 9 ("latest material developments / next known catalyst"). No
+// earnings-transcript or guidance pipeline exists anywhere in this codebase
+// (HARD BOUNDS forbids a "giant SEC-tag expansion project" to build one), so
+// this states the one real, already-sourced fact a run carries about what is
+// new: `result.latestFiling`, the filer's single most recent SEC filing of
+// ANY form (not the 10-K-only `business.narrative` slot 5 already reads —
+// that would hide a genuinely more recent 8-K/10-Q behind a stale annual
+// filing). A subsequent REVIEW correction (comment 5953340635) found the
+// populated branch below redirecting the reader to "the Business and
+// Evidence tabs" was itself the forbidden "'see Evidence' placeholder
+// standing in for missing content" — this states the fact plainly instead of
+// pointing elsewhere for it.
 function RecentDevelopmentsSlot({ result }: { result: AnalysisResult }) {
-  const narrative = result.business.narrative;
+  const filing = result.latestFiling;
   return (
     <div className="ovslot" id="slot-12">
       <h3>Latest material development</h3>
-      {narrative === null ? (
-        <p className="note">
-          Not yet available — {result.business.unavailableReason ?? "no filing has been acquired for this analysis."}
-        </p>
+      {filing === null ? (
+        <p className="note">No recent SEC filing could be confirmed for this company.</p>
       ) : (
         <p>
-          The most recent filing acquired for this analysis is a {narrative.filingForm}, filed {narrative.filingDate}
-          . See the Business and Evidence tabs for its content and accession number.
+          This analysis reflects the company&rsquo;s filings through its most recent {filing.form}, filed{" "}
+          {filing.filingDate}.
         </p>
       )}
     </div>

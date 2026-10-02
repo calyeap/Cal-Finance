@@ -64,6 +64,15 @@ export interface TrustInput {
    * into `states.qualifying`.
    */
   profileHumanConfirmed: boolean;
+  /**
+   * CF-ANALYZER-V1-SETTLE-01 — true only when assemble.ts has determined this
+   * run's profile needs no human confirmation because it is unambiguous: the
+   * pure automatic path resolved it (never a human decision) AND Gate 0
+   * passed (not asset-based/financial/insurance/reserve-extraction). Optional
+   * so every existing caller that only ever meant a real human act — tests
+   * included — keeps behaving exactly as before without passing it.
+   */
+  profileAutomaticallyUnambiguous?: boolean;
   /** §3.8.2. Fact ids whose deterministic cross-check failed. */
   crossCheckFailedFactIds: readonly string[];
 }
@@ -122,7 +131,7 @@ export function computeTrustStatus(input: TrustInput): TrustResult {
     });
   }
 
-  if (!input.profileHumanConfirmed) {
+  if (!input.profileHumanConfirmed && !input.profileAutomaticallyUnambiguous) {
     determinedBy.push({
       kind: "qualifying flag",
       detail: PROFILE_NOT_CONFIRMED_DETAIL,

@@ -201,42 +201,47 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       assertNoRawStateTextOnCorrectedSurfaces(container);
     });
 
-    // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399, comment
-    // 5933170464): the verdict slot's raw code must disappear outside
-    // Evidence, but the full verbatim verdict.reason — this ruling's other
-    // half — must still reach the Evidence tab, unmasked. Both sides
-    // asserted against the same fresh automatic run, not assumed from the
-    // component test alone.
-    it("the verdict slot's raw PROFILE NOT CONFIRMED code is hidden on Overview and verbatim on Evidence", async () => {
+    // CF-ANALYZER-V1-SETTLE-01's automatic-profile-confirmation fix (RM-brief
+    // ruling item 2, REVIEW's `CORRECT:` comment 5953340635: "classify
+    // [unambiguous operating companies] deterministically/automatically...
+    // needs no new ruling") means MSFT's Gate 0 PASS plus its automatic
+    // profile resolution now stand in for a human confirmation, so PROFILE
+    // NOT CONFIRMED no longer fires on this fresh automatic run at all — the
+    // scenario CALVIN RULING — A's masking mechanism (comment 5933170464)
+    // was originally proved against. That masking mechanism itself (raw code
+    // hidden outside Evidence, verbatim on Evidence) is still covered
+    // directly, with crafted props, by DominantVerdictSlot.test.tsx; this
+    // real-run test instead asserts the hero's new, correct Overview/
+    // Evidence content for the state MSFT's automatic run now actually
+    // reaches — the still-open M8 growth-comparator gap.
+    it("Overview shows the price-vs-range headline, not raw INCOMPLETE; Evidence shows the full verbatim reason", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
 
       const overview = await renderTab(runId, "overview");
       const overviewVerdict = overview.container.querySelector(".verdictslot") as HTMLElement;
+      expect(overviewVerdict.textContent).not.toContain("INCOMPLETE");
       expect(overviewVerdict.textContent).not.toContain("PROFILE NOT CONFIRMED");
-      // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT HEAD FOR
-      // ONE FINAL PRODUCT-COMPLETION PASS, item 2: the bare "Unavailable —
-      // see Evidence" marker is replaced with the actual missing condition
-      // in plain English.
-      expect(overviewVerdict.textContent).toContain(
-        "Nobody has confirmed which financial profile fits this company yet"
-      );
+      expect(overviewVerdict.textContent).toContain("of the way from the bear case to the bull case");
       cleanup();
 
       const evidence = await renderTab(runId, "evidence");
       const evidenceVerdict = evidence.container.querySelector(".verdictslot") as HTMLElement;
-      expect(evidenceVerdict.textContent).toContain("PROFILE NOT CONFIRMED");
+      expect(evidenceVerdict.textContent).toContain("INCOMPLETE");
+      expect(evidenceVerdict.textContent).toContain("growth comparator");
     });
 
-    // REVIEW's `CORRECT:` (comment 5932208513) — a fresh automatic run
-    // records no profile decision, so §10.6.3 suppresses the valuation
-    // position; the hero must not show its percentage restatement either.
-    it("never shows the bear-to-bull location percentage on a fresh automatic run (profile not yet confirmed)", async () => {
+    // CF-ANALYZER-V1-SETTLE-01's automatic-profile-confirmation fix means a
+    // fresh MSFT automatic run (Gate 0 PASS) no longer suppresses the
+    // valuation position the way an explicit, unresolved profile decision
+    // still would — superseding REVIEW's earlier `CORRECT:` (comment
+    // 5932208513), which predates the RM-brief ruling's item 2.
+    it("shows the bear-to-bull location percentage on a fresh automatic run (Gate 0 PASS stands in for confirmation)", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
       const { container } = await renderTab(runId);
       const hero = container.querySelector(".scenariorangestrip") as HTMLElement;
       expect(hero).not.toBeNull();
-      expect(hero.textContent ?? "").not.toMatch(/of the way from bear to bull/);
-      expect(hero.textContent ?? "").toContain("Valuation position — suppressed");
+      expect(hero.textContent ?? "").toMatch(/of the way from bear to bull/);
+      expect(hero.textContent ?? "").not.toContain("Valuation position — suppressed");
     });
 
     // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399, comment

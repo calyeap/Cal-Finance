@@ -1010,6 +1010,20 @@ export interface BusinessSectionContent {
   unavailableReason: string | null;
 }
 
+/**
+ * CF-ANALYZER-V1-SETTLE-01 — REQUIRED OVERVIEW CONTENT item 9 ("latest
+ * material developments"). The filer's single most recent SEC filing of ANY
+ * form, not the 10-K-specific `BusinessSectionNarrative` above: EDGAR's own
+ * submissions feed already orders every filing most-recent-first regardless
+ * of form, so this is a plain top-of-list read, not a new acquisition.
+ * `null` only where no filing list was acquired at all (never fetched a
+ * second time or substituted between LIVE and CAPTURE, same as `business`).
+ */
+export interface LatestFiling {
+  form: string;
+  filingDate: string;
+}
+
 /** The already-acquired SEC SIC classification, rendered as category framing
  * only (§2.2's "scoped down to what the existing facts support" rule) — never
  * a peer, index or sector-average comparison. */
@@ -1066,6 +1080,7 @@ export interface AnalysisResult {
   // reason it is absent, never a silent gap.
   business: BusinessSectionContent;
   marketContext: MarketContextSectionContent;
+  latestFiling: LatestFiling | null;
   policy: {
     constants: PolicyConstants;
     undefinedConstants: UndefinedPolicyConstants;

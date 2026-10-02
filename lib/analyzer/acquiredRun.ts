@@ -134,6 +134,7 @@ export async function buildAcquiredRun(
     sic: acquired.sic,
     sicDescription: acquired.sicDescription,
   };
+  const latestFiling = acquired.latestFiling;
 
   const { fixture: fixtureWithoutSourceContent, absentInputs } = buildCompanyInputs(
     acquired.acquisition,
@@ -151,6 +152,10 @@ export async function buildAcquiredRun(
       trustInputs: {
         profileHumanConfirmed: options.profileHumanConfirmed ?? false,
         crossCheckFailedFactIds: [...acquired.crossCheckFailedFactIds],
+        // Acquisition-time only: no run row exists yet to carry an automatic
+        // resolution, so there is nothing to report here. gate.ts overrides
+        // this wholesale from the run's own stored state on every load.
+        profileAutoResolved: null,
       },
     },
     // CF-NOPRICE-HONESTY-RECON-01, extended by CF-MULTIPLES-NOPRICE-RECON-01.
@@ -189,7 +194,7 @@ export async function buildAcquiredRun(
     );
   }
 
-  const fixture: CompanyFixture = { ...fixtureWithoutSourceContent, business, marketContext };
+  const fixture: CompanyFixture = { ...fixtureWithoutSourceContent, business, marketContext, latestFiling };
 
   return { fixture, acquired, absentInputs, disclosures };
 }
