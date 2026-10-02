@@ -6,6 +6,7 @@ import { CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import type { AnalysisResult, InterpretationStatement, PageOneProse } from "@/lib/analyzer/types";
+import type { Step4ForecastDispersionReading } from "@/lib/analyzer/modules/sensitivity";
 import { formatCompactUsd } from "@/lib/formatUsd";
 
 afterEach(cleanup);
@@ -26,6 +27,18 @@ function statement(text: string): InterpretationStatement {
 
 function withPageOne(result: AnalysisResult, pageOne: PageOneProse): AnalysisResult {
   return { ...result, interpretation: { ...result.interpretation, pageOne } };
+}
+
+// CF-ANALYZER-V1-SETTLE-01 correction (CALVIN RULING — A, slot 11) — builds
+// a result with a chosen `forecastDispersion` reading onto the assembled
+// MSFT fixture, the same pattern `withPageOne` above already uses, so the
+// "no computed source" fallback path (NVDA today) is reachable without a
+// second DB-backed fixture.
+function withForecastDispersion(result: AnalysisResult, forecastDispersion: Step4ForecastDispersionReading): AnalysisResult {
+  return {
+    ...result,
+    diagnostics: { ...result.diagnostics, sensitivity: { ...result.diagnostics.sensitivity, forecastDispersion } },
+  };
 }
 
 const FILLED_PAGE_ONE: PageOneProse = {
@@ -51,11 +64,35 @@ describe("AnalyzerOverview — fixed slot order (slots 5-11)", () => {
     expect(ids).toEqual(["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11"]);
   });
 
-  it("slot 11 remains an honest structural frame — no approved content source (issue #160 SCOPE item 7)", () => {
+  // CF-ANALYZER-V1-SETTLE-01 correction (CALVIN RULING — A, comment
+  // 5946448076) — slot 11 is no longer unconditionally "not yet available":
+  // where M14's tornado already names the largest-swing driver for this run
+  // (MSFT has an analyst-supplied growth/margin range; growth's own swing
+  // already exceeds margin's — msftSensitivityCaptureOnRealRun.test.ts), it
+  // states that driver directly, a short statement naming the variable, not
+  // a prediction or advice on when to act (design contract row 11).
+  it("slot 11 states M14's own largest-swing driver for MSFT, a short statement naming the variable", () => {
     const { container } = render(<AnalyzerOverview result={result} />);
     const slot = container.querySelector("#slot-11");
     expect(slot).not.toBeNull();
-    expect(slot!.textContent).toMatch(/Not yet available/);
+    const reading = result.diagnostics.sensitivity.forecastDispersion as Step4ForecastDispersionReading;
+    expect(reading.available).toBe(true);
+    if (!reading.available) return;
+    expect(reading.selectedDriver).toBe("growth");
+    expect(slot!.textContent).toContain("growth");
+    expect(slot!.textContent).toContain(`${reading.fullRangeValueImpact.mul(100).toFixed(1)}%`);
+    expect(slot!.textContent).not.toMatch(/Not yet available/);
+  });
+
+  it("slot 11 falls back to an honest 'no computed change trigger' marker when no sensitivity range exists for this ticker (NVDA today)", () => {
+    const unavailable = withForecastDispersion(result, {
+      available: false,
+      cause: "no tornado row is available: true — every analyst-supplied range for this run is missing",
+    });
+    const { container } = render(<AnalyzerOverview result={unavailable} />);
+    const slot = container.querySelector("#slot-11");
+    expect(slot).not.toBeNull();
+    expect(slot!.textContent).toContain("No computed change trigger available yet.");
   });
 
   // CF-ANALYZER-V1-SETTLE-01 correction (REVIEW's `CORRECT:`, comment
@@ -134,8 +171,10 @@ describe("AnalyzerOverview — fixed slot order (slots 5-11)", () => {
 
   it("Overview shows no more than 3 inline missing-data markers when interpretation has not run", () => {
     const { container } = render(<AnalyzerOverview result={result} />);
-    // The structural slots (5, 11) plus the one shared interpretation note —
-    // never one marker per affected editorial slot.
+    // Slot 5 (no business narrative in this fixture) plus the one shared
+    // interpretation note — never one marker per affected editorial slot.
+    // Slot 11 carries no `.note` marker here: MSFT has a computed
+    // forecastDispersion reading, so it renders real content, not a marker.
     const markers = container.querySelectorAll("#slot-5 .note, #slot-11 .note, #interpretation-unavailable .note");
     expect(markers.length).toBeLessThanOrEqual(3);
   });
@@ -184,9 +223,10 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
     expect(slot9.querySelectorAll("li, ol, ul").length).toBe(0);
   });
 
-  it("slot 11 still renders as a structural frame when pageOne is filled — it has no content source regardless", () => {
+  it("slot 11 still states the largest-swing driver when pageOne is filled — unaffected by interpretation content", () => {
     const { container } = render(<AnalyzerOverview result={result} />);
-    expect(container.querySelector("#slot-11")!.textContent).toMatch(/Not yet available/);
+    expect(container.querySelector("#slot-11")!.textContent).toContain("growth");
+    expect(container.querySelector("#slot-11")!.textContent).not.toMatch(/Not yet available/);
   });
 
   it("slot 5 still falls back to its honest frame when pageOne is filled but the business narrative is not available", () => {

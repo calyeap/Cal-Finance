@@ -238,6 +238,22 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       expect(hero.textContent ?? "").not.toMatch(/of the way from bear to bull/);
       expect(hero.textContent ?? "").toContain("Valuation position — suppressed");
     });
+
+    // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399, comment
+    // 5946448076): slot 11 states M14's own largest-swing driver on a fresh
+    // automatic run (no recordJudgment/recordFactDecision/
+    // recordProfileDecision call in this file) — the tornado reads only the
+    // fixture's own scenario/analyst-supplied-range inputs, independent of
+    // profile confirmation.
+    it("slot 11 states the largest-swing driver (growth) rather than the structural 'not yet available' frame", async () => {
+      const runId = await analyze("MSFT", "Microsoft Corporation");
+      const { container } = await renderTab(runId, "overview");
+      const slot = container.querySelector("#slot-11") as HTMLElement;
+      expect(slot).not.toBeNull();
+      expect(slot.textContent).toContain("growth");
+      expect(slot.textContent).toMatch(/\d+\.\d%/);
+      expect(slot.textContent).not.toContain("No computed change trigger available yet.");
+    });
   });
 
   describe("NVDA", () => {
@@ -285,6 +301,19 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
         (el) => (el.textContent ?? "").includes("Not yet available")
       );
       expect(markers.length).toBeLessThanOrEqual(3);
+    });
+
+    // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399, comment
+    // 5946448076): NVDA has no analyst-supplied sensitivity range
+    // (`sensitivityRangesFor` has no NVDA entry), so forecastDispersion
+    // stays `available: false` and slot 11 shows the ruling's own honest
+    // fallback rather than inventing a trigger.
+    it("slot 11 shows the honest 'no computed change trigger' fallback — NVDA has no analyst-supplied sensitivity range", async () => {
+      const runId = await analyze("NVDA", "NVIDIA Corporation");
+      const { container } = await renderTab(runId, "overview");
+      const slot = container.querySelector("#slot-11") as HTMLElement;
+      expect(slot).not.toBeNull();
+      expect(slot.textContent).toContain("No computed change trigger available yet.");
     });
   });
 

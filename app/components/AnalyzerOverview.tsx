@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import Decimal from "decimal.js";
 import type { AnalysisResult, InterpretationStatement } from "@/lib/analyzer/types";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
+import type { Step4ForecastDispersionReading } from "@/lib/analyzer/modules/sensitivity";
 import { AiLayerNote, humanizeCause, CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 import { formatCompactUsd } from "@/lib/formatUsd";
@@ -17,24 +18,6 @@ import { formatCompactUsd } from "@/lib/formatUsd";
 // 11) is exactly M9-DESKTOP-SHELL-01's own content for those slots,
 // unchanged — this file still adds no prose of its own (EditorialProseBlock
 // boundary, m9-analyzer-design-contract.md §3).
-
-const STRUCTURAL_SLOTS: { id: string; label: string }[] = [
-  { id: "slot-11", label: "What would change the verdict" },
-];
-
-// design.md:464 — "a section is never absent... it renders its state."
-// Slot 11 has no editorial content source (SCOPE item 7), so it renders as
-// a real, labelled, present frame naming that honestly, the same "Not yet
-// available" convention Sections I/I2 already use for content that has not
-// been built yet (AnalyzerReport.tsx).
-function StructuralSlot({ id, label }: { id: string; label: string }) {
-  return (
-    <div className="ovslot structural" id={id}>
-      <h3>{label}</h3>
-      <p className="note">Not yet available — editorial content for this slot is a later build item.</p>
-    </div>
-  );
-}
 
 // First 2-3 sentences of an already-extracted, verbatim excerpt — a string
 // cut, not a rewrite (EditorialProseBlock boundary, m9-analyzer-design-
@@ -193,8 +176,37 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
   );
 }
 
+// Slot 11 — "What would change the verdict." CF-ANALYZER-V1-SETTLE-01
+// correction, CALVIN RULING — A (slot 11, comment 5946448076): where M14's
+// tornado already names this run's single largest-swing driver — the same
+// `Step4ForecastDispersionReading` Step 4 already computes
+// (`selectStep4ForecastDispersionReading`, sensitivity.ts) — state it
+// directly, the design contract's own "short, specific statement naming
+// the variable" shape for this slot (m9-analyzer-design-contract.md row
+// 11), never a prediction or advice on when to act. No new computation, no
+// new methodology: this restates an existing field. Where no
+// analyst-supplied sensitivity range exists for this ticker (NVDA today —
+// `sensitivityRangesFor` has no entry), this keeps the same honest
+// structural frame slot 11 used before this correction.
+function ChangeTriggerSlot({ reading }: { reading: Step4ForecastDispersionReading }) {
+  return (
+    <div className="ovslot structural" id="slot-11">
+      <h3>What would change the verdict</h3>
+      {reading.available ? (
+        <p>
+          The single largest driver of this valuation is {humanizeCause(reading.selectedDriver)}, which can move the
+          result by {pct(reading.fullRangeValueImpact)} across its own analyst-supplied range.
+        </p>
+      ) : (
+        <p className="note">No computed change trigger available yet.</p>
+      )}
+    </div>
+  );
+}
+
 export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; aiLayer?: AiLayerReport }) {
   const pageOne = result.interpretation.pageOne;
+  const forecastDispersion = result.diagnostics.sensitivity.forecastDispersion as Step4ForecastDispersionReading;
 
   // §17.7.1 — the same deterministic selection Section I's "Challenger
   // point" line and Section I2's headline already share (issue #160 SCOPE
@@ -254,8 +266,9 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
         statement={pageOne === null ? null : pageOne.biggestUncertainty}
       />
 
-      {/* Slot 11 — no approved content source (issue #160 SCOPE item 7). */}
-      <StructuralSlot {...STRUCTURAL_SLOTS[0]} />
+      {/* Slot 11 — the strongest existing sensitivity signal, where one
+          exists (CF-ANALYZER-V1-SETTLE-01, CALVIN RULING — A). */}
+      <ChangeTriggerSlot reading={forecastDispersion} />
     </div>
   );
 }
