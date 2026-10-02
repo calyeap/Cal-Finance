@@ -213,7 +213,13 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       const overview = await renderTab(runId, "overview");
       const overviewVerdict = overview.container.querySelector(".verdictslot") as HTMLElement;
       expect(overviewVerdict.textContent).not.toContain("PROFILE NOT CONFIRMED");
-      expect(overviewVerdict.textContent).toContain("Unavailable — see Evidence");
+      // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT HEAD FOR
+      // ONE FINAL PRODUCT-COMPLETION PASS, item 2: the bare "Unavailable —
+      // see Evidence" marker is replaced with the actual missing condition
+      // in plain English.
+      expect(overviewVerdict.textContent).toContain(
+        "Nobody has confirmed which financial profile fits this company yet"
+      );
       cleanup();
 
       const evidence = await renderTab(runId, "evidence");

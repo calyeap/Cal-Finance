@@ -49,14 +49,23 @@ export function DominantVerdictSlot({
   verdict,
   trustStatus,
   isEvidenceTab = false,
+  incompleteExplanation,
 }: {
   verdict: VerdictResult;
   trustStatus: TrustStatus;
   isEvidenceTab?: boolean;
+  // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT HEAD FOR ONE
+  // FINAL PRODUCT-COMPLETION PASS, item 2: the plain-English stand-in for
+  // an INCOMPLETE verdict outside Evidence (lib/analyzer/trustCopy.ts's
+  // `incompleteVerdictExplanation`), computed by the caller from the same
+  // already-computed signals `deriveVerdict` itself branches on. Optional,
+  // defaulting to the bare marker below, so a call site that omits it
+  // fails toward naming only that a verdict is missing, never toward
+  // leaking the raw reason.
+  incompleteExplanation?: string;
 }) {
-  const reason = isEvidenceTab ? verdict.reason : REASON_UNAVAILABLE_MARKER;
-
   if (verdict.status === "INCOMPLETE") {
+    const reason = isEvidenceTab ? verdict.reason : incompleteExplanation ?? REASON_UNAVAILABLE_MARKER;
     return (
       <div className="verdictslot state incomplete">
         <span className="name">INCOMPLETE</span>
@@ -65,6 +74,7 @@ export function DominantVerdictSlot({
     );
   }
 
+  const reason = isEvidenceTab ? verdict.reason : REASON_UNAVAILABLE_MARKER;
   return (
     <div className="verdictslot completed">
       <span className="verdictword">{verdict.status}</span>

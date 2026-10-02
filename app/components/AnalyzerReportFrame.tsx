@@ -6,7 +6,12 @@ import { DominantVerdictSlot } from "./DominantVerdictSlot";
 import { PriceChartPanel } from "./PriceChartPanel";
 import { ScenarioRangeStrip } from "./ScenarioRangeStrip";
 import { AnalyzerRightRail } from "./AnalyzerRightRail";
-import { trustStatusLine, trustConsequenceLine, uncertaintyLevel } from "@/lib/analyzer/trustCopy";
+import {
+  trustStatusLine,
+  trustConsequenceLine,
+  uncertaintyLevel,
+  incompleteVerdictExplanation,
+} from "@/lib/analyzer/trustCopy";
 import { createDeepSnapshotAction, beginUpdateRunAction } from "@/app/actions/analyzer";
 import { boundState, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
 
@@ -103,6 +108,11 @@ export function AnalyzerReportFrame({
               verdict={verdict}
               trustStatus={trust.status}
               isEvidenceTab={activeTab === "evidence"}
+              incompleteExplanation={incompleteVerdictExplanation({
+                trustStatus: trust.status,
+                fairValueRangeKind: result.fairValueRange.kind,
+                profileNotConfirmed,
+              })}
             />
             <UncertaintyBadge status={trust.status} />
           </div>

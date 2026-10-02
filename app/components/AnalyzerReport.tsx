@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import Decimal from "decimal.js";
-import { formatUsd } from "@/lib/formatUsd";
+import { formatUsd, formatCompactUsd } from "@/lib/formatUsd";
 import { QuickRead } from "./QuickRead";
 import { ValuationStrip } from "./ValuationStrip";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
@@ -1025,13 +1025,13 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
               <tr>
                 <th scope="row">Steady-state EV</th>
                 <td>
-                  <FigureValue figure={priceImplied.steadyStateEv} format={(v) => `$${num(v, 0)}`} />
+                  <FigureValue figure={priceImplied.steadyStateEv} format={(v) => `$${formatCompactUsd(v)}`} />
                 </td>
               </tr>
               <tr>
                 <th scope="row">PVGO</th>
                 <td>
-                  <FigureValue figure={priceImplied.pvgo} format={(v) => `$${num(v, 0)}`} />
+                  <FigureValue figure={priceImplied.pvgo} format={(v) => `$${formatCompactUsd(v)}`} />
                 </td>
               </tr>
               <tr>
@@ -1045,7 +1045,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                   <th scope="row">NOPAT gap (current vs median-margin)</th>
                   <td>
                     <span className="v">
-                      ${num(priceImplied.nopatGap.current, 0)} vs ${num(priceImplied.nopatGap.medianMargin, 0)}
+                      ${formatCompactUsd(priceImplied.nopatGap.current)} vs ${formatCompactUsd(priceImplied.nopatGap.medianMargin)}
                     </span>
                   </td>
                 </tr>

@@ -6,6 +6,7 @@ import { CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import type { AnalysisResult, InterpretationStatement, PageOneProse } from "@/lib/analyzer/types";
+import { formatCompactUsd } from "@/lib/formatUsd";
 
 afterEach(cleanup);
 
@@ -116,7 +117,7 @@ describe("AnalyzerOverview — fixed slot order (slots 5-11)", () => {
     ) {
       throw new Error("unreachable — narrowed by the assertions above");
     }
-    expect(slot8.textContent).toContain(`$${result.priceImplied.steadyStateEv.value.toFixed(0)}`);
+    expect(slot8.textContent).toContain(`$${formatCompactUsd(result.priceImplied.steadyStateEv.value)}`);
     expect(slot8.textContent).toContain(`${result.priceImplied.pvgoShareOfEv.value.mul(100).toFixed(1)}%`);
     expect(slot8.textContent).toContain(`${baseRateCell.fiveYearGrowth.value.mul(100).toFixed(1)}%`);
   });

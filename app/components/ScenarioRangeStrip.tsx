@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 import { ValuationStrip } from "./ValuationStrip";
 import { humanizeCause } from "./AnalyzerReport";
+import { formatCompactUsd } from "@/lib/formatUsd";
 
 // M9-DESKTOP-SHELL-01 — Overview slot 4, per docs/design/m9-analyzer-
 // design-contract.md §2.1 row 4, §3.
@@ -143,7 +144,7 @@ export function ScenarioRangeStrip({
             ) : (
               <div className="pi">
                 <span className="lbl">Steady-state EV</span>
-                <b>${num(priceImplied.steadyStateEv.value, 0)}</b>
+                <b>${formatCompactUsd(priceImplied.steadyStateEv.value)}</b>
               </div>
             )}
             {priceImplied.pvgoShareOfEv.suppressed ? (

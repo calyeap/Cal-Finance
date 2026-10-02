@@ -1,4 +1,4 @@
-import type { TrustStatus } from "./types";
+import type { FairValueRange, TrustStatus } from "./types";
 
 // ---------------------------------------------------------------------------
 // The page-one trust sentences, DERIVED from the computed status.
@@ -99,4 +99,47 @@ export function uncertaintyLevel(status: TrustStatus): UncertaintyLevel {
     case "UNUSABLE":
       return "High";
   }
+}
+
+// ---------------------------------------------------------------------------
+// CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT HEAD FOR ONE
+// FINAL PRODUCT-COMPLETION PASS, item 2: outside Evidence, the hero's
+// INCOMPLETE verdict slot (DominantVerdictSlot) showed only "INCOMPLETE" /
+// "Unavailable — see Evidence" — naming that a verdict is missing, never
+// why. Calvin: "Explain the actual missing decision-critical condition(s)
+// in plain English, then link/defer technical detail to Evidence."
+//
+// `deriveVerdict` (verdict.ts) is pinned by content hash
+// (m9RealCompanyValidationGuards.test.ts) and stays untouched — this reads
+// the exact same already-computed signals that function branches on (trust
+// status, the fair-value range's kind, whether a human has confirmed the
+// profile), in the same order, and states the condition in plain language
+// instead of parsing `verdict.reason`'s pinned prose. No new computation,
+// no new state; `verdict.reason` itself remains the full verbatim technical
+// explanation, still shown in full on Evidence.
+// ---------------------------------------------------------------------------
+
+/** Plain-English stand-in for the hero's INCOMPLETE verdict outside Evidence. */
+export function incompleteVerdictExplanation({
+  trustStatus,
+  fairValueRangeKind,
+  profileNotConfirmed,
+}: {
+  trustStatus: TrustStatus;
+  fairValueRangeKind: FairValueRange["kind"];
+  profileNotConfirmed: boolean;
+}): string {
+  if (trustStatus === "UNUSABLE") {
+    return "This run's underlying data isn't reliable enough yet to support a verdict. See Evidence for which part failed.";
+  }
+  if (fairValueRangeKind === "suppressed") {
+    return "A defensible fair-value range isn't available yet for this company. See Evidence for the specific gap.";
+  }
+  if (fairValueRangeKind === "pre-revenue-distribution") {
+    return "This company doesn't yet generate the kind of earnings this model prices against, so there is no buy/hold/sell line yet — only a cash-floor estimate below.";
+  }
+  if (profileNotConfirmed) {
+    return "Nobody has confirmed which financial profile fits this company yet, so a verdict can't render until that happens.";
+  }
+  return "A fair-value range is available, but a full verdict also requires comparing this company's actual growth against what today's price assumes — that comparison isn't built yet. See Evidence for detail.";
 }

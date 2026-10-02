@@ -8,6 +8,7 @@ import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
 import { AnalyzerOverview } from "./AnalyzerOverview";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
+import { incompleteVerdictExplanation } from "@/lib/analyzer/trustCopy";
 
 // ---------------------------------------------------------------------------
 // CF-S44-RECORD-01 — the rendering half of MSFT's recorded §4.4 ruling: the
@@ -91,7 +92,17 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     // Evidence the hero shows the plain marker, never verdict.reason — see
     // DominantVerdictSlot.tsx and the design contract's §4 V1 narrowing.
     expect(hero.textContent).not.toContain(verdict.reason);
-    expect(hero.textContent).toContain("Unavailable — see Evidence");
+    // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT HEAD FOR
+    // ONE FINAL PRODUCT-COMPLETION PASS, item 2: the bare "Unavailable —
+    // see Evidence" marker is replaced with the actual missing condition
+    // in plain English.
+    expect(hero.textContent).toContain(
+      incompleteVerdictExplanation({
+        trustStatus: result.trust.status,
+        fairValueRangeKind: result.fairValueRange.kind,
+        profileNotConfirmed: false,
+      })
+    );
     // §2.1 slot 2 — confidence only when the analysis is not INCOMPLETE.
     expect(hero.querySelector(".confidence")).toBeNull();
   });

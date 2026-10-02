@@ -4,6 +4,7 @@ import type { AnalysisResult, InterpretationStatement } from "@/lib/analyzer/typ
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { AiLayerNote, humanizeCause, CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
+import { formatCompactUsd } from "@/lib/formatUsd";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — the Overview tab's own body, below the
 // shared AnalyzerReportFrame hero. Slots 1 (company header), 2 (dominant
@@ -127,7 +128,7 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
       ) : (
         <div className="pi">
           <span className="lbl">Steady-state EV</span>
-          <b>${num(priceImplied.steadyStateEv.value, 0)}</b>
+          <b>${formatCompactUsd(priceImplied.steadyStateEv.value)}</b>
         </div>
       )}
       {priceImplied.pvgoShareOfEv.suppressed ? (

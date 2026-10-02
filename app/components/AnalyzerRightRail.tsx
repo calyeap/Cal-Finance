@@ -1,5 +1,5 @@
 import type { AnalysisResult } from "@/lib/analyzer/types";
-import { formatUsd } from "@/lib/formatUsd";
+import { formatUsd, formatCompactUsd } from "@/lib/formatUsd";
 import { FigureValue } from "./AnalyzerReport";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — the wide-desktop persistent right rail
@@ -36,7 +36,11 @@ export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
               {diagnostics.enterpriseValue.suppressed ? (
                 <span className="name">{diagnostics.enterpriseValue.state}</span>
               ) : (
-                usd(diagnostics.enterpriseValue.value.marketCap)
+                // CF-ANALYZER-V1-SETTLE-01 — REJECT CURRENT HEAD, item 3: a
+                // company-scale dollar figure through plain `formatUsd`
+                // reads as an unbroken wall of digits once in the hundreds
+                // of billions or above; abbreviated to T/B/M instead.
+                `$${formatCompactUsd(diagnostics.enterpriseValue.value.marketCap)}`
               )}
             </dd>
           </div>

@@ -12,6 +12,8 @@ import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
 import { AnalyzerReport } from "./AnalyzerReport";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
+import { formatCompactUsd } from "@/lib/formatUsd";
+import { incompleteVerdictExplanation } from "@/lib/analyzer/trustCopy";
 
 // ---------------------------------------------------------------------------
 // #118 runway item 10 — real-company validation, MSFT and OKLO.
@@ -164,11 +166,26 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       expect(hero.textContent).toContain("INCOMPLETE");
       // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399): outside
       // Evidence, the design contract's §4 "verbatim in every case" rule is
-      // narrowed — the hero shows the plain marker, never verdict.reason,
-      // since several of deriveVerdict's branches embed a raw trust/gate
-      // state code (#392's ACCEPTANCE GATE forbids that outside Evidence).
+      // narrowed — the hero shows a plain-English stand-in, never
+      // verdict.reason, since several of deriveVerdict's branches embed a
+      // raw trust/gate state code (#392's ACCEPTANCE GATE forbids that
+      // outside Evidence).
       expect(hero.textContent).not.toContain(verdict.reason);
-      expect(hero.textContent).toContain("Unavailable — see Evidence");
+      // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT HEAD FOR
+      // ONE FINAL PRODUCT-COMPLETION PASS, item 2: the bare "Unavailable —
+      // see Evidence" marker is replaced with the actual missing condition
+      // in plain English, computed from the same signals `deriveVerdict`
+      // branches on — which one fires depends on the ticker (MSFT lands on
+      // the comparator-gap fallback, OKLO's pre-revenue model on a
+      // different branch), so this reads it off the real result rather
+      // than hardcoding one ticker's text.
+      expect(hero.textContent).toContain(
+        incompleteVerdictExplanation({
+          trustStatus: result.trust.status,
+          fairValueRangeKind: result.fairValueRange.kind,
+          profileNotConfirmed: false,
+        })
+      );
       // §2.1 slot 2 — confidence only when the analysis is not INCOMPLETE.
       expect(hero.querySelector(".confidence")).toBeNull();
     });
@@ -204,7 +221,7 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
         // via `states.suppressing`, assemble.ts).
         expect(slot8.textContent).toContain("Unavailable — see Evidence");
       } else {
-        expect(slot8.textContent).toContain(`$${steadyStateEv.value.toFixed(0)}`);
+        expect(slot8.textContent).toContain(`$${formatCompactUsd(steadyStateEv.value)}`);
       }
       if (pvgoShareOfEv.suppressed) {
         expect(slot8.textContent).toContain("Unavailable — see Evidence");
