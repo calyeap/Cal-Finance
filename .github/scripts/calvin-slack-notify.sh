@@ -58,8 +58,11 @@ calvin_slack_payload() {
     && [ "$(runtime_slack_is_duplicate "$comments_json" "$created_at" "$raw")" = true ]; then
     return 1
   fi
+  # These are the only Slack-eligible states in the runtime: a real Calvin
+  # decision/action gate. Include one channel mention so Slack creates an
+  # actual notification instead of only dropping a quiet webhook message.
   jq -n --arg h "$header" --arg repo "$repo" --arg line "$line" --arg url "$comment_url" \
-    '{text: ($h + " — " + $repo + "\n" + $line + "\n" + $url)}'
+    '{text: ($h + " — " + $repo + "\n" + $line + "\n" + $url + "\n<!channel>")}'
 }
 
 # calvin_slack_send <line> <repo> <comment_url> [<comments_json> <created_at>]
