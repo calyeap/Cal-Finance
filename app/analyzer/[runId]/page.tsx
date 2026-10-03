@@ -3,6 +3,7 @@ import { AnalyzerShell } from "@/app/components/AnalyzerShell";
 import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import {
   AnalyzerReportFrame,
+  TrustAndProfileNote,
   DEFAULT_ANALYZER_TAB,
   isAnalyzerTabSlug,
   type AnalyzerTabSlug,
@@ -23,6 +24,7 @@ import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate"
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import { analysisForReport, type AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
+import { PROFILE_NOT_CONFIRMED_DETAIL } from "@/lib/analyzer/trust";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — docs/design/analyzer-v2-design-authority.md
@@ -38,7 +40,17 @@ import type { AnalysisResult } from "@/lib/analyzer/types";
 // any tab shows is settled by the same refusal-before-calculation path
 // (lib/analyzer/gate.ts §2) before any tab renders.
 
-function TabBody({ tab, result, aiLayer }: { tab: AnalyzerTabSlug; result: AnalysisResult; aiLayer?: AiLayerReport }) {
+function TabBody({
+  tab,
+  result,
+  aiLayer,
+  profileNotConfirmed,
+}: {
+  tab: AnalyzerTabSlug;
+  result: AnalysisResult;
+  aiLayer?: AiLayerReport;
+  profileNotConfirmed: boolean;
+}) {
   switch (tab) {
     case "overview":
       return <AnalyzerOverview result={result} aiLayer={aiLayer} />;
@@ -57,10 +69,12 @@ function TabBody({ tab, result, aiLayer }: { tab: AnalyzerTabSlug; result: Analy
       // (AnalyzerReport, the only other renderer of either, now backs only
       // the snapshot page) — rendered here so EvidenceSections' own "See
       // Section A for what and why" cross-reference points at content that
-      // actually exists on this tab.
+      // actually exists on this tab. Trust/profile plumbing (CF-ANALYZER-
+      // V1-SETTLE-01) lives here too, not repeated on the other six tabs.
       return (
         <>
           <QuickRead result={result} />
+          <TrustAndProfileNote result={result} profileNotConfirmed={profileNotConfirmed} />
           <HeaderAndStatesSection result={result} />
           <EvidenceSections result={result} />
         </>
@@ -107,7 +121,15 @@ export default async function ReportPage({
     throw err;
   }
 
-  const profileNotConfirmed = !state.run.profileHumanConfirmed;
+  // CF-ANALYZER-V1-SETTLE-01 — read the same fact trust.ts already computed
+  // (§9.6's PROFILE NOT CONFIRMED qualifier) rather than re-deriving it from
+  // the raw DB field: trust.ts also treats an unambiguous automatic
+  // resolution (Gate 0 PASS, no human decision) as confirmed-enough for V1,
+  // and a second, independent derivation here would be free to disagree —
+  // exactly the failure mode trust.ts's own header comment warns against.
+  const profileNotConfirmed = report.result.trust.determinedBy.some(
+    (d) => d.kind === "qualifying flag" && d.detail === PROFILE_NOT_CONFIRMED_DETAIL
+  );
   const verdict = deriveVerdict(report.result);
 
   return (
@@ -120,7 +142,12 @@ export default async function ReportPage({
         profileNotConfirmed={profileNotConfirmed}
         activeTab={activeTab}
       >
-        <TabBody tab={activeTab} result={report.result} aiLayer={report.aiLayer} />
+        <TabBody
+          tab={activeTab}
+          result={report.result}
+          aiLayer={report.aiLayer}
+          profileNotConfirmed={profileNotConfirmed}
+        />
       </AnalyzerReportFrame>
       <SourcesAndDetails runId={runId} />
     </AnalyzerShell>

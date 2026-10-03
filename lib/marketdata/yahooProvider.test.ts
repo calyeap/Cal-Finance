@@ -4,11 +4,16 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 // the mock must be a constructor exposing the same methods. All provider
 // calls funnel through these spies so tests can assert the exact symbol
 // string the adapter sent to Yahoo.
-const { mockChart, mockQuote } = vi.hoisted(() => ({ mockChart: vi.fn(), mockQuote: vi.fn() }));
+const { mockChart, mockQuote, mockQuoteSummary } = vi.hoisted(() => ({
+  mockChart: vi.fn(),
+  mockQuote: vi.fn(),
+  mockQuoteSummary: vi.fn(),
+}));
 vi.mock("yahoo-finance2", () => ({
   default: class {
     chart = mockChart;
     quote = mockQuote;
+    quoteSummary = mockQuoteSummary;
   },
 }));
 
@@ -29,6 +34,7 @@ const BITCOIN_USD_CLOSE = 79805.13;
 beforeEach(() => {
   mockChart.mockReset();
   mockQuote.mockReset();
+  mockQuoteSummary.mockReset();
   mockChart.mockImplementation(async (symbol: string) => {
     switch (symbol) {
       case "BTC-USD":
@@ -182,5 +188,117 @@ describe("yahooProvider.resolveInstrument — identity resolution, independent o
     mockQuote.mockResolvedValue({ symbol: "NVDA", quoteType: "EQUITY", longName: "NVIDIA Corporation" });
     await yahooProvider.resolveInstrument("  nvda  ");
     expect(mockQuote).toHaveBeenCalledWith("NVDA");
+  });
+});
+
+describe("yahooProvider.fetchFundamentals — CF-ANALYZER-LEAN-MSFT-PROOF-01's EPS surface", () => {
+  it("reads trailing and forward EPS off the same quote() call as identity resolution", async () => {
+    mockQuote.mockResolvedValue({
+      symbol: "MSFT",
+      quoteType: "EQUITY",
+      epsTrailingTwelveMonths: 13.11,
+      epsForward: 15.42,
+    });
+
+    const result = await yahooProvider.fetchFundamentals!("msft");
+
+    expect(mockQuote).toHaveBeenCalledWith("MSFT");
+    expect(result).toEqual({ epsTrailing: 13.11, epsForward: 15.42 });
+  });
+
+  it("carries a missing half as null rather than inventing a value", async () => {
+    mockQuote.mockResolvedValue({ symbol: "MSFT", quoteType: "EQUITY", epsTrailingTwelveMonths: 13.11 });
+    const result = await yahooProvider.fetchFundamentals!("MSFT");
+    expect(result).toEqual({ epsTrailing: 13.11, epsForward: null });
+  });
+
+  it("returns null for the whole record when Yahoo has no quote for the symbol", async () => {
+    mockQuote.mockResolvedValue(undefined);
+    await expect(yahooProvider.fetchFundamentals!("DSADASD")).resolves.toBeNull();
+  });
+
+  it("returns null, never throws, on a network/timeout failure", async () => {
+    mockQuote.mockRejectedValue(new Error("network timeout"));
+    await expect(yahooProvider.fetchFundamentals!("MSFT")).resolves.toBeNull();
+  });
+});
+
+describe("yahooProvider.fetchNonOperatingInvestments — CF-ANALYZER-V1-SETTLE-01's §4.4 fallback", () => {
+  it("calls quoteSummary with validateResult:false, since the typed/validated path strips these fields", async () => {
+    mockQuoteSummary.mockResolvedValue({
+      balanceSheetHistory: {
+        balanceSheetStatements: [
+          { endDate: "2026-06-30", shortTermInvestments: 1_000_000, longTermInvestments: 4_000_000 },
+        ],
+      },
+    });
+
+    await yahooProvider.fetchNonOperatingInvestments!("COST");
+
+    expect(mockQuoteSummary).toHaveBeenCalledWith(
+      "COST",
+      { modules: ["balanceSheetHistory"] },
+      { validateResult: false }
+    );
+  });
+
+  it("sums short- and long-term investments off the most recent statement", async () => {
+    mockQuoteSummary.mockResolvedValue({
+      balanceSheetHistory: {
+        balanceSheetStatements: [
+          { endDate: "2025-06-30", shortTermInvestments: 100, longTermInvestments: 200 },
+          { endDate: "2026-06-30", shortTermInvestments: 1_000_000, longTermInvestments: 4_000_000 },
+        ],
+      },
+    });
+
+    const result = await yahooProvider.fetchNonOperatingInvestments!("COST");
+
+    expect(result).toEqual({ value: 5_000_000, asOfDate: "2026-06-30" });
+  });
+
+  it("carries a missing half as zero, never inventing the other", async () => {
+    mockQuoteSummary.mockResolvedValue({
+      balanceSheetHistory: {
+        balanceSheetStatements: [{ endDate: "2026-06-30", longTermInvestments: 4_000_000 }],
+      },
+    });
+
+    const result = await yahooProvider.fetchNonOperatingInvestments!("COST");
+
+    expect(result).toEqual({ value: 4_000_000, asOfDate: "2026-06-30" });
+  });
+
+  it("returns null when neither field is present (the field this schema normally strips)", async () => {
+    mockQuoteSummary.mockResolvedValue({
+      balanceSheetHistory: { balanceSheetStatements: [{ endDate: "2026-06-30" }] },
+    });
+
+    await expect(yahooProvider.fetchNonOperatingInvestments!("COST")).resolves.toBeNull();
+  });
+
+  it("returns null on a genuine zero rather than a synthetic candidate with nothing to classify", async () => {
+    mockQuoteSummary.mockResolvedValue({
+      balanceSheetHistory: {
+        balanceSheetStatements: [{ endDate: "2026-06-30", shortTermInvestments: 0, longTermInvestments: 0 }],
+      },
+    });
+
+    await expect(yahooProvider.fetchNonOperatingInvestments!("COST")).resolves.toBeNull();
+  });
+
+  it("returns null when there is no balance sheet history at all", async () => {
+    mockQuoteSummary.mockResolvedValue({});
+    await expect(yahooProvider.fetchNonOperatingInvestments!("COST")).resolves.toBeNull();
+  });
+
+  it("returns null, never throws, on a network/timeout failure", async () => {
+    mockQuoteSummary.mockRejectedValue(new Error("network timeout"));
+    await expect(yahooProvider.fetchNonOperatingInvestments!("COST")).resolves.toBeNull();
+  });
+
+  it("returns null on an unrecognised response shape rather than throwing", async () => {
+    mockQuoteSummary.mockResolvedValue({ balanceSheetHistory: { balanceSheetStatements: "not an array" } });
+    await expect(yahooProvider.fetchNonOperatingInvestments!("COST")).resolves.toBeNull();
   });
 });

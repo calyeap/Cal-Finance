@@ -279,6 +279,56 @@ export async function getJudgments(runId: string): Promise<StoredJudgment[]> {
   }));
 }
 
+// ---------------------------------------------------------------------------
+// CF-ANALYZER-V1-SETTLE-01 — durable, company-keyed §4.4 judgments
+// (migration 007). A second SOURCE `gate.ts` falls back to only when THIS
+// run has no judgment of its own recorded — it never overrides a per-run
+// selection an analyst actually made, and it is not a second resolver:
+// `selectionToNonOperatingInvestments` is still the only function that
+// turns a selection string into the figure the EV bridge takes.
+// ---------------------------------------------------------------------------
+
+export interface CompanyJudgmentOverride {
+  judgmentKey: JudgmentKey;
+  selection: string;
+  reason: string;
+}
+
+export async function getCompanyJudgmentOverride(
+  ticker: string,
+  judgmentKey: JudgmentKey
+): Promise<CompanyJudgmentOverride | null> {
+  const { rows } = await getPool().query(
+    `SELECT judgment_key, selection, reason
+       FROM analyzer_company_judgment_overrides
+      WHERE ticker = $1 AND judgment_key = $2`,
+    [ticker, judgmentKey]
+  );
+  if (rows.length === 0) return null;
+  return {
+    judgmentKey: rows[0].judgment_key,
+    selection: rows[0].selection,
+    reason: rows[0].reason,
+  };
+}
+
+export async function recordCompanyJudgmentOverride(
+  ticker: string,
+  judgmentKey: JudgmentKey,
+  selection: string,
+  reason: string
+): Promise<void> {
+  await getPool().query(
+    `INSERT INTO analyzer_company_judgment_overrides (ticker, judgment_key, selection, reason)
+     VALUES ($1, $2, $3, $4)
+     ON CONFLICT (ticker, judgment_key)
+     DO UPDATE SET selection = EXCLUDED.selection,
+                   reason = EXCLUDED.reason,
+                   recorded_at = now()`,
+    [ticker, judgmentKey, selection, reason]
+  );
+}
+
 /**
  * Records the Step 6 outcome (§6.3).
  *

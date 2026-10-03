@@ -496,13 +496,12 @@ describe("a real acquired run with no price — multiplesInput.price (CF-MULTIPL
     expect(run.absentInputs).toContain("price");
 
     // Latent today, exactly like enterpriseValue.price was on NVDA before
-    // CF-NOPRICE-HONESTY-RECON-01 fixed it: MSFT's own epsTrailing,
-    // epsForward and bookValue are already null on the acquired path (EPS
-    // is not in this mapping version), so P/E and P/B were already
-    // INCOMPLETE via their other operand. This proves the fix regardless —
-    // "computes against $0" and "computes against null, still INCOMPLETE
-    // for another stated reason" are different bugs, and only the read
-    // itself (asserted above) proves which one this is.
+    // CF-NOPRICE-HONESTY-RECON-01 fixed it: this call passes no epsTrailing/
+    // epsForward option (and bookValue still has no source at all), so P/E
+    // and P/B were already INCOMPLETE via their other operand. This proves
+    // the fix regardless — "computes against $0" and "computes against
+    // null, still INCOMPLETE for another stated reason" are different bugs,
+    // and only the read itself (asserted above) proves which one this is.
     const result = assembleAnalysisResult(run.fixture);
     for (const m of [result.diagnostics.multiples.peTrailing, result.diagnostics.multiples.peForward, result.diagnostics.multiples.priceToBook]) {
       expect(m.suppressed).toBe(true);
@@ -542,10 +541,114 @@ describe("a real acquired run with no price — multiplesInput.price (CF-MULTIPL
   });
 });
 
+describe("CF-ANALYZER-LEAN-MSFT-PROOF-01 — EPS and market cap off the market-data feed", () => {
+  const EPS_TRAILING = new Decimal("13.11");
+  const EPS_FORWARD = new Decimal("15.42");
+
+  it("REGRESSION — with no EPS supplied, P/E stays INCOMPLETE exactly as before this outcome", async () => {
+    const run = await msftRun();
+    expect(run.fixture.multiplesInput.epsTrailing).toBeNull();
+    expect(run.fixture.multiplesInput.epsForward).toBeNull();
+    expect(run.absentInputs).toEqual(expect.arrayContaining(["epsTrailing", "epsForward"]));
+
+    const result = assembleAnalysisResult(run.fixture);
+    expect(result.diagnostics.multiples.peTrailing.suppressed).toBe(true);
+    expect(result.diagnostics.multiples.peForward.suppressed).toBe(true);
+  });
+
+  it("populates P/E trailing and forward once the market-data feed supplies EPS", async () => {
+    const run = await buildAcquiredRun({
+      ticker: "MSFT",
+      price: PRICE,
+      source: "CAPTURE",
+      acquiredAt: "2026-09-08T10:00:00.000Z",
+      fiftyTwoWeek: { low: new Decimal("344.79"), high: new Decimal("555.45") },
+      epsTrailing: EPS_TRAILING,
+      epsForward: EPS_FORWARD,
+    });
+
+    expect(run.absentInputs).not.toContain("epsTrailing");
+    expect(run.absentInputs).not.toContain("epsForward");
+
+    const result = assembleAnalysisResult(run.fixture);
+    expect(result.diagnostics.multiples.peTrailing.suppressed).toBe(false);
+    expect(result.diagnostics.multiples.peForward.suppressed).toBe(false);
+    if (!result.diagnostics.multiples.peTrailing.suppressed) {
+      expect(result.diagnostics.multiples.peTrailing.value.toString()).toBe(
+        PRICE.value.dividedBy(EPS_TRAILING).toString()
+      );
+    }
+    if (!result.diagnostics.multiples.peForward.suppressed) {
+      expect(result.diagnostics.multiples.peForward.value.toString()).toBe(
+        PRICE.value.dividedBy(EPS_FORWARD).toString()
+      );
+    }
+  });
+
+  it("computes market cap as price x shares outstanding, and FCF yield on market cap follows it — never a third acquisition", async () => {
+    const run = await msftRun();
+
+    expect(run.fixture.multiplesInput.marketCap).not.toBeNull();
+    const expectedMarketCap = PRICE.value.mul("7425545491"); // the raw acquired shares-outstanding fact
+    expect(run.fixture.multiplesInput.marketCap?.value.toString()).toBe(expectedMarketCap.toString());
+    expect(run.absentInputs).not.toContain("marketCap");
+
+    const result = assembleAnalysisResult(run.fixture);
+    expect(result.diagnostics.multiples.fcfYieldOnMarketCap.suppressed).toBe(false);
+    if (!result.diagnostics.multiples.fcfYieldOnMarketCap.suppressed && run.fixture.multiplesInput.cashFcf) {
+      expect(result.diagnostics.multiples.fcfYieldOnMarketCap.value.toString()).toBe(
+        run.fixture.multiplesInput.cashFcf.value.dividedBy(expectedMarketCap).toString()
+      );
+    }
+  });
+
+  it("DEGRADE LOCALLY — a missing forward EPS suppresses only P/E forward, never P/E trailing, market cap or FCF yield", async () => {
+    const run = await buildAcquiredRun({
+      ticker: "MSFT",
+      price: PRICE,
+      source: "CAPTURE",
+      acquiredAt: "2026-09-08T10:00:00.000Z",
+      fiftyTwoWeek: { low: new Decimal("344.79"), high: new Decimal("555.45") },
+      epsTrailing: EPS_TRAILING,
+      epsForward: null,
+    });
+
+    const result = assembleAnalysisResult(run.fixture);
+    expect(result.diagnostics.multiples.peForward.suppressed).toBe(true);
+    expect(result.diagnostics.multiples.peTrailing.suppressed).toBe(false);
+    expect(result.diagnostics.multiples.fcfYieldOnMarketCap.suppressed).toBe(false);
+  });
+
+  it("carries real provenance on the fetched EPS — market-data-feed tokens, never CONFIRMED (nothing will ever spot-check it) and never SECONDARY/AI-EXTRACTED", async () => {
+    const run = await buildAcquiredRun({
+      ticker: "MSFT",
+      price: PRICE,
+      source: "CAPTURE",
+      acquiredAt: "2026-09-08T10:00:00.000Z",
+      fiftyTwoWeek: { low: new Decimal("344.79"), high: new Decimal("555.45") },
+      epsTrailing: EPS_TRAILING,
+      epsForward: EPS_FORWARD,
+    });
+
+    const eps = run.fixture.multiplesInput.epsTrailing;
+    expect(eps).not.toBeNull();
+    expect(eps?.provenance.sourceClass).toBe("PRIMARY");
+    expect(eps?.provenance.extractionType).toBe("DETERMINISTIC/STRUCTURED");
+    expect(eps?.provenance.verificationState).toBe("SPOT-CHECK NOT REQUIRED");
+  });
+});
+
 describe("a company with no analyst input bundle", () => {
+  // CF-ANALYZER-V1-SETTLE-01 (issue #392) — NVDA now durably resolves
+  // (migration 008), so it is no longer this codebase's "capture exists,
+  // no bundle" example; a synthetic ticker with no committed capture and no
+  // recorded/committed bundle proves the same refusal without depending on
+  // NVDA's own support status. analystInputsFor is checked before any
+  // capture is ever read (acquiredRun.ts:118-119), so no real capture file
+  // is needed for this ticker to exercise this exact refusal.
   it("refuses rather than inventing scenarios", async () => {
     await expect(
-      buildAcquiredRun({ ticker: "NVDA", price: PRICE, source: "CAPTURE" })
+      buildAcquiredRun({ ticker: "ZZZNOBUNDLE", price: PRICE, source: "CAPTURE" })
     ).rejects.toBeInstanceOf(AnalystInputsUnavailableError);
   });
 });

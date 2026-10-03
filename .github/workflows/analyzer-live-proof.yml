@@ -41,6 +41,15 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/calboard_proof
+      # Required by lib/analyzer/acquisition/secClient.ts for EDGAR acquisition.
+      # Not a secret — an identifying contact string EDGAR's own terms require.
+      SEC_USER_AGENT: "Cal-Finance-Analyzer-Proof/1.0 (calvinyeap.h@gmail.com)"
+
+    defaults:
+      run:
+        # Without pipefail, `cmd | tee file` always exits 0 (tee's status),
+        # so a failing ai-run would be masked as a passing step.
+        shell: bash --noprofile --norc -eo pipefail {0}
 
     steps:
       - uses: actions/checkout@v4

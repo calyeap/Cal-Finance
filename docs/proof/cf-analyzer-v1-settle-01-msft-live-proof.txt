@@ -1,0 +1,265 @@
+====
+MSFT — a real run through the M7 flow
+========================================================================
+run a0ab90ea-b0af-4b05-a826-6544a01e56d0
+Please consider completing the survey at https://bit.ly/yahoo-finance-api-feedback if you haven't already; for more info see https://github.com/gadicc/yahoo-finance2/issues/764#issuecomment-2056623851.  This will only be shown once, but you can suppress this message in future with `new YahooFinance({ suppressNotices: ['yahooSurvey'] })`.
+Step 2: 2 fact(s) queued for spot-check
+§4.4 judgment: NON-OPERATING INVESTMENTS not recorded — enterprise value reports INCOMPLETE
+Step 6: profile CONFIRMED as MATURE_PROFITABLE_STABLE_FCF
+
+========================================================================
+AI layer — COMPLETED
+========================================================================
+model: claude-opus-5
+
+model calls:   2
+  challenger      1 call(s) — 33.1s
+  interpretation  1 call(s) — 71.5s
+
+wall time:     72.0s
+  the two calls run concurrently, so one clean generation costs about the slower of the two:
+  slowest first attempt   71.5s
+  spent on regenerations  0.0s
+
+========================================================================
+Section I — interpretation [C]
+========================================================================
+
+[GROWTH PATH AGAINST BASE RATES AND HISTORY]
+The analyst's base path is anchored to a ten-year compound growth rate described as consistent with the price-implied path, so it is calibrated against the market rather than against the company's own record. The supplied data carries base rates for margin only — the history window runs 11 years, with a median of 41.6%, a range of 18.2% and a worst single-year change of 0.3% — and contains no base rate for revenue growth, for growth persistence at this scale, or for how often a company sustains a given compound rate. No such comparison is available, and none is offered here. What would have to be true is visible in the reverse-DCF grid: at the lowest rate on the policy grid, with margin held where it is, revenue must reach $1220.3B against a trailing base of $311.9B, at a return on new invested capital of 17.5%. The growth has to be funded: cash capital expenditure is already $115.9B against operating cash flow of $182.9B, with a further $24.6B of finance-lease assets obtained in the period, leaving cash free cash flow of $67.0B.
+
+[MODEL FRAGILITY]
+This model is fragile, and the computed values say so directly. Of an enterprise value of $3814.6B, the steady-state portion is $1104.2B and the present value of growth opportunities is $2710.3B — a PVGO share of 71.1%. Most of the value sits in growth that has not happened yet. In the reverse-DCF grid the terminal period overwhelms the explicit forecast in several cells outright: at the highest rate on the policy grid every margin case returns DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE, DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE and DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE, and the stress margin also degenerates at the middle rate, DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE. Where the terminal value exceeds total value, the discount rate and the policy terminal growth rate of 3.0% are close enough that the arithmetic stops carrying information. The checks that would size this fragility were not run: the higher-rate and lower-rate revaluations are INCOMPLETE and INCOMPLETE, and the rate at which the base case equals the price is INCOMPLETE. The output should be read as a map of what the price demands, not as a precise value.
+
+[PRICE-IMPLIED DIAGNOSTICS]
+At the lowest rate on the policy grid, holding margin at today's level, the price requires growth of 18.8% across the five-year horizon and a ten-year CAGR of 13.9%. Let margin fall back to its history-window median and the requirement rises to 21.4% and 15.7%; under the stress margin it rises again to 23.5% and 17.1%. Raise the discount rate to the middle policy grid rate and the current-margin requirement becomes 29.2% and 21.0%, with year-ten revenue of $2223.8B; at the stress margin that cell is DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE. The gap between margin cases is small in absolute profit terms — $124.2B against $110.4B — yet it moves the required growth materially. On comparison: the supplied data has margin base rates and no revenue-growth base rate, so these required rates cannot be placed against any growth history here. The multiple diagnostics are largely unavailable — INCOMPLETE, INCOMPLETE, the implied exit multiple at INCOMPLETE, and the placement of the multiple in the company's own history at INCOMPLETE — leaving trailing price/earnings of 28.3x and a free-cash-flow yield on market capitalisation of 1.8% with no historical context attached. The combined yield-and-growth check is suppressed: PRECONDITION FAILED.
+
+[SCENARIO CONSTRUCTION]
+The bear case rests on the margin history: it reverts toward the window median of 41.6% and lets growth slow without turning negative, which matches what the triggers found — the margin-at-high test fired, the margin-collapse test did not, with the worst single-year change in the window at 0.3%. The base case holds margin at 46.8% and takes its growth from the price-implied path. That is the least anchored element in the set: the growth input is read off the market, so the resulting value of $510.00 sitting close to $512.90 is an artefact of the anchor rather than an independent finding. The bull case holds margin at the current high and extends the implied five-year path. Reinvestment is held identical across all cases, so the bull case funds much faster growth with the same proportional spend as the bear — that assumption is not anchored to anything in the supplied data. The range runs from $265.00 to $650.00, with today's price at 64% of the way through it and a weighted value of $475.00 inside.
+
+[ASSUMPTION PLAUSIBILITY AND WHAT THE PRICE REQUIRES]
+The margin assumption carries a qualification: MARGIN AT HISTORICAL HIGH. The current operating margin of 46.8% is the maximum of a window spanning 11 years, sits above the window median of 41.6%, and that window has a range of 18.2%. Base and bull both hold margin at that high. The supplied data contains no base rate for how often a peak margin persists, so the plausibility of that choice cannot be tested here beyond noting where it sits in this company's own window. The bear case's reversion toward the median is the one margin assumption with a history-based anchor. There is an internal inconsistency worth naming: reinvestment is identical in all cases while growth differs widely across them, and the return on new invested capital in the grid is constant at 17.5% regardless of how much growth is demanded. Separately, the capital base is heavier than the headline suggests — total debt of $40.3B plus finance leases of $66.6B against cash and marketable securities of $76.8B, for net debt of $30.0B. What the price requires, stated plainly: growth of 18.8% across the five-year horizon at the lowest policy rate with margin held at its historical high; 29.2% if the discount rate moves to the middle of the policy grid; more again if margin reverts; and at the highest policy rate no solvable requirement at all, only DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE. Most of the value — 71.1% of enterprise value — depends on that growth arriving.
+
+========================================================================
+Page one — the four variable sentences (§10.7 rule 2)
+========================================================================
+
+mainFinding: The price requires sustained high growth alongside an operating margin held at the top of its own history, and the supplied data contains margin base rates but no growth base rate against which that growth requirement can be tested.
+
+whatSupportsTheCase: The history-sufficiency test passed with 19 filed years, the leverage precondition passed, margin stability is strong with a worst single-year change of 0.3%, and the lowest rate on the policy grid produces a solvable requirement at 13.9% with a return on new invested capital of 17.5%.
+
+whatWorriesCalboard: The present value of growth opportunities is 71.1% of enterprise value, the terminal period exceeds total value in every margin case at the highest policy rate, the margin feeding the base and bull cases is flagged MARGIN AT HISTORICAL HIGH, free-cash-flow yield on market capitalisation is 1.8% against capital expenditure of $115.9B, and the sensitivity checks are unavailable at INCOMPLETE.
+
+biggestUncertainty: The discount rate — it moves the required growth from 18.8% to 29.2% and then to no solution at all, and the check that would size that effect is INCOMPLETE.
+
+========================================================================
+Section I2 — challenger findings (a call that did not see the analysis)
+========================================================================
+completed at 2026-10-01T12:00:20.875Z
+
+bears on: Capital expenditure (cash) (capex)
+evidence: Cash capital expenditure for the year, $115.9B, absorbs the majority of operating cash flow of $182.9B, leaving cash FCF of only $67.0B against operating income of $155.2B. On the filed figures, reported profitability is converting into free cash at a far lower rate than the income statement alone implies.
+what would have to be true: This matters if a favourable case treats current earnings or operating margin as a proxy for distributable cash. It would be defused only if the capital spend is genuinely discretionary and can be stepped down without impairing revenue — nothing in the supplied record establishes that.
+
+bears on: Finance-lease ROU assets obtained in the period (finance-lease-rou-additions)
+evidence: Right-of-use assets obtained in exchange for finance lease liabilities during the period, $24.6B, are capacity additions that never pass through the cash capex line, so total capacity investment exceeds $115.9B while cash FCF of $67.0B is computed only net of the cash portion.
+what would have to be true: This matters if the free-cash figure is being read as the full economic cost of maintaining and expanding the asset base. It would be immaterial only if these leased assets require no future cash outflow — the filed finance lease liability balance $66.6B indicates otherwise.
+
+bears on: Finance lease liabilities (finance-lease-liabilities)
+evidence: Finance lease liabilities of $66.6B exceed the tagged long-term debt of $40.3B, and the source line for total debt records that commercial paper and short-term borrowings were not tagged at this period. Operating lease liabilities of $21.9B are carried as memo only and excluded from net debt of $30.0B.
+what would have to be true: This matters if obligations are being judged from the debt caption rather than from the full set of fixed claims. It would not matter only if the untagged borrowing categories were genuinely nil and the memo-only operating leases carry no enforceable future payment.
+
+bears on: Current operating margin (current-operating-margin)
+evidence: The run carries the qualification that operating margin sits at its historical high, and the current margin is 46.8%. Meanwhile depreciation and amortisation of $39.0B is far below the period's cash capex of $115.9B, so the recently purchased asset base is not yet fully reflected in the expense line.
+what would have to be true: This matters if forward value rests on holding the peak margin flat or expanding it. The margin would be sustainable only if the newly built asset base either depreciates far more slowly than it was purchased or generates revenue fast enough to outrun its own future depreciation charge; the record supplies no evidence either way.
+
+bears on: Share-based compensation (sbc)
+evidence: Share-based compensation of $12.4B is a non-cash add-back inside operating cash flow of $182.9B, and therefore sits inside cash FCF of $67.0B without being charged against it, while treasury-method dilution is recorded at only 24,000,000 shares against shares outstanding of 7,425,545,491 shares.
+what would have to be true: This matters if per-share cash generation is derived from the cash FCF figure. The low recorded dilution relative to the compensation charge is consistent with repurchases offsetting issuance, in which case the cost is borne in cash used for buybacks rather than in share count — a cost the free-cash figure as filed does not deduct.
+
+bears on: Operating cash flow, latest single quarter (burn where negative) (quarterly-burn)
+evidence: The single-quarter operating cash flow of $46.7B is drawn from an interim filing for the March quarter, whereas the balance sheet and full-year flow items come from the annual filing at the June year-end, and shares outstanding 7,425,545,491 shares carry a later July as-of date while price $512.9 is a September close.
+what would have to be true: This matters if any per-share or coverage construction combines these items as though measured at a single date. It would be harmless only if nothing material to capital structure, share count or cash generation changed across the gaps between those as-of dates — the record contains no observation covering those intervals.
+
+========================================================================
+The catalogue [C] could reference
+========================================================================
+  {{price}}  current share price = $512.90
+  {{price.timestamp}}  price as-of timestamp = 2026-09-30
+  {{facts.shares-outstanding}}  Shares outstanding = 7,425,545,491 shares
+  {{facts.treasury-method-dilution}}  Treasury-method dilution = 24,000,000 shares
+  {{facts.total-debt}}  Total debt = $40.3B
+  {{facts.total-equity}}  Total equity = $442.4B
+  {{facts.finance-lease-liabilities}}  Finance lease liabilities = $66.6B
+  {{facts.cash-and-marketable-debt-securities}}  Cash and marketable debt securities = $76.8B
+  {{facts.operating-lease-liabilities}}  Operating lease liabilities (memo only) = $21.9B
+  {{facts.current-revenue}}  Current-period revenue = $331.8B
+  {{facts.operating-income}}  Operating income = $155.2B
+  {{facts.capex}}  Capital expenditure (cash) = $115.9B
+  {{facts.finance-lease-rou-additions}}  Finance-lease ROU assets obtained in the period = $24.6B
+  {{facts.operating-cash-flow}}  Operating cash flow = $182.9B
+  {{facts.sbc}}  Share-based compensation = $12.4B
+  {{facts.depreciation-and-amortisation}}  Depreciation and amortisation = $39.0B
+  {{facts.cash-balance}}  Cash balance = $20.9B
+  {{facts.quarterly-burn}}  Operating cash flow, latest single quarter (burn where negative) = $46.7B
+  {{facts.price}}  Price = $512.9
+  {{facts.current-operating-margin}}  Current operating margin = 46.8%
+  {{facts.net-debt}}  Net debt (including finance leases) = $30.0B
+  {{facts.cash-fcf}}  Cash FCF = $67.0B
+  {{policy.terminalGrowth}}  terminal growth rate from policy = 3.0%
+  {{policy.terminalRoicPremium}}  terminal ROIC premium assumed for every company = 3%
+  {{policy.rateGrid.0}}  discount rate from the policy grid = 8%
+  {{policy.rateGrid.1}}  discount rate from the policy grid = 10%
+  {{policy.rateGrid.2}}  discount rate from the policy grid = 12%
+  {{priceImplied.steadyStateEv}}  steady-state enterprise value = $1104.2B
+  {{priceImplied.pvgo}}  present value of growth opportunities = $2710.3B
+  {{priceImplied.pvgoShareOfEv}}  PVGO share of enterprise value = 71.1%
+  {{priceImplied.impliedExitMultiple}}  implied exit multiple, dividing EV/EBIT (operating income) = INCOMPLETE  [state]
+  {{priceImplied.nopatGap.current}}  NOPAT at the current margin = $124.2B
+  {{priceImplied.nopatGap.medianMargin}}  NOPAT at the median margin = $110.4B
+  {{priceImplied.reverseDcf.current@0.08.fiveYearGrowth}}  price-implied growth for years 1-5, current margin at r = 8% = 18.8%
+  {{priceImplied.reverseDcf.current@0.08.tenYearCagr}}  price-implied ten-year CAGR, current margin at r = 8% = 13.9%
+  {{priceImplied.reverseDcf.current@0.08.year10Revenue}}  price-implied year-10 revenue, current margin at r = 8% = $1220.3B
+  {{priceImplied.reverseDcf.current@0.08.ronic}}  return on new invested capital, current margin at r = 8% = 17.5%
+  {{priceImplied.reverseDcf.current@0.1.fiveYearGrowth}}  price-implied growth for years 1-5, current margin at r = 10% = 29.2%
+  {{priceImplied.reverseDcf.current@0.1.tenYearCagr}}  price-implied ten-year CAGR, current margin at r = 10% = 21.0%
+  {{priceImplied.reverseDcf.current@0.1.year10Revenue}}  price-implied year-10 revenue, current margin at r = 10% = $2223.8B
+  {{priceImplied.reverseDcf.current@0.1.ronic}}  return on new invested capital, current margin at r = 10% = 17.5%
+  {{priceImplied.reverseDcf.current@0.12.fiveYearGrowth}}  price-implied growth for years 1-5, current margin at r = 12% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.current@0.12.tenYearCagr}}  price-implied ten-year CAGR, current margin at r = 12% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.current@0.12.year10Revenue}}  price-implied year-10 revenue, current margin at r = 12% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.current@0.12.ronic}}  return on new invested capital, current margin at r = 12% = 17.5%
+  {{priceImplied.reverseDcf.median@0.08.fiveYearGrowth}}  price-implied growth for years 1-5, median margin at r = 8% = 21.4%
+  {{priceImplied.reverseDcf.median@0.08.tenYearCagr}}  price-implied ten-year CAGR, median margin at r = 8% = 15.7%
+  {{priceImplied.reverseDcf.median@0.08.year10Revenue}}  price-implied year-10 revenue, median margin at r = 8% = $1428.6B
+  {{priceImplied.reverseDcf.median@0.08.ronic}}  return on new invested capital, median margin at r = 8% = 17.5%
+  {{priceImplied.reverseDcf.median@0.1.fiveYearGrowth}}  price-implied growth for years 1-5, median margin at r = 10% = 32.1%
+  {{priceImplied.reverseDcf.median@0.1.tenYearCagr}}  price-implied ten-year CAGR, median margin at r = 10% = 22.9%
+  {{priceImplied.reverseDcf.median@0.1.year10Revenue}}  price-implied year-10 revenue, median margin at r = 10% = $2612.2B
+  {{priceImplied.reverseDcf.median@0.1.ronic}}  return on new invested capital, median margin at r = 10% = 17.5%
+  {{priceImplied.reverseDcf.median@0.12.fiveYearGrowth}}  price-implied growth for years 1-5, median margin at r = 12% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.median@0.12.tenYearCagr}}  price-implied ten-year CAGR, median margin at r = 12% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.median@0.12.year10Revenue}}  price-implied year-10 revenue, median margin at r = 12% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.median@0.12.ronic}}  return on new invested capital, median margin at r = 12% = 17.5%
+  {{priceImplied.reverseDcf.stress@0.08.fiveYearGrowth}}  price-implied growth for years 1-5, stress margin at r = 8% = 23.5%
+  {{priceImplied.reverseDcf.stress@0.08.tenYearCagr}}  price-implied ten-year CAGR, stress margin at r = 8% = 17.1%
+  {{priceImplied.reverseDcf.stress@0.08.year10Revenue}}  price-implied year-10 revenue, stress margin at r = 8% = $1608.3B
+  {{priceImplied.reverseDcf.stress@0.08.ronic}}  return on new invested capital, stress margin at r = 8% = 17.5%
+  {{priceImplied.reverseDcf.stress@0.1.fiveYearGrowth}}  price-implied growth for years 1-5, stress margin at r = 10% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.stress@0.1.tenYearCagr}}  price-implied ten-year CAGR, stress margin at r = 10% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.stress@0.1.year10Revenue}}  price-implied year-10 revenue, stress margin at r = 10% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.stress@0.1.ronic}}  return on new invested capital, stress margin at r = 10% = 17.5%
+  {{priceImplied.reverseDcf.stress@0.12.fiveYearGrowth}}  price-implied growth for years 1-5, stress margin at r = 12% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.stress@0.12.tenYearCagr}}  price-implied ten-year CAGR, stress margin at r = 12% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.stress@0.12.year10Revenue}}  price-implied year-10 revenue, stress margin at r = 12% = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state]
+  {{priceImplied.reverseDcf.stress@0.12.ronic}}  return on new invested capital, stress margin at r = 12% = 17.5%
+  {{diagnostics.enterpriseValue}}  enterprise value = $3814.6B
+  {{diagnostics.multiples.peTrailing}}  trailing price/earnings = 28.3x
+  {{diagnostics.multiples.evToEbit}}  EV/EBIT = INCOMPLETE  [state]
+  {{diagnostics.multiples.evToEbitda}}  EV/EBITDA = INCOMPLETE  [state]
+  {{diagnostics.multiples.fcfYieldOnMarketCap}}  free-cash-flow yield on market capitalisation = 1.8%
+  {{diagnostics.multiples.ownHistoryPercentile}}  where the multiple sits in the company's own history = INCOMPLETE  [state]
+  {{diagnostics.marginHistory.currentMargin}}  current operating margin = 46.8%
+  {{diagnostics.marginHistory.windowYears}}  length of the margin-history window, in years = 11
+  {{gates.gate1.filedYearsCount}}  number of filed years this company has = 19
+  {{policy.preRevenueConstructionLeadYears}}  construction lead assumed by policy, in years = 2
+  {{diagnostics.marginHistory.median}}  median operating margin over the history window = 41.6%
+  {{diagnostics.marginHistory.range}}  operating-margin range over the history window = 18.2%
+  {{diagnostics.marginHistory.worstSingleYearChange}}  worst single-year margin change in the history window = 0.3%
+  {{diagnostics.fcf.cashFcf}}  cash free cash flow = $67.0B
+  {{diagnostics.fcf.unleveredFcf}}  unlevered free cash flow = INCOMPLETE  [state]
+  {{diagnostics.impliedReturnOnNewCapital}}  implied return on new capital, current fiscal year = INCOMPLETE  [state]
+  {{diagnostics.rateSensitivity.plusOnePoint}}  value change from a one-point higher discount rate = INCOMPLETE  [state]
+  {{diagnostics.rateSensitivity.minusOnePoint}}  value change from a one-point lower discount rate = INCOMPLETE  [state]
+  {{diagnostics.runRate.ttm}}  trailing twelve-month revenue = $311.9B
+  {{scenarioOutputs.values.bear}}  bear scenario value = $265.00
+  {{scenarioOutputs.values.base}}  base scenario value = $510.00
+  {{scenarioOutputs.values.bull}}  bull scenario value = $650.00
+  {{scenarioOutputs.weightedDistribution}}  probability-weighted value, shown inside the range and never as a headline = $475.00
+  {{scenarioOutputs.priceLocationWithinRange}}  where today's price sits within the scenario range = 64%
+  {{scenarioOutputs.rateAtWhichBaseEqualsPrice}}  discount rate at which the base case equals today's price = INCOMPLETE  [state]
+  {{fairValueRange.bear}}  bottom of the fair-value range = $265.00
+  {{fairValueRange.bull}}  top of the fair-value range = $650.00
+  {{fairValueRange.weightedValueInside}}  weighted value shown inside the range = $475.00
+
+========================================================================
+Every figure in [C] output, traced to its field (§8.3 limit 3)
+========================================================================
+  ok  statement 1: diagnostics.marginHistory.windowYears = 11
+  ok  statement 1: diagnostics.marginHistory.median = 41.6%
+  ok  statement 1: diagnostics.marginHistory.range = 18.2%
+  ok  statement 1: diagnostics.marginHistory.worstSingleYearChange = 0.3%
+  ok  statement 1: priceImplied.reverseDcf.current@0.08.year10Revenue = $1220.3B
+  ok  statement 1: diagnostics.runRate.ttm = $311.9B
+  ok  statement 1: priceImplied.reverseDcf.current@0.08.ronic = 17.5%
+  ok  statement 1: facts.capex = $115.9B
+  ok  statement 1: facts.operating-cash-flow = $182.9B
+  ok  statement 1: facts.finance-lease-rou-additions = $24.6B
+  ok  statement 1: facts.cash-fcf = $67.0B
+  ok  statement 2: diagnostics.enterpriseValue = $3814.6B
+  ok  statement 2: priceImplied.steadyStateEv = $1104.2B
+  ok  statement 2: priceImplied.pvgo = $2710.3B
+  ok  statement 2: priceImplied.pvgoShareOfEv = 71.1%
+  ok  statement 2: priceImplied.reverseDcf.current@0.12.tenYearCagr = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state, not a number]
+  ok  statement 2: priceImplied.reverseDcf.median@0.12.tenYearCagr = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state, not a number]
+  ok  statement 2: priceImplied.reverseDcf.stress@0.12.tenYearCagr = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state, not a number]
+  ok  statement 2: priceImplied.reverseDcf.stress@0.1.tenYearCagr = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state, not a number]
+  ok  statement 2: policy.terminalGrowth = 3.0%
+  ok  statement 2: diagnostics.rateSensitivity.plusOnePoint = INCOMPLETE  [state, not a number]
+  ok  statement 2: diagnostics.rateSensitivity.minusOnePoint = INCOMPLETE  [state, not a number]
+  ok  statement 2: scenarioOutputs.rateAtWhichBaseEqualsPrice = INCOMPLETE  [state, not a number]
+  ok  statement 3: priceImplied.reverseDcf.current@0.08.fiveYearGrowth = 18.8%
+  ok  statement 3: priceImplied.reverseDcf.current@0.08.tenYearCagr = 13.9%
+  ok  statement 3: priceImplied.reverseDcf.median@0.08.fiveYearGrowth = 21.4%
+  ok  statement 3: priceImplied.reverseDcf.median@0.08.tenYearCagr = 15.7%
+  ok  statement 3: priceImplied.reverseDcf.stress@0.08.fiveYearGrowth = 23.5%
+  ok  statement 3: priceImplied.reverseDcf.stress@0.08.tenYearCagr = 17.1%
+  ok  statement 3: priceImplied.reverseDcf.current@0.1.fiveYearGrowth = 29.2%
+  ok  statement 3: priceImplied.reverseDcf.current@0.1.tenYearCagr = 21.0%
+  ok  statement 3: priceImplied.reverseDcf.current@0.1.year10Revenue = $2223.8B
+  ok  statement 3: priceImplied.reverseDcf.stress@0.1.fiveYearGrowth = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state, not a number]
+  ok  statement 3: priceImplied.nopatGap.current = $124.2B
+  ok  statement 3: priceImplied.nopatGap.medianMargin = $110.4B
+  ok  statement 3: diagnostics.multiples.evToEbit = INCOMPLETE  [state, not a number]
+  ok  statement 3: diagnostics.multiples.evToEbitda = INCOMPLETE  [state, not a number]
+  ok  statement 3: priceImplied.impliedExitMultiple = INCOMPLETE  [state, not a number]
+  ok  statement 3: diagnostics.multiples.ownHistoryPercentile = INCOMPLETE  [state, not a number]
+  ok  statement 3: diagnostics.multiples.peTrailing = 28.3x
+  ok  statement 3: diagnostics.multiples.fcfYieldOnMarketCap = 1.8%
+  ok  statement 4: diagnostics.marginHistory.median = 41.6%
+  ok  statement 4: diagnostics.marginHistory.worstSingleYearChange = 0.3%
+  ok  statement 4: facts.current-operating-margin = 46.8%
+  ok  statement 4: scenarioOutputs.values.base = $510.00
+  ok  statement 4: price = $512.90
+  ok  statement 4: fairValueRange.bear = $265.00
+  ok  statement 4: fairValueRange.bull = $650.00
+  ok  statement 4: scenarioOutputs.priceLocationWithinRange = 64%
+  ok  statement 4: fairValueRange.weightedValueInside = $475.00
+  ok  statement 5: diagnostics.marginHistory.currentMargin = 46.8%
+  ok  statement 5: diagnostics.marginHistory.windowYears = 11
+  ok  statement 5: diagnostics.marginHistory.median = 41.6%
+  ok  statement 5: diagnostics.marginHistory.range = 18.2%
+  ok  statement 5: priceImplied.reverseDcf.current@0.08.ronic = 17.5%
+  ok  statement 5: facts.total-debt = $40.3B
+  ok  statement 5: facts.finance-lease-liabilities = $66.6B
+  ok  statement 5: facts.cash-and-marketable-debt-securities = $76.8B
+  ok  statement 5: facts.net-debt = $30.0B
+  ok  statement 5: priceImplied.reverseDcf.current@0.08.fiveYearGrowth = 18.8%
+  ok  statement 5: priceImplied.reverseDcf.current@0.1.fiveYearGrowth = 29.2%
+  ok  statement 5: priceImplied.reverseDcf.current@0.12.fiveYearGrowth = DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE  [state, not a number]
+  ok  statement 5: priceImplied.pvgoShareOfEv = 71.1%
+  ok  page one — whatSupportsTheCase: gates.gate1.filedYearsCount = 19
+  ok  page one — whatSupportsTheCase: diagnostics.marginHistory.worstSingleYearChange = 0.3%
+  ok  page one — whatSupportsTheCase: priceImplied.reverseDcf.current@0.08.tenYearCagr = 13.9%
+  ok  page one — whatSupportsTheCase: priceImplied.reverseDcf.current@0.08.ronic = 17.5%
+  ok  page one — whatWorriesCalboard: priceImplied.pvgoShareOfEv = 71.1%
+  ok  page one — whatWorriesCalboard: diagnostics.multiples.fcfYieldOnMarketCap = 1.8%
+  ok  page one — whatWorriesCalboard: facts.capex = $115.9B
+  ok  page one — whatWorriesCalboard: diagnostics.rateSensitivity.plusOnePoint = INCOMPLETE  [state, not a number]
+  ok  page one — biggestUncertainty: priceImplied.reverseDcf.current@0.08.fiveYearGrowth = 18.8%
+  ok  page one — biggestUncertainty: priceImplied.reverseDcf.current@0.1.fiveYearGrowth = 29.2%
+  ok  page one — biggestUncertainty: scenarioOutputs.rateAtWhichBaseEqualsPrice = INCOMPLETE  [state, not a number]
+
+  74 figure reference(s) in [C] prose; 0 without a field behind them.
+
+Report: /analyzer/a0ab90ea-b0af-4b05-a826-6544a01e56d0/report

@@ -68,9 +68,18 @@ async function analyzeAutomatically(ticker: string, companyName: string): Promis
 /**
  * The same run as an analyst would have produced it before this outcome:
  * every queued fact confirmed by hand, and Step 6 answered *Cannot judge* —
- * the one §6.3 outcome that, like the automatic resolution, leaves the profile
- * not human-confirmed. That is what makes the comparison below apples to
- * apples rather than a comparison against a confirmation nobody gave.
+ * a real, explicit human act of uncertainty, unlike the automatic path's
+ * silent resolution.
+ *
+ * CF-ANALYZER-V1-SETTLE-01 (RM-brief ruling item 2) deliberately makes this
+ * no longer equivalent to the automatic path for an unambiguous operating
+ * company: Gate 0 PASS plus an automatic resolution now stands in for a
+ * human confirmation, while an explicit *Cannot judge* still means exactly
+ * what it always meant and still raises PROFILE NOT CONFIRMED. The two paths
+ * stay apples-to-apples wherever the range is already suppressed for an
+ * unrelated reason (OKLO's LEVERAGE UNSUPPORTED IN v1 — trust.ts's Rule 1
+ * returns before Rule 2's profile check ever runs), which is why the
+ * comparison below is split by ticker rather than asserted uniformly.
  */
 async function analyzeByHand(ticker: string, companyName: string): Promise<AnalysisResult> {
   const runId = await createRun(ticker, companyName);
@@ -208,22 +217,66 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       const { result: automatic } = await analyzeAutomatically(ticker, companyName);
       const byHand = await analyzeByHand(ticker, companyName);
 
-      expect(financeStateOf(automatic)).toEqual(financeStateOf(byHand));
+      // Every deterministic finance fact is identical regardless of ticker —
+      // that claim is unaffected by CF-ANALYZER-V1-SETTLE-01's profile-
+      // confirmation change, which only touches presentation (trust status
+      // and the verdict's own reason string).
+      const { trust: _automaticTrust, verdictStatus: _automaticVerdictStatus, verdictReason: _automaticVerdictReason, ...automaticFinance } =
+        financeStateOf(automatic);
+      const { trust: _byHandTrust, verdictStatus: _byHandVerdictStatus, verdictReason: _byHandVerdictReason, ...byHandFinance } =
+        financeStateOf(byHand);
+      expect(automaticFinance).toEqual(byHandFinance);
+
+      if (ticker === "MSFT") {
+        // MSFT's Gate 0 PASS makes the automatic resolution stand in for a
+        // human confirmation (see analyzeByHand's doc comment), so its
+        // automatic run no longer carries PROFILE NOT CONFIRMED the way the
+        // explicit-Cannot-judge hand run still does.
+        expect(automatic.trust.status).toBe("PARTIAL");
+        expect(deriveVerdict(automatic).reason).not.toContain("PROFILE NOT CONFIRMED");
+        expect(byHand.trust.status).toBe("PARTIAL");
+        expect(deriveVerdict(byHand).reason).toContain("PROFILE NOT CONFIRMED");
+      } else {
+        // OKLO's range is already suppressed for an unrelated reason
+        // (LEVERAGE UNSUPPORTED IN v1), so trust/verdict are unaffected and
+        // stay identical between the two paths.
+        expect(financeStateOf(automatic)).toEqual(financeStateOf(byHand));
+      }
     });
 
-    it("still reads INCOMPLETE, for the upstream reason it already read INCOMPLETE for", async () => {
+    it("still reads INCOMPLETE, for the upstream reason it now reads INCOMPLETE for", async () => {
       const { result } = await analyzeAutomatically(ticker, companyName);
       const verdict = deriveVerdict(result);
 
       // 22 Sep 02:24:07Z (B) — deriveVerdict stays honestly INCOMPLETE, and
       // this outcome neither fixes that nor is entitled to.
       expect(verdict.status).toBe("INCOMPLETE");
-      // The state docs/m9-real-company-validation-findings.md records for a
-      // run carrying no §4.4 judgment, unchanged.
-      expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
-      expect(result.trust.status).toBe("UNUSABLE");
-      expect(result.fairValueRange.kind).toBe("suppressed");
-      expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
+
+      if (ticker === "MSFT") {
+        // CF-ANALYZER-V1-SETTLE-01 — migration 007's durable §4.4 override
+        // (Calvin ruling 2) now resolves MSFT's enterprise value/leverage
+        // on a fresh run automatically, carrying forward the exact same
+        // ruling "MSFT's recorded §4.4 state" below records explicitly. And
+        // the RM-brief ruling's automatic-profile-confirmation fix (item 2)
+        // means this run's Gate 0 PASS now stands in for a human
+        // confirmation, so PROFILE NOT CONFIRMED no longer fires either —
+        // INCOMPLETE now reads for the one real gap that remains: M8's
+        // required-versus-achieved growth comparator has not been acquired.
+        expect(result.gates.leverage.result).toBe("PASS");
+        expect(result.trust.status).toBe("PARTIAL");
+        expect(result.fairValueRange.kind).toBe("range");
+        expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
+        expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
+        expect(verdict.reason).toContain("growth comparator");
+      } else {
+        // OKLO has zero tagged non-operating-investment candidates
+        // (docs/m9-real-company-validation-findings.md), so no override —
+        // durable or per-run — was ever possible for it; unchanged.
+        expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
+        expect(result.trust.status).toBe("UNUSABLE");
+        expect(result.fairValueRange.kind).toBe("suppressed");
+        expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
+      }
     });
 
     it("running the automatic pass again writes nothing and changes nothing", async () => {

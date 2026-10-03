@@ -6,7 +6,7 @@ import type { CompanyFactsDocument, SubmissionsDocument } from "./secClient";
 import { acquire, type AcquisitionResult, type PriceQuote } from "./acquire";
 import { runCrossChecks, assertEveryInputReported, type CrossCheckReport } from "../crosschecks/run";
 import { extractItem1 } from "./item1Extraction";
-import type { BusinessSectionContent } from "../types";
+import type { BusinessSectionContent, LatestFiling } from "../types";
 
 // ---------------------------------------------------------------------------
 // Where a run's facts come from.
@@ -44,6 +44,8 @@ export interface AcquiredCompany {
    * here isn't — see fromEdgar/fromCapture below.
    */
   business: BusinessSectionContent;
+  /** CF-ANALYZER-V1-SETTLE-01 — see `LatestFiling`'s own doc comment. */
+  latestFiling: LatestFiling | null;
   provenanceNote: string;
 }
 
@@ -116,6 +118,7 @@ function assemble(
   // screen and the gate different things.
   classification: { sic: string | null; sicDescription: string | null },
   business: BusinessSectionContent,
+  latestFiling: LatestFiling | null,
   provenanceNote: string,
   options: AcquireOptions
 ): AcquiredCompany {
@@ -143,8 +146,28 @@ function assemble(
     sic: classification.sic,
     sicDescription: classification.sicDescription,
     business,
+    latestFiling,
     provenanceNote,
   };
+}
+
+/**
+ * The single most recent filing of ANY form from `submissions()`'s "recent"
+ * arrays. EDGAR already returns that whole list most-recent-first across
+ * every form mixed together (the same ordering `latestFormFiling` relies on
+ * to find the latest OF ONE form) — so the truly most recent filing,
+ * regardless of form, is simply its first well-formed entry.
+ */
+function latestFilingOfAnyForm(submissions: SubmissionsDocument): LatestFiling | null {
+  const recent = submissions.filings?.recent;
+  if (!recent?.form || !recent.filingDate || recent.form.length === 0) return null;
+
+  for (let i = 0; i < recent.form.length; i++) {
+    const form = recent.form[i];
+    const filingDate = recent.filingDate[i];
+    if (form && filingDate) return { form, filingDate };
+  }
+  return null;
 }
 
 const CAPTURE_BUSINESS_CONTENT: BusinessSectionContent = {
@@ -180,6 +203,10 @@ function fromCapture(ticker: string, options: AcquireOptions): AcquiredCompany {
     // and could not have caught any defect in the populated path.
     { sic: meta?.sic ?? null, sicDescription: meta?.sicDescription ?? null },
     CAPTURE_BUSINESS_CONTENT,
+    // No submissions/filings index is part of the committed capture (only
+    // XBRL company facts) — honestly null, same reasoning as
+    // CAPTURE_BUSINESS_CONTENT above, not a new capture shape.
+    null,
     `Committed SEC capture, taken ${meta?.capturedAt ?? "at an unrecorded time"}. ` +
       `Real filing data, not live — figures are as at the capture, not as at now.`,
     options
@@ -283,6 +310,7 @@ async function fromEdgar(ticker: string, options: AcquireOptions): Promise<Acqui
     unavailableReason:
       "The SEC submissions lookup that names the company's filings did not complete, so no 10-K could be located.",
   };
+  let latestFiling: LatestFiling | null = null;
   try {
     const submissions: SubmissionsDocument = await client.submissions(found.cik);
     classification = {
@@ -293,6 +321,7 @@ async function fromEdgar(ticker: string, options: AcquireOptions): Promise<Acqui
     // reason rather than throwing, so it cannot fall into this catch and
     // wrongly null out a classification that DID succeed.
     business = await businessNarrativeFrom(client, found.cik, submissions);
+    latestFiling = latestFilingOfAnyForm(submissions);
   } catch {
     // Gate 0 fails closed on a missing classification (§5.3, §6.1). A failed
     // lookup leaves both null; neither may default to something classifiable.
@@ -306,6 +335,7 @@ async function fromEdgar(ticker: string, options: AcquireOptions): Promise<Acqui
     companyFacts,
     classification,
     business,
+    latestFiling,
     `Live SEC EDGAR, fetched ${new Date().toISOString()}`,
     options
   );

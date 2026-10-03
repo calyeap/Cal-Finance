@@ -2,8 +2,10 @@ import type { ReactNode } from "react";
 import Decimal from "decimal.js";
 import type { AnalysisResult, InterpretationStatement } from "@/lib/analyzer/types";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
+import type { Step4ForecastDispersionReading } from "@/lib/analyzer/modules/sensitivity";
 import { AiLayerNote, humanizeCause, CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
+import { formatCompactUsd } from "@/lib/formatUsd";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — the Overview tab's own body, below the
 // shared AnalyzerReportFrame hero. Slots 1 (company header), 2 (dominant
@@ -17,21 +19,38 @@ import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 // unchanged — this file still adds no prose of its own (EditorialProseBlock
 // boundary, m9-analyzer-design-contract.md §3).
 
-const STRUCTURAL_SLOTS: { id: string; label: string }[] = [
-  { id: "slot-5", label: "What the business does" },
-  { id: "slot-11", label: "What would change the verdict" },
-];
+// First 2-3 sentences of an already-extracted, verbatim excerpt — a string
+// cut, not a rewrite (EditorialProseBlock boundary, m9-analyzer-design-
+// contract.md §3: no fact, ranking or portfolio-action language added).
+// Falls back to the whole excerpt when it has 3 or fewer sentences.
+function firstSentences(text: string, count: number): string {
+  const sentences = text.match(/[^.!?]+[.!?]+(?:\s+|$)/g);
+  if (sentences === null || sentences.length <= count) return text.trim();
+  return sentences.slice(0, count).join("").trim();
+}
 
-// design.md:464 — "a section is never absent... it renders its state."
-// Slots 5 and 11 have no editorial content source (SCOPE item 7), so each
-// renders as a real, labelled, present frame naming that honestly, the same
-// "Not yet available" convention Sections I/I2 already use for content that
-// has not been built yet (AnalyzerReport.tsx).
-function StructuralSlot({ id, label }: { id: string; label: string }) {
+// Slot 5 — "What the business does." CF-ANALYZER-V1-SETTLE-01 correction:
+// the Business tab (AnalyzerReport.tsx's BusinessSection) already carries
+// the filer's own 10-K Item 1 excerpt for this exact run; this slot restates
+// its first 2-3 sentences rather than a second "not yet available" marker
+// for content that, in fact, already exists. Mechanical restatement only —
+// no new extraction, no second computation (same discipline as slot 8's
+// PriceAssumptionSlot restating Section E).
+function BusinessDescriptionSlot({ result }: { result: AnalysisResult }) {
+  const narrative = result.business.narrative;
   return (
-    <div className="ovslot structural" id={id}>
-      <h3>{label}</h3>
-      <p className="note">Not yet available — editorial content for this slot is a later build item.</p>
+    <div className="ovslot" id="slot-5">
+      <h3>What the business does</h3>
+      {narrative === null ? (
+        <p className="note">
+          Not yet available — {result.business.unavailableReason ?? "Business section content has not been built for this analysis."}
+        </p>
+      ) : (
+        <>
+          <p>{firstSentences(narrative.text, 3)}</p>
+          <p className="note">Full description on the Business tab.</p>
+        </>
+      )}
     </div>
   );
 }
@@ -41,36 +60,52 @@ function StructuralSlot({ id, label }: { id: string; label: string }) {
 // this component adds no prose of its own (contract §3, `EditorialProseBlock`
 // boundary). `pageOne` is null until the interpretation call has run, or
 // where the AI layer's all-or-nothing failure policy refused its output
-// (lib/analyzer/reportAnalysis.ts); that null path reuses Section I's own
-// "not yet available" note and `AiLayerNote`'s cause line (issue #160 SCOPE
-// item 6) rather than a second vocabulary for the same three causes.
+// (lib/analyzer/reportAnalysis.ts).
+//
+// CF-ANALYZER-V1-SETTLE-01 — the four slots share one underlying cause
+// (`pageOne === null`), so they no longer each restate the full "not yet
+// available" sentence plus the AI layer's cause line: that was up to four
+// repeated failure-state markers for one fact. `AnalyzerOverview` now
+// renders that explanation once, in `InterpretationUnavailableNote` below;
+// each affected slot instead renders a plain "—" in place of its sentence,
+// the same missing-value convention `ValuationStrip` already uses.
 function EditorialProseSlot({
   id,
   label,
   statement,
-  aiLayer,
   extra,
 }: {
   id: string;
   label: string;
   statement: InterpretationStatement | null;
-  aiLayer: AiLayerReport | undefined;
   extra?: ReactNode;
 }) {
   return (
     <div className="ovslot editorial" id={id}>
       <h3>{label}</h3>
       {statement === null ? (
-        <>
-          <p className="note">Not yet available — the interpretation call has not run for this analysis.</p>
-          <AiLayerNote aiLayer={aiLayer} />
-        </>
+        <p className="note">—</p>
       ) : (
         <>
           <p>{statement.statement}</p>
           {extra}
         </>
       )}
+    </div>
+  );
+}
+
+// The one shared explanation for all four editorial slots' missing content
+// — rendered once, not per-slot, so a run with no model interpretation
+// shows one inline marker for this cause rather than four.
+function InterpretationUnavailableNote({ aiLayer }: { aiLayer: AiLayerReport | undefined }) {
+  return (
+    <div className="ovnote" id="interpretation-unavailable">
+      <p className="note">
+        Not yet available — the interpretation call has not run for this analysis. Why invest, Why be cautious, What
+        matters most and Biggest risk below show &ldquo;—&rdquo; until it does.
+      </p>
+      <AiLayerNote aiLayer={aiLayer} />
     </div>
   );
 }
@@ -97,20 +132,26 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
     <div className="ovslot" id="slot-8">
       <h3>What today&apos;s price assumes</h3>
       <p className="sub2">Restated in full from Section E — the same figures, no second computation.</p>
+      {/* CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE
+          forbids raw gate/trust state codes (e.g. "LEVERAGE UNSUPPORTED IN
+          v1") outside Evidence; Overview is a non-Evidence tab. The raw
+          code still reaches Evidence via `states.suppressing`
+          (assemble.ts) — this is the same state, restated as a local
+          marker, not a new computation. */}
       {priceImplied.steadyStateEv.suppressed ? (
         <div className="state">
-          <span className="name">{priceImplied.steadyStateEv.state}</span>
+          <span className="name">Unavailable — see Evidence</span>
           <span className="cause">{humanizeCause(priceImplied.steadyStateEv.cause)}</span>
         </div>
       ) : (
         <div className="pi">
           <span className="lbl">Steady-state EV</span>
-          <b>${num(priceImplied.steadyStateEv.value, 0)}</b>
+          <b>${formatCompactUsd(priceImplied.steadyStateEv.value)}</b>
         </div>
       )}
       {priceImplied.pvgoShareOfEv.suppressed ? (
         <div className="state">
-          <span className="name">{priceImplied.pvgoShareOfEv.state}</span>
+          <span className="name">Unavailable — see Evidence</span>
           <span className="cause">{humanizeCause(priceImplied.pvgoShareOfEv.cause)}</span>
         </div>
       ) : (
@@ -122,7 +163,7 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
       {baseRateCell &&
         (baseRateCell.fiveYearGrowth.suppressed ? (
           <div className="state">
-            <span className="name">{baseRateCell.fiveYearGrowth.state}</span>
+            <span className="name">Unavailable — see Evidence</span>
             <span className="cause">{humanizeCause(baseRateCell.fiveYearGrowth.cause)}</span>
           </div>
         ) : (
@@ -135,8 +176,78 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
   );
 }
 
+// Slot 11 — "What would change the verdict." CF-ANALYZER-V1-SETTLE-01
+// correction, CALVIN RULING — A (slot 11, comment 5946448076): where M14's
+// tornado already names this run's single largest-swing driver — the same
+// `Step4ForecastDispersionReading` Step 4 already computes
+// (`selectStep4ForecastDispersionReading`, sensitivity.ts) — state it
+// directly, the design contract's own "short, specific statement naming
+// the variable" shape for this slot (m9-analyzer-design-contract.md row
+// 11), never a prediction or advice on when to act. No new computation, no
+// new methodology: this restates an existing field. Where no
+// analyst-supplied sensitivity range exists for this ticker (NVDA today —
+// `sensitivityRangesFor` has no entry), this keeps the same honest
+// structural frame slot 11 used before this correction.
+// Slot 12 — "Latest material developments." CALVIN RULING — REJECT CURRENT
+// PRODUCT SURFACE; BUILD ONE SIMPLE COMPLETE RM-BRIEF PROOF (PR #399,
+// comment 5952716764), REQUIRED OVERVIEW CONTENT item 9. No earnings-
+// transcript or guidance pipeline exists anywhere in this codebase (HARD
+// BOUNDS forbids a "giant SEC-tag expansion project" to build one), so this
+// states the one real, already-sourced fact this run does carry about what
+// is new: the filer's own most recent SEC filing — the same
+// `BusinessSectionNarrative` the Business tab and slot 5 already read
+// (one figure, one computation). Honest and bounded, never a fabricated
+// headline or guidance figure.
+// CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE COMPLETE
+// RM-BRIEF PROOF (PR #399, comment 5952716764), REQUIRED OVERVIEW CONTENT
+// item 9 ("latest material developments / next known catalyst"). No
+// earnings-transcript or guidance pipeline exists anywhere in this codebase
+// (HARD BOUNDS forbids a "giant SEC-tag expansion project" to build one), so
+// this states the one real, already-sourced fact a run carries about what is
+// new: `result.latestFiling`, the filer's single most recent SEC filing of
+// ANY form (not the 10-K-only `business.narrative` slot 5 already reads —
+// that would hide a genuinely more recent 8-K/10-Q behind a stale annual
+// filing). A subsequent REVIEW correction (comment 5953340635) found the
+// populated branch below redirecting the reader to "the Business and
+// Evidence tabs" was itself the forbidden "'see Evidence' placeholder
+// standing in for missing content" — this states the fact plainly instead of
+// pointing elsewhere for it.
+function RecentDevelopmentsSlot({ result }: { result: AnalysisResult }) {
+  const filing = result.latestFiling;
+  return (
+    <div className="ovslot" id="slot-12">
+      <h3>Latest material development</h3>
+      {filing === null ? (
+        <p className="note">No recent SEC filing could be confirmed for this company.</p>
+      ) : (
+        <p>
+          This analysis reflects the company&rsquo;s filings through its most recent {filing.form}, filed{" "}
+          {filing.filingDate}.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function ChangeTriggerSlot({ reading }: { reading: Step4ForecastDispersionReading }) {
+  return (
+    <div className="ovslot structural" id="slot-11">
+      <h3>What would change the verdict</h3>
+      {reading.available ? (
+        <p>
+          The single largest driver of this valuation is {humanizeCause(reading.selectedDriver)}, which can move the
+          result by {pct(reading.fullRangeValueImpact)} across its own analyst-supplied range.
+        </p>
+      ) : (
+        <p className="note">No computed change trigger available yet.</p>
+      )}
+    </div>
+  );
+}
+
 export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; aiLayer?: AiLayerReport }) {
   const pageOne = result.interpretation.pageOne;
+  const forecastDispersion = result.diagnostics.sensitivity.forecastDispersion as Step4ForecastDispersionReading;
 
   // §17.7.1 — the same deterministic selection Section I's "Challenger
   // point" line and Section I2's headline already share (issue #160 SCOPE
@@ -146,15 +257,19 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
 
   return (
     <div className="ovtab overview">
-      {/* Slot 5 — no approved content source (issue #160 SCOPE item 7). */}
-      <StructuralSlot {...STRUCTURAL_SLOTS[0]} />
+      {/* Slot 5 — restated from the Business tab's own excerpt. */}
+      <BusinessDescriptionSlot result={result} />
+
+      {/* One shared explanation for slots 6, 7, 9, 10's missing content —
+          CF-ANALYZER-V1-SETTLE-01, replacing four repeated markers with
+          one. */}
+      {pageOne === null && <InterpretationUnavailableNote aiLayer={aiLayer} />}
 
       {/* Slot 6 — "Why invest." */}
       <EditorialProseSlot
         id="slot-6"
         label="Why invest"
         statement={pageOne === null ? null : pageOne.whatSupportsTheCase}
-        aiLayer={aiLayer}
       />
 
       {/* Slot 7 — "Why be cautious," symmetric to slot 6. May surface the
@@ -165,7 +280,6 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
         id="slot-7"
         label="Why be cautious"
         statement={pageOne === null ? null : pageOne.whatWorriesCalboard}
-        aiLayer={aiLayer}
         extra={
           challengerSelection === null ? null : (
             <>
@@ -184,7 +298,6 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
         id="slot-9"
         label="What matters most"
         statement={pageOne === null ? null : pageOne.mainFinding}
-        aiLayer={aiLayer}
       />
 
       {/* Slot 10 — "Biggest risk." */}
@@ -192,11 +305,15 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
         id="slot-10"
         label="Biggest risk"
         statement={pageOne === null ? null : pageOne.biggestUncertainty}
-        aiLayer={aiLayer}
       />
 
-      {/* Slot 11 — no approved content source (issue #160 SCOPE item 7). */}
-      <StructuralSlot {...STRUCTURAL_SLOTS[1]} />
+      {/* Slot 11 — the strongest existing sensitivity signal, where one
+          exists (CF-ANALYZER-V1-SETTLE-01, CALVIN RULING — A). */}
+      <ChangeTriggerSlot reading={forecastDispersion} />
+
+      {/* Slot 12 — the most recent filing acquired, as the honest answer to
+          "latest material developments" (REQUIRED OVERVIEW CONTENT item 9). */}
+      <RecentDevelopmentsSlot result={result} />
     </div>
   );
 }

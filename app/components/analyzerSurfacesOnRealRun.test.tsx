@@ -12,6 +12,8 @@ import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
 import { AnalyzerReport } from "./AnalyzerReport";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
+import { formatCompactUsd } from "@/lib/formatUsd";
+import { incompleteVerdictExplanation, priceVsRangeHeadline } from "@/lib/analyzer/trustCopy";
 
 // ---------------------------------------------------------------------------
 // #118 runway item 10 — real-company validation, MSFT and OKLO.
@@ -70,7 +72,7 @@ async function openRealRun(ticker: string, companyName: string): Promise<RealRun
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — AnalyzerOverview now renders only the
 // Overview tab's own body (slots 5-11); slots 1-4 and 12 moved to
 // AnalyzerReportFrame, exercised separately below.
-const OVERVIEW_TAB_SLOT_ORDER = ["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11"];
+const OVERVIEW_TAB_SLOT_ORDER = ["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11", "slot-12"];
 
 const REPORT_SECTION_ORDER = ["quickread", "A", "C", "D", "E", "F", "G", "H", "I", "I2", "B", "J", "atglance"];
 
@@ -145,7 +147,7 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       expect(ids).toEqual(OVERVIEW_TAB_SLOT_ORDER);
     });
 
-    it("the shared hero renders the INCOMPLETE presentation — state name, verdict.reason verbatim as the cause line, and no confidence figure", async () => {
+    it("the shared hero never leaks verdict.reason outside Evidence, and states a plain-English position — price-vs-range where a range exists, the honest structural cause otherwise", async () => {
       const { result } = await openRealRun(ticker, companyName);
       const verdict = deriveVerdict(result);
       // verdict.ts is unchanged (m9RealCompanyValidationGuards.test.ts pins
@@ -161,10 +163,59 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
         </AnalyzerReportFrame>
       );
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
+      // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399): outside
+      // Evidence, the design contract's §4 "verbatim in every case" rule is
+      // narrowed — the hero never leaks verdict.reason, since several of
+      // deriveVerdict's branches embed a raw trust/gate state code (#392's
+      // ACCEPTANCE GATE forbids that outside Evidence).
+      expect(hero.textContent).not.toContain(verdict.reason);
+
+      const headline = priceVsRangeHeadline({
+        fairValueRange: result.fairValueRange,
+        priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
+        trustStatus: result.trust.status,
+        profileNotConfirmed: false,
+      });
+      if (headline !== null) {
+        // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
+        // COMPLETE RM-BRIEF PROOF (PR #399, comment 5952716764),
+        // REMOVE/BYPASS item 1: MSFT has a defensible "range"-kind fair
+        // value, so the literal word "INCOMPLETE" must not dominate the
+        // hero — the price-vs-range headline takes over, with the
+        // qualitative evidence-status label beside it.
+        expect(hero.textContent).not.toContain("INCOMPLETE");
+        expect(hero.textContent).toContain(headline);
+        expect(hero.querySelector(".confidence")).not.toBeNull();
+      } else {
+        // OKLO's pre-revenue-distribution range has no bear-to-bull
+        // position to state — the honest structural cause (unchanged)
+        // still names the actual missing condition in plain English.
+        expect(hero.textContent).toContain("INCOMPLETE");
+        expect(hero.textContent).toContain(
+          incompleteVerdictExplanation({
+            trustStatus: result.trust.status,
+            fairValueRangeKind: result.fairValueRange.kind,
+            profileNotConfirmed: false,
+          })
+        );
+        // §2.1 slot 2 — confidence only when the analysis is not INCOMPLETE.
+        expect(hero.querySelector(".confidence")).toBeNull();
+      }
+    });
+
+    it("the shared hero renders verdict.reason verbatim on the Evidence tab only", async () => {
+      const { result } = await openRealRun(ticker, companyName);
+      const verdict = deriveVerdict(result);
+      expect(verdict.status).toBe("INCOMPLETE");
+
+      const { container } = render(
+        <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="evidence">
+          <div />
+        </AnalyzerReportFrame>
+      );
+      const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
       expect(hero.textContent).toContain("INCOMPLETE");
       expect(hero.textContent).toContain(verdict.reason);
-      // §2.1 slot 2 — confidence only when the analysis is not INCOMPLETE.
-      expect(hero.querySelector(".confidence")).toBeNull();
     });
 
     it("no slot renders a numeral the Analysis Result does not carry — the price-implied restatement (slot 8) shows its suppression state, not a figure, wherever the result itself is suppressed", async () => {
@@ -177,12 +228,16 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       const pvgoShareOfEv = priceImplied.pvgoShareOfEv;
 
       if (steadyStateEv.suppressed) {
-        expect(slot8.textContent).toContain(steadyStateEv.state);
+        // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE
+        // forbids the raw state code outside Evidence; Overview renders a
+        // plain local marker instead (the raw code still reaches Evidence
+        // via `states.suppressing`, assemble.ts).
+        expect(slot8.textContent).toContain("Unavailable — see Evidence");
       } else {
-        expect(slot8.textContent).toContain(`$${steadyStateEv.value.toFixed(0)}`);
+        expect(slot8.textContent).toContain(`$${formatCompactUsd(steadyStateEv.value)}`);
       }
       if (pvgoShareOfEv.suppressed) {
-        expect(slot8.textContent).toContain(pvgoShareOfEv.state);
+        expect(slot8.textContent).toContain("Unavailable — see Evidence");
       } else {
         expect(slot8.textContent).toContain(`${pvgoShareOfEv.value.mul(100).toFixed(1)}%`);
       }

@@ -7,6 +7,7 @@ import { AnalyzerReportFrame, ANALYZER_TABS, type AnalyzerTabSlug } from "./Anal
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
+import { priceVsRangeHeadline } from "@/lib/analyzer/trustCopy";
 
 // CF-V2-DRIFT-GUARD-01 — docs/design/analyzer-v2-design-authority.md,
 // "Implementation enforcement": "Add fixed-width visual-regression /
@@ -187,6 +188,17 @@ const ACCEPTANCE_TARGETS: AcceptanceTarget[] = [
 
 const result = assembleAnalysisResult(MSFT_FIXTURE);
 const verdict = deriveVerdict(result);
+// CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE COMPLETE
+// RM-BRIEF PROOF (PR #399, comment 5952716764), REMOVE/BYPASS item 1: the
+// MSFT fixture carries a "range"-kind fair value and this file's
+// `profileNotConfirmed={false}` call site below, so the hero now states the
+// price-vs-range position instead of the literal word "INCOMPLETE".
+const heroHeadline = priceVsRangeHeadline({
+  fairValueRange: result.fairValueRange,
+  priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
+  trustStatus: result.trust.status,
+  profileNotConfirmed: false,
+});
 
 function renderFrame(activeTab: AnalyzerTabSlug) {
   return render(
@@ -269,7 +281,12 @@ describe("Analyzer V2 acceptance-target drift guard (CF-V2-DRIFT-GUARD-01)", () 
         // Price / verdict / uncertainty summary.
         const hero = container.querySelector(".az-hero") as HTMLElement;
         expect(hero.getAttribute("data-tab")).toBe(slug);
-        expect(hero.querySelector(".az-hero-verdict")?.textContent).toContain(verdict.status);
+        // The Evidence tab alone renders the literal verdict state/reason
+        // (DominantVerdictSlot's `isEvidenceTab` branch); every other tab
+        // states the price-vs-range headline instead (REMOVE/BYPASS item 1).
+        expect(hero.querySelector(".az-hero-verdict")?.textContent).toContain(
+          slug === "evidence" ? verdict.status : (heroHeadline ?? verdict.status)
+        );
         expect(hero.querySelector(".az-hero-price")).not.toBeNull();
         expect(hero.querySelector(".az-uncertainty")).not.toBeNull();
 

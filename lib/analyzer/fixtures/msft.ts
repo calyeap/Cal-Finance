@@ -282,7 +282,7 @@ export const MSFT_FIXTURE: CompanyFixture = {
   // §9.6 rule 2. Both design mocks state the profile as CONFIRMED on their
   // own face, and these fixtures predate acquisition so no §3.8.2 cross-check
   // ran against them — which is why the list is empty rather than unknown.
-  trustInputs: { profileHumanConfirmed: true, crossCheckFailedFactIds: [] },
+  trustInputs: { profileHumanConfirmed: true, crossCheckFailedFactIds: [], profileAutoResolved: null },
   configuredConstants: {
     nopatTaxRate: new Decimal("0.2"),
     stressMarginLevel: new Decimal("0.38"),

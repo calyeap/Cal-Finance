@@ -4,6 +4,9 @@ import { assembleAnalysisResult } from "./assemble";
 import { MSFT_FIXTURE } from "./fixtures/msft";
 import { OKLO_FIXTURE } from "./fixtures/oklo";
 import { computeUnitExitBreakEvenPrice } from "./modules/preRevenue";
+import { computeScenarioEnterpriseValue } from "./modules/scenarioOutputs";
+import { buildFixedShapeGrowthPath } from "./growthPath";
+import { POLICY } from "./policy";
 import { windowMedian, windowRange, worstSingleYearDecline } from "./marginMath";
 import { boundState, NOT_COMPUTED_BINDING } from "./notComputed";
 
@@ -801,5 +804,79 @@ describe("assembleAnalysisResult — H3 acquired-run cash basis", () => {
 
     // The fair-value range is NOT an input the burn feeds — it survives.
     expect(r.fairValueRange.kind).toBe("pre-revenue-distribution");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (issue #399). scenarioValues
+// null (an AI-proposed bundle, never an explicit one) is computed dynamically
+// through the SAME M15 model + EV bridge every other output already reads —
+// exercised here against MSFT's own real, already-verified fixture numbers
+// rather than synthetic data, so the expected figure is the identical
+// computeScenarioEnterpriseValue the dynamic path itself calls, never a
+// hand-derived DCF this test would have to get right independently.
+// ---------------------------------------------------------------------------
+describe("assembleAnalysisResult — dynamic scenario values (null fixture.scenarioValues)", () => {
+  it("derives bear/base/bull per-share values through computeScenarioEnterpriseValue + the EV bridge's own net debt term, when every REQUIRED input is present", () => {
+    const fixture = { ...MSFT_FIXTURE, scenarioValues: null };
+    const result = assembleAnalysisResult(fixture);
+
+    // The EV bridge's own net debt/cash/non-operating-investments term —
+    // marketCap = shares x price, enterpriseValue = marketCap + bridge — is
+    // msft.ts's own named `bridge` constant (6.3), confirmed independently
+    // here from the fixture's REQUIRED enterpriseValue inputs rather than
+    // imported from the fixture file's private scope.
+    const ev = fixture.enterpriseValue;
+    const marketCap = ev.sharesOutstanding!.value.plus(ev.treasuryMethodDilution!.value).mul(ev.price!.value);
+    const enterpriseValue = marketCap
+      .plus(ev.totalDebt!.value)
+      .plus(ev.financeLeaseLiabilities!.value)
+      .minus(ev.cashAndMarketableDebtSecurities!.value)
+      .minus(ev.nonOperatingEquityInvestmentsAtBook!.value);
+    const netDebtBridge = enterpriseValue.minus(marketCap);
+
+    for (const key of ["bear", "base", "bull"] as const) {
+      const driver = fixture.scenarios[key];
+      const expectedEv = computeScenarioEnterpriseValue(
+        fixture.reverseDcf.baseYearRevenue!.value,
+        buildFixedShapeGrowthPath(driver.revenueGrowthOrPath as Decimal),
+        driver.operatingMargin!,
+        driver.reinvestmentCapitalIntensity!,
+        POLICY.rateGrid[1],
+        fixture.configuredConstants.nopatTaxRate!
+      );
+      const expectedPerShare = expectedEv.minus(netDebtBridge).dividedBy(driver.shareCount);
+      expect(result.scenarioOutputs.values[key].toString()).toBe(expectedPerShare.toString());
+    }
+
+    // Computed, not suppressed: no INCOMPLETE bound to the range, and the
+    // range itself still renders (§9.6 rule 1 would otherwise remove it).
+    expect(boundState(result.states, NOT_COMPUTED_BINDING.scenarioValues)).toBeNull();
+    expect(result.fairValueRange.kind).toBe("range");
+  });
+
+  it("binds INCOMPLETE, scoped to the fair-value range, when enterprise value is itself INCOMPLETE — never a zero or NaN rendered as a figure", () => {
+    const fixture = {
+      ...MSFT_FIXTURE,
+      scenarioValues: null,
+      enterpriseValue: { ...MSFT_FIXTURE.enterpriseValue, totalDebt: null },
+    };
+    const result = assembleAnalysisResult(fixture);
+
+    expect(result.scenarioOutputs.values.bear.isNaN()).toBe(true);
+    const bound = boundState(result.states, NOT_COMPUTED_BINDING.scenarioValues);
+    expect(bound?.state).toBe("INCOMPLETE");
+    expect(bound?.cause).toMatch(/enterprise value is INCOMPLETE/);
+
+    // Scoped to the range alone (the override this binding always passes) —
+    // the range itself is removed by it, per §9.6 rule 1's second clause.
+    expect(result.fairValueRange.kind).not.toBe("range");
+  });
+
+  it("an explicit bundle's own scenarioValues still override — the dynamic path never runs when they are supplied", () => {
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+
+    expect(result.scenarioOutputs.values.bear.toString()).toBe(MSFT_FIXTURE.scenarioValues!.bear.toString());
+    expect(boundState(result.states, NOT_COMPUTED_BINDING.scenarioValues)).toBeNull();
   });
 });

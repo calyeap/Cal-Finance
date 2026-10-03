@@ -12,6 +12,12 @@ afterEach(cleanup);
 // it through yet. The contract's own instruction is not to build or test
 // only the INCOMPLETE-always world (issue #158's "one tension" note), so
 // this file exercises both paths as first-class, independently.
+//
+// CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399): §4's "verbatim in
+// every case" rule is narrowed for V1 — `verdict.reason` renders verbatim
+// only on the Evidence tab (`isEvidenceTab={true}`); every other tab gets
+// the plain local marker. Tests below pass `isEvidenceTab` explicitly on
+// both sides of that split rather than relying on the prop's default.
 
 describe("DominantVerdictSlot — completed path", () => {
   it("renders the verdict word, a confidence indicator carrying the evidence-status label, and the rationale line — never the .state/.name/.cause markup", () => {
@@ -19,6 +25,7 @@ describe("DominantVerdictSlot — completed path", () => {
       <DominantVerdictSlot
         verdict={{ status: "BUY", reason: "The evidence supports it." }}
         trustStatus="CLEAN"
+        isEvidenceTab
       />
     );
     expect(screen.getByText("BUY")).not.toBeNull();
@@ -31,14 +38,31 @@ describe("DominantVerdictSlot — completed path", () => {
 
   it("renders HOLD and SELL through the same completed path", () => {
     const hold = render(
-      <DominantVerdictSlot verdict={{ status: "HOLD", reason: "Mixed evidence." }} trustStatus="PARTIAL" />
+      <DominantVerdictSlot
+        verdict={{ status: "HOLD", reason: "Mixed evidence." }}
+        trustStatus="PARTIAL"
+        isEvidenceTab
+      />
     );
     expect(hold.getByText("HOLD")).not.toBeNull();
     cleanup();
     const sell = render(
-      <DominantVerdictSlot verdict={{ status: "SELL", reason: "The case has weakened." }} trustStatus="UNUSABLE" />
+      <DominantVerdictSlot
+        verdict={{ status: "SELL", reason: "The case has weakened." }}
+        trustStatus="UNUSABLE"
+        isEvidenceTab
+      />
     );
     expect(sell.getByText("SELL")).not.toBeNull();
+  });
+
+  it("outside the Evidence tab, renders the plain marker instead of the verbatim rationale", () => {
+    const { container } = render(
+      <DominantVerdictSlot verdict={{ status: "BUY", reason: "The evidence supports it." }} trustStatus="CLEAN" />
+    );
+    expect(screen.getByText("BUY")).not.toBeNull();
+    expect(screen.queryByText("The evidence supports it.")).toBeNull();
+    expect(container.querySelector(".rationale")?.textContent).toBe("Unavailable — see Evidence");
   });
 });
 
@@ -79,6 +103,7 @@ describe("DominantVerdictSlot — INCOMPLETE path", () => {
       <DominantVerdictSlot
         verdict={{ status: "INCOMPLETE", reason: "Decision-critical analysis is incomplete — the range is not usable." }}
         trustStatus="CLEAN"
+        isEvidenceTab
       />
     );
     expect(screen.getByText("INCOMPLETE")).not.toBeNull();
@@ -89,12 +114,28 @@ describe("DominantVerdictSlot — INCOMPLETE path", () => {
     expect(container.querySelector(".verdictword")).toBeNull();
   });
 
-  it("renders verdict.reason verbatim, including an embedded recovery clause, without splitting it into a separate element", () => {
+  it("renders verdict.reason verbatim, including an embedded recovery clause, without splitting it into a separate element — on the Evidence tab", () => {
     const reason =
       "Decision-critical analysis is incomplete — a fair-value range alone cannot determine BUY / HOLD / SELL. " +
       "Recovery: this verdict becomes available once M8 delivers the comparator fact.";
-    render(<DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="PARTIAL" />);
+    render(<DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="PARTIAL" isEvidenceTab />);
     expect(screen.getByText(reason)).not.toBeNull();
+  });
+
+  it("CF-ANALYZER-V1-SETTLE-01 — outside the Evidence tab, never renders the raw reason; renders the plain marker instead", () => {
+    const reason = "Decision-critical analysis is incomplete — LEVERAGE UNSUPPORTED IN v1";
+    const { container } = render(<DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="PARTIAL" />);
+    expect(screen.getByText("INCOMPLETE")).not.toBeNull();
+    expect(screen.queryByText(reason)).toBeNull();
+    expect(screen.queryByText(/LEVERAGE UNSUPPORTED/)).toBeNull();
+    expect(container.querySelector(".cause")?.textContent).toBe("Unavailable — see Evidence");
+  });
+
+  it("isEvidenceTab defaults to false — omitting the prop still suppresses the raw reason", () => {
+    const reason = "Decision-critical analysis is incomplete — PROFILE NOT CONFIRMED is active.";
+    render(<DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="CLEAN" />);
+    expect(screen.queryByText(reason)).toBeNull();
+    expect(screen.getByText("Unavailable — see Evidence")).not.toBeNull();
   });
 
   it("never renders anything confidence-like on the INCOMPLETE path, whatever the trust status", () => {

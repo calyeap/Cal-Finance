@@ -131,16 +131,39 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
 
         expect(result.price.value.toString()).toBe(expectedPriceValue);
         expect(result.price.timestamp).toBe(expectedPriceTimestamp);
-
         expect(verdict.status).toBe("INCOMPLETE");
-        expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
-        expect(result.trust.status).toBe("UNUSABLE");
-        expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
-        expect(result.fairValueRange.kind).toBe("suppressed");
 
-        const ev = result.diagnostics.enterpriseValue;
-        expect(ev.suppressed).toBe(true);
-        if (ev.suppressed) expect(ev.cause).toBe(expectedEnterpriseValueCause);
+        if (ticker === "MSFT") {
+          // CF-ANALYZER-V1-SETTLE-01 — migration 007's durable §4.4
+          // override (Calvin ruling 2) now resolves MSFT's enterprise
+          // value/leverage on this automatically-driven run, exactly as
+          // automaticAnalysisOnRealRun.test.ts's "still reads INCOMPLETE"
+          // case independently proves. `openObservedRun` records no human
+          // profile confirmation, but the RM-brief ruling's automatic-
+          // profile-confirmation fix (item 2) means this run's Gate 0 PASS
+          // now stands in for one, so PROFILE NOT CONFIRMED no longer fires
+          // either — this run's own INCOMPLETE reason is now the one real
+          // gap that remains: M8's required-versus-achieved growth
+          // comparator has not been acquired.
+          expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
+          expect(verdict.reason).toContain("growth comparator");
+          expect(result.trust.status).toBe("PARTIAL");
+          expect(result.gates.leverage.result).toBe("PASS");
+          expect(result.fairValueRange.kind).toBe("range");
+          expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
+        } else {
+          // OKLO has zero tagged non-operating-investment candidates
+          // (docs/m9-real-company-validation-findings.md), so no override —
+          // durable or per-run — was ever possible for it; unchanged.
+          expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
+          expect(result.trust.status).toBe("UNUSABLE");
+          expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
+          expect(result.fairValueRange.kind).toBe("suppressed");
+
+          const ev = result.diagnostics.enterpriseValue;
+          expect(ev.suppressed).toBe(true);
+          if (ev.suppressed) expect(ev.cause).toBe(expectedEnterpriseValueCause);
+        }
       });
 
       it("both the first run and the re-look decide their own queue automatically, with no fact left undecided", async () => {

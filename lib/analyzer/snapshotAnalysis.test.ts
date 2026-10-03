@@ -119,17 +119,25 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     expect(reopenedFirst!.version).toBe(1);
   });
 
-  it("returns an explicit INCOMPLETE verdict, never a manufactured one, when the range is not usable", async () => {
-    // No §4.4 judgment recorded: the leverage precondition fails closed and
-    // the range is suppressed (leverageOnRealRun.test.ts's "still fails
-    // closed" case), so trust is UNUSABLE.
+  it("returns an explicit INCOMPLETE verdict, never a manufactured one, even where the range itself is usable", async () => {
+    // CF-ANALYZER-V1-SETTLE-01 — no §4.4 judgment recorded for this run,
+    // but migration 007's durable MSFT override now resolves the leverage
+    // precondition the same way an explicit recordJudgment would
+    // (automaticAnalysisOnRealRun.test.ts's "MSFT's recorded §4.4 state"),
+    // so the range renders and trust is PARTIAL, not UNUSABLE — driven by
+    // unrelated qualifying flags (a margin-at-historical-high flag, and the
+    // ±1% rate-sensitivity/rate-at-base-equals-price diagnostics #392
+    // explicitly parks out of V1 scope). The verdict itself is still
+    // honestly INCOMPLETE regardless (deriveVerdict's own M8 comparator
+    // gap) — that boundary is untouched by this outcome.
     const runId = await createRun("MSFT", "Microsoft Corporation");
     await completeSpotCheck(runId);
     await recordProfileDecision(runId, "CONFIRMED", "MATURE_PROFITABLE", null);
 
     const snapshot = await createDeepSnapshot(runId, null);
 
-    expect(snapshot.result.trust.status).toBe("UNUSABLE");
+    expect(snapshot.result.trust.status).toBe("PARTIAL");
+    expect(snapshot.result.fairValueRange.kind).toBe("range");
     expect(snapshot.verdict.status).toBe("INCOMPLETE");
     expect(snapshot.verdict.reason).not.toBe("");
   });

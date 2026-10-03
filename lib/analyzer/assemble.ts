@@ -57,6 +57,7 @@ import type {
   BusinessSectionContent,
   FactRecord,
   Figure,
+  LatestFiling,
   MarketContextSectionContent,
   OverrideRecord,
   Profile,
@@ -120,6 +121,9 @@ export interface CompanyFixture {
   // (acquiredRun.ts) always sets both, from the fact set it already acquired.
   business?: BusinessSectionContent;
   marketContext?: MarketContextSectionContent;
+  // CF-ANALYZER-V1-SETTLE-01 — see `LatestFiling`'s own doc comment. Same
+  // optionality reasoning as `business`/`marketContext` above.
+  latestFiling?: LatestFiling | null;
 
   gate0: Gate0Input;
   gate1: Gate1Input;
@@ -168,7 +172,15 @@ export interface CompanyFixture {
   impliedExitMultipleMetric: { value: SourcedValue<Decimal> | null; metricName: string };
 
   scenarios: ScenarioInputSet;
-  scenarioValues: { bear: Decimal; base: Decimal; bull: Decimal };
+  // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (issue #399). null only for
+  // a bundle with no analyst-authored dollar values (an AI-proposed bundle —
+  // acquisition/analystInputs.ts's aiProposedAnalystInputBundle): assembly
+  // then computes these THROUGH THE SAME M15 model (computeScenarioEnterpriseValue)
+  // and EV bridge every other output already uses, from `scenarios` above and
+  // `enterpriseValue`/`reverseDcf.baseYearRevenue` — never a second valuation
+  // model. An explicit analyst bundle (MSFT, NVDA) still supplies these
+  // directly and always overrides the dynamic computation.
+  scenarioValues: { bear: Decimal; base: Decimal; bull: Decimal } | null;
   // null where the fixture has no real revaluation-at-rate solver — see
   // computeScenarioOutputs's own doc comment (CB-AUDIT-01 H2). Never a
   // placeholder formula standing in for one.
@@ -186,6 +198,12 @@ export interface CompanyFixture {
   trustInputs: {
     profileHumanConfirmed: boolean;
     crossCheckFailedFactIds: readonly string[];
+    // CF-ANALYZER-V1-SETTLE-01 — non-null only on the pure automatic path
+    // (autoRun.ts Step 6, never a human decision). Combined below with Gate
+    // 0 PASS to decide whether this run's profile is unambiguous enough to
+    // stand in for a human confirmation on the V1 presentation path — see
+    // the comment at its one use below.
+    profileAutoResolved: string | null;
   };
 
   // §10.6.2/§13 (CF-VERDICT-NONPOLICY-GAPS-01) — Step 7's achieved-history
@@ -293,6 +311,12 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   const currentEnterpriseValue: SourcedValue<Decimal> | null = enterpriseValueBridge.suppressed
     ? null
     : sourced(enterpriseValueBridge.value.enterpriseValue);
+  // M15's own dynamic scenario-value computation (below) needs the bridge's
+  // market cap too — the same bridge output, read a second time rather than
+  // a second EV computation.
+  const currentMarketCap: Decimal | null = enterpriseValueBridge.suppressed
+    ? null
+    : enterpriseValueBridge.value.marketCap;
   const baseRevenueSourced = fixture.reverseDcf.baseYearRevenue;
 
   // --- §6.5 — the leverage precondition, AFTER M1 ---------------------------
@@ -525,10 +549,70 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // presentation bindings below — reads the identical value, never a second
   // signal invented for the same fact.
   const currentPrice = fixture.enterpriseValue.price?.value ?? null;
+
+  // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A. Where no analyst authored
+  // dollar scenario values (fixture.scenarioValues === null — an AI-proposed
+  // bundle), this derives them through the SAME M15 model every explicit
+  // bundle's own hand-authored figures are consistent with: each scenario's
+  // drivers run through computeScenarioEnterpriseValue (unmodified) to an
+  // enterprise value, then the SAME debt/cash/non-operating-investments
+  // bridge term this run's own M1 output already carries converts that to
+  // an equity value, divided by this scenario's own share count. Never a
+  // second valuation model, and never computed where a REQUIRED input is
+  // itself missing — scenarioValuesMissing names which, and the fair-value
+  // range reports INCOMPLETE exactly as it already does for any other
+  // missing REQUIRED input of it.
+  let scenarioValuesMissing: string | null = null;
+  const dynamicScenarioValue = (key: keyof ScenarioSet): Decimal => {
+    const driver = fixture.scenarios[key];
+    if (baseRevenueSourced === null) {
+      scenarioValuesMissing = "base-year revenue is INCOMPLETE on this run";
+      return new Decimal(NaN);
+    }
+    if (nopatTaxRateForRun === null) {
+      scenarioValuesMissing = "nopatTaxRate is not configured for this run (§7.1)";
+      return new Decimal(NaN);
+    }
+    if (currentEnterpriseValue === null || currentMarketCap === null) {
+      scenarioValuesMissing = "enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply";
+      return new Decimal(NaN);
+    }
+    if (
+      driver.revenueGrowthOrPath === null ||
+      driver.operatingMargin === null ||
+      driver.reinvestmentCapitalIntensity === null ||
+      !(driver.revenueGrowthOrPath instanceof Decimal)
+    ) {
+      scenarioValuesMissing = `${key} scenario drivers are not authored for this run, or use an explicit year-by-year path this computation does not take`;
+      return new Decimal(NaN);
+    }
+    const scenarioEnterpriseValue = computeScenarioEnterpriseValue(
+      baseRevenueSourced.value,
+      buildFixedShapeGrowthPath(driver.revenueGrowthOrPath),
+      driver.operatingMargin,
+      driver.reinvestmentCapitalIntensity,
+      POLICY.rateGrid[1],
+      nopatTaxRateForRun
+    );
+    // The bridge's own net debt/cash/non-operating-investments term, held
+    // constant across bear/base/bull exactly as the debt and cash on a
+    // company's balance sheet do not change by scenario — inverting the
+    // identical M1 formula (enterpriseValue = marketCap + debt - cash -
+    // nonOperatingInvestments) rather than re-deriving a second one.
+    const netDebtBridge = currentEnterpriseValue.value.minus(currentMarketCap);
+    const equityValue = scenarioEnterpriseValue.minus(netDebtBridge);
+    return equityValue.dividedBy(driver.shareCount);
+  };
+
+  const dynamicScenarioValues =
+    fixture.scenarioValues === null
+      ? { bear: dynamicScenarioValue("bear"), base: dynamicScenarioValue("base"), bull: dynamicScenarioValue("bull") }
+      : null;
+
   const scenarioOutputs = computeScenarioOutputs({
-    bearValue: fixture.scenarioValues.bear,
-    baseValue: fixture.scenarioValues.base,
-    bullValue: fixture.scenarioValues.bull,
+    bearValue: fixture.scenarioValues?.bear ?? dynamicScenarioValues?.bear ?? new Decimal(NaN),
+    baseValue: fixture.scenarioValues?.base ?? dynamicScenarioValues?.base ?? new Decimal(NaN),
+    bullValue: fixture.scenarioValues?.bull ?? dynamicScenarioValues?.bull ?? new Decimal(NaN),
     // Equal-weight, summing to 1 — display only, never a headline. Was
     // {1,1,1}, which sums to 3 and turned the weighted average into a
     // plain sum (B1, third-pass fix; authorised for this one line only).
@@ -709,6 +793,19 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       )
     );
   }
+  // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A. scenarioValuesMissing is
+  // set above only where fixture.scenarioValues is null (an AI-proposed
+  // bundle, never an explicit analyst bundle) AND the dynamic computation
+  // through the existing M15 model could not run. Scoped explicitly to the
+  // range itself — the same override cashPerShare's own check below uses —
+  // since these values ARE the range's bear/base/bull (§9.6 rule 1's second
+  // clause), not a display figure of their own.
+  if (scenarioValuesMissing !== null) {
+    suppressing.push({
+      ...notComputed(NOT_COMPUTED_BINDING.scenarioValues, "INCOMPLETE", scenarioValuesMissing),
+      scope: "the fair-value range",
+    });
+  }
   // --- §7.2 M16 / CalFinance Methodology v2 — the acquired-run cash basis --
   //
   // cashPerShare is a REQUIRED input of the fair-value range (it IS the
@@ -788,8 +885,12 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         }
       : {
           kind: "range",
-          bear: fixture.scenarioValues.bear,
-          bull: fixture.scenarioValues.bull,
+          // Reads scenarioOutputs' own values rather than fixture.scenarioValues
+          // directly — identical on an explicit analyst bundle, and the only
+          // way to reach the AI-proposed/dynamic figures computeScenarioOutputs
+          // was built from above (fixture.scenarioValues is null there).
+          bear: scenarioOutputs.values.bear,
+          bull: scenarioOutputs.values.bull,
           weightedValueInside: scenarioOutputs.weightedDistribution,
           drivingInputs: ["years 1-5 revenue growth", "operating margin path", "reinvestment as % of NOPAT"],
           scenarioLabelsWarning: triggerA.fired || triggerB.fired,
@@ -972,6 +1073,22 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       diagnostics,
       profileHumanConfirmed: fixture.trustInputs.profileHumanConfirmed,
       crossCheckFailedFactIds: fixture.trustInputs.crossCheckFailedFactIds,
+      // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
+      // COMPLETE RM-BRIEF PROOF (PR #399): "[manual profile confirmation]
+      // must not block obvious supported operating companies... Classify
+      // them deterministically/automatically." Gate 0 (§6.1) is already the
+      // deterministic, fail-closed test for "is this company's profile
+      // unambiguous" — it refuses every asset-based/financial/insurance/
+      // reserve-extraction row, which is exactly the set the old PROFILE NOT
+      // CONFIRMED qualifier existed to catch a human rubber-stamp for. So:
+      // on the pure automatic path (profileAutoResolved set, never a human
+      // decision — autoRun.ts Step 6) AND Gate 0 PASS, no new human act adds
+      // information this run does not already have, and §6.3's own *Cannot
+      // judge* escape hatch (a real human decision) still raises the
+      // qualifier normally, because that path never sets profileAutoResolved
+      // (autoRun.ts only resolves automatically where no decision exists).
+      profileAutomaticallyUnambiguous:
+        fixture.trustInputs.profileAutoResolved !== null && gate0.result === "PASS",
     }),
     achievedRevenueCagr: fixture.achievedRevenueCagr,
     preRevenue,
@@ -992,6 +1109,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       unavailableReason: "Business section content has not been built for this analysis.",
     },
     marketContext: fixture.marketContext ?? { sic: null, sicDescription: null },
+    latestFiling: fixture.latestFiling ?? null,
     policy: {
       constants: POLICY,
       undefinedConstants: fixture.configuredConstants,

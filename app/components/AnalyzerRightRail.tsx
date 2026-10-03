@@ -1,5 +1,5 @@
 import type { AnalysisResult } from "@/lib/analyzer/types";
-import { formatUsd } from "@/lib/formatUsd";
+import { formatUsd, formatCompactUsd } from "@/lib/formatUsd";
 import { FigureValue } from "./AnalyzerReport";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — the wide-desktop persistent right rail
@@ -23,7 +23,7 @@ function usd(v: import("decimal.js").default): string {
 }
 
 export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
-  const { diagnostics, marketContext } = result;
+  const { diagnostics, marketContext, gates } = result;
 
   return (
     <aside className="az-rightrail" aria-label="Key stats, market context and upcoming events">
@@ -36,7 +36,11 @@ export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
               {diagnostics.enterpriseValue.suppressed ? (
                 <span className="name">{diagnostics.enterpriseValue.state}</span>
               ) : (
-                usd(diagnostics.enterpriseValue.value.marketCap)
+                // CF-ANALYZER-V1-SETTLE-01 — REJECT CURRENT HEAD, item 3: a
+                // company-scale dollar figure through plain `formatUsd`
+                // reads as an unbroken wall of digits once in the hundreds
+                // of billions or above; abbreviated to T/B/M instead.
+                `$${formatCompactUsd(diagnostics.enterpriseValue.value.marketCap)}`
               )}
             </dd>
           </div>
@@ -59,6 +63,30 @@ export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
                 <span className="name">{diagnostics.marginHistory.state}</span>
               ) : (
                 `${usd(diagnostics.marginHistory.value.fiftyTwoWeekRange[0])} – ${usd(diagnostics.marginHistory.value.fiftyTwoWeekRange[1])}`
+              )}
+            </dd>
+          </div>
+          {/* CF-ANALYZER-V1-SETTLE-01 — #392's V1 Key Stats list names "one
+              compact balance-sheet/leverage metric" alongside market cap,
+              P/E and FCF yield; this rail had the other three but not this
+              one. Same figure Section D's "Leverage precondition" row
+              already reads (gates.leverage, one figure one computation),
+              restated here in the same suppressed/value shape the three
+              stats above already use — no new computation, no new state. */}
+          <div>
+            <dt>Leverage</dt>
+            <dd>
+              {gates.leverage.result === "PASS" && gates.leverage.netDebtRatio !== null ? (
+                `Net debt ${pct(gates.leverage.netDebtRatio)}`
+              ) : (
+                // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE
+                // GATE forbids raw gate/trust/spot-check state codes
+                // (e.g. "LEVERAGE UNSUPPORTED IN v1") outside Evidence; the
+                // right rail is part of the shared shell and renders on
+                // every tab. The raw code still reaches Evidence via
+                // `states.suppressing` (assemble.ts) — this is the same
+                // figure, restated as a local marker, not a new state.
+                <span className="name">Unavailable — see Evidence</span>
               )}
             </dd>
           </div>
