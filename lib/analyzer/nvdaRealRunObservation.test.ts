@@ -140,9 +140,9 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     expect(durable).not.toBeNull();
     const approved = approvedNvdaBundle();
     expect(durable?.inputs.profile.confirmedOrOverridden).toBe(approved.profile);
-    expect(durable?.inputs.scenarioValues.bear.toString()).toBe(approved.scenarioValues.bear);
-    expect(durable?.inputs.scenarioValues.base.toString()).toBe(approved.scenarioValues.base);
-    expect(durable?.inputs.scenarioValues.bull.toString()).toBe(approved.scenarioValues.bull);
+    expect(durable?.inputs.scenarioValues?.bear.toString()).toBe(approved.scenarioValues.bear);
+    expect(durable?.inputs.scenarioValues?.base.toString()).toBe(approved.scenarioValues.base);
+    expect(durable?.inputs.scenarioValues?.bull.toString()).toBe(approved.scenarioValues.bull);
   });
 
   it("transcribes the approved bundle, opens a run and reaches a computed report", async () => {
@@ -363,9 +363,9 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     await completeSpotCheck(runId);
     const state = await loadGateState(runId);
 
-    expect(state.fixture.scenarioValues.bear.toString()).toBe("28.08");
-    expect(state.fixture.scenarioValues.base.toString()).toBe("102.38");
-    expect(state.fixture.scenarioValues.bull.toString()).toBe("296.44");
+    expect(state.fixture.scenarioValues?.bear.toString()).toBe("28.08");
+    expect(state.fixture.scenarioValues?.base.toString()).toBe("102.38");
+    expect(state.fixture.scenarioValues?.bull.toString()).toBe("296.44");
     expect(state.fixture.profile.recommended).toBe("HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY");
   });
 });

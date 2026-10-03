@@ -27,11 +27,24 @@ function driver(overrides: Partial<Record<string, string>> = {}) {
   };
 }
 
-function wellFormedResponse(overrides: Partial<Record<"bear" | "base" | "bull", Record<string, string>>> = {}) {
+function policyConstants(overrides: Partial<Record<string, string>> = {}) {
+  return {
+    nopatTaxRate: "0.21",
+    stressMarginLevel: "0.02",
+    writtenAnchor: "Tax rate cites the supplied US federal statutory rate; stress margin cites the company's own current/median operating margin, supplied below.",
+    ...overrides,
+  };
+}
+
+function wellFormedResponse(
+  overrides: Partial<Record<"bear" | "base" | "bull", Record<string, string>>> = {},
+  policyConstantsOverrides: Partial<Record<string, string>> = {}
+) {
   return {
     bear: driver({ revenueGrowthOrPath: "0.04", operatingMargin: "0.15", ...overrides.bear }),
     base: driver({ revenueGrowthOrPath: "0.08", operatingMargin: "0.20", ...overrides.base }),
     bull: driver({ revenueGrowthOrPath: "0.14", operatingMargin: "0.24", ...overrides.bull }),
+    policyConstants: policyConstants(policyConstantsOverrides),
   };
 }
 
@@ -55,6 +68,9 @@ describe("runScenarioProposal", () => {
     expect(result.base.revenueGrowthOrPath.toString()).toBe("0.08");
     expect(result.bull.revenueGrowthOrPath.toString()).toBe("0.14");
     expect(result.bear.writtenAnchor).toContain("achieved revenue CAGR");
+    expect(result.nopatTaxRate.toString()).toBe("0.21");
+    expect(result.stressMarginLevel.toString()).toBe("0.02");
+    expect(result.policyConstantsAnchor).toContain("US federal statutory rate");
 
     expect(seen).toHaveLength(1);
     expect(seen[0].label).toBe("scenarioProposal");
@@ -62,6 +78,8 @@ describe("runScenarioProposal", () => {
     // rate the model might otherwise cite.
     expect(seen[0].user).toContain("Costco Wholesale Corporation");
     expect(seen[0].user).toContain("9.0%"); // historicalRevenueCagr
+    // The one tax reference the model is allowed to cite, supplied as data.
+    expect(seen[0].user).toContain("US federal statutory corporate income tax rate: 21.0%");
   });
 
   it("names a fact as unavailable rather than omitting it silently, so the model cannot cite it from memory", async () => {
@@ -105,6 +123,31 @@ describe("runScenarioProposal", () => {
   it("refuses an empty written anchor", async () => {
     const bad = wellFormedResponse({ base: { writtenAnchor: "   " } });
     await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/writtenAnchor is empty/);
+  });
+
+  it("refuses a response with a missing policyConstants field", async () => {
+    const bad = wellFormedResponse();
+    delete (bad.policyConstants as Partial<typeof bad.policyConstants>).writtenAnchor;
+
+    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/missing one of its three fields/);
+  });
+
+  it("refuses a NOPAT tax rate outside the plausible band", async () => {
+    const bad = wellFormedResponse({}, { nopatTaxRate: "0.75" });
+    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/outside the plausible band/);
+  });
+
+  it("refuses a stress margin level that exceeds the supplied current/median operating margin", async () => {
+    // FACTS supplies currentOperatingMargin 3.6% and medianOperatingMargin 3.2%.
+    const bad = wellFormedResponse({}, { stressMarginLevel: "0.05" });
+    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(
+      /stressMarginLevel = 0.0500 exceeds the supplied/
+    );
+  });
+
+  it("refuses an empty policyConstants written anchor", async () => {
+    const bad = wellFormedResponse({}, { writtenAnchor: "   " });
+    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/policyConstants.writtenAnchor is empty/);
   });
 
   it("regenerates once on a refused response and succeeds if the second attempt is clean", async () => {

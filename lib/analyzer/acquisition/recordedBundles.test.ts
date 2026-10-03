@@ -66,7 +66,7 @@ describe("recordedBundles.ts", () => {
 
     const bundle = await recordedAnalystInputBundle(TICKER);
     expect(bundle).not.toBeNull();
-    expect(bundle?.inputs.scenarioValues.base.toString()).toBe("20");
+    expect(bundle?.inputs.scenarioValues?.base.toString()).toBe("20");
     expect(bundle?.inputs.scenarios.bear.writtenAnchor).toBe("bear anchor");
     expect(bundle?.inputs.configuredConstants.nopatTaxRate?.toString()).toBe("0.2");
     expect(bundle?.inputs.configuredConstants.stressMarginLevel).toBeNull();
@@ -114,7 +114,7 @@ describe("recordedBundles.ts", () => {
     await recordAnalystBundle(TICKER, validInput({ scenarioValues: { bear: "11", base: "21", bull: "31" } }));
 
     const bundle = await recordedAnalystInputBundle(TICKER);
-    expect(bundle?.inputs.scenarioValues.bear.toString()).toBe("11");
+    expect(bundle?.inputs.scenarioValues?.bear.toString()).toBe("11");
 
     const { rows } = await getPool().query(
       "SELECT count(*)::int AS n FROM analyzer_recorded_analyst_bundles WHERE ticker = $1",

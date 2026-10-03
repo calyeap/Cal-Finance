@@ -161,8 +161,8 @@ describe("CF-ANALYST-DRAFT-NVDA-SCENARIO-02 — the drafted scenario-value gap b
 
     const nvda = await recordedAnalystInputBundle("NVDA");
     expect(nvda).not.toBeNull();
-    expect(nvda?.inputs.scenarioValues.bear.toString()).not.toBe("1");
-    expect(nvda?.inputs.scenarioValues.bear.toString()).toBe("28.08");
+    expect(nvda?.inputs.scenarioValues?.bear.toString()).not.toBe("1");
+    expect(nvda?.inputs.scenarioValues?.bear.toString()).toBe("28.08");
   });
 });
 
@@ -242,9 +242,9 @@ describe("CF-ANALYST-DRAFT-NVDA-01 — the runtime resolution path is unchanged 
     const bundle = await analystInputsFor("NVDA");
     expect(bundle).not.toBeNull();
     expect(bundle?.inputs.profile.confirmedOrOverridden).toBe("HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY");
-    expect(bundle?.inputs.scenarioValues.bear.toString()).toBe("28.08");
-    expect(bundle?.inputs.scenarioValues.base.toString()).toBe("102.38");
-    expect(bundle?.inputs.scenarioValues.bull.toString()).toBe("296.44");
+    expect(bundle?.inputs.scenarioValues?.bear.toString()).toBe("28.08");
+    expect(bundle?.inputs.scenarioValues?.base.toString()).toBe("102.38");
+    expect(bundle?.inputs.scenarioValues?.bull.toString()).toBe("296.44");
   });
 
   it("a run for NVDA no longer fails closed: isSupportedTicker(\"NVDA\") is true", async () => {

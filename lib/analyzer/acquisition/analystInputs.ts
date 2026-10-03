@@ -4,6 +4,18 @@ import { OKLO_FIXTURE } from "../fixtures/oklo";
 import type { AnalystInputs } from "./companyInputs";
 import { recordedAnalystInputBundle } from "./recordedBundles";
 import type { AnalystSuppliedRange } from "../modules/sensitivity";
+import { acquireCompany, type AcquiredCompany } from "./provider";
+import { analystCallIfConfigured } from "../ai/anthropicCall";
+import { aiProposedAnalystInputBundle } from "./aiProposedBundle";
+
+// Same switch gate.ts's own isOffline() reads (private there) — never a
+// second ANALYZER_OFFLINE meaning, just this file's own read of the one
+// existing flag, since calling out to acquire a company for the AI-proposed
+// path must not happen from an offline run any more than any other live-only
+// call in this codebase does.
+function isOfflineAnalyzerRun(): boolean {
+  return process.env.ANALYZER_OFFLINE === "1";
+}
 
 // ---------------------------------------------------------------------------
 // The inputs that are NOT facts, and were never acquired from anything.
@@ -194,7 +206,31 @@ const BUNDLES: Record<string, AnalystInputBundle> = {
 export async function analystInputsFor(ticker: string): Promise<AnalystInputBundle | null> {
   const committed = BUNDLES[ticker.toUpperCase()];
   if (committed !== undefined) return committed;
-  return recordedAnalystInputBundle(ticker);
+  const recorded = await recordedAnalystInputBundle(ticker);
+  if (recorded !== null) return recorded;
+
+  // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (issue #399). The same one
+  // resolver (CF-ANALYST-INPUT-ENTRY-01's own rule: no second resolution
+  // path), extended with a third, bounded source — consulted only where
+  // both the committed and the recorded source return null, never a second
+  // vote against an analyst's own recorded scenarios. Offline mode and a
+  // missing ANTHROPIC_API_KEY both fall through to this function's own
+  // existing refusal, same as any other unsupported ticker — see
+  // acquisition/aiProposedBundle.ts's own header for why this acquires here
+  // rather than being handed an already-acquired company: this is the one
+  // signature every existing caller already uses, ticker alone.
+  if (isOfflineAnalyzerRun()) return null;
+  const call = analystCallIfConfigured();
+  if (call === null) return null;
+
+  let acquired: AcquiredCompany;
+  try {
+    acquired = await acquireCompany(ticker, { price: null });
+  } catch {
+    return null;
+  }
+
+  return aiProposedAnalystInputBundle(ticker, acquired.acquisition.companyName, acquired, call);
 }
 
 /** The tickers whose analyst inputs are committed in code, never recorded
