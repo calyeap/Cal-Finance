@@ -103,10 +103,14 @@ async function main(): Promise<void> {
   if (result.fairValueRange?.kind !== "range") {
     failures.push(`bear/base/bull fair-value range unavailable (${result.fairValueRange?.kind ?? "missing"})`);
   } else {
-    if (!isFiniteDecimal(result.fairValueRange.bear)) failures.push("bear value non-finite");
-    if (!isFiniteDecimal(result.fairValueRange.base)) failures.push("base value non-finite");
-    if (!isFiniteDecimal(result.fairValueRange.bull)) failures.push("bull value non-finite");
+    if (!isFiniteDecimal(result.fairValueRange.bear)) failures.push("bear range bound non-finite");
+    if (!isFiniteDecimal(result.fairValueRange.bull)) failures.push("bull range bound non-finite");
   }
+
+  const scenarioValues = result.scenarioOutputs?.values;
+  if (!isFiniteDecimal(scenarioValues?.bear)) failures.push("bear scenario value non-finite");
+  if (!isFiniteDecimal(scenarioValues?.base)) failures.push("base scenario value non-finite");
+  if (!isFiniteDecimal(scenarioValues?.bull)) failures.push("bull scenario value non-finite");
 
   if (!isFiniteDecimal(result.scenarioOutputs?.priceLocationWithinRange)) {
     failures.push("current-price context within scenario range missing");
@@ -144,12 +148,17 @@ async function main(): Promise<void> {
     price: result.price?.value?.toString?.() ?? null,
     priceAsOf: result.price?.timestamp ?? null,
     aiLayer: report.aiLayer.status,
+    scenarios: {
+      bear: scenarioValues?.bear?.toString?.() ?? null,
+      base: scenarioValues?.base?.toString?.() ?? null,
+      bull: scenarioValues?.bull?.toString?.() ?? null,
+    },
     fairValueRange:
       result.fairValueRange?.kind === "range"
         ? {
             bear: result.fairValueRange.bear.toString(),
-            base: result.fairValueRange.base.toString(),
             bull: result.fairValueRange.bull.toString(),
+            weightedValueInside: result.fairValueRange.weightedValueInside.toString(),
           }
         : { kind: result.fairValueRange?.kind ?? null },
     latestFiling: latestFiling ?? null,
