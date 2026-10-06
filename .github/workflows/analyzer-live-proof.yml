@@ -1,34 +1,34 @@
 name: Analyzer live proof
 
-# Exact-head live proof. Manual dispatch remains available, and the existing
-# workflow can now also be woken by one explicit PR label when BUILD cannot
-# access the app secret/network from its sandbox. This is the proof handoff;
-# no second proof system or watcher is introduced.
+# RELIABILITY-FIRST CONTRACT
+#
+# This workflow is intentionally explicit and boring:
+#   1. a human/authorized operator supplies the exact ref to prove;
+#   2. the workflow checks out that exact ref;
+#   3. the product's automatic ticker -> report path runs;
+#   4. the deterministic acceptance probe decides PASS/FAIL;
+#   5. GitHub Actions itself is the receipt.
+#
+# No PR-label wake, OWNER relay, recursive workflow event, retry controller,
+# or label cleanup belongs on this critical path. Autonomy can be re-earned
+# later only if this explicit path becomes repetitive and remains reliable.
 on:
   workflow_dispatch:
     inputs:
       ref:
-        description: "Commit SHA or ref to prove (for example PR head SHA)"
-        required: false
-        default: "master"
+        description: "Exact commit SHA or ref to prove"
+        required: true
       ticker:
         description: "Ticker to prove (MSFT, NVDA, or COST); leave blank to run all"
         required: false
         default: ""
-  pull_request:
-    types: [labeled]
 
 permissions:
   contents: read
-  issues: write
-  pull-requests: read
 
 jobs:
   live-proof:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.event.label.name == 'needs-analyzer-live-proof'
-    name: fresh live run proof
+    name: exact-head RM-brief acceptance
     runs-on: ubuntu-latest
     timeout-minutes: 20
 
@@ -49,37 +49,19 @@ jobs:
 
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/calboard_proof
-      # Required by lib/analyzer/acquisition/secClient.ts for EDGAR acquisition.
-      # Not a secret — an identifying contact string EDGAR's own terms require.
       SEC_USER_AGENT: "Cal-Finance-Analyzer-Proof/1.0 (calvinyeap.h@gmail.com)"
 
     defaults:
       run:
-        # Without pipefail, `cmd | tee file` reports tee's status and can mask
-        # a failing ai-run as a passing proof.
+        # Fail the step when the acceptance command fails even though output is
+        # piped through tee. A green job must mean the report passed acceptance.
         shell: bash --noprofile --norc -eo pipefail {0}
 
     steps:
-      - name: Resolve exact proof ref
-        id: target
-        env:
-          EVENT_NAME: ${{ github.event_name }}
-          DISPATCH_REF: ${{ inputs.ref }}
-          PR_HEAD_SHA: ${{ github.event.pull_request.head.sha }}
-          PR_NUMBER: ${{ github.event.pull_request.number }}
-        run: |
-          set -euo pipefail
-          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
-            REF="${DISPATCH_REF:-master}"
-          else
-            REF="$PR_HEAD_SHA"
-          fi
-          echo "ref=$REF" >> "$GITHUB_OUTPUT"
-          echo "number=${PR_NUMBER:-}" >> "$GITHUB_OUTPUT"
-
-      - uses: actions/checkout@v4
+      - name: Checkout exact proof ref
+        uses: actions/checkout@v4
         with:
-          ref: ${{ steps.target.outputs.ref }}
+          ref: ${{ inputs.ref }}
 
       - uses: actions/setup-node@v4
         with:
@@ -92,75 +74,35 @@ jobs:
       - name: Apply migrations
         run: npm run migrate
 
-      - name: Fresh live run — MSFT
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.ticker == '' || inputs.ticker == 'MSFT' }}
+      - name: Verify reliability-first acceptance probe exists
+        run: test -f scripts/analyzer/acceptance-run.ts
+
+      - name: Fresh automatic acceptance — MSFT
+        if: ${{ inputs.ticker == '' || inputs.ticker == 'MSFT' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npm run ai-run -- MSFT --slots | tee msft-fresh-run-proof.txt
+        run: npx tsx scripts/analyzer/acceptance-run.ts MSFT | tee msft-acceptance-proof.txt
 
-      - name: Fresh live run — NVDA
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.ticker == '' || inputs.ticker == 'NVDA' }}
+      - name: Fresh automatic acceptance — NVDA
+        if: ${{ inputs.ticker == '' || inputs.ticker == 'NVDA' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npm run ai-run -- NVDA --slots | tee nvda-fresh-run-proof.txt
+        run: npx tsx scripts/analyzer/acceptance-run.ts NVDA | tee nvda-acceptance-proof.txt
 
-      - name: Fresh live run — COST
-        if: ${{ github.event_name != 'workflow_dispatch' || inputs.ticker == '' || inputs.ticker == 'COST' }}
+      - name: Fresh automatic acceptance — COST
+        if: ${{ inputs.ticker == '' || inputs.ticker == 'COST' }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npm run ai-run -- COST --slots | tee cost-fresh-run-proof.txt
+        run: npx tsx scripts/analyzer/acceptance-run.ts COST | tee cost-acceptance-proof.txt
 
-      - name: Upload proof artifacts
+      - name: Upload acceptance evidence
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: analyzer-live-proof
           path: |
-            msft-fresh-run-proof.txt
-            nvda-fresh-run-proof.txt
-            cost-fresh-run-proof.txt
+            msft-acceptance-proof.txt
+            nvda-acceptance-proof.txt
+            cost-acceptance-proof.txt
           if-no-files-found: warn
           retention-days: 90
-
-      - name: Hand passing proof back to OWNER
-        if: success() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          NUMBER: ${{ steps.target.outputs.number }}
-          REF: ${{ steps.target.outputs.ref }}
-          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
-          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
-          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
-        run: |
-          set -euo pipefail
-          source .github/scripts/terminal-relay.sh
-          LINE="DONE: EVIDENCE — Analyzer live proof passed on ${REF}: fresh MSFT + NVDA + COST runs completed and artifacts were uploaded."
-          gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE" >/dev/null
-          terminal_relay_owner "$REPO" "$NUMBER" "$LINE" analyzer-live-proof-pass
-
-      - name: Hand failed proof back to OWNER
-        if: failure() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          NUMBER: ${{ steps.target.outputs.number }}
-          REF: ${{ steps.target.outputs.ref }}
-          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
-          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
-          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
-        run: |
-          set -uo pipefail
-          source .github/scripts/terminal-relay.sh
-          LINE="BLOCKED: AI — Analyzer live proof failed on ${REF}; inspect this workflow run and proof artifacts before any merge."
-          gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE" >/dev/null
-          terminal_relay_owner "$REPO" "$NUMBER" "$LINE" analyzer-live-proof-fail
-
-      - name: Clear proof wake label
-        if: always() && github.event_name == 'pull_request'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          NUMBER: ${{ steps.target.outputs.number }}
-        run: |
-          gh api --method DELETE "repos/${REPO}/issues/${NUMBER}/labels/needs-analyzer-live-proof" || true
