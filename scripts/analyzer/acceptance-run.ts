@@ -50,15 +50,6 @@ function textOfStatement(statement: unknown): string | null {
   return typeof text === "string" && text.trim() !== "" ? text.trim() : null;
 }
 
-function jsonHasNaN(value: unknown): boolean {
-  try {
-    const text = JSON.stringify(value);
-    return /(^|[^A-Za-z])NaN([^A-Za-z]|$)/.test(text);
-  } catch {
-    return true;
-  }
-}
-
 async function main(): Promise<void> {
   const ticker = (process.argv[2] ?? "").trim().toUpperCase();
   if (!(ticker in COMPANY_NAMES)) {
@@ -105,6 +96,9 @@ async function main(): Promise<void> {
   } else {
     if (!isFiniteDecimal(result.fairValueRange.bear)) failures.push("bear range bound non-finite");
     if (!isFiniteDecimal(result.fairValueRange.bull)) failures.push("bull range bound non-finite");
+    if (!isFiniteDecimal(result.fairValueRange.weightedValueInside)) {
+      failures.push("weighted fair value non-finite");
+    }
   }
 
   const scenarioValues = result.scenarioOutputs?.values;
@@ -123,7 +117,11 @@ async function main(): Promise<void> {
     ["52-week / market range", result.diagnostics?.marginHistory],
   ];
   for (const [label, figure] of keyStats) {
-    if (!figureAvailable(figure)) failures.push(`${label} unavailable`);
+    if (!figureAvailable(figure)) {
+      failures.push(`${label} unavailable`);
+    } else if (!isFiniteDecimal((figure as { value?: unknown }).value)) {
+      failures.push(`${label} non-finite`);
+    }
   }
   if (result.gates?.leverage?.result !== "PASS" || !isFiniteDecimal(result.gates?.leverage?.netDebtRatio)) {
     failures.push("compact leverage metric unavailable");
@@ -132,6 +130,16 @@ async function main(): Promise<void> {
   const forecastDispersion = dynamic?.diagnostics?.sensitivity?.forecastDispersion;
   if (!forecastDispersion || forecastDispersion.available !== true) {
     failures.push("what-would-change-view trigger unavailable");
+  } else {
+    if (!isFiniteDecimal(forecastDispersion.fullRangeValueImpact)) {
+      failures.push("what-would-change-view impact non-finite");
+    }
+    if (!nonEmpty(forecastDispersion.selectedDriver)) {
+      failures.push("what-would-change-view driver missing");
+    }
+    if (!["LOW", "MEDIUM", "HIGH"].includes(forecastDispersion.tier)) {
+      failures.push("what-would-change-view tier invalid");
+    }
   }
 
   const latestFiling = dynamic.latestFiling;
