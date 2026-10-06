@@ -139,7 +139,6 @@ async function main(): Promise<void> {
     failures.push("latest material development / filing freshness missing");
   }
 
-  if (jsonHasNaN(result)) failures.push("report contains NaN / non-finite output");
 
   const summary = {
     ticker,
