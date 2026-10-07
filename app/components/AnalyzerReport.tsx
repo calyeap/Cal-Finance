@@ -1,6 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import Decimal from "decimal.js";
-import { formatUsd } from "@/lib/formatUsd";
+import { formatUsd, formatCompactUsd } from "@/lib/formatUsd";
 import { QuickRead } from "./QuickRead";
 import { ValuationStrip } from "./ValuationStrip";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
@@ -545,6 +545,18 @@ export function BusinessSection({ result }: { result: AnalysisResult }) {
             Not yet available —{" "}
             {result.business.unavailableReason ?? "Business section content has not been built for this analysis."}
           </p>
+        ) : result.business.narrative.source === "MARKET-DATA PROVIDER SUMMARY" ? (
+          // CF-ANALYZER-V1-SETTLE-01 — the approved provider-summary
+          // fallback (PR #399, comment 5952716764). Labelled as such, with
+          // the filing path's own reason for not supplying the excerpt.
+          <>
+            <p>{result.business.narrative.text}</p>
+            <p className="note">
+              Source: {result.business.narrative.provider} company profile summary, retrieved{" "}
+              {result.business.narrative.retrievedAt.slice(0, 10)} — used because the filer&apos;s own 10-K Item 1
+              excerpt was not available: {result.business.narrative.primaryUnavailableReason}
+            </p>
+          </>
         ) : (
           <>
             <p>{result.business.narrative.text}</p>
@@ -577,20 +589,26 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
         {/* ============ C ============ */}
         <section id="C">
           <div className="sechead">
-            <h2>C — Gate results</h2>
+            {/* CF-ANALYZER-V1-SETTLE-01 correction — Financials is not
+                Evidence; Calvin's product-completion ruling forbids
+                "Gate 0/1 terminology" as main-product language here. The
+                heading and row labels below are plain English; the raw
+                "Gate 0"/"Gate 1" names still identify these same checks in
+                Evidence (QuickRead / challenger payload) and in code. */}
+            <h2>C — Data sufficiency checks</h2>
             <span className="k">No remedy is offered anywhere</span>
           </div>
           <hr />
           <table className="t">
             <tbody>
               <tr>
-                <th scope="row">Gate 0 — supported profile</th>
+                <th scope="row">Business classification check</th>
                 <td>
                   <span className="v">{gates.gate0.result}</span>
                 </td>
               </tr>
               <tr>
-                <th scope="row">Gate 1 — history sufficiency</th>
+                <th scope="row">Filing history sufficiency check</th>
                 <td>
                   <span className="v">{gates.gate1.state ?? `${gates.gate1.filedYearsCount} filed years`}</span>
                 </td>
@@ -598,7 +616,13 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
               <tr>
                 <th scope="row">Leverage precondition{preRevenue && " — company today"}</th>
                 <td>
-                  <span className="v">{gates.leverage.result}</span>
+                  {/* CF-ANALYZER-V1-SETTLE-01 correction — Financials is not
+                      Evidence; #392's ACCEPTANCE GATE forbids the raw
+                      "LEVERAGE UNSUPPORTED IN v1" banner here. "PASS" is not
+                      one of the forbidden banners, so it still renders
+                      as-is; the raw code reaches Evidence via
+                      `states.suppressing` regardless. */}
+                  <span className="v">{gates.leverage.result === "PASS" ? "PASS" : "Unavailable — see Evidence"}</span>
                   {gates.leverage.netDebtRatio !== null && <div className="sub">net debt ratio {pct(gates.leverage.netDebtRatio)}</div>}
                   {gates.leverage.operatingLeaseInclusiveMemo !== null && (
                     <div className="sub">operating-lease-inclusive memo {pct(gates.leverage.operatingLeaseInclusiveMemo)}</div>
@@ -624,7 +648,10 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
         <section id="D">
           <div className="sechead">
             <h2>D — Deterministic diagnostics</h2>
-            <span className="k">M1–M14 · extract shown</span>
+            {/* CF-ANALYZER-V1-SETTLE-01 correction — plain English; "M1-M14"
+                is the internal diagnostic numbering, not main-product
+                language (Calvin's product-completion ruling, item 2). */}
+            <span className="k">Figures below are extracted directly from the filed financial statements</span>
           </div>
           <hr />
           <table className="t">
@@ -1019,13 +1046,13 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
               <tr>
                 <th scope="row">Steady-state EV</th>
                 <td>
-                  <FigureValue figure={priceImplied.steadyStateEv} format={(v) => `$${num(v, 0)}`} />
+                  <FigureValue figure={priceImplied.steadyStateEv} format={(v) => `$${formatCompactUsd(v)}`} />
                 </td>
               </tr>
               <tr>
                 <th scope="row">PVGO</th>
                 <td>
-                  <FigureValue figure={priceImplied.pvgo} format={(v) => `$${num(v, 0)}`} />
+                  <FigureValue figure={priceImplied.pvgo} format={(v) => `$${formatCompactUsd(v)}`} />
                 </td>
               </tr>
               <tr>
@@ -1039,7 +1066,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                   <th scope="row">NOPAT gap (current vs median-margin)</th>
                   <td>
                     <span className="v">
-                      ${num(priceImplied.nopatGap.current, 0)} vs ${num(priceImplied.nopatGap.medianMargin, 0)}
+                      ${formatCompactUsd(priceImplied.nopatGap.current)} vs ${formatCompactUsd(priceImplied.nopatGap.medianMargin)}
                     </span>
                   </td>
                 </tr>

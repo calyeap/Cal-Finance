@@ -1,7 +1,18 @@
 import YahooFinance from "yahoo-finance2";
-import type { MarketDataProvider, EodPricePoint, InstrumentResolution } from "./provider";
+import type {
+  MarketDataProvider,
+  EodPricePoint,
+  EquityFundamentals,
+  InstrumentResolution,
+  NonOperatingInvestmentsFigure,
+  BusinessSummary,
+} from "./provider";
 import type { AssetClass } from "../assets";
 import { lookupCrypto, UnsupportedCryptoError } from "./cryptoSymbols";
+
+// A company-profile summary shorter than this is a stub, not a description
+// of what the business does — refused rather than shown as one.
+const MIN_BUSINESS_SUMMARY_LENGTH = 80;
 
 // yahoo-finance2 v4 (installed: see package.json) exports the class itself as
 // the default export rather than a ready-made singleton (v2 API assumed by
@@ -105,5 +116,107 @@ export const yahooProvider: MarketDataProvider = {
         close: q.close!,
         adjustedClose: q.adjclose ?? q.close!,
       }));
+  },
+  // Same call shape as resolveInstrument's identity quote, read for its
+  // trailing/forward EPS fields instead. A missing quote or a thrown error
+  // (network, timeout, unknown symbol) returns null for the whole record —
+  // never a partial guess — exactly like resolveInstrument's own "unavailable"
+  // treatment of a provider failure.
+  async fetchFundamentals(ticker: string): Promise<EquityFundamentals | null> {
+    const symbol = ticker.trim().toUpperCase();
+    let result;
+    try {
+      result = await yahooFinance.quote(symbol);
+    } catch {
+      return null;
+    }
+    if (!result) return null;
+    return {
+      epsTrailing: result.epsTrailingTwelveMonths ?? null,
+      epsForward: result.epsForward ?? null,
+    };
+  },
+  // CF-ANALYZER-V1-SETTLE-01 — §4.4's non-operating-investments judgment has
+  // no candidates when a filer's own SEC tags carry none (acquire.ts).
+  // yahoo-finance2's balanceSheetHistory module is typed (and, by default,
+  // zod-validated) down to only { maxAge, endDate } — its generated schema
+  // is additionalProperties:false with no short/long-term-investments field
+  // at all (node_modules/yahoo-finance2/esm/src/modules/quoteSummary-
+  // iface.schema.js, BalanceSheetStatement) — so the normal typed call can
+  // never see those fields even when Yahoo's own response carries them.
+  // { validateResult: false } is the library's own documented escape hatch:
+  // it skips that strict validation/stripping and returns Yahoo's raw
+  // camelCased JSON instead, which is why the fields below are read off an
+  // explicit untyped cast rather than the (narrower) generated interface.
+  //
+  // Same fail-closed contract as fetchFundamentals: any failure — network,
+  // an unrecognised shape, a statement with neither field — returns null,
+  // never a partial or invented figure. A genuine zero (both fields present
+  // and zero) is a real "nothing non-operating" answer, but with no tag to
+  // attach it to this returns null too — nonOperatingJudgment.ts's own
+  // "None of these are non-operating" option already exists for that case
+  // and needs no synthetic candidate to express it.
+  async fetchNonOperatingInvestments(ticker: string): Promise<NonOperatingInvestmentsFigure | null> {
+    const symbol = ticker.trim().toUpperCase();
+    let result: unknown;
+    try {
+      result = await yahooFinance.quoteSummary(
+        symbol,
+        { modules: ["balanceSheetHistory"] },
+        { validateResult: false }
+      );
+    } catch {
+      return null;
+    }
+
+    // Cast once, at the one seam that reads past yahoo-finance2's own
+    // narrowed type (see the comment above) — everything below this line
+    // reads defensively rather than trusting the cast.
+    const balanceSheetStatements = (
+      result as { balanceSheetHistory?: { balanceSheetStatements?: unknown[] } } | null | undefined
+    )?.balanceSheetHistory?.balanceSheetStatements;
+    const statements = balanceSheetStatements as
+      | { endDate: string | Date; shortTermInvestments?: unknown; longTermInvestments?: unknown }[]
+      | undefined;
+    if (!statements || statements.length === 0) return null;
+
+    // Most recent fiscal period end first — sorted explicitly rather than
+    // assumed, since validateResult:false also skips whatever ordering
+    // guarantee the typed path might otherwise rely on.
+    const latest = [...statements].sort(
+      (a, b) => new Date(b.endDate).getTime() - new Date(a.endDate).getTime()
+    )[0];
+
+    const asNumber = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+    const shortTerm = asNumber(latest.shortTermInvestments);
+    const longTerm = asNumber(latest.longTermInvestments);
+    if (shortTerm === null && longTerm === null) return null;
+
+    const value = (shortTerm ?? 0) + (longTerm ?? 0);
+    if (value <= 0) return null;
+
+    return { value, asOfDate: new Date(latest.endDate).toISOString().slice(0, 10) };
+  },
+  // CF-ANALYZER-V1-SETTLE-01 — the approved business-description fallback
+  // (PR #399, comment 5952716764: "provider summary fallback if needed"):
+  // assetProfile.longBusinessSummary, read with { validateResult: false }
+  // for the same reason fetchNonOperatingInvestments above uses it — a
+  // strict-schema mismatch on an unrelated assetProfile field must not
+  // throw away the one field read here. Fails closed to null on any
+  // failure, a missing field, or a stub too short to describe a business.
+  async fetchBusinessSummary(ticker: string): Promise<BusinessSummary | null> {
+    const symbol = ticker.trim().toUpperCase();
+    let result: unknown;
+    try {
+      result = await yahooFinance.quoteSummary(symbol, { modules: ["assetProfile"] }, { validateResult: false });
+    } catch {
+      return null;
+    }
+    const summary = (result as { assetProfile?: { longBusinessSummary?: unknown } } | null | undefined)?.assetProfile
+      ?.longBusinessSummary;
+    if (typeof summary !== "string") return null;
+    const text = summary.replace(/\s+/g, " ").trim();
+    if (text.length < MIN_BUSINESS_SUMMARY_LENGTH) return null;
+    return { text };
   },
 };

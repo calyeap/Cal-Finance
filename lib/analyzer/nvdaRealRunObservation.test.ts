@@ -3,7 +3,7 @@ import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
 import { deriveVerdict } from "./verdict";
-import { recordAnalystBundle, type RecordedAnalystBundleInput } from "./acquisition/recordedBundles";
+import { type RecordedAnalystBundleInput } from "./acquisition/recordedBundles";
 import { revenueSeries, comparatorRecency, achievedRevenueCagr } from "./calibration/inputs";
 
 // ---------------------------------------------------------------------------
@@ -11,11 +11,15 @@ import { revenueSeries, comparatorRecency, achievedRevenueCagr } from "./calibra
 // (docs/verdict-methodology-reconciliation.md §12) that
 // `docs/nvda-realrun-observation.md` reports.
 //
-// Transcribes the now-complete, Calvin-approved NVDA Step-7 / §6.3 bundle
-// (docs/analyst-drafts/nvda-step7-draft.md, merged at 0753051) BYTE-FAITHFUL
-// into the recorded analyst-input store via `recordAnalystBundle` — the same
-// path `/analyzer/inputs/NVDA` writes — then opens one real run through the
-// same gated product path MSFT and OKLO already run through
+// Originally transcribed the now-complete, Calvin-approved NVDA Step-7 /
+// §6.3 bundle (docs/analyst-drafts/nvda-step7-draft.md, merged at 0753051)
+// BYTE-FAITHFUL into the recorded analyst-input store via
+// `recordAnalystBundle` — the same path `/analyzer/inputs/NVDA` writes —
+// proving that write path end to end. CF-ANALYZER-V1-SETTLE-01 (issue
+// #392, migration 008) has since made that same transcription durable, so
+// this file no longer writes it itself (see the pure-reader note beside
+// `openNvdaObservationRun` below) — it opens one real run through the same
+// gated product path MSFT and OKLO already run through
 // (createRun -> clear the spot-check queue -> record the profile decision ->
 // computeAnalysisForRun), reusing the existing real-run harness
 // (nonOperatingJudgmentRecordedOnRealRun.test.ts,
@@ -26,11 +30,6 @@ import { revenueSeries, comparatorRecency, achievedRevenueCagr } from "./calibra
 // UNMADE on this run (no recordJudgment call) — the same state OKLO's own
 // real-run path already reaches — and what that costs the output is part of
 // the observation, not a gate to raise.
-//
-// The recorded row is inserted and deleted around every test (the same
-// discipline nvdaAnalystDraftValidation.test.ts's own throwaway ticker
-// already uses), so this file leaves no residue for any other file's own
-// "NVDA has nothing recorded" pins to trip over regardless of run order.
 // ---------------------------------------------------------------------------
 
 const NVDA_TICKER = "NVDA";
@@ -106,14 +105,17 @@ async function completeSpotCheck(runId: string): Promise<void> {
   }
 }
 
-async function deleteRecordedNvdaBundle(): Promise<void> {
-  await getPool().query("DELETE FROM analyzer_recorded_analyst_bundles WHERE ticker = $1", [NVDA_TICKER]);
-}
-
-/** Opens NVDA's real run, exactly per SCOPE items 1-3: bundle recorded,
- * run opened through gate.ts, §4.4 left unmade. */
+// CF-ANALYZER-V1-SETTLE-01 (issue #392) — migration 008 now durably seeds
+// this exact bundle for NVDA, so this file no longer records it itself:
+// doing so would mean transiently deleting/rewriting the same row every
+// other test file now expects to find durably present, racing any of them
+// that happens to run concurrently. This file becomes a pure reader —
+// proving the durably-seeded row IS this approved content (below), then
+// running through it exactly as before, with no write of its own anywhere
+// in this file.
+/** Opens NVDA's real run, exactly per SCOPE items 1-3: durable bundle
+ * (migration 008), run opened through gate.ts, §4.4 left unmade. */
 async function openNvdaObservationRun() {
-  await recordAnalystBundle(NVDA_TICKER, approvedNvdaBundle());
   const runId = await createRun(NVDA_TICKER, "NVIDIA Corporation");
   await completeSpotCheck(runId);
   const state = await loadGateState(runId);
@@ -126,12 +128,21 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     await getPool().query(
       "TRUNCATE analyzer_run_fact_decisions, analyzer_run_judgments, analyzer_runs CASCADE"
     );
-    await deleteRecordedNvdaBundle();
   });
 
   afterAll(async () => {
-    await deleteRecordedNvdaBundle();
     await getPool().end();
+  });
+
+  it("migration 008's durably recorded bundle is byte-identical to the approved content this file transcribes", async () => {
+    const { recordedAnalystInputBundle } = await import("./acquisition/recordedBundles");
+    const durable = await recordedAnalystInputBundle(NVDA_TICKER);
+    expect(durable).not.toBeNull();
+    const approved = approvedNvdaBundle();
+    expect(durable?.inputs.profile.confirmedOrOverridden).toBe(approved.profile);
+    expect(durable?.inputs.scenarioValues?.bear.toString()).toBe(approved.scenarioValues.bear);
+    expect(durable?.inputs.scenarioValues?.base.toString()).toBe(approved.scenarioValues.base);
+    expect(durable?.inputs.scenarioValues?.bull.toString()).toBe(approved.scenarioValues.bull);
   });
 
   it("transcribes the approved bundle, opens a run and reaches a computed report", async () => {
@@ -348,14 +359,13 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
   });
 
   it("the two deliberately-blank §7.1 constants and the scenario values round-trip byte-faithful from the recorded store", async () => {
-    await recordAnalystBundle(NVDA_TICKER, approvedNvdaBundle());
     const runId = await createRun(NVDA_TICKER, "NVIDIA Corporation");
     await completeSpotCheck(runId);
     const state = await loadGateState(runId);
 
-    expect(state.fixture.scenarioValues.bear.toString()).toBe("28.08");
-    expect(state.fixture.scenarioValues.base.toString()).toBe("102.38");
-    expect(state.fixture.scenarioValues.bull.toString()).toBe("296.44");
+    expect(state.fixture.scenarioValues?.bear.toString()).toBe("28.08");
+    expect(state.fixture.scenarioValues?.base.toString()).toBe("102.38");
+    expect(state.fixture.scenarioValues?.bull.toString()).toBe("296.44");
     expect(state.fixture.profile.recommended).toBe("HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY");
   });
 });

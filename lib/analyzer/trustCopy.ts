@@ -1,4 +1,6 @@
-import type { TrustStatus } from "./types";
+import type Decimal from "decimal.js";
+import type { FairValueRange, LeverageResult, TrustStatus } from "./types";
+import { verdictUnavailableLine } from "./overviewCopy";
 
 // ---------------------------------------------------------------------------
 // The page-one trust sentences, DERIVED from the computed status.
@@ -99,4 +101,112 @@ export function uncertaintyLevel(status: TrustStatus): UncertaintyLevel {
     case "UNUSABLE":
       return "High";
   }
+}
+
+// ---------------------------------------------------------------------------
+// CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT HEAD FOR ONE
+// FINAL PRODUCT-COMPLETION PASS, item 2: outside Evidence, the hero's
+// INCOMPLETE verdict slot (DominantVerdictSlot) showed only "INCOMPLETE" /
+// "Unavailable — see Evidence" — naming that a verdict is missing, never
+// why. Calvin: "Explain the actual missing decision-critical condition(s)
+// in plain English, then link/defer technical detail to Evidence."
+//
+// `deriveVerdict` (verdict.ts) is pinned by content hash
+// (m9RealCompanyValidationGuards.test.ts) and stays untouched — this reads
+// the exact same already-computed signals that function branches on (trust
+// status, the fair-value range's kind, whether a human has confirmed the
+// profile), in the same order, and states the condition in plain language
+// instead of parsing `verdict.reason`'s pinned prose. No new computation,
+// no new state; `verdict.reason` itself remains the full verbatim technical
+// explanation, still shown in full on Evidence.
+// ---------------------------------------------------------------------------
+
+/**
+ * Plain-English stand-in for the hero's INCOMPLETE verdict outside Evidence.
+ *
+ * CF-ANALYZER-V1-SETTLE-01 — Calvin's 7 Oct 2026 decision on #399 (Option
+ * 1): the normal Overview carries no "see Evidence" placeholder, so each
+ * branch states the condition itself. Where no fair-value range exists (the
+ * case that also makes trust UNUSABLE, §9.6 rule 1), the sentence names the
+ * range's own reason in plain words (overviewCopy.ts) instead of pointing
+ * elsewhere for it.
+ */
+export function incompleteVerdictExplanation({
+  trustStatus,
+  fairValueRange,
+  leverage,
+  profileNotConfirmed,
+}: {
+  trustStatus: TrustStatus;
+  fairValueRange: FairValueRange;
+  leverage?: LeverageResult;
+  profileNotConfirmed: boolean;
+}): string {
+  if (fairValueRange.kind === "suppressed") {
+    return verdictUnavailableLine(fairValueRange, leverage);
+  }
+  if (trustStatus === "UNUSABLE") {
+    return "This run's underlying data isn't reliable enough yet to support a verdict.";
+  }
+  if (fairValueRange.kind === "pre-revenue-distribution") {
+    return "This company doesn't yet generate the kind of earnings this model prices against, so there is no buy/hold/sell line yet — only a cash-floor estimate below.";
+  }
+  if (profileNotConfirmed) {
+    return "Nobody has confirmed which financial profile fits this company yet, so a verdict can't render until that happens.";
+  }
+  return "A fair-value range is available, but a full verdict also requires comparing this company's actual growth against what today's price assumes — that comparison isn't built yet.";
+}
+
+// ---------------------------------------------------------------------------
+// CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE COMPLETE
+// RM-BRIEF PROOF (PR #399, comment 5952716764), REMOVE/BYPASS item 1: "
+// deriveVerdict / hero INCOMPLETE must not block or dominate the normal
+// report. Use existing price-vs-range / current-price interpretation
+// instead. Do not invent BUY/HOLD/SELL."
+//
+// `scenarioOutputs.priceLocationWithinRange` (modules/scenarioOutputs.ts)
+// already computes exactly this — the same "X% of the way from bear to
+// bull" figure Quick Read's ValuationStrip already states in words
+// (`showLocation`). This restates that already-computed figure as the
+// hero's own bottom-line sentence, in place of the literal "INCOMPLETE"
+// label, whenever a defensible range exists. It states where the price
+// sits, never whether that is good or bad — no BUY/HOLD/SELL word, no new
+// computation.
+// ---------------------------------------------------------------------------
+
+/**
+ * The hero's price-vs-range bottom line, or null where no defensible range
+ * exists to describe a position within, OR where §10.6.3's existing
+ * valuation-position suppression applies — trust UNUSABLE, or the profile
+ * not yet human-confirmed (the same `positionSuppressedBy` gate
+ * ScenarioRangeStrip already enforces, REVIEW's own `CORRECT:` on this PR,
+ * comment 5932208513: "a fresh automatic run records no profile decision,
+ * so §10.6.3 suppresses the valuation position; the hero must not show its
+ * percentage restatement either"). This function reuses that exact gate
+ * rather than loosening it — §10.6.3 itself is untouched by this outcome.
+ * The caller falls back to `incompleteVerdictExplanation` in either case,
+ * which already states the suppression's own plain-English cause.
+ */
+export function priceVsRangeHeadline({
+  fairValueRange,
+  priceLocationWithinRange,
+  trustStatus,
+  profileNotConfirmed,
+}: {
+  fairValueRange: FairValueRange;
+  priceLocationWithinRange: Decimal | null;
+  trustStatus: TrustStatus;
+  profileNotConfirmed: boolean;
+}): string | null {
+  if (fairValueRange.kind !== "range" || priceLocationWithinRange === null) return null;
+  if (trustStatus === "UNUSABLE" || profileNotConfirmed) return null;
+
+  const pct = priceLocationWithinRange.mul(100);
+  if (pct.lte(0)) {
+    return "Trading at or below the bear case modeled for this company — the current price is already at or beyond the most pessimistic scenario in the range below.";
+  }
+  if (pct.gte(100)) {
+    return "Trading at or above the bull case modeled for this company — the current price is already at or beyond the most optimistic scenario in the range below.";
+  }
+  return `Trading ${pct.toFixed(0)}% of the way from the bear case to the bull case modeled for this company.`;
 }

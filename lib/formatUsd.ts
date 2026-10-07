@@ -26,3 +26,22 @@ export function formatUsd(value: Decimal | number | string): string {
 export function formatSignedUsd(d: Decimal): string {
   return d.isNegative() ? `−$${formatUsd(d.abs())}` : `+$${formatUsd(d)}`;
 }
+
+// CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT HEAD FOR ONE
+// FINAL PRODUCT-COMPLETION PASS, item 3: company-scale dollar figures
+// (market cap, enterprise value, steady-state EV) rendered through the
+// plain `toFixed(0)` helpers scattered across the report came out as
+// unreadable strings of digits (e.g. "$1104224240826"). This abbreviates
+// to the nearest T/B/M, matching ordinary financial-site convention; below
+// $1M it falls back to `formatUsd`'s comma-grouped, cents-precise form,
+// which is already readable at that scale. Display-layer only, same as
+// `formatUsd` above — never apply to an editable input.
+export function formatCompactUsd(value: Decimal | number | string): string {
+  const d = value instanceof Decimal ? value : new Decimal(value);
+  const abs = d.abs();
+  const sign = d.isNegative() ? "-" : "";
+  if (abs.gte(1_000_000_000_000)) return `${sign}${abs.div(1_000_000_000_000).toFixed(2)}T`;
+  if (abs.gte(1_000_000_000)) return `${sign}${abs.div(1_000_000_000).toFixed(1)}B`;
+  if (abs.gte(1_000_000)) return `${sign}${abs.div(1_000_000).toFixed(1)}M`;
+  return `${sign}${formatUsd(abs)}`;
+}

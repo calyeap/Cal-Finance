@@ -3148,6 +3148,15 @@ h6 {
 .cb-analyzer .overview .ovslot.editorial .note {
   margin-top: 8px;
 }
+/* CF-ANALYZER-V1-SETTLE-01 — the one shared "interpretation not run" note
+   ahead of slots 6/7/9/10, same spacing rhythm as .ovslot but not itself
+   one of the fixed slot-5-through-11 sequence (.ovtab > .ovslot). */
+.cb-analyzer .overview .ovnote {
+  margin-bottom: 32px;
+}
+.cb-analyzer .overview .ovnote .note {
+  margin: 0 0 8px;
+}
 .cb-analyzer .overview .act {
   display: inline-block;
   font: inherit;

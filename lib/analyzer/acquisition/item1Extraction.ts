@@ -33,7 +33,7 @@
 
 /** Bump whenever the boundary patterns, the standalone-line requirement, or
  * MIN_EXCERPT_LENGTH change. Recorded on every excerpt this rule produces. */
-export const ITEM1_EXTRACTION_RULE_VERSION = "item1-2026-09-1";
+export const ITEM1_EXTRACTION_RULE_VERSION = "item1-2026-10-1";
 
 const MIN_EXCERPT_LENGTH = 200;
 
@@ -66,7 +66,16 @@ function htmlToPlainText(html: string): string {
   const withoutTags = withLineBreaks.replace(/<[^>]+>/g, " ");
   const decoded = decodeEntities(withoutTags);
 
-  const lines = decoded.split("\n").map((line) => line.replace(/[ \t ]+/g, " ").trim());
+  const lines = decoded.split("\n").map((line) =>
+    line
+      .replace(/[ \t ]+/g, " ")
+      // Inline-XBRL can split visible heading words across formatting spans
+      // (for example Microsoft's "B USINESS"). Normalize only the two fixed
+      // boundary titles before applying the same standalone-line rule.
+      .replace(/\bB\s+USINESS\b/gi, "BUSINESS")
+      .replace(/\bR\s+ISK\s+F\s+ACTORS\b/gi, "RISK FACTORS")
+      .trim()
+  );
   return lines.join("\n").replace(/\n{3,}/g, "\n\n");
 }
 

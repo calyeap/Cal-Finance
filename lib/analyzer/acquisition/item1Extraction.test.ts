@@ -37,6 +37,22 @@ describe("extractItem1 — the fixed, versioned rule", () => {
     expect(result.text).not.toContain(".....");
   });
 
+
+  it("handles the inline-XBRL split heading shape observed in the live MSFT filing", () => {
+    const html = `
+      <html><body>
+        <p>Item 1. <span>B</span><span>USINESS</span></p>
+        <p>${LONG_PARAGRAPH}</p>
+        <p>Item 1A. <span>R</span><span>ISK</span> <span>F</span><span>ACTORS</span></p>
+      </body></html>
+    `;
+    const result = extractItem1(html);
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error("expected ok");
+    expect(result.text).toContain("We design, develop and sell");
+    expect(result.ruleVersion).toBe(ITEM1_EXTRACTION_RULE_VERSION);
+  });
+
   it("is tolerant of a dash between the item number and its title", () => {
     const html = wellFormedFiling().replace("Item 1. Business</p>", "Item 1 - Business</p>");
     const result = extractItem1(html);

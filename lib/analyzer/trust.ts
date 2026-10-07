@@ -51,6 +51,18 @@ import type {
  */
 export const PROFILE_NOT_CONFIRMED_DETAIL = "PROFILE NOT CONFIRMED on the valuation path";
 
+/**
+ * CF-ANALYZER-V1-SETTLE-01 — whether this run's trust result carries the
+ * PROFILE NOT CONFIRMED qualifier. The report page and the live-proof probe
+ * both render the Overview from this one reading of the fact this module
+ * already computed, so the proof checks exactly what the page shows.
+ */
+export function profileNotConfirmedFor(result: Pick<AnalysisResult, "trust">): boolean {
+  return result.trust.determinedBy.some(
+    (d) => d.kind === "qualifying flag" && d.detail === PROFILE_NOT_CONFIRMED_DETAIL
+  );
+}
+
 export interface TrustInput {
   /** The §10.3 outcome. Suppressed here IS rule 1. */
   fairValueRange: FairValueRange;
@@ -64,6 +76,15 @@ export interface TrustInput {
    * into `states.qualifying`.
    */
   profileHumanConfirmed: boolean;
+  /**
+   * CF-ANALYZER-V1-SETTLE-01 — true only when assemble.ts has determined this
+   * run's profile needs no human confirmation because it is unambiguous: the
+   * pure automatic path resolved it (never a human decision) AND Gate 0
+   * passed (not asset-based/financial/insurance/reserve-extraction). Optional
+   * so every existing caller that only ever meant a real human act — tests
+   * included — keeps behaving exactly as before without passing it.
+   */
+  profileAutomaticallyUnambiguous?: boolean;
   /** §3.8.2. Fact ids whose deterministic cross-check failed. */
   crossCheckFailedFactIds: readonly string[];
 }
@@ -122,7 +143,7 @@ export function computeTrustStatus(input: TrustInput): TrustResult {
     });
   }
 
-  if (!input.profileHumanConfirmed) {
+  if (!input.profileHumanConfirmed && !input.profileAutomaticallyUnambiguous) {
     determinedBy.push({
       kind: "qualifying flag",
       detail: PROFILE_NOT_CONFIRMED_DETAIL,

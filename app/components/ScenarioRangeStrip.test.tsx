@@ -44,30 +44,77 @@ describe("ScenarioRangeStrip — the normal range case", () => {
 
   it("suppresses the valuation-position slot when the profile is not human-confirmed (§10.6.3), without hiding the range", () => {
     render(<ScenarioRangeStrip result={result} profileNotConfirmed={true} />);
-    expect(screen.getByText("Valuation position — suppressed")).not.toBeNull();
-    expect(screen.getByText("PROFILE NOT CONFIRMED")).not.toBeNull();
+    // CF-ANALYZER-V1-SETTLE-01 (Option 1): the reason in plain words — no
+    // "suppressed" label, no "see Evidence" placeholder.
+    expect(
+      screen.getByText("Where today's price sits in this range is not shown until the company's financial profile is confirmed.")
+    ).not.toBeNull();
+    expect(screen.queryByText(/see Evidence/i)).toBeNull();
     expect(screen.getByText("Fair-value range")).not.toBeNull();
+  });
+
+  // CF-ANALYZER-V1-SETTLE-01 correction — the ValuationStrip grid's own
+  // "X% of the way from bear to bull" location line is the same §10.6.3
+  // position, restated as a percentage; it must not render wherever the
+  // slot below it is suppressed.
+  it("never shows the bear-to-bull location percentage when the profile is not human-confirmed", () => {
+    render(<ScenarioRangeStrip result={result} profileNotConfirmed={true} />);
+    expect(screen.queryByText(/of the way from bear to bull/)).toBeNull();
+  });
+
+  // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE forbids
+  // raw trust-status/profile code text on the hero, which renders on every
+  // non-Evidence tab; the identical text already reaches the Evidence tab
+  // via `TrustAndProfileNote`.
+  it("never prints the raw trust-status/profile code itself — only the local marker", () => {
+    render(<ScenarioRangeStrip result={result} profileNotConfirmed={true} />);
+    expect(screen.queryByText("PROFILE NOT CONFIRMED")).toBeNull();
   });
 
   it("does not render the valuation-position slot when nothing suppresses it", () => {
     render(<ScenarioRangeStrip result={result} profileNotConfirmed={false} />);
-    expect(screen.queryByText("Valuation position — suppressed")).toBeNull();
+    expect(screen.queryByText(/Where today's price sits in this range is not shown/)).toBeNull();
   });
 });
 
 describe("ScenarioRangeStrip — §10.6.3 suppression (trust UNUSABLE)", () => {
-  it("renders the suppressing state in place of the range, never a bear/bull bound", () => {
+  it("renders the plain-English reason in place of the range, never a bear/bull bound", () => {
     const result = assembleAnalysisResult(leveredMsft());
     render(<ScenarioRangeStrip result={result} profileNotConfirmed={false} />);
-    expect(screen.getByText("LEVERAGE UNSUPPORTED IN v1")).not.toBeNull();
+    // CF-ANALYZER-V1-SETTLE-01 (Option 1): MSFT levered past §6.5's
+    // threshold — the ratio exists, so the reason is the level, not missing inputs.
+    expect(
+      screen.getByText(
+        "No fair-value range for this company yet — its debt load is above the level this version of the model can value."
+      )
+    ).not.toBeNull();
+    expect(screen.queryByText(/see Evidence/i)).toBeNull();
     expect(screen.queryByText("Fair-value range")).toBeNull();
     expect(screen.queryByText(/Driven by:/)).toBeNull();
+  });
+
+  // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE forbids
+  // raw gate/trust state codes (e.g. "LEVERAGE UNSUPPORTED IN v1") on the
+  // hero, which is shared-shell and renders on every non-Evidence tab.
+  it("never prints the raw suppressing state code itself — only the local marker", () => {
+    const result = assembleAnalysisResult(leveredMsft());
+    render(<ScenarioRangeStrip result={result} profileNotConfirmed={false} />);
+    expect(screen.queryByText("LEVERAGE UNSUPPORTED IN v1")).toBeNull();
   });
 
   it("still renders the ValuationStrip grid — the strip is never collapsed or hidden", () => {
     const result = assembleAnalysisResult(leveredMsft());
     render(<ScenarioRangeStrip result={result} profileNotConfirmed={false} />);
     expect(screen.getByText("Current price")).not.toBeNull();
+  });
+
+  // CF-ANALYZER-V1-SETTLE-01 correction — same §10.6.3 guard as the
+  // profile-not-confirmed case above: trust UNUSABLE must suppress the
+  // location line too, not just the slot below it.
+  it("never shows the bear-to-bull location percentage when trust is UNUSABLE", () => {
+    const result = assembleAnalysisResult(leveredMsft());
+    render(<ScenarioRangeStrip result={result} profileNotConfirmed={false} />);
+    expect(screen.queryByText(/of the way from bear to bull/)).toBeNull();
   });
 });
 

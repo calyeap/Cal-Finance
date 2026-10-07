@@ -6,7 +6,13 @@ import { DominantVerdictSlot } from "./DominantVerdictSlot";
 import { PriceChartPanel } from "./PriceChartPanel";
 import { ScenarioRangeStrip } from "./ScenarioRangeStrip";
 import { AnalyzerRightRail } from "./AnalyzerRightRail";
-import { trustStatusLine, trustConsequenceLine, uncertaintyLevel } from "@/lib/analyzer/trustCopy";
+import {
+  trustStatusLine,
+  trustConsequenceLine,
+  uncertaintyLevel,
+  incompleteVerdictExplanation,
+  priceVsRangeHeadline,
+} from "@/lib/analyzer/trustCopy";
 import { createDeepSnapshotAction, beginUpdateRunAction } from "@/app/actions/analyzer";
 import { boundState, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
 
@@ -74,12 +80,6 @@ export function AnalyzerReportFrame({
   const trust = result.trust;
   // CF-PRICE-DISPLAY-HONESTY-RECON-01 — CONTEXT item 5.
   const priceState = boundState(result.states, NOT_COMPUTED_BINDING.price);
-  const positionSuppressedBy =
-    trust.status === "UNUSABLE"
-      ? `TRUST STATUS UNUSABLE · ${trust.determinedBy[0]?.detail ?? ""}`
-      : profileNotConfirmed
-        ? "PROFILE NOT CONFIRMED"
-        : null;
 
   return (
     <div className="az-report">
@@ -105,7 +105,23 @@ export function AnalyzerReportFrame({
             mock's own invention (never shipped by ScenarioRangeStrip). */}
         <div className="az-hero" data-tab={activeTab}>
           <div className="az-hero-verdict">
-            <DominantVerdictSlot verdict={verdict} trustStatus={trust.status} />
+            <DominantVerdictSlot
+              verdict={verdict}
+              trustStatus={trust.status}
+              isEvidenceTab={activeTab === "evidence"}
+              incompleteExplanation={incompleteVerdictExplanation({
+                trustStatus: trust.status,
+                fairValueRange: result.fairValueRange,
+                leverage: result.gates.leverage,
+                profileNotConfirmed,
+              })}
+              priceVsRangeHeadline={priceVsRangeHeadline({
+                fairValueRange: result.fairValueRange,
+                priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
+                trustStatus: trust.status,
+                profileNotConfirmed,
+              })}
+            />
             <UncertaintyBadge status={trust.status} />
           </div>
           <div className="az-hero-price">
@@ -115,26 +131,6 @@ export function AnalyzerReportFrame({
             <ScenarioRangeStrip result={result} profileNotConfirmed={profileNotConfirmed} />
           </div>
         </div>
-
-        {(profileNotConfirmed || trust.status !== "CLEAN") && (
-          <div className="az-trustnote">
-            <div className="state">
-              {profileNotConfirmed && (
-                <span className="plain">
-                  The recommended profile was used provisionally. Nobody confirmed that it describes this company.
-                </span>
-              )}
-              <span className="name">{trustStatusLine(trust.status, profileNotConfirmed)}</span>
-              <span className="cause">{trustConsequenceLine(trust.status)}</span>
-            </div>
-            {positionSuppressedBy !== null && (
-              <div className="state" style={{ marginTop: 14 }}>
-                <span className="name">Valuation position — suppressed</span>
-                <span className="cause">{positionSuppressedBy}</span>
-              </div>
-            )}
-          </div>
-        )}
 
         {/* Seven-tab rail — same order, placement and selected-state
             treatment on every screen this run has (design authority doc,
@@ -181,6 +177,51 @@ export function AnalyzerReportFrame({
       </div>
 
       <AnalyzerRightRail result={result} />
+    </div>
+  );
+}
+
+// CF-ANALYZER-V1-SETTLE-01 — trust/profile plumbing moved out of the shared
+// shell. It used to render unconditionally on every one of the seven tabs
+// whenever trust wasn't CLEAN (a repeated failure-state banner the V1
+// content contract names explicitly as something that must live in
+// Evidence/Diagnostics only, not repeat across tabs). Same markup, same
+// copy, same suppression rule — only where it renders has moved. The Evidence
+// tab (page.tsx's TabBody) is its one remaining caller.
+export function TrustAndProfileNote({
+  result,
+  profileNotConfirmed,
+}: {
+  result: AnalysisResult;
+  profileNotConfirmed: boolean;
+}) {
+  const trust = result.trust;
+  const positionSuppressedBy =
+    trust.status === "UNUSABLE"
+      ? `TRUST STATUS UNUSABLE · ${trust.determinedBy[0]?.detail ?? ""}`
+      : profileNotConfirmed
+        ? "PROFILE NOT CONFIRMED"
+        : null;
+
+  if (!profileNotConfirmed && trust.status === "CLEAN") return null;
+
+  return (
+    <div className="az-trustnote">
+      <div className="state">
+        {profileNotConfirmed && (
+          <span className="plain">
+            The recommended profile was used provisionally. Nobody confirmed that it describes this company.
+          </span>
+        )}
+        <span className="name">{trustStatusLine(trust.status, profileNotConfirmed)}</span>
+        <span className="cause">{trustConsequenceLine(trust.status)}</span>
+      </div>
+      {positionSuppressedBy !== null && (
+        <div className="state" style={{ marginTop: 14 }}>
+          <span className="name">Valuation position — suppressed</span>
+          <span className="cause">{positionSuppressedBy}</span>
+        </div>
+      )}
     </div>
   );
 }

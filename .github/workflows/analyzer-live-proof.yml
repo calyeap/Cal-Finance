@@ -1,17 +1,27 @@
 name: Analyzer live proof
+run-name: "Analyzer live proof — ${{ inputs.ticker }} at ${{ inputs.ref }}"
 
 # RELIABILITY-FIRST CONTRACT
 #
 # This workflow is intentionally explicit and boring:
 #   1. a human/authorized operator supplies the exact ref to prove;
 #   2. the workflow checks out that exact ref;
-#   3. the product's automatic ticker -> report path runs;
-#   4. the deterministic acceptance probe decides PASS/FAIL;
-#   5. GitHub Actions itself is the receipt.
+#   3. the product's automatic ticker -> report path runs for EVERY ticker
+#      asked for — one ticker failing never hides the others' evidence;
+#   4. the deterministic acceptance probe decides PASS/FAIL per ticker and
+#      prints the cause of every failure;
+#   5. the run reports its own result: one comment on the pull request that
+#      holds the proved commit, one Slack line through the existing notifier
+#      (.github/scripts/calvin-slack-notify.sh), and the evidence artifact.
 #
 # No PR-label wake, OWNER relay, recursive workflow event, retry controller,
-# or label cleanup belongs on this critical path. Autonomy can be re-earned
-# later only if this explicit path becomes repetitive and remains reliable.
+# or label cleanup belongs on this critical path. The result comment is
+# posted with this job's own GITHUB_TOKEN, which by GitHub's design starts no
+# other workflow run, so it wakes nothing; Slack is therefore sent directly,
+# exactly as the other workflow-authored terminals do.
+#
+# Dispatch it from the branch whose copy of this file you want (Actions → Run
+# workflow → "Use workflow from"); the proved code is always `ref`.
 on:
   workflow_dispatch:
     inputs:
@@ -19,12 +29,19 @@ on:
         description: "Exact commit SHA or ref to prove"
         required: true
       ticker:
-        description: "Ticker to prove (MSFT, NVDA, or COST); leave blank to run all"
-        required: false
-        default: ""
+        description: "Ticker to prove (ALL runs MSFT, NVDA and COST)"
+        type: choice
+        options:
+          - ALL
+          - MSFT
+          - NVDA
+          - COST
+        default: ALL
 
 permissions:
   contents: read
+  issues: write
+  pull-requests: write
 
 jobs:
   live-proof:
@@ -50,6 +67,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://postgres:postgres@localhost:5432/calboard_proof
       SEC_USER_AGENT: "Cal-Finance-Analyzer-Proof/1.0 (calvinyeap.h@gmail.com)"
+      PROOF_OUTPUT_DIR: proof
 
     defaults:
       run:
@@ -75,34 +93,158 @@ jobs:
         run: npm run migrate
 
       - name: Verify reliability-first acceptance probe exists
-        run: test -f scripts/analyzer/acceptance-run.ts
+        id: ready
+        run: |
+          test -f scripts/analyzer/acceptance-run.ts
+          rm -rf proof
+          mkdir proof
 
+      # Each ticker runs whenever setup succeeded, whatever happened to the
+      # ticker before it. Console output (stdout and stderr, including the
+      # [analyzer] log lines that name a failure's cause) is kept per ticker.
       - name: Fresh automatic acceptance — MSFT
-        if: ${{ inputs.ticker == '' || inputs.ticker == 'MSFT' }}
+        id: msft
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' && (inputs.ticker == 'ALL' || inputs.ticker == 'MSFT') }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npx tsx scripts/analyzer/acceptance-run.ts MSFT | tee msft-acceptance-proof.txt
+        run: npx tsx scripts/analyzer/acceptance-run.ts MSFT 2>&1 | tee proof/msft-console.txt
 
       - name: Fresh automatic acceptance — NVDA
-        if: ${{ inputs.ticker == '' || inputs.ticker == 'NVDA' }}
+        id: nvda
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' && (inputs.ticker == 'ALL' || inputs.ticker == 'NVDA') }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npx tsx scripts/analyzer/acceptance-run.ts NVDA | tee nvda-acceptance-proof.txt
+        run: npx tsx scripts/analyzer/acceptance-run.ts NVDA 2>&1 | tee proof/nvda-console.txt
 
       - name: Fresh automatic acceptance — COST
-        if: ${{ inputs.ticker == '' || inputs.ticker == 'COST' }}
+        id: cost
+        if: ${{ !cancelled() && steps.ready.outcome == 'success' && (inputs.ticker == 'ALL' || inputs.ticker == 'COST') }}
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-        run: npx tsx scripts/analyzer/acceptance-run.ts COST | tee cost-acceptance-proof.txt
+        run: npx tsx scripts/analyzer/acceptance-run.ts COST 2>&1 | tee proof/cost-console.txt
 
       - name: Upload acceptance evidence
+        id: upload
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: analyzer-live-proof
-          path: |
-            msft-acceptance-proof.txt
-            nvda-acceptance-proof.txt
-            cost-acceptance-proof.txt
+          path: proof/
           if-no-files-found: warn
           retention-days: 90
+
+      # The run's own terminal report. PASS → "CALVIN REQUIRED:" (review and
+      # accept); anything else → "BLOCKED: ACTIONABLE" (fix the printed causes,
+      # then one rerun). Both first lines are what calvin_slack_send already
+      # treats as Slack-eligible — the notifier itself is unchanged.
+      - name: Report the result to the pull request and Slack
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
+          TICKER_INPUT: ${{ inputs.ticker }}
+          REF_INPUT: ${{ inputs.ref }}
+          READY_OUTCOME: ${{ steps.ready.outcome }}
+          MSFT_OUTCOME: ${{ steps.msft.outcome }}
+          NVDA_OUTCOME: ${{ steps.nvda.outcome }}
+          COST_OUTCOME: ${{ steps.cost.outcome }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          ARTIFACT_URL: ${{ steps.upload.outputs.artifact-url }}
+        run: |
+          SHA="$(git rev-parse HEAD 2>/dev/null || echo "$REF_INPUT")"
+          SHORT="${SHA:0:7}"
+          if [ "$TICKER_INPUT" = ALL ]; then TICKERS="MSFT NVDA COST"; else TICKERS="$TICKER_INPUT"; fi
+
+          verdict=PASS
+          joined=""
+          details="$(mktemp)"
+          if [ "${READY_OUTCOME:-}" != success ]; then
+            verdict=FAIL
+            printf 'Setup did not complete (outcome: %s), so no ticker could run — the failing setup step is in the run log.\n\n' "${READY_OUTCOME:-not reached}" >> "$details"
+          fi
+          for t in $TICKERS; do
+            lower="$(printf '%s' "$t" | tr '[:upper:]' '[:lower:]')"
+            outcome_var="${t}_OUTCOME"
+            case "${!outcome_var:-}" in
+              success) status=PASS ;;
+              failure) status=FAIL ;;
+              cancelled) status=CANCELLED ;;
+              *) status="NOT RUN" ;;
+            esac
+            [ "$status" = PASS ] || verdict=FAIL
+            joined="${joined:+${joined} · }${t} ${status}"
+
+            summary="proof/${lower}-acceptance.md"
+            console="proof/${lower}-console.txt"
+            if [ "$status" = "NOT RUN" ]; then
+              printf '### %s — NOT RUN\n\nThis ticker did not start (step outcome: %s).\n' "$t" "${!outcome_var:-not reached}" >> "$details"
+            elif [ -s "$summary" ]; then
+              cat "$summary" >> "$details"
+            else
+              printf '### %s — %s\n\nNo acceptance summary was written for this ticker.\n' "$t" "$status" >> "$details"
+            fi
+            # A run that could not complete names its stage in the summary; the
+            # cause is in the console's [analyzer] lines and final error lines.
+            if [ "$status" != PASS ] && [ -s "$console" ] && { [ ! -s "$summary" ] || grep -q 'the run could not complete' "$summary"; }; then
+              {
+                printf '\n<details><summary>%s console — [analyzer] log lines and the last 40 lines</summary>\n\n```\n' "$t"
+                grep '^\[analyzer\]' "$console" | tail -n 20 || true
+                printf -- '--- last 40 lines ---\n'
+                tail -n 40 "$console"
+                printf '```\n</details>\n'
+              } >> "$details"
+            fi
+            printf '\n\n' >> "$details"
+          done
+
+          # The pull request that holds the proved commit (an open one first).
+          PR="$(gh api "repos/${REPO}/commits/${SHA}/pulls" --jq '(map(select(.state == "open")) + .) | .[0].number // empty' 2>/dev/null || true)"
+
+          if [ "$verdict" = PASS ]; then
+            FIRST_LINE="CALVIN REQUIRED: Analyzer live proof PASS at ${SHORT} (${joined}) — review the briefs below, then ACCEPT or REJECT${PR:+ #${PR}}."
+          else
+            FIRST_LINE="BLOCKED: ACTIONABLE — Analyzer live proof FAIL at ${SHORT} (${joined}) — the cause of every failure is printed below; fix only those, then rerun once."
+          fi
+
+          body="$(mktemp)"
+          {
+            printf '%s\n\n' "$FIRST_LINE"
+            printf 'Proved commit `%s` (input ref `%s`, tickers: %s) · [run](%s)' "$SHA" "$REF_INPUT" "$TICKER_INPUT" "$RUN_URL"
+            if [ -n "${ARTIFACT_URL:-}" ]; then printf ' · [evidence artifact](%s) — full report JSON, rendered Overview text and console per ticker' "$ARTIFACT_URL"; fi
+            printf '\n\n'
+            cat "$details"
+          } > "$body"
+          # A GitHub comment holds at most 65,536 characters.
+          if [ "$(wc -c < "$body")" -gt 60000 ]; then
+            head -c 60000 "$body" > "${body}.cut"
+            printf '\n\n…truncated — the full per-ticker summaries are in the evidence artifact.\n' >> "${body}.cut"
+            mv "${body}.cut" "$body"
+          fi
+          cat "$body" >> "$GITHUB_STEP_SUMMARY"
+
+          delivery_failed=0
+          if [ -n "$PR" ]; then
+            if ! COMMENT_URL="$(gh api --method POST "repos/${REPO}/issues/${PR}/comments" -F "body=@${body}" --jq .html_url)"; then
+              echo "::error::Could not post the proof result to PR #${PR}."
+              delivery_failed=1
+              COMMENT_URL="$RUN_URL"
+            fi
+          else
+            echo "::warning::No pull request contains ${SHA}; the result is in this run's summary only."
+            COMMENT_URL="$RUN_URL"
+          fi
+
+          if [ -z "${SLACK_WEBHOOK_URL:-}" ]; then
+            echo "::error::CALVIN_SLACK_WEBHOOK_URL is missing, so Slack was not sent."
+            delivery_failed=1
+          elif [ ! -f .github/scripts/calvin-slack-notify.sh ]; then
+            echo "::error::The proved ref has no .github/scripts/calvin-slack-notify.sh, so Slack was not sent."
+            delivery_failed=1
+          else
+            source .github/scripts/calvin-slack-notify.sh
+            calvin_slack_send "$FIRST_LINE" "$REPO" "$COMMENT_URL" || delivery_failed=1
+          fi
+
+          echo "$FIRST_LINE"
+          exit "$delivery_failed"

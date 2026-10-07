@@ -13,6 +13,7 @@ import { buildSlotCatalogue } from "./slots";
 import { boundState, NOT_COMPUTED_BINDING } from "../notComputed";
 import { renderText, slotIdsIn, traceText, UntraceableFigureError, type SlotCatalogue } from "./traceability";
 import { scanProhibitedCopy, ProhibitedCopyError } from "./prohibitions";
+import { pageOneVocabularyDefects, PageOneVocabularyError, type PageOneVocabularyDefect } from "./pageOneVocabulary";
 import { callWithOneRegeneration, MalformedAnalystResponseError, type AnalystCall } from "./analystCall";
 
 export { INTERPRETATION_RESPONSIBILITIES };
@@ -217,7 +218,14 @@ carry the same limits and no latitude at all:
   mainFinding          What this analysis found. Not a verdict on the company.
   whatSupportsTheCase  What in the computed values supports the case.
   whatWorriesCalboard  What in the computed values counts against it.
-  biggestUncertainty   The single assumption most capable of changing the answer.`;
+  biggestUncertainty   The single assumption most capable of changing the answer.
+
+Page one is shown on the report's Overview to a reader who does not know this
+model's vocabulary. In these four sentences only: reference no slot marked
+SUPPRESSED, and where something is not computed for this run say so in plain
+words ("is not computed for this run") without naming its state. Never write a
+state name, a gate or module name (Gate 0, Gate 1, M1 to M16), a section sign
+or a spec reference there. The five statements above are not bound by this.`;
 }
 
 function validate(where: string, text: string, catalogue: SlotCatalogue): void {
@@ -327,15 +335,30 @@ function interpretResponse(raw: unknown, catalogue: SlotCatalogue): Interpretati
 
   // Page one's four sentences carry the §8.2 responsibility they discharge so
   // that nothing in the result object is a sentence without a reason to exist.
+  // CF-ANALYZER-V1-SETTLE-01 — page one is quoted verbatim on the normal
+  // Overview, which may carry no technical state vocabulary
+  // (pageOneVocabulary.ts). Collected across all four sentences and refused
+  // once, so the single regeneration hears every defect at the same time.
+  const vocabularyDefects: PageOneVocabularyDefect[] = [];
   const pageOne = Object.fromEntries(
     PAGE_ONE_KEYS.map((key) => {
       const text = response.pageOne[key];
       if (typeof text !== "string") {
         throw new MalformedAnalystResponseError("interpretation", `page one is missing ${key}`);
       }
-      return [key, toStatement(`page one — ${key}`, "ASSUMPTION PLAUSIBILITY AND WHAT THE PRICE REQUIRES", text, catalogue)];
+      const statement = toStatement(
+        `page one — ${key}`,
+        "ASSUMPTION PLAUSIBILITY AND WHAT THE PRICE REQUIRES",
+        text,
+        catalogue
+      );
+      for (const defect of pageOneVocabularyDefects(text, statement.statement, catalogue)) {
+        vocabularyDefects.push({ ...defect, detail: `${key}: ${defect.detail}` });
+      }
+      return [key, statement];
     })
   ) as unknown as PageOneProse;
+  if (vocabularyDefects.length > 0) throw new PageOneVocabularyError("interpretation page one", vocabularyDefects);
 
   return { statements, pageOne };
 }

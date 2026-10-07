@@ -233,4 +233,55 @@ describe("the §2 ordering rule, enforced at the route boundary", () => {
     await expect(computeAnalysisForRun(fresh)).rejects.toBeInstanceOf(SpotCheckIncompleteError);
     expect(assembleSpy).not.toHaveBeenCalled();
   });
+
+  // CF-ANALYZER-V1-SETTLE-01 — Calvin ruling 2: a fresh run must not need
+  // its own §4.4 NON-OPERATING INVESTMENTS judgment re-supplied when a
+  // durable company-level override already carries an already-ruled answer
+  // (migration 007 seeds MSFT's, from Calvin's CALVIN DECISION on issue
+  // #188). No `recordJudgment` call happens in the first test below — the
+  // whole point is that this run never asks for one.
+  describe("§4.4 durable company-level override", () => {
+    it("resolves enterprise value on a fresh MSFT run with no per-run judgment recorded", async () => {
+      const runId = await createRun("MSFT", "Microsoft Corporation");
+      for (const factId of await queuedIdsForRun(runId)) {
+        await recordFactDecision(runId, factId, "CONFIRMED", null);
+      }
+
+      const result = await computeAnalysisForRun(runId);
+      expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
+    });
+
+    it("still lets an explicit per-run judgment win over the durable override", async () => {
+      const runId = await createRun("MSFT", "Microsoft Corporation");
+      for (const factId of await queuedIdsForRun(runId)) {
+        await recordFactDecision(runId, factId, "CONFIRMED", null);
+      }
+      const { recordJudgment } = await import("./runStore");
+      await recordJudgment(runId, "NON-OPERATING INVESTMENTS", "None of these are non-operating", null);
+
+      const result = await computeAnalysisForRun(runId);
+      expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
+      if (!result.diagnostics.enterpriseValue.suppressed) {
+        // The analyst's own "none" selection means zero non-operating value —
+        // a different bridge than the durable override's LongTermInvestments
+        // figure would have produced, proving the per-run choice was actually
+        // used rather than silently overridden by the durable one.
+        expect(result.diagnostics.enterpriseValue.value.nonOperatingEquityInvestmentsAtBook.toString()).toBe("0");
+      }
+    });
+
+    it("a ticker with no durable override and no per-run judgment stays INCOMPLETE, exactly as before", async () => {
+      const runId = await createRun("OKLO", "Oklo Inc.");
+      for (const factId of await queuedIdsForRun(runId)) {
+        await recordFactDecision(runId, factId, "CONFIRMED", null);
+      }
+
+      const result = await computeAnalysisForRun(runId);
+      // OKLO has no tagged non-operating-investment candidates at all (no
+      // override exists or could apply), so this assertion is about the
+      // absence of a durable override never fabricating a value — not about
+      // OKLO's own, separately-caused leverage/EV suppression.
+      expect(result.diagnostics.enterpriseValue.suppressed).toBe(true);
+    });
+  });
 });

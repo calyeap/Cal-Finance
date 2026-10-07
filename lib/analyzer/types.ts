@@ -994,6 +994,8 @@ export interface AchievedGrowth {
 /** The filer's own 10-K Item 1 excerpt, under the fixed, versioned rule in
  * lib/analyzer/acquisition/item1Extraction.ts. */
 export interface BusinessSectionNarrative {
+  /** Absent on excerpts recorded before the provider fallback existed — read as "10-K ITEM 1". */
+  source?: "10-K ITEM 1";
   text: string;
   /** ITEM1_EXTRACTION_RULE_VERSION at acquisition time — travels with the excerpt. */
   ruleVersion: string;
@@ -1002,12 +1004,47 @@ export interface BusinessSectionNarrative {
   accessionNumber: string;
 }
 
+/**
+ * CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT PRODUCT SURFACE
+ * (PR #399, comment 5952716764), SOURCE / FALLBACK RULE: "business / risk
+ * description → filing / company IR; provider summary fallback if needed".
+ * Used only where the filer's own 10-K Item 1 excerpt could not be produced,
+ * and it carries that primary path's own recorded reason, so the report (and
+ * the live proof) always says which source was used and why.
+ */
+export interface ProviderBusinessSummary {
+  source: "MARKET-DATA PROVIDER SUMMARY";
+  text: string;
+  /** The market-data provider's `sourceName` (e.g. "YAHOO"). */
+  provider: string;
+  retrievedAt: string;
+  /** Why the 10-K Item 1 excerpt was not used — the primary path's own reason, verbatim. */
+  primaryUnavailableReason: string;
+}
+
 /** `narrative` and `unavailableReason` are exclusive — content is never
  * present without a reason for its absence being equally available to say
  * why not, and the reason is never invented at render time. */
 export interface BusinessSectionContent {
-  narrative: BusinessSectionNarrative | null;
+  narrative: BusinessSectionNarrative | ProviderBusinessSummary | null;
   unavailableReason: string | null;
+}
+
+/**
+ * CF-ANALYZER-V1-SETTLE-01 — REQUIRED OVERVIEW CONTENT item 9 ("latest
+ * material developments"). The filer's most recent MATERIAL SEC filing —
+ * a periodic or current report (lib/analyzer/materialFilings.ts), never an
+ * insider/ownership form: the 7 Oct 2026 live proof showed a Form 4 standing
+ * in as MSFT's latest development under the earlier "any form" reading.
+ * EDGAR's submissions feed already orders filings most-recent-first, so this
+ * is the first material entry in that list, not a new acquisition. `null`
+ * where no filing list was acquired or none in it is material (never
+ * fetched a second time or substituted between LIVE and CAPTURE, same as
+ * `business`).
+ */
+export interface LatestFiling {
+  form: string;
+  filingDate: string;
 }
 
 /** The already-acquired SEC SIC classification, rendered as category framing
@@ -1066,6 +1103,7 @@ export interface AnalysisResult {
   // reason it is absent, never a silent gap.
   business: BusinessSectionContent;
   marketContext: MarketContextSectionContent;
+  latestFiling: LatestFiling | null;
   policy: {
     constants: PolicyConstants;
     undefinedConstants: UndefinedPolicyConstants;

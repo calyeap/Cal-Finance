@@ -114,19 +114,44 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
   describe.each([
     { ticker: "MSFT", companyName: "Microsoft Corporation", queuedFactName: "Price" },
     { ticker: "OKLO", companyName: "Oklo Inc.", queuedFactName: "Price" },
+    // CF-ANALYZER-V1-SETTLE-01 — migration 008's durably-seeded bundle
+    // (lib/analyzer/nvdaRealRunObservation.test.ts) makes NVDA reachable
+    // through this same automatic path with no human act; NVDA's queue has
+    // no Price fact (FINAL OWNER RULING #205 — no price row for this
+    // filer), so its one outstanding fact is Current operating margin.
+    { ticker: "NVDA", companyName: "NVIDIA Corporation", queuedFactName: "Current operating margin" },
   ])("$ticker", ({ ticker, companyName, queuedFactName }) => {
     it("Overview renders a report from the run alone, with no redirect to Screen 2 or Screen 3", async () => {
       const runId = await analyze(ticker, companyName);
       const { container } = await renderTab(runId);
 
-      // The shared hero is #118's most prominent element, and both real
-      // runs land on INCOMPLETE — the honest, unchanged upstream state.
+      // The shared hero is #118's most prominent element. CF-ANALYZER-
+      // V1-SETTLE-01's automatic-profile-confirmation fix (RM-brief ruling
+      // item 2: "classify [unambiguous operating companies]
+      // deterministically/automatically") means MSFT's Gate 0 PASS plus its
+      // automatic profile resolution now stand in for a human confirmation,
+      // so its hero shows the price-vs-range headline instead of raw
+      // INCOMPLETE. OKLO (suppressed range, pre-revenue) and NVDA
+      // (suppressed range, known treasuryMethodDilution/
+      // financeLeaseLiabilities gaps) have no defensible range regardless of
+      // profile confirmation, so their hero is unchanged.
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
-      expect(hero.textContent).toContain("INCOMPLETE");
-      // All seven Overview tab slots, in the fixed §2.1 order — the route
-      // still renders the whole Overview tab body, not a reduced one.
+      if (ticker === "MSFT") {
+        expect(hero.textContent).not.toContain("INCOMPLETE");
+        expect(hero.textContent).toContain("the way from the bear case to the bull case");
+      } else {
+        // CF-ANALYZER-V1-SETTLE-01 (Calvin's 7 Oct 2026 decision on #399,
+        // Option 1): no defensible range, so the hero states why in plain
+        // English — never the raw INCOMPLETE state name or "see Evidence".
+        expect(hero.textContent).not.toContain("INCOMPLETE");
+        expect(hero.textContent).not.toMatch(/see Evidence/i);
+        expect(hero.textContent).toMatch(/^No valuation verdict for this company yet — /);
+      }
+      // All eight Overview tab slots (5-11 plus the new slot 12, REQUIRED
+      // OVERVIEW CONTENT item 9), in the fixed order — the route still
+      // renders the whole Overview tab body, not a reduced one.
       const slots = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
-      expect(slots).toHaveLength(7);
+      expect(slots).toHaveLength(8);
     });
 
     it("the Evidence tab renders Sections B and J from the run alone, with no redirect", async () => {

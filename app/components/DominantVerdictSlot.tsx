@@ -13,17 +13,29 @@ import { evidenceStatusLabel } from "@/lib/analyzer/trustCopy";
 // report/page.tsx already uses for every other suppressing state in the
 // product.
 //
-// verdict.reason is rendered verbatim as the cause line in every case
-// (contract §4). It is also the only textual field VerdictResult carries at
-// all — for a completed verdict there is no separate "rationale" field in
-// the type, so the same reason string is what RationaleLine renders too.
-// This is not an invented substitute: it is literally the one sentence
-// deriveVerdict's caller has to explain the verdict, whichever status it
-// carries. Three of VerdictResult's four INCOMPLETE branches state a cause
-// only, one (COMPARATOR_NOT_YET_AVAILABLE) embeds its own recovery clause
-// inside that same string (lib/analyzer/verdict.ts) — rendering the string
-// verbatim, unsplit, already satisfies "render a recovery statement only
-// where the derivation supplies one" without this component parsing it.
+// verdict.reason was originally specified to render verbatim as the cause
+// line in every case (contract §4). CF-ANALYZER-V1-SETTLE-01 — CALVIN
+// RULING — A (PR #399, comment 5933170464): verdict.reason is deriveVerdict's
+// one explanatory sentence, and several of its branches embed a raw
+// trust/gate state code (lib/analyzer/verdict.ts — e.g. the UNUSABLE
+// trust's `detail`, a suppressed range's `cause`, or the literal "PROFILE
+// NOT CONFIRMED"). This hero is part of the shared shell and renders on
+// every tab (design authority doc, shell invariants), so rendering it
+// verbatim everywhere was exactly the raw-code-outside-Evidence leak #392's
+// ACCEPTANCE GATE forbids. Calvin's ruling: outside Evidence, replace it
+// with a plain local marker; keep the full verbatim reason on the Evidence
+// tab only. deriveVerdict itself is unchanged — this is presentation-only.
+// `isEvidenceTab` defaults to false so a call site that omits it fails
+// toward the marker, never toward leaking the raw reason.
+//
+// It is also the only textual field VerdictResult carries at all — for a
+// completed verdict there is no separate "rationale" field in the type, so
+// the same reason string is what RationaleLine renders too. Three of
+// VerdictResult's four INCOMPLETE branches state a cause only, one
+// (COMPARATOR_NOT_YET_AVAILABLE) embeds its own recovery clause inside that
+// same string — rendering the string verbatim, unsplit, on Evidence already
+// satisfies "render a recovery statement only where the derivation supplies
+// one" without this component parsing it.
 //
 // deriveVerdict returns INCOMPLETE on every run today (the M8 comparator
 // gap recorded in docs/design/m9-contract-reconciliation.md §5-§6). The
@@ -31,27 +43,75 @@ import { evidenceStatusLabel } from "@/lib/analyzer/trustCopy";
 // exercised render path — not a hypothetical — per the M9 outcome's
 // instruction not to build or test only the INCOMPLETE-always world.
 
+const REASON_UNAVAILABLE_MARKER = "Unavailable — see Evidence";
+// The INCOMPLETE path's fallback when a call site supplies no explanation —
+// plain words, never the raw state or an Evidence redirect.
+const REASON_UNAVAILABLE_PLAIN = "No valuation verdict for this company yet.";
+
 export function DominantVerdictSlot({
   verdict,
   trustStatus,
+  isEvidenceTab = false,
+  incompleteExplanation,
+  priceVsRangeHeadline,
 }: {
   verdict: VerdictResult;
   trustStatus: TrustStatus;
+  isEvidenceTab?: boolean;
+  // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — REJECT CURRENT HEAD FOR ONE
+  // FINAL PRODUCT-COMPLETION PASS, item 2: the plain-English stand-in for
+  // an INCOMPLETE verdict outside Evidence (lib/analyzer/trustCopy.ts's
+  // `incompleteVerdictExplanation`), computed by the caller from the same
+  // already-computed signals `deriveVerdict` itself branches on. Optional,
+  // defaulting to the bare marker below, so a call site that omits it
+  // fails toward naming only that a verdict is missing, never toward
+  // leaking the raw reason.
+  incompleteExplanation?: string;
+  // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
+  // COMPLETE RM-BRIEF PROOF (PR #399, comment 5952716764), REMOVE/BYPASS
+  // item 1: outside Evidence, a defensible fair-value range must not be
+  // reduced to the literal word "INCOMPLETE" — the already-computed
+  // price-vs-range position (lib/analyzer/trustCopy.ts's
+  // `priceVsRangeHeadline`) takes over the slot's bottom line instead.
+  // Null exactly where no defensible range exists to describe a position
+  // within (the existing `incompleteExplanation` fallback still applies
+  // there) — never a fabricated position on a priceless or suppressed run.
+  priceVsRangeHeadline?: string | null;
 }) {
   if (verdict.status === "INCOMPLETE") {
+    if (!isEvidenceTab && priceVsRangeHeadline != null) {
+      return (
+        <div className="verdictslot completed">
+          <ConfidenceIndicator status={trustStatus} />
+          <RationaleLine text={priceVsRangeHeadline} />
+        </div>
+      );
+    }
+    if (isEvidenceTab) {
+      return (
+        <div className="verdictslot state incomplete">
+          <span className="name">INCOMPLETE</span>
+          <span className="cause">{verdict.reason}</span>
+        </div>
+      );
+    }
+    // CF-ANALYZER-V1-SETTLE-01 — Calvin's 7 Oct 2026 decision on #399
+    // (Option 1): outside Evidence the hero states the plain-English reason
+    // alone. The raw INCOMPLETE state name stays on the Evidence tab, above,
+    // with the verbatim `verdict.reason`.
     return (
       <div className="verdictslot state incomplete">
-        <span className="name">INCOMPLETE</span>
-        <span className="cause">{verdict.reason}</span>
+        <span className="cause">{incompleteExplanation ?? REASON_UNAVAILABLE_PLAIN}</span>
       </div>
     );
   }
 
+  const reason = isEvidenceTab ? verdict.reason : REASON_UNAVAILABLE_MARKER;
   return (
     <div className="verdictslot completed">
       <span className="verdictword">{verdict.status}</span>
       <ConfidenceIndicator status={trustStatus} />
-      <RationaleLine text={verdict.reason} />
+      <RationaleLine text={reason} />
     </div>
   );
 }

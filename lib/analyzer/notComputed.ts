@@ -59,6 +59,13 @@ export const NOT_COMPUTED_BINDING = {
   // range itself here, the same standing cashPerShare already has for
   // failure/cashFloor two rows above.
   successAsPriceRequires: "pre-revenue success as the price requires",
+  // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (issue #399). Bound only on
+  // a run whose scenario values are not analyst-authored (fixture.
+  // scenarioValues null — an AI-proposed bundle) and the dynamic computation
+  // through the existing M15 model + EV bridge could not run. An explicit
+  // analyst bundle (MSFT, NVDA) always supplies scenarioValues directly and
+  // never reaches this binding.
+  scenarioValues: "the analyst scenario values",
 } as const;
 
 const SEPARATOR = " — ";

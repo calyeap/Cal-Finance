@@ -1,7 +1,8 @@
 import Decimal from "decimal.js";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 import { ValuationStrip } from "./ValuationStrip";
-import { humanizeCause } from "./AnalyzerReport";
+import { formatCompactUsd } from "@/lib/formatUsd";
+import { fairValueRangeUnavailableLine, notComputedLine, positionHiddenLine } from "@/lib/analyzer/overviewCopy";
 
 // M9-DESKTOP-SHELL-01 — Overview slot 4, per docs/design/m9-analyzer-
 // design-contract.md §2.1 row 4, §3.
@@ -73,12 +74,26 @@ export function ScenarioRangeStrip({
 
   return (
     <div className="scenariorangestrip">
-      <ValuationStrip result={result} />
+      {/* CF-ANALYZER-V1-SETTLE-01 — Calvin ruling 1: a decision-useful
+          range-vs-price / valuation-position presentation beside the
+          (possibly still INCOMPLETE) verdict, wherever a defensible range
+          exists. `showLocation` already computes this from
+          scenarioOutputs.priceLocationWithinRange — the same figure Quick
+          Read's own call site already shows — so this is the existing
+          figure surfaced one place earlier, not a new computation. Gated on
+          `positionSuppressedBy === null`: §10.6.3 never renders the
+          position where suppression rules say it must not, and the
+          location line is that same position restated as a percentage. */}
+      <ValuationStrip result={result} showLocation={positionSuppressedBy === null} />
 
       {fairValueRange.kind === "suppressed" ? (
+        // CF-ANALYZER-V1-SETTLE-01 — Calvin's 7 Oct 2026 decision on #399
+        // (Option 1): no raw state code and no "see Evidence" placeholder on
+        // the normal Overview; one plain-English line names why there is no
+        // range (overviewCopy.ts). The raw state and cause still reach
+        // Evidence via `states.suppressing` (assemble.ts) unchanged.
         <div className="state" style={{ marginTop: 14 }}>
-          <span className="name">{fairValueRange.state}</span>
-          <span className="cause">{humanizeCause(fairValueRange.cause)}</span>
+          <span className="cause">{fairValueRangeUnavailableLine(fairValueRange, result.gates.leverage)}</span>
         </div>
       ) : (
         <div className="hframe" style={{ marginTop: 14 }}>
@@ -103,9 +118,18 @@ export function ScenarioRangeStrip({
               <p className="sub2">Cash floor ${num(fairValueRange.cashFloor)} per current share.</p>
             )}
             {positionSuppressedBy !== null && (
+              // CF-ANALYZER-V1-SETTLE-01 — `positionSuppressedBy` still
+              // decides whether this note renders at all; its raw text
+              // ("PROFILE NOT CONFIRMED", "TRUST STATUS UNUSABLE · ...")
+              // renders on the Evidence tab via `TrustAndProfileNote`, and
+              // here only the plain-English reason (overviewCopy.ts).
               <div className="state" style={{ marginTop: 10 }}>
-                <span className="name">Valuation position — suppressed</span>
-                <span className="cause">{positionSuppressedBy}</span>
+                <span className="cause">
+                  {positionHiddenLine({
+                    trustUnusable: trust.status === "UNUSABLE",
+                    profileNotConfirmed,
+                  })}
+                </span>
               </div>
             )}
           </div>
@@ -114,19 +138,31 @@ export function ScenarioRangeStrip({
             <p className="sub2">Restated from Section E</p>
             {priceImplied.steadyStateEv.suppressed ? (
               <div className="state">
-                <span className="name">{priceImplied.steadyStateEv.state}</span>
-                <span className="cause">{humanizeCause(priceImplied.steadyStateEv.cause)}</span>
+                <span className="lbl">Steady-state EV</span>{" "}
+                <span className="cause">
+                  {notComputedLine(
+                    priceImplied.steadyStateEv.state,
+                    priceImplied.steadyStateEv.cause,
+                    result.gates.leverage
+                  )}
+                </span>
               </div>
             ) : (
               <div className="pi">
                 <span className="lbl">Steady-state EV</span>
-                <b>${num(priceImplied.steadyStateEv.value, 0)}</b>
+                <b>${formatCompactUsd(priceImplied.steadyStateEv.value)}</b>
               </div>
             )}
             {priceImplied.pvgoShareOfEv.suppressed ? (
               <div className="state">
-                <span className="name">{priceImplied.pvgoShareOfEv.state}</span>
-                <span className="cause">{humanizeCause(priceImplied.pvgoShareOfEv.cause)}</span>
+                <span className="lbl">PVGO share of EV</span>{" "}
+                <span className="cause">
+                  {notComputedLine(
+                    priceImplied.pvgoShareOfEv.state,
+                    priceImplied.pvgoShareOfEv.cause,
+                    result.gates.leverage
+                  )}
+                </span>
               </div>
             ) : (
               <div className="pi" style={{ borderBottom: 0 }}>

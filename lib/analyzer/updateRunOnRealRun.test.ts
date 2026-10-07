@@ -40,6 +40,10 @@ describe("CF-UPDATE-FIRST-OUTCOME-01 — a re-look run against the real pipeline
   describe.each([
     { ticker: "MSFT", companyName: "Microsoft Corporation" },
     { ticker: "OKLO", companyName: "Oklo Inc." },
+    // CF-ANALYZER-V1-SETTLE-01 — migration 008's durably-seeded bundle makes
+    // NVDA reachable through this same automatic path; #392's ACCEPTANCE
+    // GATE asks for "UPDATE produces an independent run" on MSFT + NVDA.
+    { ticker: "NVDA", companyName: "NVIDIA Corporation" },
   ])("$ticker", ({ ticker, companyName }) => {
     it("gives the re-look its own distinct runId, never reusing or deriving from the prior one", async () => {
       const priorRunId = await createRun(ticker, companyName);
