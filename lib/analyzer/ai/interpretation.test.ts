@@ -7,6 +7,7 @@ import { runInterpretation, INTERPRETATION_RESPONSIBILITIES } from "./interpreta
 import { INTERPRETATION_RESPONSIBILITY_KEYS } from "../types";
 import { UntraceableFigureError } from "./traceability";
 import { ProhibitedCopyError } from "./prohibitions";
+import { PageOneVocabularyError } from "./pageOneVocabulary";
 
 const msft = assembleAnalysisResult(MSFT_FIXTURE);
 
@@ -280,6 +281,72 @@ describe("runInterpretation", () => {
     extra.statements.overallVerdict = "Nothing numeric.";
 
     await expect(runInterpretation(msft, fakeCall(extra))).rejects.toThrow(/overallVerdict/);
+  });
+});
+
+// CF-ANALYZER-V1-SETTLE-01 — page one is quoted verbatim on the normal
+// Overview, which may carry no technical state vocabulary (Calvin's ruling on
+// #399, comment 5952716764). The live MSFT and NVDA runs (docs/proof/, 1 Oct
+// 2026) put "INCOMPLETE" and "LEVERAGE UNSUPPORTED IN v1" there by citing a
+// suppressed slot. Section I's five statements stay the technical record and
+// may still cite one — "prints a suppressed figure as its state" above.
+describe("runInterpretation — page one carries no technical vocabulary (CF-ANALYZER-V1-SETTLE-01)", () => {
+  function withPageOne(biggestUncertainty: string): unknown {
+    const response = statementsOf([]) as { pageOne: { biggestUncertainty: string } };
+    response.pageOne.biggestUncertainty = biggestUncertainty;
+    return response;
+  }
+
+  it("tells the model the page-one rule in the prompt itself", async () => {
+    const seen: AnalystCallRequest[] = [];
+    await runInterpretation(msft, fakeCall(statementsOf([]), seen));
+
+    expect(seen[0].user).toContain("reference no slot marked\nSUPPRESSED");
+  });
+
+  it("REFUSES a page-one sentence that cites a suppressed slot — it would render as a state name on the Overview", async () => {
+    const call = fakeCall(withPageOne(`The check that would size it returns {{${SUPPRESSED_SLOT}}}.`));
+
+    await expect(runInterpretation(msft, call)).rejects.toThrow(PageOneVocabularyError);
+    await expect(runInterpretation(msft, call)).rejects.toThrow(/technical reference/);
+  });
+
+  it("REFUSES a state name written into page one as prose", async () => {
+    const call = fakeCall(withPageOne("The check that would size that effect is INCOMPLETE for this run."));
+
+    const refusal = await runInterpretation(msft, call).catch((err: unknown) => err);
+
+    expect(refusal).toBeInstanceOf(PageOneVocabularyError);
+    expect((refusal as PageOneVocabularyError).diagnostic).toContain("TECHNICAL VOCABULARY ON PAGE ONE");
+    expect((refusal as PageOneVocabularyError).diagnostic).toContain("biggestUncertainty");
+  });
+
+  it("regenerates once with the defect named, and keeps the clean second output", async () => {
+    const seen: AnalystCallRequest[] = [];
+    let n = 0;
+    const badThenClean: AnalystCall = async (request) => {
+      seen.push(request);
+      n += 1;
+      return n === 1
+        ? withPageOne(`The check that would size it returns {{${SUPPRESSED_SLOT}}}.`)
+        : withPageOne("The check that would size it is not computed for this run.");
+    };
+
+    const interpretation = await runInterpretation(msft, badThenClean);
+
+    expect(seen).toHaveLength(2);
+    expect(seen[1].user).toContain("SUPPRESSED SLOT ON PAGE ONE");
+    expect(interpretation.pageOne!.biggestUncertainty.statement).toBe(
+      "The check that would size it is not computed for this run."
+    );
+  });
+
+  it("still lets a Section I statement cite the same suppressed slot", async () => {
+    const call = fakeCall(statementsOf([`The stress cell returns {{${SUPPRESSED_SLOT}}}.`]));
+
+    const interpretation = await runInterpretation(msft, call);
+
+    expect(interpretation.statements[0].referencesValueIds).toEqual([SUPPRESSED_SLOT]);
   });
 });
 

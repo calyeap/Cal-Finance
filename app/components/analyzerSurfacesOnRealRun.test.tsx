@@ -13,6 +13,7 @@ import { AnalyzerReport } from "./AnalyzerReport";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { formatCompactUsd } from "@/lib/formatUsd";
+import { notComputedLine } from "@/lib/analyzer/overviewCopy";
 import { incompleteVerdictExplanation, priceVsRangeHeadline } from "@/lib/analyzer/trustCopy";
 
 // ---------------------------------------------------------------------------
@@ -188,13 +189,17 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
         expect(hero.querySelector(".confidence")).not.toBeNull();
       } else {
         // OKLO's pre-revenue-distribution range has no bear-to-bull
-        // position to state — the honest structural cause (unchanged)
-        // still names the actual missing condition in plain English.
-        expect(hero.textContent).toContain("INCOMPLETE");
+        // position to state — the honest structural cause still names the
+        // actual missing condition in plain English. CF-ANALYZER-V1-SETTLE-01,
+        // Calvin's 7 Oct 2026 decision on #399 (Option 1): outside Evidence
+        // that sentence stands alone, without the raw INCOMPLETE state name
+        // (which the Evidence-tab test below still finds).
+        expect(hero.textContent).not.toContain("INCOMPLETE");
         expect(hero.textContent).toContain(
           incompleteVerdictExplanation({
             trustStatus: result.trust.status,
-            fairValueRangeKind: result.fairValueRange.kind,
+            fairValueRange: result.fairValueRange,
+            leverage: result.gates.leverage,
             profileNotConfirmed: false,
           })
         );
@@ -228,16 +233,21 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       const pvgoShareOfEv = priceImplied.pvgoShareOfEv;
 
       if (steadyStateEv.suppressed) {
-        // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE
-        // forbids the raw state code outside Evidence; Overview renders a
-        // plain local marker instead (the raw code still reaches Evidence
-        // via `states.suppressing`, assemble.ts).
-        expect(slot8.textContent).toContain("Unavailable — see Evidence");
+        // CF-ANALYZER-V1-SETTLE-01 — the raw state code never renders
+        // outside Evidence; the Overview states the reason in plain English
+        // (Calvin's 7 Oct 2026 decision on #399, Option 1) — the raw code
+        // still reaches Evidence via `states.suppressing`, assemble.ts.
+        expect(slot8.textContent).toContain(
+          `Steady-state EV ${notComputedLine(steadyStateEv.state, steadyStateEv.cause, result.gates.leverage)}`
+        );
+        expect(slot8.textContent).not.toContain(steadyStateEv.state);
       } else {
         expect(slot8.textContent).toContain(`$${formatCompactUsd(steadyStateEv.value)}`);
       }
       if (pvgoShareOfEv.suppressed) {
-        expect(slot8.textContent).toContain("Unavailable — see Evidence");
+        expect(slot8.textContent).toContain(
+          `PVGO share of EV ${notComputedLine(pvgoShareOfEv.state, pvgoShareOfEv.cause, result.gates.leverage)}`
+        );
       } else {
         expect(slot8.textContent).toContain(`${pvgoShareOfEv.value.mul(100).toFixed(1)}%`);
       }

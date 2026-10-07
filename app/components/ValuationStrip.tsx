@@ -66,6 +66,7 @@ export function ValuationStrip({ result, showLocation = false }: { result: Analy
   // place of a figure" treatment cashPerShareState already has, two lines
   // above, for this same tile shape.
   const priceState = boundState(states, NOT_COMPUTED_BINDING.price);
+  const scenarioValuesState = boundState(states, NOT_COMPUTED_BINDING.scenarioValues);
 
   if (preRevenue) {
     return (
@@ -101,7 +102,16 @@ export function ValuationStrip({ result, showLocation = false }: { result: Analy
         </div>
         <div>
           <span className="lb">Base</span>
-          <span className="fig">${num(scenarioOutputs.values.base, 0)}</span>
+          {/* CF-ANALYZER-V1-SETTLE-01 — an AI-proposed bundle whose dynamic
+              scenario values could not be computed carries NaN bound to an
+              INCOMPLETE state (assemble.ts, NOT_COMPUTED_BINDING.
+              scenarioValues). That is "no figure", the same "—" Bear and
+              Bull already use here — never "$NaN". */}
+          <span className="fig">
+            {scenarioValuesState === null && scenarioOutputs.values.base.isFinite()
+              ? `$${num(scenarioOutputs.values.base, 0)}`
+              : "—"}
+          </span>
         </div>
         <div>
           <span className="lb">Bull</span>

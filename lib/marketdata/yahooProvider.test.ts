@@ -302,3 +302,40 @@ describe("yahooProvider.fetchNonOperatingInvestments — CF-ANALYZER-V1-SETTLE-0
     await expect(yahooProvider.fetchNonOperatingInvestments!("COST")).resolves.toBeNull();
   });
 });
+
+describe("yahooProvider.fetchBusinessSummary — CF-ANALYZER-V1-SETTLE-01's approved business-description fallback", () => {
+  const SUMMARY =
+    "Microsoft Corporation develops and supports software, services, devices and solutions worldwide, " +
+    "across productivity, cloud computing and personal computing.";
+
+  it("reads assetProfile.longBusinessSummary with validateResult:false", async () => {
+    mockQuoteSummary.mockResolvedValue({ assetProfile: { longBusinessSummary: SUMMARY } });
+
+    const result = await yahooProvider.fetchBusinessSummary!("msft");
+
+    expect(mockQuoteSummary).toHaveBeenCalledWith("MSFT", { modules: ["assetProfile"] }, { validateResult: false });
+    expect(result).toEqual({ text: SUMMARY });
+  });
+
+  it("collapses the provider's internal whitespace into single spaces", async () => {
+    mockQuoteSummary.mockResolvedValue({ assetProfile: { longBusinessSummary: `  ${SUMMARY.replace(/ /g, "  \n ")}  ` } });
+
+    const result = await yahooProvider.fetchBusinessSummary!("MSFT");
+
+    expect(result).toEqual({ text: SUMMARY });
+  });
+
+  it("fails closed to null on a provider error, a missing field or a stub too short to describe a business", async () => {
+    mockQuoteSummary.mockRejectedValueOnce(new Error("Invalid Crumb"));
+    expect(await yahooProvider.fetchBusinessSummary!("MSFT")).toBeNull();
+
+    mockQuoteSummary.mockResolvedValueOnce({ assetProfile: {} });
+    expect(await yahooProvider.fetchBusinessSummary!("MSFT")).toBeNull();
+
+    mockQuoteSummary.mockResolvedValueOnce({ assetProfile: { longBusinessSummary: "Software." } });
+    expect(await yahooProvider.fetchBusinessSummary!("MSFT")).toBeNull();
+
+    mockQuoteSummary.mockResolvedValueOnce(null);
+    expect(await yahooProvider.fetchBusinessSummary!("MSFT")).toBeNull();
+  });
+});

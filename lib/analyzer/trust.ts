@@ -51,6 +51,18 @@ import type {
  */
 export const PROFILE_NOT_CONFIRMED_DETAIL = "PROFILE NOT CONFIRMED on the valuation path";
 
+/**
+ * CF-ANALYZER-V1-SETTLE-01 — whether this run's trust result carries the
+ * PROFILE NOT CONFIRMED qualifier. The report page and the live-proof probe
+ * both render the Overview from this one reading of the fact this module
+ * already computed, so the proof checks exactly what the page shows.
+ */
+export function profileNotConfirmedFor(result: Pick<AnalysisResult, "trust">): boolean {
+  return result.trust.determinedBy.some(
+    (d) => d.kind === "qualifying flag" && d.detail === PROFILE_NOT_CONFIRMED_DETAIL
+  );
+}
+
 export interface TrustInput {
   /** The §10.3 outcome. Suppressed here IS rule 1. */
   fairValueRange: FairValueRange;

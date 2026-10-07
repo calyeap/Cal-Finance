@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 import type { AcquiredCompany } from "./provider";
 import type { AnalystInputBundle } from "./analystInputs";
-import type { AnalystCall } from "../ai/analystCall";
+import { writeAnalystLog, type AnalystCall } from "../ai/analystCall";
 import { runScenarioProposal, type ScenarioProposalFacts } from "../ai/scenarioProposal";
 import { revenueSeries, achievedRevenueCagr, comparatorRecency } from "../calibration/inputs";
 import { annualSeries, operatingMarginSeries } from "./history";
@@ -231,23 +231,34 @@ async function resolveAiProposedAnalystInputBundle(
   acquired: AcquiredCompany,
   call: AnalystCall
 ): Promise<AnalystInputBundle | null> {
+  // CF-ANALYZER-V1-SETTLE-01 — every refusal below names its cause in the
+  // analyzer log; a null here otherwise reaches a live run only as "the run
+  // cannot open", with no cause (PR #399 audit, 7 Oct 2026).
+  const refuse = (cause: string): null => {
+    writeAnalystLog(`no AI-proposed analyst-input bundle for ${ticker.toUpperCase()}: ${cause}`);
+    return null;
+  };
+
   const facts = proposalFactsFor(ticker, companyName, acquired);
-  if (facts.currentRevenue === null) return null;
+  if (facts.currentRevenue === null) return refuse("the acquired filings carry no current revenue to propose scenarios from");
 
   let proposal;
   try {
     proposal = await runScenarioProposal(facts, call);
-  } catch {
+  } catch (err) {
     // scenarioProposal.ts's own callWithOneRegeneration already retried once
-    // and logged the refusal. A second failure is the same honest "no
+    // and logged the first refusal. A second failure is the same honest "no
     // scenarios for this company" refusal analystInputsFor already gives a
     // ticker with no bundle at all — never an exception reaching a route.
-    return null;
+    const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+    const diagnostic = typeof err === "object" && err !== null ? (err as { diagnostic?: unknown }).diagnostic : undefined;
+    const detail = typeof diagnostic === "string" && !message.includes(diagnostic) ? ` (${diagnostic})` : "";
+    return refuse(`the scenario-proposal call failed or was refused twice — ${message}${detail}`);
   }
 
   const margins = marginSeriesFor(acquired);
   const recommended = recommendedProfile(facts, proposal.base.reinvestmentCapitalIntensity, margins);
-  if (recommended === null) return null;
+  if (recommended === null) return refuse("no financial profile could be recommended from the acquired facts");
 
   const dilutedShares = (() => {
     const sharesOutstanding = factDecimal(acquired, "shares-outstanding");

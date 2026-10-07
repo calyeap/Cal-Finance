@@ -1,5 +1,6 @@
 import type Decimal from "decimal.js";
-import type { FairValueRange, TrustStatus } from "./types";
+import type { FairValueRange, LeverageResult, TrustStatus } from "./types";
+import { verdictUnavailableLine } from "./overviewCopy";
 
 // ---------------------------------------------------------------------------
 // The page-one trust sentences, DERIVED from the computed status.
@@ -120,29 +121,40 @@ export function uncertaintyLevel(status: TrustStatus): UncertaintyLevel {
 // explanation, still shown in full on Evidence.
 // ---------------------------------------------------------------------------
 
-/** Plain-English stand-in for the hero's INCOMPLETE verdict outside Evidence. */
+/**
+ * Plain-English stand-in for the hero's INCOMPLETE verdict outside Evidence.
+ *
+ * CF-ANALYZER-V1-SETTLE-01 — Calvin's 7 Oct 2026 decision on #399 (Option
+ * 1): the normal Overview carries no "see Evidence" placeholder, so each
+ * branch states the condition itself. Where no fair-value range exists (the
+ * case that also makes trust UNUSABLE, §9.6 rule 1), the sentence names the
+ * range's own reason in plain words (overviewCopy.ts) instead of pointing
+ * elsewhere for it.
+ */
 export function incompleteVerdictExplanation({
   trustStatus,
-  fairValueRangeKind,
+  fairValueRange,
+  leverage,
   profileNotConfirmed,
 }: {
   trustStatus: TrustStatus;
-  fairValueRangeKind: FairValueRange["kind"];
+  fairValueRange: FairValueRange;
+  leverage?: LeverageResult;
   profileNotConfirmed: boolean;
 }): string {
+  if (fairValueRange.kind === "suppressed") {
+    return verdictUnavailableLine(fairValueRange, leverage);
+  }
   if (trustStatus === "UNUSABLE") {
-    return "This run's underlying data isn't reliable enough yet to support a verdict. See Evidence for which part failed.";
+    return "This run's underlying data isn't reliable enough yet to support a verdict.";
   }
-  if (fairValueRangeKind === "suppressed") {
-    return "A defensible fair-value range isn't available yet for this company. See Evidence for the specific gap.";
-  }
-  if (fairValueRangeKind === "pre-revenue-distribution") {
+  if (fairValueRange.kind === "pre-revenue-distribution") {
     return "This company doesn't yet generate the kind of earnings this model prices against, so there is no buy/hold/sell line yet — only a cash-floor estimate below.";
   }
   if (profileNotConfirmed) {
     return "Nobody has confirmed which financial profile fits this company yet, so a verdict can't render until that happens.";
   }
-  return "A fair-value range is available, but a full verdict also requires comparing this company's actual growth against what today's price assumes — that comparison isn't built yet. See Evidence for detail.";
+  return "A fair-value range is available, but a full verdict also requires comparing this company's actual growth against what today's price assumes — that comparison isn't built yet.";
 }
 
 // ---------------------------------------------------------------------------

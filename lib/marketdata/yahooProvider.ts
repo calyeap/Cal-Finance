@@ -5,9 +5,14 @@ import type {
   EquityFundamentals,
   InstrumentResolution,
   NonOperatingInvestmentsFigure,
+  BusinessSummary,
 } from "./provider";
 import type { AssetClass } from "../assets";
 import { lookupCrypto, UnsupportedCryptoError } from "./cryptoSymbols";
+
+// A company-profile summary shorter than this is a stub, not a description
+// of what the business does — refused rather than shown as one.
+const MIN_BUSINESS_SUMMARY_LENGTH = 80;
 
 // yahoo-finance2 v4 (installed: see package.json) exports the class itself as
 // the default export rather than a ready-made singleton (v2 API assumed by
@@ -191,5 +196,27 @@ export const yahooProvider: MarketDataProvider = {
     if (value <= 0) return null;
 
     return { value, asOfDate: new Date(latest.endDate).toISOString().slice(0, 10) };
+  },
+  // CF-ANALYZER-V1-SETTLE-01 — the approved business-description fallback
+  // (PR #399, comment 5952716764: "provider summary fallback if needed"):
+  // assetProfile.longBusinessSummary, read with { validateResult: false }
+  // for the same reason fetchNonOperatingInvestments above uses it — a
+  // strict-schema mismatch on an unrelated assetProfile field must not
+  // throw away the one field read here. Fails closed to null on any
+  // failure, a missing field, or a stub too short to describe a business.
+  async fetchBusinessSummary(ticker: string): Promise<BusinessSummary | null> {
+    const symbol = ticker.trim().toUpperCase();
+    let result: unknown;
+    try {
+      result = await yahooFinance.quoteSummary(symbol, { modules: ["assetProfile"] }, { validateResult: false });
+    } catch {
+      return null;
+    }
+    const summary = (result as { assetProfile?: { longBusinessSummary?: unknown } } | null | undefined)?.assetProfile
+      ?.longBusinessSummary;
+    if (typeof summary !== "string") return null;
+    const text = summary.replace(/\s+/g, " ").trim();
+    if (text.length < MIN_BUSINESS_SUMMARY_LENGTH) return null;
+    return { text };
   },
 };

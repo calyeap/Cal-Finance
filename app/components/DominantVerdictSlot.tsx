@@ -44,6 +44,9 @@ import { evidenceStatusLabel } from "@/lib/analyzer/trustCopy";
 // instruction not to build or test only the INCOMPLETE-always world.
 
 const REASON_UNAVAILABLE_MARKER = "Unavailable — see Evidence";
+// The INCOMPLETE path's fallback when a call site supplies no explanation —
+// plain words, never the raw state or an Evidence redirect.
+const REASON_UNAVAILABLE_PLAIN = "No valuation verdict for this company yet.";
 
 export function DominantVerdictSlot({
   verdict,
@@ -84,11 +87,21 @@ export function DominantVerdictSlot({
         </div>
       );
     }
-    const reason = isEvidenceTab ? verdict.reason : incompleteExplanation ?? REASON_UNAVAILABLE_MARKER;
+    if (isEvidenceTab) {
+      return (
+        <div className="verdictslot state incomplete">
+          <span className="name">INCOMPLETE</span>
+          <span className="cause">{verdict.reason}</span>
+        </div>
+      );
+    }
+    // CF-ANALYZER-V1-SETTLE-01 — Calvin's 7 Oct 2026 decision on #399
+    // (Option 1): outside Evidence the hero states the plain-English reason
+    // alone. The raw INCOMPLETE state name stays on the Evidence tab, above,
+    // with the verbatim `verdict.reason`.
     return (
       <div className="verdictslot state incomplete">
-        <span className="name">INCOMPLETE</span>
-        <span className="cause">{reason}</span>
+        <span className="cause">{incompleteExplanation ?? REASON_UNAVAILABLE_PLAIN}</span>
       </div>
     );
   }

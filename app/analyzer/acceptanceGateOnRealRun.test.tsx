@@ -181,7 +181,11 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       // fiftyTwoWeekOfflineOnRealRun.test.ts proves at the data layer.
       // Local to those two rows only: it does not blank the market cap,
       // FCF yield or leverage rows beside them (missing-data stays local).
-      expect(text).toContain("INCOMPLETE");
+      // CF-ANALYZER-V1-SETTLE-01 (Option 1): stated in plain English on the
+      // rail, never as the raw INCOMPLETE state code.
+      expect(text).toContain("52-week rangeNot computed for this company yet — it needs a 52-week price history");
+      expect(text).toMatch(/P\/E \(trailing\)Not computed for this company yet — /);
+      expect(text).not.toContain("INCOMPLETE");
     });
 
     it("Overview never exceeds 3 inline missing-data markers", async () => {

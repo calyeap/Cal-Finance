@@ -7,6 +7,8 @@ import { acquire, type AcquisitionResult, type PriceQuote } from "./acquire";
 import { runCrossChecks, assertEveryInputReported, type CrossCheckReport } from "../crosschecks/run";
 import { extractItem1 } from "./item1Extraction";
 import type { BusinessSectionContent, LatestFiling } from "../types";
+import { isMaterialFilingForm } from "../materialFilings";
+import { activeProvider } from "../../marketdata";
 
 // ---------------------------------------------------------------------------
 // Where a run's facts come from.
@@ -152,22 +154,83 @@ function assemble(
 }
 
 /**
- * The single most recent filing of ANY form from `submissions()`'s "recent"
- * arrays. EDGAR already returns that whole list most-recent-first across
- * every form mixed together (the same ordering `latestFormFiling` relies on
- * to find the latest OF ONE form) — so the truly most recent filing,
- * regardless of form, is simply its first well-formed entry.
+ * CF-ANALYZER-V1-SETTLE-01 — the most recent MATERIAL filing (a periodic or
+ * current report, lib/analyzer/materialFilings.ts) from `submissions()`'s
+ * "recent" arrays. EDGAR returns that list most-recent-first across every
+ * form mixed together (the same ordering `latestFormFiling` relies on), so
+ * the first well-formed material entry is the latest one. The 7 Oct 2026
+ * live proof (run 37566908890) showed why "any form" was wrong: MSFT's
+ * latest filing was a Form 4 insider transaction, which the Overview then
+ * presented as the company's latest development. Null where none of the
+ * recent filings is material.
  */
-function latestFilingOfAnyForm(submissions: SubmissionsDocument): LatestFiling | null {
+export function latestMaterialFiling(submissions: SubmissionsDocument): LatestFiling | null {
   const recent = submissions.filings?.recent;
   if (!recent?.form || !recent.filingDate || recent.form.length === 0) return null;
 
   for (let i = 0; i < recent.form.length; i++) {
     const form = recent.form[i];
     const filingDate = recent.filingDate[i];
-    if (form && filingDate) return { form, filingDate };
+    if (form && filingDate && isMaterialFilingForm(form)) return { form, filingDate };
   }
   return null;
+}
+
+/** Fetches the market-data provider's company summary; null on any failure. */
+export type BusinessSummaryFetcher = (ticker: string) => Promise<{ text: string; provider: string } | null>;
+
+const providerBusinessSummary: BusinessSummaryFetcher = async (ticker) => {
+  const provider = activeProvider();
+  const summary = await provider.fetchBusinessSummary?.(ticker);
+  return summary == null ? null : { text: summary.text, provider: provider.sourceName };
+};
+
+/**
+ * CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING (PR #399, comment 5952716764),
+ * SOURCE / FALLBACK RULE: "business / risk description → filing / company
+ * IR; provider summary fallback if needed".
+ *
+ * The filer's own 10-K Item 1 excerpt stays the primary source and is
+ * returned untouched whenever it exists. Only where it could not be
+ * produced is the market-data provider's company summary used instead —
+ * labelled as such, and carrying the primary path's own recorded reason
+ * verbatim, so the report and the live proof always say which source was
+ * used and why the filing was not. Live acquisition only; a CAPTURE run
+ * never reaches this. Never throws: a provider failure leaves the honest
+ * unavailable reason, extended to say the fallback failed too.
+ */
+export async function withProviderBusinessSummary(
+  ticker: string,
+  primary: BusinessSectionContent,
+  fetchSummary: BusinessSummaryFetcher = providerBusinessSummary,
+  now: () => Date = () => new Date()
+): Promise<BusinessSectionContent> {
+  if (primary.narrative !== null) return primary;
+  const primaryUnavailableReason =
+    primary.unavailableReason ?? "The filer's 10-K Item 1 excerpt could not be produced.";
+
+  let summary: { text: string; provider: string } | null = null;
+  try {
+    summary = await fetchSummary(ticker);
+  } catch {
+    summary = null;
+  }
+  if (summary === null || summary.text.trim() === "") {
+    return {
+      narrative: null,
+      unavailableReason: `${primaryUnavailableReason} The market-data provider's company summary was not available either.`,
+    };
+  }
+  return {
+    narrative: {
+      source: "MARKET-DATA PROVIDER SUMMARY",
+      text: summary.text.trim(),
+      provider: summary.provider,
+      retrievedAt: now().toISOString(),
+      primaryUnavailableReason,
+    },
+    unavailableReason: null,
+  };
 }
 
 const CAPTURE_BUSINESS_CONTENT: BusinessSectionContent = {
@@ -321,12 +384,17 @@ async function fromEdgar(ticker: string, options: AcquireOptions): Promise<Acqui
     // reason rather than throwing, so it cannot fall into this catch and
     // wrongly null out a classification that DID succeed.
     business = await businessNarrativeFrom(client, found.cik, submissions);
-    latestFiling = latestFilingOfAnyForm(submissions);
+    latestFiling = latestMaterialFiling(submissions);
   } catch {
     // Gate 0 fails closed on a missing classification (§5.3, §6.1). A failed
     // lookup leaves both null; neither may default to something classifiable.
     classification = { sic: null, sicDescription: null };
   }
+
+  // The approved fallback, applied once here so every consumer of this
+  // acquisition (the report and the AI scenario proposal alike) reads the
+  // same business content, cached with the rest of the acquisition.
+  business = await withProviderBusinessSummary(ticker, business);
 
   return assemble(
     ticker,

@@ -3,6 +3,7 @@ import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup } from "@testing-library/react";
 import { AnalyzerOverview } from "./AnalyzerOverview";
 import { CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
+import { OVERVIEW_CHALLENGER_NOTE } from "@/lib/analyzer/overviewCopy";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import type { AnalysisResult, InterpretationStatement, PageOneProse } from "@/lib/analyzer/types";
@@ -260,9 +261,35 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
       "The margin expansion assumed in the base case has no precedent in the company's own history."
     );
     // §17.7.1 — the rendered copy must state the finding was selected by
-    // report order, not by damage, and never call it the strongest. This is
-    // Section I's exact sentence, imported rather than restated.
-    expect(container.querySelector("#slot-7")!.textContent).toContain(CHALLENGER_SELECTION_RULE_NOTE);
+    // report order, not by damage, and never call it the strongest.
+    // CF-ANALYZER-V1-SETTLE-01: on the Overview that rule is stated in plain
+    // words (OVERVIEW_CHALLENGER_NOTE) — Section I keeps its own technical
+    // sentence with the spec citation, which the normal Overview may not show.
+    expect(container.querySelector("#slot-7")!.textContent).toContain(OVERVIEW_CHALLENGER_NOTE);
+    expect(container.querySelector("#slot-7")!.textContent).not.toContain(CHALLENGER_SELECTION_RULE_NOTE);
+  });
+
+  // CF-ANALYZER-V1-SETTLE-01 — the challenger's prose is never edited on the
+  // Overview; a point whose wording would bring technical state vocabulary
+  // onto it is not surfaced there (the full set stays in Section I2).
+  it("slot 7 does not surface a challenger point whose wording carries technical state vocabulary", () => {
+    const withChallenger: AnalysisResult = {
+      ...result,
+      challenger: {
+        findings: [
+          {
+            claimOrFactReference: "Section D — margin trend",
+            boundSection: "D",
+            evidence: "The check that would size this is INCOMPLETE on this run.",
+            whatWouldHaveToBeTrue: "Cost discipline would have to improve materially beyond any prior year.",
+          },
+        ],
+        completedAt: "2026-09-19T00:00:00.000Z",
+      },
+    };
+    const { container } = render(<AnalyzerOverview result={withChallenger} />);
+    expect(container.querySelector("#slot-7")!.textContent).not.toMatch(/Challenger point/);
+    expect(container.querySelector("#slot-7")!.textContent).not.toContain("INCOMPLETE");
   });
 
   it("slot 7 surfaces nothing challenger-related when the challenger call has not completed", () => {

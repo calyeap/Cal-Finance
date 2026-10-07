@@ -1,8 +1,8 @@
 import Decimal from "decimal.js";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 import { ValuationStrip } from "./ValuationStrip";
-import { humanizeCause } from "./AnalyzerReport";
 import { formatCompactUsd } from "@/lib/formatUsd";
+import { fairValueRangeUnavailableLine, notComputedLine, positionHiddenLine } from "@/lib/analyzer/overviewCopy";
 
 // M9-DESKTOP-SHELL-01 — Overview slot 4, per docs/design/m9-analyzer-
 // design-contract.md §2.1 row 4, §3.
@@ -87,15 +87,13 @@ export function ScenarioRangeStrip({
       <ValuationStrip result={result} showLocation={positionSuppressedBy === null} />
 
       {fairValueRange.kind === "suppressed" ? (
-        // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE GATE
-        // forbids raw gate/trust state codes (e.g. "LEVERAGE UNSUPPORTED IN
-        // v1") outside Evidence; the hero is part of the shared shell and
-        // renders on every tab. The raw code still reaches Evidence via
-        // `states.suppressing` (assemble.ts) — this is the same state,
-        // restated as a local marker, not a new computation.
+        // CF-ANALYZER-V1-SETTLE-01 — Calvin's 7 Oct 2026 decision on #399
+        // (Option 1): no raw state code and no "see Evidence" placeholder on
+        // the normal Overview; one plain-English line names why there is no
+        // range (overviewCopy.ts). The raw state and cause still reach
+        // Evidence via `states.suppressing` (assemble.ts) unchanged.
         <div className="state" style={{ marginTop: 14 }}>
-          <span className="name">Unavailable — see Evidence</span>
-          <span className="cause">{humanizeCause(fairValueRange.cause)}</span>
+          <span className="cause">{fairValueRangeUnavailableLine(fairValueRange, result.gates.leverage)}</span>
         </div>
       ) : (
         <div className="hframe" style={{ marginTop: 14 }}>
@@ -120,16 +118,18 @@ export function ScenarioRangeStrip({
               <p className="sub2">Cash floor ${num(fairValueRange.cashFloor)} per current share.</p>
             )}
             {positionSuppressedBy !== null && (
-              // CF-ANALYZER-V1-SETTLE-01 correction — #392's ACCEPTANCE
-              // GATE forbids raw trust-status/profile code text (e.g.
-              // "PROFILE NOT CONFIRMED", "TRUST STATUS UNUSABLE · ...")
-              // outside Evidence; `positionSuppressedBy` still decides
-              // whether this slot renders at all, but its raw text is not
-              // printed here — the identical text already renders on the
-              // Evidence tab via `TrustAndProfileNote`.
+              // CF-ANALYZER-V1-SETTLE-01 — `positionSuppressedBy` still
+              // decides whether this note renders at all; its raw text
+              // ("PROFILE NOT CONFIRMED", "TRUST STATUS UNUSABLE · ...")
+              // renders on the Evidence tab via `TrustAndProfileNote`, and
+              // here only the plain-English reason (overviewCopy.ts).
               <div className="state" style={{ marginTop: 10 }}>
-                <span className="name">Valuation position — suppressed</span>
-                <span className="cause">Unavailable — see Evidence</span>
+                <span className="cause">
+                  {positionHiddenLine({
+                    trustUnusable: trust.status === "UNUSABLE",
+                    profileNotConfirmed,
+                  })}
+                </span>
               </div>
             )}
           </div>
@@ -138,8 +138,14 @@ export function ScenarioRangeStrip({
             <p className="sub2">Restated from Section E</p>
             {priceImplied.steadyStateEv.suppressed ? (
               <div className="state">
-                <span className="name">Unavailable — see Evidence</span>
-                <span className="cause">{humanizeCause(priceImplied.steadyStateEv.cause)}</span>
+                <span className="lbl">Steady-state EV</span>{" "}
+                <span className="cause">
+                  {notComputedLine(
+                    priceImplied.steadyStateEv.state,
+                    priceImplied.steadyStateEv.cause,
+                    result.gates.leverage
+                  )}
+                </span>
               </div>
             ) : (
               <div className="pi">
@@ -149,8 +155,14 @@ export function ScenarioRangeStrip({
             )}
             {priceImplied.pvgoShareOfEv.suppressed ? (
               <div className="state">
-                <span className="name">Unavailable — see Evidence</span>
-                <span className="cause">{humanizeCause(priceImplied.pvgoShareOfEv.cause)}</span>
+                <span className="lbl">PVGO share of EV</span>{" "}
+                <span className="cause">
+                  {notComputedLine(
+                    priceImplied.pvgoShareOfEv.state,
+                    priceImplied.pvgoShareOfEv.cause,
+                    result.gates.leverage
+                  )}
+                </span>
               </div>
             ) : (
               <div className="pi" style={{ borderBottom: 0 }}>

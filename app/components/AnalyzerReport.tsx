@@ -545,6 +545,18 @@ export function BusinessSection({ result }: { result: AnalysisResult }) {
             Not yet available —{" "}
             {result.business.unavailableReason ?? "Business section content has not been built for this analysis."}
           </p>
+        ) : result.business.narrative.source === "MARKET-DATA PROVIDER SUMMARY" ? (
+          // CF-ANALYZER-V1-SETTLE-01 — the approved provider-summary
+          // fallback (PR #399, comment 5952716764). Labelled as such, with
+          // the filing path's own reason for not supplying the excerpt.
+          <>
+            <p>{result.business.narrative.text}</p>
+            <p className="note">
+              Source: {result.business.narrative.provider} company profile summary, retrieved{" "}
+              {result.business.narrative.retrievedAt.slice(0, 10)} — used because the filer&apos;s own 10-K Item 1
+              excerpt was not available: {result.business.narrative.primaryUnavailableReason}
+            </p>
+          </>
         ) : (
           <>
             <p>{result.business.narrative.text}</p>

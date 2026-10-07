@@ -24,7 +24,7 @@ import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate"
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import { analysisForReport, type AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
-import { PROFILE_NOT_CONFIRMED_DETAIL } from "@/lib/analyzer/trust";
+import { profileNotConfirmedFor } from "@/lib/analyzer/trust";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — docs/design/analyzer-v2-design-authority.md
@@ -127,9 +127,7 @@ export default async function ReportPage({
   // resolution (Gate 0 PASS, no human decision) as confirmed-enough for V1,
   // and a second, independent derivation here would be free to disagree —
   // exactly the failure mode trust.ts's own header comment warns against.
-  const profileNotConfirmed = report.result.trust.determinedBy.some(
-    (d) => d.kind === "qualifying flag" && d.detail === PROFILE_NOT_CONFIRMED_DETAIL
-  );
+  const profileNotConfirmed = profileNotConfirmedFor(report.result);
   const verdict = deriveVerdict(report.result);
 
   return (

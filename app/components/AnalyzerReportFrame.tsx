@@ -111,7 +111,8 @@ export function AnalyzerReportFrame({
               isEvidenceTab={activeTab === "evidence"}
               incompleteExplanation={incompleteVerdictExplanation({
                 trustStatus: trust.status,
-                fairValueRangeKind: result.fairValueRange.kind,
+                fairValueRange: result.fairValueRange,
+                leverage: result.gates.leverage,
                 profileNotConfirmed,
               })}
               priceVsRangeHeadline={priceVsRangeHeadline({

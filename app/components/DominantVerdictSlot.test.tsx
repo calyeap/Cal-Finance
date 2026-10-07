@@ -122,20 +122,28 @@ describe("DominantVerdictSlot — INCOMPLETE path", () => {
     expect(screen.getByText(reason)).not.toBeNull();
   });
 
-  it("CF-ANALYZER-V1-SETTLE-01 — outside the Evidence tab, never renders the raw reason; renders the plain marker instead", () => {
+  // CF-ANALYZER-V1-SETTLE-01 — Calvin's 7 Oct 2026 decision on #399
+  // (Option 1): outside Evidence the slot states a plain-English reason
+  // alone — no raw INCOMPLETE state name, no raw reason, no "see Evidence".
+  it("CF-ANALYZER-V1-SETTLE-01 — outside the Evidence tab, never renders the raw reason or state name; renders the plain explanation instead", () => {
     const reason = "Decision-critical analysis is incomplete — LEVERAGE UNSUPPORTED IN v1";
-    const { container } = render(<DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="PARTIAL" />);
-    expect(screen.getByText("INCOMPLETE")).not.toBeNull();
+    const explanation = "No valuation verdict for this company yet — its debt load is above the level this version of the model can value.";
+    const { container } = render(
+      <DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="PARTIAL" incompleteExplanation={explanation} />
+    );
+    expect(screen.queryByText("INCOMPLETE")).toBeNull();
     expect(screen.queryByText(reason)).toBeNull();
     expect(screen.queryByText(/LEVERAGE UNSUPPORTED/)).toBeNull();
-    expect(container.querySelector(".cause")?.textContent).toBe("Unavailable — see Evidence");
+    expect(container.querySelector(".cause")?.textContent).toBe(explanation);
+    expect(container.textContent).not.toMatch(/see Evidence/i);
   });
 
-  it("isEvidenceTab defaults to false — omitting the prop still suppresses the raw reason", () => {
+  it("isEvidenceTab defaults to false — omitting the prop still suppresses the raw reason, and an omitted explanation falls back to plain words", () => {
     const reason = "Decision-critical analysis is incomplete — PROFILE NOT CONFIRMED is active.";
-    render(<DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="CLEAN" />);
+    const { container } = render(<DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="CLEAN" />);
     expect(screen.queryByText(reason)).toBeNull();
-    expect(screen.getByText("Unavailable — see Evidence")).not.toBeNull();
+    expect(screen.queryByText("INCOMPLETE")).toBeNull();
+    expect(container.querySelector(".cause")?.textContent).toBe("No valuation verdict for this company yet.");
   });
 
   it("never renders anything confidence-like on the INCOMPLETE path, whatever the trust status", () => {

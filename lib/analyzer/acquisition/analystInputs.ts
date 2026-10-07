@@ -6,6 +6,7 @@ import { recordedAnalystInputBundle } from "./recordedBundles";
 import type { AnalystSuppliedRange } from "../modules/sensitivity";
 import { acquireCompany, type AcquiredCompany } from "./provider";
 import { analystCallIfConfigured } from "../ai/anthropicCall";
+import { writeAnalystLog } from "../ai/analystCall";
 import { aiProposedAnalystInputBundle } from "./aiProposedBundle";
 
 // Same switch gate.ts's own isOffline() reads (private there) — never a
@@ -220,13 +221,27 @@ export async function analystInputsFor(ticker: string): Promise<AnalystInputBund
   // rather than being handed an already-acquired company: this is the one
   // signature every existing caller already uses, ticker alone.
   if (isOfflineAnalyzerRun()) return null;
+  // CF-ANALYZER-V1-SETTLE-01 — each refusal below names its cause in the
+  // analyzer log. A null here surfaces downstream only as "the run cannot
+  // open" (gate.ts), so without this line a live run that could not get a
+  // bundle carried no cause at all (PR #399 audit, 7 Oct 2026).
   const call = analystCallIfConfigured();
-  if (call === null) return null;
+  if (call === null) {
+    writeAnalystLog(
+      `no analyst-input bundle for ${ticker.toUpperCase()}: none is committed or recorded, and no model credentials are configured to propose one`
+    );
+    return null;
+  }
 
   let acquired: AcquiredCompany;
   try {
     acquired = await acquireCompany(ticker, { price: null });
-  } catch {
+  } catch (err) {
+    writeAnalystLog(
+      `no analyst-input bundle for ${ticker.toUpperCase()}: acquiring the company to propose one failed — ${
+        err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+      }`
+    );
     return null;
   }
 

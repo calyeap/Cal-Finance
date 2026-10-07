@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import Decimal from "decimal.js";
 import type { AnalystCall, AnalystCallRequest } from "../ai/analystCall";
 import type { AcquiredCompany } from "./provider";
@@ -143,6 +143,31 @@ describe("aiProposedAnalystInputBundle", () => {
       alwaysBad
     );
     expect(bundle).toBeNull();
+  });
+
+  it("names the cause of each refusal in the analyzer log — a live run that cannot open must say why (CF-ANALYZER-V1-SETTLE-01)", async () => {
+    const written: string[] = [];
+    const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: string | Uint8Array) => {
+      written.push(String(chunk));
+      return true;
+    });
+    try {
+      const noRevenue = acquiredCompanyFor("COST", {
+        acquisition: { ...acquiredCompanyFor("COST").acquisition, facts: [] },
+      });
+      await aiProposedAnalystInputBundle("COST", "Costco Wholesale Corporation", noRevenue, fakeCall(wellFormedProposalResponse()));
+      __resetAiProposedBundleCache();
+      const alwaysBad = async () => ({ bear: {}, base: {}, bull: {}, policyConstants: {} });
+      await aiProposedAnalystInputBundle("COST", "Costco Wholesale Corporation", acquiredCompanyFor("COST"), alwaysBad);
+    } finally {
+      spy.mockRestore();
+    }
+
+    const log = written.join("");
+    expect(log).toContain(
+      "[analyzer] no AI-proposed analyst-input bundle for COST: the acquired filings carry no current revenue to propose scenarios from"
+    );
+    expect(log).toMatch(/\[analyzer\] no AI-proposed analyst-input bundle for COST: the scenario-proposal call failed or was refused twice — \S/);
   });
 
   it("caches the resolved bundle per ticker so a second call within the TTL never re-invokes the AI call", async () => {

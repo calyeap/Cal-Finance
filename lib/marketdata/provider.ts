@@ -37,6 +37,15 @@ export interface NonOperatingInvestmentsFigure {
   asOfDate: string; // YYYY-MM-DD
 }
 
+// CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING (PR #399, comment 5952716764),
+// SOURCE / FALLBACK RULE: "business / risk description → filing / company
+// IR; provider summary fallback if needed". The provider's own company
+// profile summary, consulted only where the filer's 10-K Item 1 excerpt
+// could not be produced (acquisition/provider.ts). Never a filing fact.
+export interface BusinessSummary {
+  text: string;
+}
+
 export interface MarketDataProvider {
   readonly sourceName: string; // must match a row in the `sources` table
   // Crypto is never resolved here — lib/marketdata/cryptoSymbols.ts is the
@@ -61,4 +70,8 @@ export interface MarketDataProvider {
   // has no balance-sheet surface; callers treat a missing method exactly
   // like a null result.
   fetchNonOperatingInvestments?(ticker: string): Promise<NonOperatingInvestmentsFigure | null>;
+  // Optional, same contract as fetchFundamentals: omit where the provider
+  // has no company-profile surface; callers treat a missing method exactly
+  // like a null result.
+  fetchBusinessSummary?(ticker: string): Promise<BusinessSummary | null>;
 }

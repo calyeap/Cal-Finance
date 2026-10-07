@@ -140,7 +140,12 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
         expect(hero.textContent).not.toContain("INCOMPLETE");
         expect(hero.textContent).toContain("the way from the bear case to the bull case");
       } else {
-        expect(hero.textContent).toContain("INCOMPLETE");
+        // CF-ANALYZER-V1-SETTLE-01 (Calvin's 7 Oct 2026 decision on #399,
+        // Option 1): no defensible range, so the hero states why in plain
+        // English — never the raw INCOMPLETE state name or "see Evidence".
+        expect(hero.textContent).not.toContain("INCOMPLETE");
+        expect(hero.textContent).not.toMatch(/see Evidence/i);
+        expect(hero.textContent).toMatch(/^No valuation verdict for this company yet — /);
       }
       // All eight Overview tab slots (5-11 plus the new slot 12, REQUIRED
       // OVERVIEW CONTENT item 9), in the fixed order — the route still

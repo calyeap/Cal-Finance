@@ -3,9 +3,16 @@ import Decimal from "decimal.js";
 import type { AnalysisResult, InterpretationStatement } from "@/lib/analyzer/types";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import type { Step4ForecastDispersionReading } from "@/lib/analyzer/modules/sensitivity";
-import { AiLayerNote, humanizeCause, CHALLENGER_SELECTION_RULE_NOTE } from "./AnalyzerReport";
+import { AiLayerNote, humanizeCause } from "./AnalyzerReport";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 import { formatCompactUsd } from "@/lib/formatUsd";
+import {
+  notComputedLine,
+  overviewTextViolations,
+  CHANGE_TRIGGER_UNAVAILABLE_LINE,
+  OVERVIEW_CHALLENGER_NOTE,
+} from "@/lib/analyzer/overviewCopy";
+import { materialFilingLabel } from "@/lib/analyzer/materialFilings";
 
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — the Overview tab's own body, below the
 // shared AnalyzerReportFrame hero. Slots 1 (company header), 2 (dominant
@@ -138,10 +145,17 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
           code still reaches Evidence via `states.suppressing`
           (assemble.ts) — this is the same state, restated as a local
           marker, not a new computation. */}
+      {/* CF-ANALYZER-V1-SETTLE-01 — Calvin's 7 Oct 2026 decision on #399
+          (Option 1): a figure the engine cannot compute for this company
+          shows its label and one plain-English reason (overviewCopy.ts) —
+          no raw state code, no "see Evidence" placeholder. The raw state
+          still reaches Evidence via `states.suppressing` (assemble.ts). */}
       {priceImplied.steadyStateEv.suppressed ? (
         <div className="state">
-          <span className="name">Unavailable — see Evidence</span>
-          <span className="cause">{humanizeCause(priceImplied.steadyStateEv.cause)}</span>
+          <span className="lbl">Steady-state EV</span>{" "}
+          <span className="cause">
+            {notComputedLine(priceImplied.steadyStateEv.state, priceImplied.steadyStateEv.cause, result.gates.leverage)}
+          </span>
         </div>
       ) : (
         <div className="pi">
@@ -151,8 +165,10 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
       )}
       {priceImplied.pvgoShareOfEv.suppressed ? (
         <div className="state">
-          <span className="name">Unavailable — see Evidence</span>
-          <span className="cause">{humanizeCause(priceImplied.pvgoShareOfEv.cause)}</span>
+          <span className="lbl">PVGO share of EV</span>{" "}
+          <span className="cause">
+            {notComputedLine(priceImplied.pvgoShareOfEv.state, priceImplied.pvgoShareOfEv.cause, result.gates.leverage)}
+          </span>
         </div>
       ) : (
         <div className="pi">
@@ -163,8 +179,14 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
       {baseRateCell &&
         (baseRateCell.fiveYearGrowth.suppressed ? (
           <div className="state">
-            <span className="name">Unavailable — see Evidence</span>
-            <span className="cause">{humanizeCause(baseRateCell.fiveYearGrowth.cause)}</span>
+            <span className="lbl">Implied growth, yrs 1-5 at r = 8%</span>{" "}
+            <span className="cause">
+              {notComputedLine(
+                baseRateCell.fiveYearGrowth.state,
+                baseRateCell.fiveYearGrowth.cause,
+                result.gates.leverage
+              )}
+            </span>
           </div>
         ) : (
           <div className="pi" style={{ borderBottom: 0 }}>
@@ -212,16 +234,19 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
 // Evidence tabs" was itself the forbidden "'see Evidence' placeholder
 // standing in for missing content" — this states the fact plainly instead of
 // pointing elsewhere for it.
+// CF-ANALYZER-V1-SETTLE-01 — `latestFiling` is now the most recent MATERIAL
+// filing (lib/analyzer/materialFilings.ts): the 7 Oct 2026 live proof showed
+// a Form 4 insider transaction standing in as MSFT's "latest development".
 function RecentDevelopmentsSlot({ result }: { result: AnalysisResult }) {
   const filing = result.latestFiling;
   return (
     <div className="ovslot" id="slot-12">
       <h3>Latest material development</h3>
       {filing === null ? (
-        <p className="note">No recent SEC filing could be confirmed for this company.</p>
+        <p className="note">No recent material SEC filing could be confirmed for this company.</p>
       ) : (
         <p>
-          This analysis reflects the company&rsquo;s filings through its most recent {filing.form}, filed{" "}
+          The company&rsquo;s most recent material SEC filing is its {materialFilingLabel(filing.form)}, filed{" "}
           {filing.filingDate}.
         </p>
       )}
@@ -239,7 +264,7 @@ function ChangeTriggerSlot({ reading }: { reading: Step4ForecastDispersionReadin
           result by {pct(reading.fullRangeValueImpact)} across its own analyst-supplied range.
         </p>
       ) : (
-        <p className="note">No computed change trigger available yet.</p>
+        <p className="note">{CHANGE_TRIGGER_UNAVAILABLE_LINE}</p>
       )}
     </div>
   );
@@ -281,10 +306,16 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
         label="Why be cautious"
         statement={pageOne === null ? null : pageOne.whatWorriesCalboard}
         extra={
-          challengerSelection === null ? null : (
+          // CF-ANALYZER-V1-SETTLE-01 — the normal Overview carries no
+          // technical state vocabulary (overviewCopy.ts). The challenger's
+          // prose is the blind call's own and is never edited here, so a
+          // selected point whose wording would bring that vocabulary onto the
+          // Overview is simply not surfaced on it — slot 7 "may" surface one
+          // (§2.1 row 7); the full set stays in Section I2 either way.
+          challengerSelection === null || overviewTextViolations(challengerSelection.selected.evidence).length > 0 ? null : (
             <>
               <p className="note">Challenger point — {challengerSelection.selected.evidence}</p>
-              <span className="selrule">{CHALLENGER_SELECTION_RULE_NOTE}</span>
+              <span className="selrule">{OVERVIEW_CHALLENGER_NOTE}</span>
             </>
           )
         }

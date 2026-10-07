@@ -44,8 +44,12 @@ describe("ScenarioRangeStrip — the normal range case", () => {
 
   it("suppresses the valuation-position slot when the profile is not human-confirmed (§10.6.3), without hiding the range", () => {
     render(<ScenarioRangeStrip result={result} profileNotConfirmed={true} />);
-    expect(screen.getByText("Valuation position — suppressed")).not.toBeNull();
-    expect(screen.getByText("Unavailable — see Evidence")).not.toBeNull();
+    // CF-ANALYZER-V1-SETTLE-01 (Option 1): the reason in plain words — no
+    // "suppressed" label, no "see Evidence" placeholder.
+    expect(
+      screen.getByText("Where today's price sits in this range is not shown until the company's financial profile is confirmed.")
+    ).not.toBeNull();
+    expect(screen.queryByText(/see Evidence/i)).toBeNull();
     expect(screen.getByText("Fair-value range")).not.toBeNull();
   });
 
@@ -69,15 +73,22 @@ describe("ScenarioRangeStrip — the normal range case", () => {
 
   it("does not render the valuation-position slot when nothing suppresses it", () => {
     render(<ScenarioRangeStrip result={result} profileNotConfirmed={false} />);
-    expect(screen.queryByText("Valuation position — suppressed")).toBeNull();
+    expect(screen.queryByText(/Where today's price sits in this range is not shown/)).toBeNull();
   });
 });
 
 describe("ScenarioRangeStrip — §10.6.3 suppression (trust UNUSABLE)", () => {
-  it("renders the suppressing state in place of the range, never a bear/bull bound", () => {
+  it("renders the plain-English reason in place of the range, never a bear/bull bound", () => {
     const result = assembleAnalysisResult(leveredMsft());
     render(<ScenarioRangeStrip result={result} profileNotConfirmed={false} />);
-    expect(screen.getByText("Unavailable — see Evidence")).not.toBeNull();
+    // CF-ANALYZER-V1-SETTLE-01 (Option 1): MSFT levered past §6.5's
+    // threshold — the ratio exists, so the reason is the level, not missing inputs.
+    expect(
+      screen.getByText(
+        "No fair-value range for this company yet — its debt load is above the level this version of the model can value."
+      )
+    ).not.toBeNull();
+    expect(screen.queryByText(/see Evidence/i)).toBeNull();
     expect(screen.queryByText("Fair-value range")).toBeNull();
     expect(screen.queryByText(/Driven by:/)).toBeNull();
   });
