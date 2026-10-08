@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import { acquireCompany, __resetAcquisitionCache } from "./provider";
+import { overviewTextViolations } from "../overviewCopy";
 
 // M9-ITEM5-CONTENT-01 SCOPE item 3 — CAPTURE runs (the acceptance runs read
 // committed captures, never live EDGAR) must degrade to an honest, reasoned
@@ -26,5 +27,18 @@ describe("CAPTURE runs — Business section content", () => {
 
     expect(acquired.business.narrative).toBeNull();
     expect(acquired.business.unavailableReason).not.toBeNull();
+  });
+
+  // CF-ANALYZER-USER-READY-01 — this reason string renders verbatim on the
+  // Overview tab (AnalyzerOverview.tsx), so it is held to the same
+  // forbidden-vocabulary rule as the rest of the Overview (overviewCopy.ts),
+  // not just checked for the words a human reviewer happened to think of.
+  // Regression: it used to end with an internal rationale clause citing its
+  // own ticket id in parentheses, which this pattern exists specifically to
+  // catch.
+  it("MSFT's capture-empty-state reason carries no internal module id or other forbidden Overview vocabulary", async () => {
+    const acquired = await acquireCompany("MSFT", { price: null, source: "CAPTURE" });
+
+    expect(overviewTextViolations(acquired.business.unavailableReason ?? "")).toEqual([]);
   });
 });

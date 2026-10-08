@@ -233,12 +233,18 @@ export async function withProviderBusinessSummary(
   };
 }
 
+// CF-ANALYZER-USER-READY-01 — this string renders verbatim on the Overview
+// tab (AnalyzerOverview.tsx reads result.business.unavailableReason
+// directly), so it must stay reader-facing prose only. It previously ended
+// with an internal rationale clause citing this module's own ticket id in
+// parentheses, which both leaked engineering detail onto the page and
+// tripped the Overview's own forbidden-vocabulary check (overviewCopy.ts's
+// "M1–M16 module id" pattern) on every CAPTURE-mode run.
 const CAPTURE_BUSINESS_CONTENT: BusinessSectionContent = {
   narrative: null,
   unavailableReason:
     "10-K Item 1 excerpts are not part of the committed SEC capture — this run reads captured XBRL facts " +
-    "only, and the extraction rule requires a live EDGAR filing-document fetch. Chosen as the honest empty " +
-    "state for CAPTURE runs rather than extending the capture shape (M9-ITEM5-CONTENT-01 SCOPE item 3).",
+    "only, and the extraction rule requires a live EDGAR filing-document fetch.",
 };
 
 function fromCapture(ticker: string, options: AcquireOptions): AcquiredCompany {
