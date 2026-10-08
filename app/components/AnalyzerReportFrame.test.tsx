@@ -16,9 +16,17 @@ import { deriveVerdict } from "@/lib/analyzer/verdict";
 // is not this repo's mechanism (no checked-in baseline pipeline exists),
 // so the equivalent guard here is a DOM-order pin: the same shell chrome,
 // in the same source order, regardless of which tab is active. A PR that
-// re-interposes .az-save between the hero and the tab rail (the exact
-// defect this guards) fails this test rather than only being catchable by
-// eye in a screenshot.
+// re-interposes the actions row between the hero and the tab rail (the
+// exact defect this guards) fails this test rather than only being
+// catchable by eye in a screenshot.
+//
+// CF-ANALYZER-NORTHSTAR-VISUAL-RESTORE-01 — the two action forms
+// (.az-save) now nest one level deeper, inside a shared .az-actions row
+// (outcome 3, consolidating the two full-width action bands). The guard
+// below keys off .az-actions instead of .az-save for exactly that reason;
+// it still pins the same chrome order — identity, hero, tabs, actions,
+// body — and the "two forms" test below still finds both .az-save forms
+// wherever they nest.
 
 vi.mock("next/link", () => ({
   default: ({ href, children, className }: { href: string; children: React.ReactNode; className?: string }) => (
@@ -43,7 +51,7 @@ function renderFrame(activeTab: AnalyzerTabSlug) {
 
 describe("AnalyzerReportFrame — locked shell invariant order", () => {
   it.each(ANALYZER_TABS.map((t) => t.slug))(
-    "renders identity -> hero -> tab rail -> save action -> tab body, in that order, on the %s tab",
+    "renders identity -> hero -> tab rail -> actions row -> tab body, in that order, on the %s tab",
     (slug) => {
       const { container } = renderFrame(slug);
       const main = container.querySelector(".az-report-main") as HTMLElement;
@@ -52,14 +60,14 @@ describe("AnalyzerReportFrame — locked shell invariant order", () => {
       const identityIndex = classesInOrder.indexOf("az-identity");
       const heroIndex = classesInOrder.indexOf("az-hero");
       const tabsIndex = classesInOrder.indexOf("az-tabs");
-      const saveIndex = classesInOrder.indexOf("az-save");
+      const actionsIndex = classesInOrder.indexOf("az-actions");
       const bodyIndex = classesInOrder.indexOf("az-tabbody");
 
       expect(identityIndex).toBeGreaterThanOrEqual(0);
       expect(heroIndex).toBeGreaterThan(identityIndex);
       expect(tabsIndex).toBeGreaterThan(heroIndex);
-      expect(saveIndex).toBeGreaterThan(tabsIndex);
-      expect(bodyIndex).toBeGreaterThan(saveIndex);
+      expect(actionsIndex).toBeGreaterThan(tabsIndex);
+      expect(bodyIndex).toBeGreaterThan(actionsIndex);
     }
   );
 
@@ -76,6 +84,7 @@ describe("AnalyzerReportFrame — locked shell invariant order", () => {
         identity: container.querySelectorAll(".az-identity").length,
         hero: container.querySelectorAll(".az-hero").length,
         tabs: container.querySelectorAll(".az-tabs .az-tab").length,
+        actions: container.querySelectorAll(".az-actions").length,
         save: container.querySelectorAll(".az-save").length,
         rightRail: container.querySelectorAll(".az-rightrail").length,
       };
@@ -100,5 +109,17 @@ describe("AnalyzerReportFrame — locked shell invariant order", () => {
     const hiddenRunId = updateForm!.querySelector('input[type="hidden"][name="runId"]');
     expect(hiddenRunId).not.toBeNull();
     expect((hiddenRunId as HTMLInputElement).value).toBe("run-1");
+  });
+
+  // CF-ANALYZER-NORTHSTAR-VISUAL-RESTORE-01 — outcome 3: the two actions
+  // consolidated into one compact row, not two independent margin bands.
+  // Same forms, same actions/inputs/labels (asserted above) — this pins
+  // only the new grouping.
+  it("groups both action forms inside one shared .az-actions row", () => {
+    const { container } = renderFrame("overview");
+    const actionsRows = container.querySelectorAll(".az-actions");
+    expect(actionsRows).toHaveLength(1);
+    const formsInRow = actionsRows[0].querySelectorAll("form.az-save");
+    expect(formsInRow).toHaveLength(2);
   });
 });

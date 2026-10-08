@@ -524,3 +524,30 @@ describe("globals.css — Analyzing (pre-report) renders no fake progress", () =
     expect(stage).not.toMatch(/animation/);
   });
 });
+
+// CF-ANALYZER-NORTHSTAR-VISUAL-RESTORE-01 — the three bounded hero/action
+// presentation changes. None of these touch a colour token, a breakpoint,
+// or any class m9AcceptanceGaps.test.ts's colour-independence check already
+// polices (that file independently re-asserts the --gain/--loss/--stale
+// ban for .verdictslot, so it is not duplicated here).
+describe("globals.css — CF-ANALYZER-NORTHSTAR-VISUAL-RESTORE-01 hero/action changes", () => {
+  it("groups the two report actions into one row instead of two stacked margin bands", () => {
+    const actions = ruleBody(".cb-analyzer .az-actions");
+    expect(actions).toMatch(/display:\s*flex\s*;/);
+    // The row, not each form, now owns the bottom margin.
+    expect(ruleBody(".cb-analyzer .az-save")).toMatch(/margin-bottom:\s*0\s*;/);
+  });
+
+  it("frames the hero verdict slot as a distinct card, with no status colour", () => {
+    const card = ruleBody(".cb-analyzer .az-hero-verdict");
+    expect(card).toMatch(/border:/);
+    expect(card).not.toMatch(/var\(--(gain|loss|stale)\)/);
+  });
+
+  it("compacts the hero's own valuation presentation without touching Section H's shared .hframe/.atglance rule elsewhere", () => {
+    expect(ruleBody(".cb-analyzer .az-hero-scenarios .hframe > div")).toMatch(/padding:/);
+    // The base/Section H rule (asserted elsewhere in this file, e.g. the
+    // 720px stacking test) keeps its own 20px padding — unchanged here.
+    expect(ruleBody(".cb-analyzer .hframe > div")).toMatch(/padding:\s*20px\s*;/);
+  });
+});

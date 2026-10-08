@@ -265,13 +265,16 @@ describe("Analyzer V2 acceptance-target drift guard (CF-V2-DRIFT-GUARD-01)", () 
         const identityIndex = classesInOrder.indexOf("az-identity");
         const heroIndex = classesInOrder.indexOf("az-hero");
         const tabsIndex = classesInOrder.indexOf("az-tabs");
-        const saveIndex = classesInOrder.indexOf("az-save");
+        // CF-ANALYZER-NORTHSTAR-VISUAL-RESTORE-01 — the two action forms now
+        // nest inside a shared .az-actions row (outcome 3); the direct-child
+        // order guard keys off that wrapper instead of .az-save.
+        const actionsIndex = classesInOrder.indexOf("az-actions");
         const bodyIndex = classesInOrder.indexOf("az-tabbody");
         expect(identityIndex).toBeGreaterThanOrEqual(0);
         expect(heroIndex).toBeGreaterThan(identityIndex);
         expect(tabsIndex).toBeGreaterThan(heroIndex);
-        expect(saveIndex).toBeGreaterThan(tabsIndex);
-        expect(bodyIndex).toBeGreaterThan(saveIndex);
+        expect(actionsIndex).toBeGreaterThan(tabsIndex);
+        expect(bodyIndex).toBeGreaterThan(actionsIndex);
 
         // Company identity row.
         const identity = container.querySelector(".az-identity") as HTMLElement;

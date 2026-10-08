@@ -152,26 +152,33 @@ export function AnalyzerReportFrame({
           ))}
         </nav>
 
-        <form action={createDeepSnapshotAction} className="az-save">
-          <input type="hidden" name="runId" value={runId} />
-          <button className="act" type="submit">
-            Save this version
-          </button>
-        </form>
+        {/* CF-ANALYZER-NORTHSTAR-VISUAL-RESTORE-01 — the two report actions
+            grouped into one compact row instead of two full-width stacked
+            bands (#415's own evidence-backed recommendation 1). Same two
+            forms, same server actions, same inputs/labels — only their
+            shared wrapper changes. */}
+        <div className="az-actions">
+          <form action={createDeepSnapshotAction} className="az-save">
+            <input type="hidden" name="runId" value={runId} />
+            <button className="act" type="submit">
+              Save this version
+            </button>
+          </form>
 
-        {/* CF-UPDATE-FIRST-OUTCOME-01 — the UPDATE entry point. Starts a
-            brand-new, independent Analyzer run for this same,
-            already-confirmed company; the new run pays the full Step 2
-            per-fact spot-check pass unchanged, exactly like a first run
-            (app/actions/analyzer.ts beginUpdateRunAction). Not a refresh:
-            it neither mutates nor supersedes this report, and it carries no
-            price-movement indicator or "facts unchanged" shortcut. */}
-        <form action={beginUpdateRunAction} className="az-save">
-          <input type="hidden" name="runId" value={runId} />
-          <button className="act" type="submit">
-            Look at this company again
-          </button>
-        </form>
+          {/* CF-UPDATE-FIRST-OUTCOME-01 — the UPDATE entry point. Starts a
+              brand-new, independent Analyzer run for this same,
+              already-confirmed company; the new run pays the full Step 2
+              per-fact spot-check pass unchanged, exactly like a first run
+              (app/actions/analyzer.ts beginUpdateRunAction). Not a refresh:
+              it neither mutates nor supersedes this report, and it carries no
+              price-movement indicator or "facts unchanged" shortcut. */}
+          <form action={beginUpdateRunAction} className="az-save">
+            <input type="hidden" name="runId" value={runId} />
+            <button className="act" type="submit">
+              Look at this company again
+            </button>
+          </form>
+        </div>
 
         <div className="az-tabbody">{children}</div>
       </div>
