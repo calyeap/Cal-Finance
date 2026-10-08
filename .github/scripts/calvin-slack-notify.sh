@@ -79,9 +79,12 @@ calvin_slack_payload() {
     jq -n --arg h "$header" --arg repo "$repo" --arg line "$line" --arg url "$comment_url" \
       '{text: ($h + " — " + $repo + "\n" + $line + "\n" + $url + "\n<!channel>")}'
   else
-    # A one-time informational notice: no action is implied, so no ping.
+    # A one-time informational notice: no action is implied. Say so
+    # explicitly ("Action: none") rather than leaving absence of a ping as
+    # the only signal, per CF-TERMINAL-NOTIFY-RELIABILITY-01 (issue #408)
+    # requirement 1.
     jq -n --arg h "$header" --arg repo "$repo" --arg line "$line" --arg url "$comment_url" \
-      '{text: ($h + " — " + $repo + "\n" + $line + "\n" + $url)}'
+      '{text: ($h + " — " + $repo + "\n" + $line + "\nAction: none\n" + $url)}'
   fi
 }
 
@@ -94,7 +97,13 @@ calvin_slack_payload() {
 # comment.
 calvin_slack_send() {
   local raw="$1" repo="$2" comment_url="$3" comments_json="${4:-}" created_at="${5:-}" payload code
-  payload="$(calvin_slack_payload "$raw" "$repo" "$comment_url" "$comments_json" "$created_at")" || return 0
+  payload="$(calvin_slack_payload "$raw" "$repo" "$comment_url" "$comments_json" "$created_at")" || {
+    # Distinct from a successful send: a green step here never implies
+    # delivery, per CF-TERMINAL-NOTIFY-RELIABILITY-01 (issue #408)
+    # requirement 7.
+    echo "calvin_slack_send: skipped (duplicate/ineligible)"
+    return 0
+  }
   : "${SLACK_WEBHOOK_URL:?SLACK_WEBHOOK_URL is required to send a Slack-eligible terminal}"
   code=$(curl -sS -o /tmp/calvin-slack-notify.out -w '%{http_code}' --request POST "$SLACK_WEBHOOK_URL" \
     --header 'Content-Type: application/json' --data "$payload") || code=curl_error
@@ -102,6 +111,9 @@ calvin_slack_send() {
     echo "::error::calvin_slack_send: Slack webhook failed (${code})" >&2
     return 1
   fi
+  # Verifiable receipt line: a 2xx response code from the webhook POST
+  # itself, not merely "the step exited 0" (which a skip also does).
+  echo "calvin_slack_send: sent (${code})"
 }
 
 if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then

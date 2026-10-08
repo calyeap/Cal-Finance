@@ -303,7 +303,7 @@ runtime_slack_is_duplicate() {
   kind="$(runtime_slack_kind "$this_raw")"
   if [ "$kind" = none ]; then echo false; return; fi
 
-  local earlier_bodies body term first k
+  local earlier_bodies body first k
   earlier_bodies="$(jq -c --arg before "$before" '
     [ .[] | select(.created_at < $before) ] | sort_by(.created_at) | reverse | .[].body
   ' <<< "$comments_json")"
@@ -316,8 +316,12 @@ runtime_slack_is_duplicate() {
       echo false
       return
     fi
-    term="$(runtime_terminal_line "$body")"
-    k="$(runtime_slack_kind "$term")"
+    # Classify from the raw body, not a pre-extracted terminal line: an
+    # earlier metadata-first OWNER terminal (the [OWNER_ATTEMPT_ID: ...]
+    # tag on its own line above the typed terminal) needs runtime_slack_kind
+    # to see that tag text to classify as `stopped`, which runtime_terminal_line
+    # alone already strips away.
+    k="$(runtime_slack_kind "$body")"
     if [ "$k" = "$kind" ]; then
       echo true
       return

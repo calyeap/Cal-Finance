@@ -80,6 +80,18 @@ assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:12:00Z"
 assert_eq "$(runtime_slack_is_duplicate "$CHILD_COMMENTS" "2026-09-28T15:09:59Z" 'BLOCKED: ACTIONABLE — sandbox denies commit [BUILD_ATTEMPT_ID: B1]')" false "the first alert for a gate is never itself a duplicate"
 assert_eq "$(runtime_slack_is_duplicate '[]' "2026-09-28T15:12:00Z" 'BLOCKED: ACTIONABLE — child BUILD run reports the same sandbox denial')" false "no prior Slack-eligible comment means nothing to duplicate"
 
+# REVIEW CORRECT (CF-TERMINAL-NOTIFY-RELIABILITY-01 re-review): an earlier
+# metadata-first OWNER BLOCKED: AI — the [OWNER_ATTEMPT_ID: ...] tag on its
+# own line above the terminal — must still classify as `stopped` when
+# scanned for dedupe, not fall through to `none` and let a replay resend.
+METADATA_FIRST_STOPPED=$(cat <<'JSON'
+[
+  {"body":"[OWNER_ATTEMPT_ID: O1]\nBLOCKED: AI — final stop, no viable path","created_at":"2026-09-28T15:10:00Z"}
+]
+JSON
+)
+assert_eq "$(runtime_slack_is_duplicate "$METADATA_FIRST_STOPPED" "2026-09-28T15:12:00Z" $'[OWNER_ATTEMPT_ID: O2]\nBLOCKED: AI — final stop, no viable path (restated)')" true "a replayed metadata-first OWNER BLOCKED: AI is a duplicate"
+
 # A Calvin ruling/resolution closes the prior gate: the same textual kind
 # afterwards is a genuinely new gate and is eligible again.
 RESOLVED_THEN_NEW=$(jq -n '[

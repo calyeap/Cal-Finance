@@ -56,6 +56,13 @@ case "$(jq -r '.text' <<<"$payload")" in
     ;;
   *) echo "ok - an informational FINISHED carries no <!channel> ping" ;;
 esac
+case "$(jq -r '.text' <<<"$payload")" in
+  *"Action: none"*) echo "ok - an informational FINISHED states Action: none" ;;
+  *)
+    echo "not ok - an informational FINISHED must state Action: none"
+    FAILURES=$((FAILURES + 1))
+    ;;
+esac
 
 payload=$(calvin_slack_payload "COMPLETE: meaningful parent outcome" "o/r" "https://x/1")
 rc=$?
@@ -73,6 +80,22 @@ case "$(jq -r '.text' <<<"$payload")" in
     FAILURES=$((FAILURES + 1))
     ;;
   *) echo "ok - an informational STOPPED carries no <!channel> ping" ;;
+esac
+case "$(jq -r '.text' <<<"$payload")" in
+  *"Action: none"*) echo "ok - an informational STOPPED states Action: none" ;;
+  *)
+    echo "not ok - an informational STOPPED must state Action: none"
+    FAILURES=$((FAILURES + 1))
+    ;;
+esac
+
+payload=$(calvin_slack_payload "CALVIN REQUIRED: pick A or B" "o/r" "https://x/1")
+case "$(jq -r '.text' <<<"$payload")" in
+  *"Action: none"*)
+    echo "not ok - a real action gate (CALVIN REQUIRED) must not say Action: none"
+    FAILURES=$((FAILURES + 1))
+    ;;
+  *) echo "ok - a real action gate (CALVIN REQUIRED) carries no Action: none" ;;
 esac
 
 # A transient child BLOCKED: AI (BUILD/REVIEW, not OWNER's own) stays
@@ -138,19 +161,29 @@ rc=$?
 set -e
 assert_status "prose followed later by CALVIN REQUIRED stays ineligible" 1 "$rc"
 
-# --- calvin_slack_send is a silent no-op (rc 0, no request) when the line
-# is not Slack-eligible, so every call site can call it unconditionally ---
+# --- calvin_slack_send no-ops (rc 0, no request) when the line is not
+# Slack-eligible, so every call site can call it unconditionally. Per
+# CF-TERMINAL-NOTIFY-RELIABILITY-01 (issue #408) requirement 7, this is no
+# longer silent: it prints a distinct "skipped" line so a green step here
+# is never mistaken for a proven send. -------------------------------------
 
 CURL_CALLED=0
 curl() { CURL_CALLED=1; }
 export -f curl
 
 set +e
-calvin_slack_send "BLOCKED: AI — worker timed out" "o/r" "https://x/1"
+SEND_OUT="$(calvin_slack_send "BLOCKED: AI — worker timed out" "o/r" "https://x/1")"
 rc=$?
 set -e
 assert_status "calvin_slack_send no-ops on an ineligible line" 0 "$rc"
 assert_eq "calvin_slack_send never calls curl for an ineligible line" 0 "$CURL_CALLED"
+case "$SEND_OUT" in
+  *"skipped"*) echo "ok - calvin_slack_send logs a distinct skipped line for an ineligible line" ;;
+  *)
+    echo "not ok - calvin_slack_send must log a distinct skipped line for an ineligible line"
+    FAILURES=$((FAILURES + 1))
+    ;;
+esac
 
 # --- calvin_slack_send does send, and fails closed on a bad webhook
 # response, for an eligible line -------------------------------------------
@@ -169,10 +202,17 @@ curl() { echo -n '200'; }
 export -f curl
 
 set +e
-calvin_slack_send "BLOCKED: ACTIONABLE — refresh secret" "o/r" "https://x/1"
+SEND_OUT="$(calvin_slack_send "BLOCKED: ACTIONABLE — refresh secret" "o/r" "https://x/1")"
 rc=$?
 set -e
 assert_status "calvin_slack_send succeeds on a 2xx webhook response" 0 "$rc"
+case "$SEND_OUT" in
+  *"sent (200)"*) echo "ok - calvin_slack_send logs a verifiable receipt line with the response code on a 2xx send" ;;
+  *)
+    echo "not ok - calvin_slack_send must log a verifiable receipt line with the response code on a 2xx send"
+    FAILURES=$((FAILURES + 1))
+    ;;
+esac
 
 # --- CF-SLACK-DEDUPE-02 (issue #391): dedupe by the underlying still-open
 # Calvin gate — canonical item + Slack kind + open/resolved state — never
