@@ -534,9 +534,19 @@ export async function loadGateState(runId: string): Promise<GateState> {
  * any queued fact lacks a decision. The order of the two statements below is
  * the milestone: the check precedes the call, and nothing computes on the
  * failing path.
+ *
+ * `preloadedState` is an optional seam, not a second source of truth: the
+ * caller may pass a `GateState` it already loaded (e.g. advanceRunAutomatically's
+ * own return value) earlier in the SAME request, so this does not call
+ * loadGateState a second time and repeat its live market-data/acquisition
+ * work. Omitted, this loads state itself exactly as before — callers that
+ * have not already read it are unaffected.
  */
-export async function computeAnalysisForRun(runId: string): Promise<AnalysisResult> {
-  const state = await loadGateState(runId);
+export async function computeAnalysisForRun(
+  runId: string,
+  preloadedState?: GateState
+): Promise<AnalysisResult> {
+  const state = preloadedState ?? (await loadGateState(runId));
 
   if (!state.spotCheckComplete) {
     throw new SpotCheckIncompleteError(runId, state.outstandingFactIds);

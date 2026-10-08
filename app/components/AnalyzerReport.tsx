@@ -6,6 +6,7 @@ import { ValuationStrip } from "./ValuationStrip";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 import { boundState, NOT_COMPUTED_BINDING, type BoundState } from "@/lib/analyzer/notComputed";
+import { notComputedLine } from "@/lib/analyzer/overviewCopy";
 import type {
   AnalysisResult,
   ComputedValue,
@@ -280,7 +281,25 @@ function StatesBearing({ states }: { states: AnalysisResult["states"] }) {
   );
 }
 
-function StateBlock({ figure }: { figure: SuppressedValue }) {
+// CF-ANALYZER-USABLE-REPORT-REPAIR-01 — `plain`, opt-in and off by default,
+// is the Financials/Valuation tabs' own treatment: the raw internal state
+// code (e.g. "PRECONDITION FAILED", "DEGENERATE — TERMINAL EXCEEDS TOTAL
+// VALUE") never renders there, only the same plain-English reason sentence
+// Overview already shows for a suppressed figure (overviewCopy.ts's
+// notComputedLine/plainReason, already Calvin-ruled for Overview — reused
+// verbatim here, not a second translation). The raw code is unaffected
+// everywhere this prop is left unset — Evidence (HeaderAndStatesSection,
+// §9.6's full disclosure) and the legacy AnalyzerReport/snapshot renderer
+// both still show it, which is correct: diagnostics stay available where
+// deliberately opened.
+function StateBlock({ figure, plain }: { figure: SuppressedValue; plain?: boolean }) {
+  if (plain) {
+    return (
+      <div className="state">
+        <span className="cause">{notComputedLine(figure.state, figure.cause)}</span>
+      </div>
+    );
+  }
   return (
     <div className="state">
       <span className="name">{figure.state}</span>
@@ -296,8 +315,8 @@ function StateBlock({ figure }: { figure: SuppressedValue }) {
 // the hero's price panel shares this component's exact `.pricerow`/`.p`/
 // `.ts` markup for the same figure (result.price), so it reuses this literal
 // mechanism rather than a second copy of it.
-export function BoundStateBlock({ bound }: { bound: BoundState }) {
-  return <StateBlock figure={{ suppressed: true, state: bound.state, cause: bound.cause }} />;
+export function BoundStateBlock({ bound, plain }: { bound: BoundState; plain?: boolean }) {
+  return <StateBlock figure={{ suppressed: true, state: bound.state, cause: bound.cause }} plain={plain} />;
 }
 
 function Flags({ flags }: { flags: ComputedValue<unknown>["qualification"]["analyticFlags"] }) {
@@ -316,8 +335,16 @@ function Flags({ flags }: { flags: ComputedValue<unknown>["qualification"]["anal
 
 // A single figure, formatted, with its qualification shown at the point
 // of use — never separated from the value (§10.0.2 rule 1).
-export function FigureValue({ figure, format }: { figure: Figure<Decimal>; format: (v: Decimal) => string }) {
-  if (figure.suppressed) return <StateBlock figure={figure} />;
+export function FigureValue({
+  figure,
+  format,
+  plain,
+}: {
+  figure: Figure<Decimal>;
+  format: (v: Decimal) => string;
+  plain?: boolean;
+}) {
+  if (figure.suppressed) return <StateBlock figure={figure} plain={plain} />;
   return (
     <>
       <span className="v">{format(figure.value)}</span>
@@ -331,16 +358,24 @@ function ReverseDcfCellView({
   cell,
   ariaRowIndex,
   ariaColIndex,
+  plain,
 }: {
   cell: ReverseDcfCell;
   ariaRowIndex: number;
   ariaColIndex: number;
+  plain?: boolean;
 }) {
   if (cell.fiveYearGrowth.suppressed) {
     return (
       <div className="cell suppressed" role="cell" aria-rowindex={ariaRowIndex} aria-colindex={ariaColIndex}>
-        <span className="name">{cell.fiveYearGrowth.state}</span>
-        <span className="cause">{humanizeCause(cell.fiveYearGrowth.cause)}</span>
+        {plain ? (
+          <span className="cause">{notComputedLine(cell.fiveYearGrowth.state, cell.fiveYearGrowth.cause)}</span>
+        ) : (
+          <>
+            <span className="name">{cell.fiveYearGrowth.state}</span>
+            <span className="cause">{humanizeCause(cell.fiveYearGrowth.cause)}</span>
+          </>
+        )}
       </div>
     );
   }
@@ -359,7 +394,11 @@ function ReverseDcfCellView({
       {!cell.year10Revenue.suppressed && (
         <div className="line">
           <span className="lbl">yr-10 revenue</span>
-          <b>${num(cell.year10Revenue.value, 0)}</b>
+          {/* B3's own defect class (formatUsd.ts's "$1104224240826") — this
+              cell was still rendering raw toFixed digits for a company-scale
+              revenue projection; formatCompactUsd is the same abbreviation
+              every other Valuation dollar figure on this page already uses. */}
+          <b>${formatCompactUsd(cell.year10Revenue.value)}</b>
         </div>
       )}
       {!cell.ronic.suppressed && (
@@ -503,11 +542,15 @@ export function AiLayerNote({ aiLayer }: { aiLayer: AiLayerReport | undefined })
   if (aiLayer.status === "COMPLETED") {
     return aiLayer.model === null ? null : <p className="note">Written by {aiLayer.model}.</p>;
   }
+  const name =
+    aiLayer.status === "NOT CONFIGURED"
+      ? "Interpretation not run"
+      : aiLayer.status === "PENDING"
+        ? "Interpretation pending"
+        : "Interpretation refused";
   return (
     <div className="state">
-      <span className="name">
-        {aiLayer.status === "NOT CONFIGURED" ? "Interpretation not run" : "Interpretation refused"}
-      </span>
+      <span className="name">{name}</span>
       <span className="cause">{aiLayer.detail}</span>
     </div>
   );
@@ -571,7 +614,7 @@ export function BusinessSection({ result }: { result: AnalysisResult }) {
   );
 }
 
-export function FinancialsSections({ result }: { result: AnalysisResult }) {
+export function FinancialsSections({ result, plain }: { result: AnalysisResult; plain?: boolean }) {
   const { gates, diagnostics, preRevenue, states } = result;
   const cashPerShareState = boundState(states, NOT_COMPUTED_BINDING.cashPerShare);
   const quarterlyBurnState = boundState(states, NOT_COMPUTED_BINDING.quarterlyBurn);
@@ -666,7 +709,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                 <th scope="row">Reinvestment, RONIC (5yr)</th>
                 <td>
                   {diagnostics.reinvestmentRonic.ronic.suppressed ? (
-                    <StateBlock figure={diagnostics.reinvestmentRonic.ronic} />
+                    <StateBlock figure={diagnostics.reinvestmentRonic.ronic} plain={plain} />
                   ) : (
                     diagnostics.reinvestmentRonic.ronic.value.cells.map((c) => (
                       <div key={c.rate}>
@@ -685,14 +728,14 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                   <div className="sub">current fiscal year, year-over-year</div>
                 </th>
                 <td>
-                  <FigureValue figure={diagnostics.impliedReturnOnNewCapital.value} format={pct} />
+                  <FigureValue figure={diagnostics.impliedReturnOnNewCapital.value} format={pct} plain={plain} />
                 </td>
               </tr>
               <tr>
                 <th scope="row">Margin history</th>
                 <td>
                   {diagnostics.marginHistory.suppressed ? (
-                    <StateBlock figure={diagnostics.marginHistory} />
+                    <StateBlock figure={diagnostics.marginHistory} plain={plain} />
                   ) : (
                     <>
                       <span className="v">{pct(diagnostics.marginHistory.value.currentMargin)}</span>
@@ -711,11 +754,13 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                 </th>
                 <td className={diagnostics.fcfYieldGrowth.precondition === "PRECONDITION FAILED" ? "state" : undefined}>
                   {diagnostics.fcfYieldGrowth.precondition === "PRECONDITION FAILED" ? (
-                    <>
+                    plain ? (
+                      <span className="cause">{notComputedLine("PRECONDITION FAILED", "")}</span>
+                    ) : (
                       <span className="name">PRECONDITION FAILED</span>
-                    </>
+                    )
                   ) : diagnostics.fcfYieldGrowth.output ? (
-                    <FigureValue figure={diagnostics.fcfYieldGrowth.output} format={pct} />
+                    <FigureValue figure={diagnostics.fcfYieldGrowth.output} format={pct} plain={plain} />
                   ) : (
                     "—"
                   )}
@@ -725,7 +770,11 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                 <th scope="row">Run-rate comparison</th>
                 <td>
                   <span className="v">{diagnostics.runRate.seasonalityTestResult}</span>
-                  {diagnostics.runRate.ttm !== null && <div className="sub">TTM {num(diagnostics.runRate.ttm, 0)}</div>}
+                  {/* B3's own defect class — this was rendering a raw
+                      toFixed revenue figure with no currency sign at all
+                      (e.g. "311898000000"); formatCompactUsd matches every
+                      other company-scale dollar figure on this page. */}
+                  {diagnostics.runRate.ttm !== null && <div className="sub">TTM ${formatCompactUsd(diagnostics.runRate.ttm)}</div>}
                 </td>
               </tr>
               <tr>
@@ -786,7 +835,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                       </td>
                       <td>
                         {cashPerShareState !== null ? (
-                          <BoundStateBlock bound={cashPerShareState} />
+                          <BoundStateBlock bound={cashPerShareState} plain={plain} />
                         ) : (
                           <>
                             <span className="v">${num(row.vFail)}</span>
@@ -824,7 +873,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                     <th scope="row">Cash per share</th>
                     <td>
                       {cashPerShareState !== null ? (
-                        <BoundStateBlock bound={cashPerShareState} />
+                        <BoundStateBlock bound={cashPerShareState} plain={plain} />
                       ) : (
                         <>
                           <span className="v">${num(preRevenue.cashPerShare)}</span>
@@ -846,7 +895,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                           available. A valid burn beside a suppressed runway
                           (or vice versa) must still show its own marks. */}
                       {quarterlyBurnState !== null ? (
-                        <BoundStateBlock bound={quarterlyBurnState} />
+                        <BoundStateBlock bound={quarterlyBurnState} plain={plain} />
                       ) : (
                         <>
                           <span className="v">${num(preRevenue.quarterlyBurn, 0)}</span>
@@ -855,7 +904,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                       )}
                       {" / "}
                       {runwayState !== null ? (
-                        <BoundStateBlock bound={runwayState} />
+                        <BoundStateBlock bound={runwayState} plain={plain} />
                       ) : (
                         <>
                           <span className="v">{num(preRevenue.runway, 0)} quarters</span>
@@ -871,7 +920,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                       <div className="sub">evaluated before the scale solve</div>
                     </th>
                     <td>
-                      <FigureValue figure={preRevenue.unitEconomicsBreakeven} format={(v) => `$${num(v, 2)}/unit`} />
+                      <FigureValue figure={preRevenue.unitEconomicsBreakeven} format={(v) => `$${num(v, 2)}/unit`} plain={plain} />
                     </td>
                   </tr>
                   <tr>
@@ -943,7 +992,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
   );
 }
 
-export function ValuationSections({ result }: { result: AnalysisResult }) {
+export function ValuationSections({ result, plain }: { result: AnalysisResult; plain?: boolean }) {
   const { states, diagnostics, priceImplied, scenarios, scenarioOutputs, fairValueRange, preRevenue } = result;
   const rateSensitivityState = boundState(states, NOT_COMPUTED_BINDING.rateSensitivity);
   const rateAtWhichBaseEqualsPriceState = boundState(states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice);
@@ -1036,7 +1085,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                 {priceImplied.reverseDcfGrid
                   .filter((c) => c.marginLevel === level)
                   .map((c, ci) => (
-                    <ReverseDcfCellView cell={c} key={`${level}-${c.rate}`} ariaRowIndex={li + 2} ariaColIndex={ci + 2} />
+                    <ReverseDcfCellView cell={c} key={`${level}-${c.rate}`} ariaRowIndex={li + 2} ariaColIndex={ci + 2} plain={plain} />
                   ))}
               </div>
             ))}
@@ -1046,19 +1095,19 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
               <tr>
                 <th scope="row">Steady-state EV</th>
                 <td>
-                  <FigureValue figure={priceImplied.steadyStateEv} format={(v) => `$${formatCompactUsd(v)}`} />
+                  <FigureValue figure={priceImplied.steadyStateEv} format={(v) => `$${formatCompactUsd(v)}`} plain={plain} />
                 </td>
               </tr>
               <tr>
                 <th scope="row">PVGO</th>
                 <td>
-                  <FigureValue figure={priceImplied.pvgo} format={(v) => `$${formatCompactUsd(v)}`} />
+                  <FigureValue figure={priceImplied.pvgo} format={(v) => `$${formatCompactUsd(v)}`} plain={plain} />
                 </td>
               </tr>
               <tr>
                 <th scope="row">PVGO share of EV</th>
                 <td>
-                  <FigureValue figure={priceImplied.pvgoShareOfEv} format={pct} />
+                  <FigureValue figure={priceImplied.pvgoShareOfEv} format={pct} plain={plain} />
                 </td>
               </tr>
               {priceImplied.nopatGap && (
@@ -1077,14 +1126,14 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                   <div className="sub">divides {priceImplied.impliedExitMultiple.dividesMetric}</div>
                 </th>
                 <td>
-                  <FigureValue figure={priceImplied.impliedExitMultiple.value} format={(v) => `${num(v, 1)}x`} />
+                  <FigureValue figure={priceImplied.impliedExitMultiple.value} format={(v) => `${num(v, 1)}x`} plain={plain} />
                 </td>
               </tr>
               <tr>
                 <th scope="row">±1% rate sensitivity</th>
                 <td>
                   {rateSensitivityState !== null ? (
-                    <BoundStateBlock bound={rateSensitivityState} />
+                    <BoundStateBlock bound={rateSensitivityState} plain={plain} />
                   ) : (
                     <>
                       <span className="v">
@@ -1122,7 +1171,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                 const bound = boundState(states, NOT_COMPUTED_BINDING.scenarioDrivers(s));
                 const driverCell = (value: Decimal | Decimal[], format: (v: Decimal) => string) =>
                   bound !== null && !Array.isArray(value) && value.isNaN() ? (
-                    <BoundStateBlock bound={bound} />
+                    <BoundStateBlock bound={bound} plain={plain} />
                   ) : (
                     <span className="v">{Array.isArray(value) ? "path" : format(value)}</span>
                   );
@@ -1141,7 +1190,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                       // One state across the three columns rather than the same
                       // state three times over.
                       <td colSpan={3}>
-                        <BoundStateBlock bound={bound} />
+                        <BoundStateBlock bound={bound} plain={plain} />
                       </td>
                     ) : (
                       <>
@@ -1192,7 +1241,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                 <th scope="row">Location of current price within the scenario range</th>
                 <td>
                   {priceLocationWithinRangeState !== null ? (
-                    <BoundStateBlock bound={priceLocationWithinRangeState} />
+                    <BoundStateBlock bound={priceLocationWithinRangeState} plain={plain} />
                   ) : (
                     <span className="v">{pct(scenarioOutputs.priceLocationWithinRange as Decimal, 0)}</span>
                   )}
@@ -1205,7 +1254,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                       the search found no root — and only the bound state says
                       which (CB-AUDIT-01 H2). */}
                   {rateAtWhichBaseEqualsPriceState !== null ? (
-                    <BoundStateBlock bound={rateAtWhichBaseEqualsPriceState} />
+                    <BoundStateBlock bound={rateAtWhichBaseEqualsPriceState} plain={plain} />
                   ) : scenarioOutputs.rateAtWhichBaseEqualsPrice !== null ? (
                     <span className="v">{pct(scenarioOutputs.rateAtWhichBaseEqualsPrice)}</span>
                   ) : null}
@@ -1360,11 +1409,11 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                     rather than invented (report-back). */}
                 <div className="pi">
                   <span className="lbl">PVGO share of EV</span>
-                  <FigureValue figure={priceImplied.pvgoShareOfEv} format={pct} />
+                  <FigureValue figure={priceImplied.pvgoShareOfEv} format={pct} plain={plain} />
                 </div>
                 <div className="pi">
                   <span className="lbl">RONIC</span>
-                  <FigureValue figure={diagnostics.impliedReturnOnNewCapital.value} format={pct} />
+                  <FigureValue figure={diagnostics.impliedReturnOnNewCapital.value} format={pct} plain={plain} />
                 </div>
                 <div className="pi" style={{ borderBottom: 0 }}>
                   <span className="lbl">Reverse-DCF cells returning a state</span>

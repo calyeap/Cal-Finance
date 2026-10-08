@@ -254,6 +254,149 @@ describe("analysisForReport", () => {
     });
   });
 
+  describe("block: false — the first-view defect #418 cites (a ~171s wait for Overview's first render)", () => {
+    /** Counts model calls and takes long enough to measure "did this wait for it". */
+    function slowCountingCall(counter: { calls: number }, delayMs = 300): AnalystCall {
+      return async (request) => {
+        counter.calls += 1;
+        await new Promise((resolve) => setTimeout(resolve, delayMs));
+        return request.label === "interpretation"
+          ? {
+              statements: Object.fromEntries(
+                INTERPRETATION_RESPONSIBILITY_KEYS.map((key) => [key, "Nothing further on this responsibility."])
+              ),
+              pageOne: {
+                mainFinding: "A.",
+                whatSupportsTheCase: "B.",
+                whatWorriesCalboard: "C.",
+                biggestUncertainty: "D.",
+              },
+            }
+          : { findings: [] };
+      };
+    }
+
+    it("returns PENDING well inside the model call's own delay, rather than waiting for it (the measured before/after)", async () => {
+      const runId = await decidedRun("MSFT", "Microsoft Corporation");
+      const counter = { calls: 0 };
+      // Large relative to this sandbox's own ~400–500ms per-request baseline
+      // (DB round trips in computeAnalysisForRun/getAiOutputs, measured
+      // directly against this same file's call === null case), so that
+      // baseline is clearly inside the margin and cannot itself explain a
+      // pass.
+      const delayMs = 2000;
+
+      const startedAt = Date.now();
+      const report = await analysisForReport(runId, slowCountingCall(counter, delayMs), undefined, { block: false });
+      const elapsedMs = Date.now() - startedAt;
+
+      // "Before": the blocking default (exercised by every other test in this
+      // file) would have taken at least delayMs — two sequential calls' worth,
+      // in fact. "After": this request itself returns in a small fraction of
+      // that, which is the whole fix for #418's ~171s first render.
+      expect(elapsedMs).toBeLessThan(delayMs * 0.6);
+      expect(report.aiLayer.status).toBe("PENDING");
+      expect(report.aiLayer.detail).not.toBeNull();
+      // The deterministic analysis is the real thing regardless — §8.1's
+      // ordering means the AI layer can never be why a figure is missing.
+      expect(report.result.priceImplied.reverseDcfGrid).toHaveLength(9);
+      expect(report.result.interpretation.statements).toEqual([]);
+
+      // The generation this request started keeps running in the background
+      // (generateOnce's in-flight registry) rather than being abandoned —
+      // confirmed below by the reload picking up its result with no second
+      // call.
+      await new Promise((resolve) => setTimeout(resolve, delayMs + 300));
+      expect(counter.calls).toBe(2); // one interpretation, one challenger — not re-started
+    });
+
+    it("a reload while generation is still running joins it rather than starting a second one", async () => {
+      const runId = await decidedRun("MSFT", "Microsoft Corporation");
+      const counter = { calls: 0 };
+      // Large relative to this sandbox's own per-request baseline (see the
+      // test above) so the generation is still demonstrably running — not
+      // merely unchecked — when the "reload" below makes its own request.
+      const call = slowCountingCall(counter, 2000);
+
+      const first = await analysisForReport(runId, call, undefined, { block: false });
+      // "Reload" — a second request for the same run while the first
+      // generation this started is still in flight.
+      const second = await analysisForReport(runId, call, undefined, { block: false });
+
+      expect(first.aiLayer.status).toBe("PENDING");
+      expect(second.aiLayer.status).toBe("PENDING");
+
+      await new Promise((resolve) => setTimeout(resolve, 2300));
+      expect(counter.calls).toBe(2); // joined, not duplicated
+    });
+
+    it("the next reload after generation finishes reads the stored result — the same words a blocking call would have produced", async () => {
+      const runId = await decidedRun("MSFT", "Microsoft Corporation");
+      const counter = { calls: 0 };
+
+      const pending = await analysisForReport(runId, slowCountingCall(counter, 150), undefined, { block: false });
+      expect(pending.aiLayer.status).toBe("PENDING");
+
+      await new Promise((resolve) => setTimeout(resolve, 400));
+
+      const reloaded = await analysisForReport(runId, slowCountingCall(counter, 150), undefined, { block: false });
+
+      expect(reloaded.aiLayer.status).toBe("COMPLETED");
+      expect(reloaded.result.challenger).not.toBeNull();
+      expect(counter.calls).toBe(2); // the reload read storage; it did not call the model again
+    });
+
+    it("reports FAILED truthfully, on the same request, when the call fails fast — REVIEW-37786725513-1 defect 1", async () => {
+      const runId = await decidedRun("MSFT", "Microsoft Corporation");
+      const failing: AnalystCall = async () => {
+        throw new Error("the request failed validation before any model call was made");
+      };
+
+      const report = await analysisForReport(runId, failing, undefined, { block: false });
+
+      // A call that rejects near-instantly settles well inside the bounded
+      // settle window, so this request sees the real outcome rather than the
+      // generic PENDING claim — the same status/detail the blocking path
+      // would have produced for the same failure.
+      expect(report.aiLayer.status).toBe("FAILED");
+      expect(report.aiLayer.detail).toContain("failed validation");
+    });
+
+    it("falls back to PENDING, with copy that does not promise prose, when the call fails slower than the settle window", async () => {
+      const runId = await decidedRun("MSFT", "Microsoft Corporation");
+      let attempts = 0;
+      const slowFailing: AnalystCall = async () => {
+        attempts += 1;
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        throw new Error("the model refused the request");
+      };
+
+      const first = await analysisForReport(runId, slowFailing, undefined, { block: false });
+
+      expect(first.aiLayer.status).toBe("PENDING");
+      // The known residual this correction discloses rather than masks: a
+      // failure slower than the settle window is not distinguishable, on
+      // this request, from one still genuinely running — so the copy must
+      // not claim the reader will see the prose on reload.
+      expect(first.aiLayer.detail).not.toContain("see them");
+      expect(first.aiLayer.detail).toContain("fresh one");
+
+      // The failed generation is not held anywhere (generateOnce's "not a
+      // cache" contract), so once it has settled, the next view is a fresh
+      // attempt rather than a report of the earlier failure — exactly what
+      // the revised copy above tells the reader to expect. One generation is
+      // two calls (interpretation + challenger, run concurrently — see
+      // runAiLayer), both of which this stub fails.
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(attempts).toBe(2);
+
+      const reloaded = await analysisForReport(runId, slowFailing, undefined, { block: false });
+      expect(reloaded.aiLayer.status).toBe("PENDING");
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(attempts).toBe(4);
+    });
+  });
+
   it("does the same for OKLO, whose pre-revenue analysis suppresses most of the grid", async () => {
     const runId = await decidedRun("OKLO", "Oklo Inc.");
 

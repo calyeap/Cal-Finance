@@ -20,7 +20,7 @@ import {
 } from "@/app/components/AnalyzerReport";
 import { QuickRead } from "@/app/components/QuickRead";
 import { SourcesAndDetails } from "@/app/components/SourcesAndDetails";
-import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
+import { RunNotFoundError, SpotCheckIncompleteError, computeAnalysisForRun } from "@/lib/analyzer/gate";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import { analysisForReport, type AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
@@ -57,9 +57,16 @@ function TabBody({
     case "business":
       return <BusinessSection result={result} />;
     case "financials":
-      return <FinancialsSections result={result} />;
+      // `plain` — CF-ANALYZER-USABLE-REPORT-REPAIR-01: Financials/Valuation
+      // are ordinary reading surfaces, not Evidence, so a suppressed figure
+      // shows the same plain-English reason Overview already shows rather
+      // than its raw internal state code. Evidence (HeaderAndStatesSection,
+      // EvidenceSections, AnalyzerReport's own snapshot rendering) leaves
+      // `plain` unset and keeps the raw code — diagnostics stay available
+      // where deliberately opened.
+      return <FinancialsSections result={result} plain />;
     case "valuation":
-      return <ValuationSections result={result} />;
+      return <ValuationSections result={result} plain />;
     case "risks":
       return <RisksThesisSections result={result} aiLayer={aiLayer} />;
     case "market":
@@ -101,9 +108,41 @@ export default async function ReportPage({
     throw err;
   }
 
-  let report;
+  // CF-ANALYZER-USABLE-REPORT-REPAIR-01 — only overview, risks and evidence
+  // actually read aiLayer or the AI-merged result.interpretation/
+  // result.challenger (TabBody's switch below, and QuickRead on the evidence
+  // tab); business, financials, valuation and market never do. Routing every
+  // tab through analysisForReport unconditionally meant visiting any one of
+  // those four could still wait on the interpretation/challenger call (or on
+  // the in-flight generation another tab started) for content it was never
+  // going to show. Calling computeAnalysisForRun directly for those four
+  // tabs is the same deterministic result with no AI dependency at all.
+  const needsAiLayer = activeTab === "overview" || activeTab === "risks" || activeTab === "evidence";
+
+  let result: AnalysisResult;
+  let aiLayer: AiLayerReport | undefined;
   try {
-    report = await analysisForReport(runId);
+    if (needsAiLayer) {
+      // `state` is passed through so this does not call loadGateState a
+      // second time for work advanceRunAutomatically already did this same
+      // request (lib/analyzer/gate.ts's computeAnalysisForRun doc comment).
+      //
+      // `block: false` — CF-ANALYZER-USABLE-REPORT-REPAIR-01 correction.
+      // Overview is DEFAULT_ANALYZER_TAB, so a run's very first view reaches
+      // here with nothing stored yet; blocking on the interpretation/
+      // challenger call made that first render wait on the full ~171s model
+      // round trip (#418). The deterministic `result` is complete and
+      // correct either way (§8.1's ordering is untouched) — this only stops
+      // the page waiting on the prose. Risks and Evidence take the same
+      // non-blocking path for the same reason: this is the one call site
+      // both reach. See analysisForReport's own doc comment for how a
+      // reload picks up the result once it's ready.
+      const report = await analysisForReport(runId, undefined, state, { block: false });
+      result = report.result;
+      aiLayer = report.aiLayer;
+    } else {
+      result = await computeAnalysisForRun(runId, state);
+    }
   } catch (err) {
     if (err instanceof SpotCheckIncompleteError) {
       // Unreachable in the normal path: the automatic pass above decides every
@@ -127,25 +166,20 @@ export default async function ReportPage({
   // resolution (Gate 0 PASS, no human decision) as confirmed-enough for V1,
   // and a second, independent derivation here would be free to disagree —
   // exactly the failure mode trust.ts's own header comment warns against.
-  const profileNotConfirmed = profileNotConfirmedFor(report.result);
-  const verdict = deriveVerdict(report.result);
+  const profileNotConfirmed = profileNotConfirmedFor(result);
+  const verdict = deriveVerdict(result);
 
   return (
     <AnalyzerShell>
       <AnalyzerTopBar variant="overview" />
       <AnalyzerReportFrame
         runId={runId}
-        result={report.result}
+        result={result}
         verdict={verdict}
         profileNotConfirmed={profileNotConfirmed}
         activeTab={activeTab}
       >
-        <TabBody
-          tab={activeTab}
-          result={report.result}
-          aiLayer={report.aiLayer}
-          profileNotConfirmed={profileNotConfirmed}
-        />
+        <TabBody tab={activeTab} result={result} aiLayer={aiLayer} profileNotConfirmed={profileNotConfirmed} />
       </AnalyzerReportFrame>
       <SourcesAndDetails runId={runId} />
     </AnalyzerShell>

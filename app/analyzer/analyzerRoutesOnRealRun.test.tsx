@@ -279,4 +279,74 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
       expect((await getFactDecisions(runId)).every((d) => d.origin === "AUTOMATIC")).toBe(true);
     });
   });
+
+  // CF-ANALYZER-USABLE-REPORT-REPAIR-01 — issue #418's own cited screenshots:
+  // "MSFT Financials/Valuation screenshots still foreground INCOMPLETE,
+  // PRECONDITION FAILED, DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE, internal
+  // field names ... raw revenue/TTM values like 311898000000". MSFT's real
+  // captured run genuinely hits every one of those states (confirmed by
+  // direct inspection against this same committed capture: fcfYieldGrowth
+  // precondition fails, four reverse-DCF cells go DEGENERATE, the rate-
+  // sensitivity/rate-at-which-base-equals-price figures go INCOMPLETE, and
+  // runRate.ttm is exactly 311898000000) — this is not a synthetic fixture,
+  // it is the exact defect on the exact run the issue describes.
+  describe("Financials and Valuation show the plain-English reason, never the raw state code or an unformatted figure", () => {
+    const RAW_STATE_CODES = [
+      "PRECONDITION FAILED",
+      "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+      "INCOMPLETE",
+    ];
+
+    it("Financials: no raw state code and no raw unformatted TTM revenue reach the tab", async () => {
+      const runId = await analyze("MSFT", "Microsoft Corporation");
+      const { container } = await renderTab(runId, "financials");
+      const text = container.textContent ?? "";
+
+      for (const code of RAW_STATE_CODES) {
+        expect(text).not.toContain(code);
+      }
+      // The exact raw figure issue #418 cites, and its honest, human-scale
+      // replacement — same underlying value (lib/formatUsd.ts's
+      // formatCompactUsd), nothing invented or rounded away silently.
+      expect(text).not.toContain("311898000000");
+      expect(text).toContain("$311.9B");
+      // The plain-English reason text itself (overviewCopy.ts's
+      // plainReason/notComputedLine) — proof the row says something, not
+      // just that it avoids saying the raw code.
+      expect(text).toContain("the conditions this measure needs do not hold for this company");
+    });
+
+    it("Valuation: no raw state code and the reverse-DCF grid's DEGENERATE cells read in plain English", async () => {
+      const runId = await analyze("MSFT", "Microsoft Corporation");
+      const { container } = await renderTab(runId, "valuation");
+      const text = container.textContent ?? "";
+
+      for (const code of RAW_STATE_CODES) {
+        expect(text).not.toContain(code);
+      }
+      // DEGENERATE's plainReason case — shared with NOT COMPUTABLE / NO
+      // SOLUTION IN RANGE, so this is the one sentence all four DEGENERATE
+      // cells (and the INCOMPLETE rate-sensitivity rows) show instead of
+      // the raw code.
+      expect(text).toContain("the model has no meaningful answer for this company at these inputs");
+    });
+
+    it("the legacy full-report (snapshot) renderer is unaffected — the raw state codes still reach it", async () => {
+      // AnalyzerReport (app/components/AnalyzerReport.tsx), not this route,
+      // backs /analyzer/[runId]/snapshot/[version] and leaves `plain`
+      // unset; this is the existing, unchanged contract
+      // AnalyzerReport.test.tsx already asserts directly against the MSFT
+      // fixture. Proven here too, against the real captured run, so a
+      // regression in either direction (the route stops hiding the code, or
+      // the snapshot starts hiding it) is caught.
+      const { AnalyzerReport } = await import("@/app/components/AnalyzerReport");
+      const { computeAnalysisForRun } = await import("@/lib/analyzer/gate");
+      const runId = await analyze("MSFT", "Microsoft Corporation");
+      const result = await computeAnalysisForRun(runId);
+      const { container } = render(<AnalyzerReport result={result} />);
+
+      expect(container.textContent).toContain("PRECONDITION FAILED");
+      expect(container.textContent).toContain("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE");
+    });
+  });
 });
