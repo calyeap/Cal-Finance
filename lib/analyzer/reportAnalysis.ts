@@ -130,18 +130,29 @@ function generateOnce(
  * The call is a parameter so tests can drive it without a network or a key,
  * and so the one place that decides whether a live call is possible
  * (`analystCallIfConfigured`) is visible in the signature rather than buried.
+ *
+ * `onStage`, CF-ANALYZER-USER-READY-01: an optional, side-effect-only timing
+ * hook so the acceptance probe (`scripts/analyzer/acceptance-run.ts`) can
+ * report where a run's time goes without this function's return shape or any
+ * existing caller changing. It fires at most once per stage per call, with
+ * the stage's own wall-clock milliseconds; no caller that omits it is
+ * affected.
  */
 export async function analysisForReport(
   runId: string,
-  call: AnalystCall | null = analystCallIfConfigured()
+  call: AnalystCall | null = analystCallIfConfigured(),
+  onStage?: (stage: "compute" | "aiLayer", ms: number) => void
 ): Promise<ReportAnalysis> {
   // First, and independently of everything below.
+  const computeStarted = Date.now();
   const result = await computeAnalysisForRun(runId);
+  onStage?.("compute", Date.now() - computeStarted);
 
   // Already run for this run. The words a report shows must not change under
   // the reader on a refresh, and re-rolling them would also re-bill the call.
   const stored = await getAiOutputs(runId);
   if (stored !== null) {
+    onStage?.("aiLayer", 0);
     return {
       result: mergeAiLayer(result, { interpretation: stored.interpretation, challenger: stored.challenger }),
       aiLayer: { status: "COMPLETED", model: stored.model, detail: null },
@@ -149,6 +160,7 @@ export async function analysisForReport(
   }
 
   if (call === null) {
+    onStage?.("aiLayer", 0);
     return {
       result,
       aiLayer: {
@@ -161,13 +173,16 @@ export async function analysisForReport(
     };
   }
 
+  const aiLayerStarted = Date.now();
   try {
     const outputs = await generateOnce(runId, result, call);
+    onStage?.("aiLayer", Date.now() - aiLayerStarted);
     return {
       result: mergeAiLayer(result, outputs),
       aiLayer: { status: "COMPLETED", model: ANALYST_MODEL, detail: null },
     };
   } catch (err) {
+    onStage?.("aiLayer", Date.now() - aiLayerStarted);
     logDiagnostic(err);
     // Nothing is stored, so a later view retries rather than inheriting a
     // failure. The analysis itself is returned untouched.
