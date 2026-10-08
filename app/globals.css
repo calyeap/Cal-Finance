@@ -3604,14 +3604,80 @@ h6 {
 .cb-analyzer .az-hero > div {
   min-width: 0;
 }
+/* CF-ANALYZER-NORTHSTAR-VISUAL-RESTORE-01 — strengthens the hero verdict
+   slot into a distinct card, closer to the approved North Star's dominant
+   verdict tile, without any status colour: DominantVerdictSlot's own
+   markup, classes and copy (BUY/HOLD/SELL, the INCOMPLETE plain-English
+   explanation) are completely unchanged by this file — only the card frame
+   and type scale around them. `.verdictword` keeps declaring no colour of
+   its own (m9AcceptanceGaps.test.ts) and no rule below references
+   --gain/--loss/--stale. */
 .cb-analyzer .az-hero-verdict {
   grid-area: verdict;
+  padding: 18px 20px;
+  border: 1px solid var(--line-strong);
+  background: var(--field);
+}
+.cb-analyzer .az-hero-verdict .verdictslot {
+  padding: 0;
+}
+.cb-analyzer .az-hero-verdict .verdictslot.completed {
+  text-align: left;
+}
+.cb-analyzer .az-hero-verdict .verdictslot.completed .rationale {
+  margin-left: 0;
+}
+/* The INCOMPLETE path reuses .state/.name/.cause verbatim (DominantVerdictSlot
+   comment, "same suppressing-state mechanism as every other state in the
+   product") — inside the hero card specifically, it drops the generic
+   tint-wash/border-left treatment and reads at a size that matches the
+   card's own prominence, per the issue's "give it clear prominence without
+   decorative green BUY styling." */
+.cb-analyzer .az-hero-verdict .verdictslot.state {
+  background: transparent;
+  border-left: 0;
+  padding: 0;
+}
+.cb-analyzer .az-hero-verdict .verdictslot.state .name {
+  font-size: 12px;
+  color: var(--ink);
+}
+.cb-analyzer .az-hero-verdict .verdictslot.state .cause {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--ink);
+  line-height: 1.4;
+  margin-top: 0;
 }
 .cb-analyzer .az-hero-price {
   grid-area: price;
 }
 .cb-analyzer .az-hero-scenarios {
   grid-area: scenarios;
+}
+/* Compacts the hero's own valuation presentation only (ScenarioRangeStrip
+   rendered inside .az-hero-scenarios) — Section H elsewhere (AnalyzerReport.tsx,
+   the Valuation tab body) reuses the exact same .atglance/.hframe/.pi classes
+   and keeps its own unchanged spacing; scoping to this ancestor is what keeps
+   the two from drifting together. Figures, labels and guards are untouched —
+   only padding/margins shrink, never information. */
+.cb-analyzer .az-hero-scenarios .atglance {
+  margin-bottom: 14px;
+}
+.cb-analyzer .az-hero-scenarios .atglance div {
+  padding: 10px 12px;
+}
+.cb-analyzer .az-hero-scenarios .striploc {
+  margin-bottom: 14px;
+}
+.cb-analyzer .az-hero-scenarios .hframe > div {
+  padding: 14px 16px;
+}
+.cb-analyzer .az-hero-scenarios .hframe .sub2 {
+  margin-bottom: 10px;
+}
+.cb-analyzer .az-hero-scenarios .pi {
+  padding: 4px 0;
 }
 .cb-analyzer .az-uncertainty {
   display: inline-block;
@@ -3630,8 +3696,18 @@ h6 {
 .cb-analyzer .az-trustnote {
   margin-bottom: 20px;
 }
-.cb-analyzer .az-save {
+/* CF-ANALYZER-NORTHSTAR-VISUAL-RESTORE-01 — the two report actions
+   (createDeepSnapshotAction, beginUpdateRunAction) now share one compact
+   row instead of each carrying its own full-width margin band
+   (AnalyzerReportFrame.tsx's new .az-actions wrapper). */
+.cb-analyzer .az-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
   margin-bottom: 24px;
+}
+.cb-analyzer .az-save {
+  margin-bottom: 0;
 }
 .cb-analyzer .az-save .act {
   display: inline-block;
