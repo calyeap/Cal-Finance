@@ -6,6 +6,12 @@ import { AnalyzerReport } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import { OKLO_FIXTURE } from "@/lib/analyzer/fixtures/oklo";
+import { CLEAN_PROVENANCE } from "@/lib/analyzer/provenance";
+import type { SourcedValue } from "@/lib/analyzer/types";
+
+function sourcedFor(value: Decimal): SourcedValue<Decimal> {
+  return { value, provenance: CLEAN_PROVENANCE };
+}
 
 afterEach(cleanup);
 
@@ -812,5 +818,56 @@ describe("AnalyzerReport — Section A price row, no price (CF-PRICE-DISPLAY-HON
     const priceRow = section.querySelector(".pricerow") as HTMLElement;
     expect(priceRow.textContent).toContain(`$${MSFT_FIXTURE.price.value.toFixed(2)}`);
     expect(priceRow.textContent).toContain(MSFT_FIXTURE.price.timestamp);
+  });
+});
+
+// CF-ANALYZER-USER-READY-01 — a real acquired run carries true-USD-scale
+// figures (e.g. TTM revenue $331,839,000,000), unlike this file's other
+// fixtures which use small round numbers for calculation-correctness
+// readability. These two company-scale fields — Section D's run-rate TTM
+// and Section E's reverse-DCF year-10 revenue — rendered through the plain
+// `num().toFixed(0)` helper instead of `formatCompactUsd` (the same
+// instrument every other company-scale figure in this report already uses,
+// per CF-ANALYZER-V1-SETTLE-01's "$1104224240826" fix), so a real run's
+// Financials and Valuation tabs showed raw unbroken digit strings at the
+// exact scale a real company's revenue sits at. Regression guard, not a
+// rendering-logic test: assembleAnalysisResult's arithmetic is proven
+// correct elsewhere (reverseDcf.test.ts, runRate tests); this only pins
+// that the renderer formats a realistic-magnitude dollar value the way
+// every other one on the page is formatted.
+describe("AnalyzerReport — company-scale dollar figures render compact, never as a raw digit string (CF-ANALYZER-USER-READY-01)", () => {
+  const realisticTtm = new Decimal("331839000000"); // MSFT's actual FY TTM revenue, in dollars
+
+  it("Section D's run-rate TTM renders as compact USD, not a raw digit string", () => {
+    const result = assembleAnalysisResult({
+      ...MSFT_FIXTURE,
+      runRate: { ...MSFT_FIXTURE.runRate, ttm: sourcedFor(realisticTtm) },
+    });
+    const { container } = render(<AnalyzerReport result={result} />);
+    const row = rowOf(container.querySelector("section#D") as HTMLElement, "Run-rate comparison");
+    expect(row.textContent).toMatch(/TTM \$331\.8B/);
+    expect(row.textContent).not.toMatch(/331839000000/);
+  });
+
+  it("Section E's reverse-DCF year-10 revenue cells render as compact USD, not a raw digit string", () => {
+    // Scales both the base revenue AND the target enterprise value by the
+    // same factor (billions, same unit the real MSFT capture uses) so the
+    // reverse-DCF solver keeps a consistent EV/revenue ratio and still
+    // solves — only the fixture's deliberately small test-arithmetic scale
+    // changes, not the relationship the solver depends on.
+    const scale = new Decimal("1000000000");
+    const result = assembleAnalysisResult({
+      ...MSFT_FIXTURE,
+      reverseDcf: {
+        ...MSFT_FIXTURE.reverseDcf,
+        baseYearRevenue: sourcedFor(MSFT_FIXTURE.reverseDcf.baseYearRevenue!.value.mul(scale)),
+        targetEnterpriseValue: sourcedFor(MSFT_FIXTURE.reverseDcf.targetEnterpriseValue!.value.mul(scale)),
+      },
+    });
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#E") as HTMLElement;
+    expect(section.textContent).toMatch(/yr-10 revenue\s*\$[\d.]+T/i);
+    // No eleven-plus-digit run anywhere in the diagnostic grid.
+    expect(section.textContent).not.toMatch(/\$\d{10,}/);
   });
 });

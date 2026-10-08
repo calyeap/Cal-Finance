@@ -359,7 +359,7 @@ function ReverseDcfCellView({
       {!cell.year10Revenue.suppressed && (
         <div className="line">
           <span className="lbl">yr-10 revenue</span>
-          <b>${num(cell.year10Revenue.value, 0)}</b>
+          <b>${formatCompactUsd(cell.year10Revenue.value)}</b>
         </div>
       )}
       {!cell.ronic.suppressed && (
@@ -725,7 +725,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                 <th scope="row">Run-rate comparison</th>
                 <td>
                   <span className="v">{diagnostics.runRate.seasonalityTestResult}</span>
-                  {diagnostics.runRate.ttm !== null && <div className="sub">TTM {num(diagnostics.runRate.ttm, 0)}</div>}
+                  {diagnostics.runRate.ttm !== null && <div className="sub">TTM ${formatCompactUsd(diagnostics.runRate.ttm)}</div>}
                 </td>
               </tr>
               <tr>
