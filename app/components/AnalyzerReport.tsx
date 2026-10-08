@@ -6,11 +6,12 @@ import { ValuationStrip } from "./ValuationStrip";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 import { boundState, NOT_COMPUTED_BINDING, type BoundState } from "@/lib/analyzer/notComputed";
-import { notComputedLine } from "@/lib/analyzer/overviewCopy";
+import { fairValueRangeUnavailableLine, notComputedLine } from "@/lib/analyzer/overviewCopy";
 import type {
   AnalysisResult,
   ComputedValue,
   Figure,
+  LeverageResult,
   Profile,
   ProvenanceTokens,
   ReverseDcfCell,
@@ -255,7 +256,13 @@ function Disclosure({ label, children }: { label: string; children: ReactNode })
 // would risk dropping one that IS relevant, which is exactly the failure
 // this constraint exists to prevent, and a state is never this section's
 // only appearance regardless, since it already renders in Section A.
-function StatesBearing({ states }: { states: AnalysisResult["states"] }) {
+function StatesBearing({
+  states,
+  leverage,
+}: {
+  states: AnalysisResult["states"];
+  leverage?: LeverageResult;
+}) {
   return (
     <div className="bearing">
       <h3>States this reading depends on</h3>
@@ -264,9 +271,19 @@ function StatesBearing({ states }: { states: AnalysisResult["states"] }) {
       ) : (
         <>
           {states.suppressing.map((s, i) => (
+            // CF-ANALYZER-USER-READY-01 correction — same defect class as
+            // StateBlock below ("raw engine states... occupying the primary
+            // reading surface"): the raw state name used to be the primary
+            // text here. `appliesTo` (which figure this affects) is already
+            // plain English and stays; only the state code moves behind the
+            // existing opt-in Disclosure, same instrument StateBlock uses.
             <div className="state" key={`s-${i}`}>
-              <span className="name">{s.state}</span>
-              <span className="cause">{s.appliesTo}</span>
+              <span className="cause">
+                {notComputedLine(s.state, "", leverage)} — {s.appliesTo}
+              </span>
+              <Disclosure label="Show the diagnostic state name">
+                <span className="name">{s.state}</span>
+              </Disclosure>
             </div>
           ))}
           {states.qualifying.map((q, i) => (
@@ -281,11 +298,21 @@ function StatesBearing({ states }: { states: AnalysisResult["states"] }) {
   );
 }
 
+// CF-ANALYZER-USER-READY-01 correction — the shared renderer behind every
+// suppressed figure on the normal Financials/Valuation surfaces (FigureValue
+// below, and every BoundStateBlock caller, including Section A's price row
+// and PriceChartPanel.tsx's hero price). Previously showed the bare raw
+// state name as the primary reading text; now shows the same plain-English
+// instrument (notComputedLine) overviewCopy.ts's own callers already use,
+// with the raw name and cause auditable in the existing opt-in Disclosure.
 function StateBlock({ figure }: { figure: SuppressedValue }) {
   return (
     <div className="state">
-      <span className="name">{figure.state}</span>
-      <span className="cause">{humanizeCause(figure.cause)}</span>
+      <span className="cause">{notComputedLine(figure.state, figure.cause)}</span>
+      <Disclosure label="Show the diagnostic state name">
+        <span className="name">{figure.state}</span>
+        <span className="cause">{humanizeCause(figure.cause)}</span>
+      </Disclosure>
     </div>
   );
 }
@@ -672,7 +699,27 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                     diagnostics.reinvestmentRonic.ronic.value.cells.map((c) => (
                       <div key={c.rate}>
                         <span className="v">
-                          r={pct(new Decimal(c.rate), 0)}: {c.state}
+                          r={pct(new Decimal(c.rate), 0)}:{" "}
+                          {/* CF-ANALYZER-USER-READY-01 correction — same
+                              defect class as StateBlock above. The other
+                              ladder labels (CLEAN, LOW RONIC — VALUE-
+                              DESTROYING GROWTH, INVERTED — HIGHER GROWTH
+                              LOWERS VALUE, RONIC CAPPED AT 200%) already say
+                              their own meaning in words via the dash phrase,
+                              the same convention Flags renders verbatim
+                              elsewhere in this file; only this one ladder
+                              state is an opaque diagnostic code with no
+                              plain-English half, so only it gets translated. */}
+                          {c.state === "RONIC NOT MEANINGFUL" ? (
+                            <>
+                              {notComputedLine("RONIC NOT MEANINGFUL", "")}
+                              <Disclosure label="Show the diagnostic state name">
+                                <span className="name">{c.state}</span>
+                              </Disclosure>
+                            </>
+                          ) : (
+                            c.state
+                          )}
                           {c.value !== null && ` (${pct(c.value)})`}
                         </span>
                       </div>
@@ -1241,9 +1288,17 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
           </div>
           <hr />
           {fairValueRange.kind === "suppressed" ? (
+            // CF-ANALYZER-USER-READY-01 correction — same defect class as
+            // StateBlock: fairValueRangeUnavailableLine is the instrument
+            // ScenarioRangeStrip.tsx's hero already uses for this exact
+            // suppressed-range case; the raw state/cause stay auditable in
+            // the existing opt-in Disclosure, no longer the primary text.
             <div className="state">
-              <span className="name">{fairValueRange.state}</span>
-              <span className="cause">{humanizeCause(fairValueRange.cause)}</span>
+              <span className="cause">{fairValueRangeUnavailableLine(fairValueRange, result.gates.leverage)}</span>
+              <Disclosure label="Show the diagnostic state name">
+                <span className="name">{fairValueRange.state}</span>
+                <span className="cause">{humanizeCause(fairValueRange.cause)}</span>
+              </Disclosure>
             </div>
           ) : fairValueRange.kind === "pre-revenue-distribution" ? (
             <div className="hframe">
@@ -1350,8 +1405,18 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                   <>
                     <div className="pi">
                       <span className="lbl">Implied growth, yrs 1-5 at r = 8%</span>
+                      {/* CF-ANALYZER-USER-READY-01 correction — same defect
+                          class as StateBlock: the bare state name used to be
+                          the primary reading text here. */}
                       {baseRateCell.fiveYearGrowth.suppressed ? (
-                        <b>{baseRateCell.fiveYearGrowth.state}</b>
+                        <>
+                          <span className="cause">
+                            {notComputedLine(baseRateCell.fiveYearGrowth.state, baseRateCell.fiveYearGrowth.cause)}
+                          </span>
+                          <Disclosure label="Show the diagnostic state name">
+                            <span className="name">{baseRateCell.fiveYearGrowth.state}</span>
+                          </Disclosure>
+                        </>
                       ) : (
                         <b>{pct(baseRateCell.fiveYearGrowth.value)}</b>
                       )}
@@ -1359,7 +1424,14 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                     <div className="pi">
                       <span className="lbl">Equivalent ten-year CAGR</span>
                       {baseRateCell.tenYearCagr.suppressed ? (
-                        <b>{baseRateCell.tenYearCagr.state}</b>
+                        <>
+                          <span className="cause">
+                            {notComputedLine(baseRateCell.tenYearCagr.state, baseRateCell.tenYearCagr.cause)}
+                          </span>
+                          <Disclosure label="Show the diagnostic state name">
+                            <span className="name">{baseRateCell.tenYearCagr.state}</span>
+                          </Disclosure>
+                        </>
                       ) : (
                         <b>{pct(baseRateCell.tenYearCagr.value)}</b>
                       )}
@@ -1422,7 +1494,7 @@ export function RisksThesisSections({ result, aiLayer }: { result: AnalysisResul
             <p className="note">Not yet available — the interpretation call has not run for this analysis.</p>
           ) : (
             <div className="sec-i">
-              <StatesBearing states={states} />
+              <StatesBearing states={states} leverage={result.gates.leverage} />
               <div className="finding">
                 <p className="lede">{result.interpretation.pageOne.mainFinding.statement}</p>
                 <dl>

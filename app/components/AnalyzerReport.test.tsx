@@ -7,7 +7,7 @@ import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import { OKLO_FIXTURE } from "@/lib/analyzer/fixtures/oklo";
 import { CLEAN_PROVENANCE } from "@/lib/analyzer/provenance";
-import type { SourcedValue } from "@/lib/analyzer/types";
+import type { AnalysisResult, SourcedValue, SuppressedValue } from "@/lib/analyzer/types";
 
 function sourcedFor(value: Decimal): SourcedValue<Decimal> {
   return { value, provenance: CLEAN_PROVENANCE };
@@ -134,6 +134,131 @@ describe("AnalyzerReport — MSFT", () => {
     expect(section.textContent).toMatch(/project-debt cost not configured/);
     expect(section.textContent).not.toMatch(/pre-revenue unlevered rate 0%/);
     expect(section.textContent).not.toMatch(/project-debt cost 0%/);
+  });
+});
+
+// CF-ANALYZER-USER-READY-01 correction (second pass) — REVIEW's remaining
+// list of raw-engine-state leaks on the normal Financials/Valuation
+// surfaces, beyond the FCF cell already fixed above: StateBlock (the shared
+// renderer behind every other suppressed figure), the Reinvestment/RONIC
+// ladder, Section H's fair-value range, and the base-rate growth/CAGR
+// restatement. Each gets the same treatment proven above — a plain-English
+// line as the primary reading text, the raw diagnostic code moved into the
+// existing opt-in Disclosure, never left as the only representation.
+//
+// Built on the assembled real-scale MSFT result (same fixture the compact-
+// dollar and FCF-cell tests above use), with only the targeted figure
+// overridden to force each suppression — the established pattern
+// AnalyzerOverview.test.tsx and QuickRead.test.tsx already use for paths the
+// baseline fixture does not itself reach.
+describe("AnalyzerReport — remaining raw engine-state translations (CF-ANALYZER-USER-READY-01 correction)", () => {
+  const base = assembleAnalysisResult(MSFT_FIXTURE);
+
+  function withMarginHistorySuppressed(): AnalysisResult {
+    return {
+      ...base,
+      diagnostics: {
+        ...base.diagnostics,
+        marginHistory: { suppressed: true, state: "HISTORY INSUFFICIENT", cause: "fewer than 5 filed years" },
+      },
+    };
+  }
+
+  function withRonicLadderCellNotMeaningful(): AnalysisResult {
+    const ronic = base.diagnostics.reinvestmentRonic.ronic;
+    if (ronic.suppressed) throw new Error("fixture precondition: MSFT's RONIC ladder must not be suppressed");
+    return {
+      ...base,
+      diagnostics: {
+        ...base.diagnostics,
+        reinvestmentRonic: {
+          ...base.diagnostics.reinvestmentRonic,
+          ronic: {
+            ...ronic,
+            value: {
+              cells: ronic.value.cells.map((c, i) => (i === 0 ? { ...c, state: "RONIC NOT MEANINGFUL" as const } : c)),
+            },
+          },
+        },
+      },
+    };
+  }
+
+  function withFairValueRangeSuppressed(): AnalysisResult {
+    return {
+      ...base,
+      fairValueRange: { kind: "suppressed", state: "NOT COMPUTABLE", cause: "the model has no stable solution" },
+    };
+  }
+
+  function withBaseRateCellSuppressed(): AnalysisResult {
+    const suppressedGrowth: SuppressedValue = { suppressed: true, state: "NOT COMPUTABLE", cause: "no stable solution in the policy bracket" };
+    return {
+      ...base,
+      priceImplied: {
+        ...base.priceImplied,
+        reverseDcfGrid: base.priceImplied.reverseDcfGrid.map((c) =>
+          c.marginLevel === "current" && c.rate === 0.08 ? { ...c, fiveYearGrowth: suppressedGrowth, tenYearCagr: suppressedGrowth } : c
+        ),
+      },
+    };
+  }
+
+  it("StateBlock (margin history, Section D): plain English is the primary text, raw state confined to Disclosure", () => {
+    const { container } = render(<AnalyzerReport result={withMarginHistorySuppressed()} />);
+    const sectionD = container.querySelector("section#D") as HTMLElement;
+    expect(within(sectionD).getByText(/filed history/)).not.toBeNull();
+    const disclosure = sectionD.querySelector("details.disclose") as HTMLElement;
+    const stateRow = Array.from(sectionD.querySelectorAll("tr")).find((tr) => tr.textContent?.includes("Margin history")) as HTMLElement;
+    const nameInDisclosure = stateRow.querySelector(".state > details.disclose .name");
+    expect(nameInDisclosure?.textContent).toBe("HISTORY INSUFFICIENT");
+    const primaryText = Array.from(stateRow.querySelectorAll(".state > .cause"))[0]?.textContent ?? "";
+    expect(primaryText).not.toContain("HISTORY INSUFFICIENT");
+    expect(disclosure).not.toBeNull();
+  });
+
+  it("RONIC ladder (Section D): RONIC NOT MEANINGFUL is explained in plain words, the raw label stays auditable in Disclosure", () => {
+    const { container } = render(<AnalyzerReport result={withRonicLadderCellNotMeaningful()} />);
+    const sectionD = container.querySelector("section#D") as HTMLElement;
+    expect(within(sectionD).getByText(/not meaningful for this company's recent history/)).not.toBeNull();
+    const ladderCell = Array.from(sectionD.querySelectorAll("tr"))
+      .find((tr) => tr.textContent?.includes("Reinvestment, RONIC"))
+      ?.querySelector("td") as HTMLElement;
+    expect(ladderCell.querySelector("details.disclose .name")?.textContent).toBe("RONIC NOT MEANINGFUL");
+  });
+
+  it("Section H fair-value range suppressed: plain English is the primary text, raw state confined to Disclosure", () => {
+    const { container } = render(<AnalyzerReport result={withFairValueRangeSuppressed()} />);
+    const sectionH = container.querySelector("section#H") as HTMLElement;
+    expect(within(sectionH).getByText(/the model has no meaningful answer for this company at these inputs/)).not.toBeNull();
+    const disclosure = sectionH.querySelector("details.disclose") as HTMLElement;
+    expect(disclosure).not.toBeNull();
+    expect(disclosure.textContent).toContain("NOT COMPUTABLE");
+    const stateDiv = sectionH.querySelector(".hframe + .state, section#H > .state") ?? sectionH.querySelector(".state");
+    const outsideDisclosureText = Array.from((stateDiv as HTMLElement).childNodes)
+      .filter((n) => n !== disclosure)
+      .map((n) => n.textContent ?? "")
+      .join(" ");
+    expect(outsideDisclosureText).not.toContain("NOT COMPUTABLE");
+  });
+
+  it("base-rate growth/CAGR restatement (Section H right column) is plain English, raw state confined to Disclosure", () => {
+    const { container } = render(<AnalyzerReport result={withBaseRateCellSuppressed()} />);
+    const sectionH = container.querySelector("section#H") as HTMLElement;
+    expect(within(sectionH).getAllByText(/the model has no meaningful answer for this company at these inputs/).length).toBeGreaterThan(0);
+    const piRows = Array.from(sectionH.querySelectorAll(".pi"));
+    const growthRow = piRows.find((r) => r.textContent?.includes("Implied growth, yrs 1-5")) as HTMLElement;
+    const cagrRow = piRows.find((r) => r.textContent?.includes("Equivalent ten-year CAGR")) as HTMLElement;
+    for (const row of [growthRow, cagrRow]) {
+      const disclosure = row.querySelector("details.disclose") as HTMLElement;
+      expect(disclosure).not.toBeNull();
+      expect(disclosure.textContent).toContain("NOT COMPUTABLE");
+      const outsideText = Array.from(row.childNodes)
+        .filter((n) => n !== disclosure)
+        .map((n) => n.textContent ?? "")
+        .join(" ");
+      expect(outsideText).not.toContain("NOT COMPUTABLE");
+    }
   });
 });
 
