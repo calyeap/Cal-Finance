@@ -313,7 +313,10 @@ describe("analysisForReport", () => {
     it("a reload while generation is still running joins it rather than starting a second one", async () => {
       const runId = await decidedRun("MSFT", "Microsoft Corporation");
       const counter = { calls: 0 };
-      const call = slowCountingCall(counter);
+      // Large relative to this sandbox's own per-request baseline (see the
+      // test above) so the generation is still demonstrably running — not
+      // merely unchecked — when the "reload" below makes its own request.
+      const call = slowCountingCall(counter, 2000);
 
       const first = await analysisForReport(runId, call, undefined, { block: false });
       // "Reload" — a second request for the same run while the first
@@ -323,7 +326,7 @@ describe("analysisForReport", () => {
       expect(first.aiLayer.status).toBe("PENDING");
       expect(second.aiLayer.status).toBe("PENDING");
 
-      await new Promise((resolve) => setTimeout(resolve, 500));
+      await new Promise((resolve) => setTimeout(resolve, 2300));
       expect(counter.calls).toBe(2); // joined, not duplicated
     });
 
@@ -341,6 +344,56 @@ describe("analysisForReport", () => {
       expect(reloaded.aiLayer.status).toBe("COMPLETED");
       expect(reloaded.result.challenger).not.toBeNull();
       expect(counter.calls).toBe(2); // the reload read storage; it did not call the model again
+    });
+
+    it("reports FAILED truthfully, on the same request, when the call fails fast — REVIEW-37786725513-1 defect 1", async () => {
+      const runId = await decidedRun("MSFT", "Microsoft Corporation");
+      const failing: AnalystCall = async () => {
+        throw new Error("the request failed validation before any model call was made");
+      };
+
+      const report = await analysisForReport(runId, failing, undefined, { block: false });
+
+      // A call that rejects near-instantly settles well inside the bounded
+      // settle window, so this request sees the real outcome rather than the
+      // generic PENDING claim — the same status/detail the blocking path
+      // would have produced for the same failure.
+      expect(report.aiLayer.status).toBe("FAILED");
+      expect(report.aiLayer.detail).toContain("failed validation");
+    });
+
+    it("falls back to PENDING, with copy that does not promise prose, when the call fails slower than the settle window", async () => {
+      const runId = await decidedRun("MSFT", "Microsoft Corporation");
+      let attempts = 0;
+      const slowFailing: AnalystCall = async () => {
+        attempts += 1;
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        throw new Error("the model refused the request");
+      };
+
+      const first = await analysisForReport(runId, slowFailing, undefined, { block: false });
+
+      expect(first.aiLayer.status).toBe("PENDING");
+      // The known residual this correction discloses rather than masks: a
+      // failure slower than the settle window is not distinguishable, on
+      // this request, from one still genuinely running — so the copy must
+      // not claim the reader will see the prose on reload.
+      expect(first.aiLayer.detail).not.toContain("see them");
+      expect(first.aiLayer.detail).toContain("fresh one");
+
+      // The failed generation is not held anywhere (generateOnce's "not a
+      // cache" contract), so once it has settled, the next view is a fresh
+      // attempt rather than a report of the earlier failure — exactly what
+      // the revised copy above tells the reader to expect. One generation is
+      // two calls (interpretation + challenger, run concurrently — see
+      // runAiLayer), both of which this stub fails.
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(attempts).toBe(2);
+
+      const reloaded = await analysisForReport(runId, slowFailing, undefined, { block: false });
+      expect(reloaded.aiLayer.status).toBe("PENDING");
+      await new Promise((resolve) => setTimeout(resolve, 400));
+      expect(attempts).toBe(4);
     });
   });
 

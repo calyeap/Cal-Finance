@@ -28,6 +28,9 @@ import type { AnalystCall, AnalystCallRequest } from "@/lib/analyzer/ai/analystC
 // render), so that baseline cannot itself explain the timing assertion below.
 const DELAY_MS = 2000;
 let slowCall: { calls: number };
+// Set by a single test (the fast-failure one below) to replace the slow stub
+// for one run without touching every other test's call shape.
+let callOverride: AnalystCall | null = null;
 
 vi.mock("@/lib/analyzer/ai/anthropicCall", async () => {
   const actual = await vi.importActual<typeof import("@/lib/analyzer/ai/anthropicCall")>(
@@ -37,6 +40,7 @@ vi.mock("@/lib/analyzer/ai/anthropicCall", async () => {
     ...actual,
     analystCallIfConfigured: (): AnalystCall =>
       async (request: AnalystCallRequest) => {
+        if (callOverride !== null) return callOverride(request);
         slowCall.calls += 1;
         await new Promise((resolve) => setTimeout(resolve, DELAY_MS));
         return request.label === "interpretation"
@@ -101,6 +105,7 @@ async function decidedRun(): Promise<string> {
 describe("CF-ANALYZER-USABLE-REPORT-REPAIR-01 correction — Overview's first render no longer waits on the model", () => {
   afterEach(() => {
     cleanup();
+    callOverride = null;
   });
 
   afterAll(async () => {
@@ -141,5 +146,21 @@ describe("CF-ANALYZER-USABLE-REPORT-REPAIR-01 correction — Overview's first re
 
     expect(container.textContent).toContain("growth this company has not yet delivered");
     expect(slowCall.calls).toBe(2); // one interpretation, one challenger — the reload did not call the model again
+  });
+
+  it("shows the real refusal, not a false promise of prose, when the call fails fast — REVIEW-37786725513-1 defect 1", async () => {
+    callOverride = async () => {
+      throw new Error("the request failed validation before any model call was made");
+    };
+    const runId = await decidedRun();
+
+    const { container } = await renderOverview(runId);
+
+    // A call that rejects near-instantly settles inside the bounded settle
+    // window (lib/analyzer/reportAnalysis.ts), so this render sees the real
+    // refusal rather than the generic "pending" claim.
+    expect(container.textContent).toContain("Interpretation refused");
+    expect(container.textContent).toContain("failed validation");
+    expect(container.textContent).not.toMatch(/Interpretation pending|being generated now/);
   });
 });

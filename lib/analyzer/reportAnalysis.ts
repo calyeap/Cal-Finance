@@ -96,6 +96,37 @@ function logDiagnostic(err: unknown): void {
  */
 const generationsInFlight = new Map<string, Promise<AiLayerOutputs>>();
 
+/**
+ * How long the non-blocking path (`block: false`) waits before giving up on
+ * reporting a generation's real outcome and falling back to `PENDING`.
+ *
+ * CF-ANALYZER-USABLE-REPORT-REPAIR-01 correction: a generation that fails
+ * (or finishes) within this window is reported as `FAILED`/`COMPLETED`
+ * truthfully, on the same request — the same words the blocking path would
+ * have produced. One that is still running past it falls back to `PENDING`,
+ * and a later view is a fresh attempt (generateOnce's own "not a cache"
+ * contract; see its doc comment). A real model call typically takes far
+ * longer than this, so most genuine failures are not caught by it — that gap
+ * is the disclosed residual: persisting a failure's reason past the request
+ * that saw it would need its own store, which is exactly the kind of new
+ * infrastructure this bounded repair does not add. Kept short and fixed
+ * rather than configurable, since its only job is to catch a call that is
+ * already settled or fails near-instantly (no credentials check, a request
+ * that fails validation before any network call), not to shorten a real wait.
+ */
+const NON_BLOCKING_SETTLE_WINDOW_MS = 50;
+
+function settlesWithin<T>(promise: Promise<T>, windowMs: number): Promise<{ settled: false } | { settled: true; value: T } | { settled: true; error: unknown }> {
+  const outcome = promise.then(
+    (value) => ({ settled: true as const, value }),
+    (error) => ({ settled: true as const, error })
+  );
+  const timeout = new Promise<{ settled: false }>((resolve) => {
+    setTimeout(() => resolve({ settled: false }), windowMs);
+  });
+  return Promise.race([outcome, timeout]);
+}
+
 function generateOnce(
   runId: string,
   result: AnalysisResult,
@@ -181,20 +212,44 @@ export async function analysisForReport(
 
   const block = options?.block ?? true;
   if (!block) {
-    // Started (or joined) here, but deliberately not awaited — see this
+    // Started (or joined) here, but not unconditionally awaited — see this
     // function's doc comment. Any failure still reaches the server log via
-    // the usual channel; it has no page to report FAILED to on this request,
-    // and the next view either finds the stored result or starts a fresh
-    // generation of its own (generateOnce's own "not a cache" contract).
+    // the usual channel regardless of which branch below runs.
     const generation = generateOnce(runId, result, call);
     generation.catch((err) => logDiagnostic(err));
+
+    // CF-ANALYZER-USABLE-REPORT-REPAIR-01 correction: give a generation that
+    // is already about to settle — joined mid-flight, or one that fails fast
+    // (no slow call ever made) — a short window to report its real outcome
+    // on this same request, rather than always claiming PENDING regardless
+    // of what actually happened. See NON_BLOCKING_SETTLE_WINDOW_MS's doc
+    // comment for why this does not catch a real, slow model failure.
+    const settled = await settlesWithin(generation, NON_BLOCKING_SETTLE_WINDOW_MS);
+    if (settled.settled) {
+      if ("error" in settled) {
+        return {
+          result,
+          aiLayer: { status: "FAILED", model: null, detail: messageOf(settled.error) },
+        };
+      }
+      return {
+        result: mergeAiLayer(result, settled.value),
+        aiLayer: { status: "COMPLETED", model: ANALYST_MODEL, detail: null },
+      };
+    }
+
     return {
       result,
       aiLayer: {
         status: "PENDING",
         model: null,
+        // Deliberately does not promise the prose will be there on reload —
+        // it may instead have failed, in which case a reload is a fresh
+        // attempt rather than a report of that failure (see this function's
+        // and NON_BLOCKING_SETTLE_WINDOW_MS's doc comments).
         detail:
-          "The interpretation and challenger are being generated now. Reload this page in a little while to see them.",
+          "The interpretation and challenger are being generated now. Reload this page in a little while to check " +
+          "again — if the attempt fails, a later reload starts a fresh one rather than repeating the same failure.",
       },
     };
   }
