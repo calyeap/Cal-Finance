@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import Decimal from "decimal.js";
-import { assembleAnalysisResult } from "../assemble";
+import { assembleAnalysisResult, type CompanyFixture } from "../assemble";
 import { formatUsd } from "../factDisplay";
 import { ALL_SUPPRESSING_STATES } from "../stateCatalogue";
 import { MSFT_FIXTURE } from "../fixtures/msft";
@@ -392,6 +392,71 @@ describe("buildSlotCatalogue", () => {
       expect(catalogue.has("fairValueRange.failure")).toBe(false);
       expect(catalogue.get("fairValueRange.state")?.formatted).toBe("INCOMPLETE");
     });
+  });
+});
+
+// CF-ANALYZER-INTEGRITY-FIRST-01 — scenarioOutputs.priceLocationWithinRange
+// was offered to [C] as soon as a price existed, even on a run where
+// ScenarioRangeStrip/ValuationStrip suppress the identical price-vs-range
+// display (trust UNUSABLE, or the profile not human-confirmed — §10.6.3,
+// the same pair app/components/ScenarioRangeStrip.tsx's own
+// `positionSuppressedBy` already gates on). [C] could then assert a number
+// the reader is never shown. These cases are the same four
+// ScenarioRangeStrip.test.tsx's own suppression describe blocks exercise,
+// read from the slot catalogue instead of the rendered UI.
+describe("buildSlotCatalogue — scenarioOutputs.priceLocationWithinRange AI/UI eligibility parity (§10.6.3)", () => {
+  /** Same construction ScenarioRangeStrip.test.tsx uses for trust UNUSABLE. */
+  function leveredMsft(): CompanyFixture {
+    return {
+      ...MSFT_FIXTURE,
+      leverage: { ...MSFT_FIXTURE.leverage, totalDebt: new Decimal(1200) },
+    };
+  }
+
+  it("omits the slot — never hands [C] a number — when trust is UNUSABLE, even though price and a computed range both exist", () => {
+    const result = assembleAnalysisResult(leveredMsft());
+    expect(result.trust.status).toBe("UNUSABLE");
+    // The bug this guards: priceLocationWithinRange is derived from price and
+    // the scenario bear/bull values alone, so it stays non-null even though
+    // the fair-value range itself is suppressed and the UI hides the position.
+    expect(result.scenarioOutputs.priceLocationWithinRange).not.toBeNull();
+
+    const catalogue = buildSlotCatalogue(result);
+    expect(catalogue.has("scenarioOutputs.priceLocationWithinRange")).toBe(false);
+  });
+
+  it("omits the slot when price and range exist but the profile is not human-confirmed", () => {
+    const result = assembleAnalysisResult({
+      ...MSFT_FIXTURE,
+      trustInputs: { ...MSFT_FIXTURE.trustInputs, profileHumanConfirmed: false },
+    });
+    expect(result.trust.status).not.toBe("UNUSABLE");
+    expect(result.fairValueRange.kind).toBe("range");
+    expect(result.scenarioOutputs.priceLocationWithinRange).not.toBeNull();
+
+    const catalogue = buildSlotCatalogue(result);
+    expect(catalogue.has("scenarioOutputs.priceLocationWithinRange")).toBe(false);
+  });
+
+  it("keeps offering the slot, formatted as a percentage, on an eligible normal trust/profile run", () => {
+    expect(msft.trust.status).not.toBe("UNUSABLE");
+    const catalogue = buildSlotCatalogue(msft);
+    const slot = catalogue.get("scenarioOutputs.priceLocationWithinRange");
+
+    expect(slot).toBeDefined();
+    expect(slot?.suppressed).toBe(false);
+    expect(slot?.formatted).toBe(`${msft.scenarioOutputs.priceLocationWithinRange!.mul(100).toFixed(0)}%`);
+  });
+
+  it("keeps the existing INCOMPLETE state — not an omission — when price itself is missing", () => {
+    const priceless = assembleAnalysisResult({ ...MSFT_FIXTURE, enterpriseValue: { ...MSFT_FIXTURE.enterpriseValue, price: null } });
+    expect(priceless.scenarioOutputs.priceLocationWithinRange).toBeNull();
+
+    const catalogue = buildSlotCatalogue(priceless);
+    const slot = catalogue.get("scenarioOutputs.priceLocationWithinRange");
+
+    expect(slot?.suppressed).toBe(true);
+    expect(slot?.formatted).toBe("INCOMPLETE");
   });
 });
 

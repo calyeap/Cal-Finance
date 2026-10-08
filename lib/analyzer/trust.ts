@@ -63,6 +63,20 @@ export function profileNotConfirmedFor(result: Pick<AnalysisResult, "trust">): b
   );
 }
 
+/**
+ * CF-ANALYZER-INTEGRITY-FIRST-01 — §10.6.3's existing valuation-position
+ * suppression predicate: trust UNUSABLE, or the profile not yet
+ * human-confirmed. ScenarioRangeStrip/report page.tsx already gate the
+ * price-vs-range display on exactly this pair (`positionSuppressedBy`), and
+ * `trustCopy.priceVsRangeHeadline` reuses the same two conditions for the
+ * hero. Exported so the AI slot catalogue (ai/slots.ts) can gate on the
+ * identical fact rather than a second, independently-written predicate that
+ * could drift from the UI's.
+ */
+export function valuationPositionSuppressed(result: Pick<AnalysisResult, "trust">): boolean {
+  return result.trust.status === "UNUSABLE" || profileNotConfirmedFor(result);
+}
+
 export interface TrustInput {
   /** The §10.3 outcome. Suppressed here IS rule 1. */
   fairValueRange: FairValueRange;
