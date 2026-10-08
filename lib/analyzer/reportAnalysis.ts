@@ -27,7 +27,7 @@ import type { AnalysisResult } from "./types";
 // carrying the half of the prose that happened to pass is not.
 // ---------------------------------------------------------------------------
 
-export type AiLayerStatus = "COMPLETED" | "NOT CONFIGURED" | "FAILED";
+export type AiLayerStatus = "COMPLETED" | "NOT CONFIGURED" | "FAILED" | "PENDING";
 
 export interface AiLayerReport {
   status: AiLayerStatus;
@@ -135,11 +135,23 @@ function generateOnce(
  * own seam — see that function's doc comment. It changes nothing about the
  * AI layer below; it only avoids a second loadGateState call when the caller
  * already has one from earlier in the same request.
+ *
+ * `options.block` (default `true`, so every existing caller is unaffected)
+ * — CF-ANALYZER-USABLE-REPORT-REPAIR-01. When a page's first view of a run
+ * has nothing stored yet, the ~minute-long interpretation/challenger call
+ * (`generateOnce`) used to be this function's own `await`, so the page could
+ * not render until it finished. `block: false` still starts (or joins, via
+ * `generateOnce`'s existing in-flight registry) that same generation — a
+ * later view of the same run picks up its result exactly as before — but
+ * returns immediately with the deterministic `result` and a `PENDING`
+ * `aiLayer`, rather than waiting on it. Nothing about the blocking path
+ * (every test above, and every other caller) changes.
  */
 export async function analysisForReport(
   runId: string,
   call: AnalystCall | null = analystCallIfConfigured(),
-  preloadedState?: GateState
+  preloadedState?: GateState,
+  options?: { block?: boolean }
 ): Promise<ReportAnalysis> {
   // First, and independently of everything below.
   const result = await computeAnalysisForRun(runId, preloadedState);
@@ -163,6 +175,26 @@ export async function analysisForReport(
         detail:
           "No model credentials are configured, so the interpretation and challenger calls did not run. " +
           "Every computed value on this page is unaffected.",
+      },
+    };
+  }
+
+  const block = options?.block ?? true;
+  if (!block) {
+    // Started (or joined) here, but deliberately not awaited — see this
+    // function's doc comment. Any failure still reaches the server log via
+    // the usual channel; it has no page to report FAILED to on this request,
+    // and the next view either finds the stored result or starts a fresh
+    // generation of its own (generateOnce's own "not a cache" contract).
+    const generation = generateOnce(runId, result, call);
+    generation.catch((err) => logDiagnostic(err));
+    return {
+      result,
+      aiLayer: {
+        status: "PENDING",
+        model: null,
+        detail:
+          "The interpretation and challenger are being generated now. Reload this page in a little while to see them.",
       },
     };
   }

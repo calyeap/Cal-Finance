@@ -173,6 +173,23 @@ describe("why the prose is absent", () => {
     expect(within(section).getByText(/NUMERAL FROM MODEL/)).not.toBeNull();
   });
 
+  it("says generation is under way rather than refused or not run, while it is still in progress", () => {
+    const { container } = render(
+      <AnalyzerReport
+        result={base}
+        aiLayer={{
+          status: "PENDING",
+          model: null,
+          detail: "The interpretation and challenger are being generated now. Reload this page in a little while to see them.",
+        }}
+      />
+    );
+
+    const section = container.querySelector("section#I") as HTMLElement;
+    expect(within(section).getByText(/Interpretation pending/)).not.toBeNull();
+    expect(within(section).getByText(/being generated now/)).not.toBeNull();
+  });
+
   it("says which model wrote the prose where a call did run", () => {
     const { container } = render(
       <AnalyzerReport result={withAi} aiLayer={{ status: "COMPLETED", model: "claude-opus-5", detail: null }} />

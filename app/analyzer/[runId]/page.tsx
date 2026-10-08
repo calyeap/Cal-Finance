@@ -126,7 +126,18 @@ export default async function ReportPage({
       // `state` is passed through so this does not call loadGateState a
       // second time for work advanceRunAutomatically already did this same
       // request (lib/analyzer/gate.ts's computeAnalysisForRun doc comment).
-      const report = await analysisForReport(runId, undefined, state);
+      //
+      // `block: false` — CF-ANALYZER-USABLE-REPORT-REPAIR-01 correction.
+      // Overview is DEFAULT_ANALYZER_TAB, so a run's very first view reaches
+      // here with nothing stored yet; blocking on the interpretation/
+      // challenger call made that first render wait on the full ~171s model
+      // round trip (#418). The deterministic `result` is complete and
+      // correct either way (§8.1's ordering is untouched) — this only stops
+      // the page waiting on the prose. Risks and Evidence take the same
+      // non-blocking path for the same reason: this is the one call site
+      // both reach. See analysisForReport's own doc comment for how a
+      // reload picks up the result once it's ready.
+      const report = await analysisForReport(runId, undefined, state, { block: false });
       result = report.result;
       aiLayer = report.aiLayer;
     } else {

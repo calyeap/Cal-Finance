@@ -542,11 +542,15 @@ export function AiLayerNote({ aiLayer }: { aiLayer: AiLayerReport | undefined })
   if (aiLayer.status === "COMPLETED") {
     return aiLayer.model === null ? null : <p className="note">Written by {aiLayer.model}.</p>;
   }
+  const name =
+    aiLayer.status === "NOT CONFIGURED"
+      ? "Interpretation not run"
+      : aiLayer.status === "PENDING"
+        ? "Interpretation pending"
+        : "Interpretation refused";
   return (
     <div className="state">
-      <span className="name">
-        {aiLayer.status === "NOT CONFIGURED" ? "Interpretation not run" : "Interpretation refused"}
-      </span>
+      <span className="name">{name}</span>
       <span className="cause">{aiLayer.detail}</span>
     </div>
   );
