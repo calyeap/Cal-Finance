@@ -37,6 +37,18 @@ function usd(v: Decimal): string {
   return `$${formatUsd(v)}`;
 }
 
+/**
+ * CF-ANALYZER-INTEGRITY-FIRST-01 — `gates.leverage.netDebtRatio` is signed
+ * (gates.ts: total debt + finance leases − cash, over EV), but this label
+ * always read "Net debt" even when the sign meant the company holds more
+ * cash than debt. Display only: the ratio, its PASS result and its
+ * threshold are unchanged (gates.ts, untouched by this fix).
+ */
+function netDebtOrCashLine(netDebtRatio: Decimal): string {
+  if (netDebtRatio.isZero()) return "No net debt or net cash (0%)";
+  return netDebtRatio.isNegative() ? `Net cash ${pct(netDebtRatio.abs())}` : `Net debt ${pct(netDebtRatio)}`;
+}
+
 /** A computed figure via the shared FigureValue (provenance marks travel with it); otherwise its plain reason. */
 function StatValue({
   figure,
@@ -114,7 +126,7 @@ export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
             <dt>Leverage</dt>
             <dd>
               {gates.leverage.result === "PASS" && gates.leverage.netDebtRatio !== null ? (
-                `Net debt ${pct(gates.leverage.netDebtRatio)}`
+                netDebtOrCashLine(gates.leverage.netDebtRatio)
               ) : (
                 <span className="cause">{leverageUnavailableLine(gates.leverage)}</span>
               )}

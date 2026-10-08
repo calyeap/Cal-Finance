@@ -5,6 +5,7 @@ import type { AnalysisResult, FactRecord, Figure, ProvenanceTokens, SuppressingS
 import type { FigureSlot, SlotCatalogue } from "./traceability";
 import { boundState, NOT_COMPUTED_BINDING, type BoundState } from "../notComputed";
 import { provenanceQualifierParts } from "../provenance";
+import { valuationPositionSuppressed } from "../trust";
 
 // ---------------------------------------------------------------------------
 // The catalogue of figures [C] may reference — built from the Analysis Result,
@@ -375,11 +376,22 @@ export function buildSlotCatalogue(result: AnalysisResult): SlotCatalogue {
   // (modules/scenarioOutputs.ts); .bound() is required rather than .value()
   // here because .value() silently drops a null with no cause, and §9.5
   // forbids a suppressed output shown without one.
+  //
+  // CF-ANALYZER-INTEGRITY-FIRST-01 — this figure was offered to [C] as a
+  // usable slot whenever price was present, even on a run where
+  // ScenarioRangeStrip/ValuationStrip suppress the identical price-vs-range
+  // display (trust.ts's `valuationPositionSuppressed`: trust UNUSABLE, or
+  // the profile not human-confirmed — the exact pair the UI already gates
+  // on). [C] could then assert a number the reader is never shown. Passing
+  // `null` here when that gate applies drops the slot the same way a
+  // missing price already does (bound()'s `v === null` branch below) — no
+  // slot behind the id, so a reference to it is an UNKNOWN SLOT defect
+  // rather than a leaked figure. Eligible runs are unaffected.
   b.bound(
     "scenarioOutputs.priceLocationWithinRange",
     "where today's price sits within the scenario range",
     boundState(result.states, NOT_COMPUTED_BINDING.priceLocationWithinRange),
-    scenarioOutputs.priceLocationWithinRange,
+    valuationPositionSuppressed(result) ? null : scenarioOutputs.priceLocationWithinRange,
     (v) => pct(v, 0)
   );
   b.bound(
