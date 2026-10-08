@@ -23,46 +23,66 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=runtime-lib.sh
 source "${SCRIPT_DIR}/runtime-lib.sh"
 
-# calvin_slack_payload <line> <repo> <comment_url> [<comments_json> <created_at>]
-# Pure. <line> is a raw terminal comment (or just its first line); the
-# OWNER_ATTEMPT_ID tag, if any, is stripped before it reaches Slack since
-# it is internal runtime bookkeeping, not part of the human-facing
+# calvin_slack_payload <raw> <repo> <comment_url> [<comments_json> <created_at>]
+# Pure. <raw> is a raw terminal comment (or just its first line); any
+# BUILD_/REVIEW_/OWNER_ATTEMPT_ID tag is stripped before it reaches Slack
+# since it is internal runtime bookkeeping, not part of the human-facing
 # message. Prints the JSON webhook payload and returns 0 when
-# runtime_slack_kind classifies <line> as Slack-eligible (calvin_required,
-# actionable_blocked — CF-SLACK-ACTION-ONLY-01: genuine Calvin-action gates
-# only, never `complete`); prints nothing and returns 1 otherwise.
+# runtime_slack_kind classifies <raw> as Slack-eligible; prints nothing and
+# returns 1 otherwise. Kind is always computed from <raw> itself, never
+# from the already tag-stripped display line below — runtime_slack_kind's
+# own `stopped` classification depends on finding an OWNER_ATTEMPT_ID tag
+# that a pre-stripped line would have already lost.
+#
+# Two kinds are a real human gate and get an `<!channel>` ping:
+# `calvin_required` ("CALVIN REQUIRED"), `actionable_blocked` ("ACTIONABLE
+# BLOCKED"). Two more are one-time informational notices with no ping, per
+# CF-TERMINAL-NOTIFY-RELIABILITY-01 (issue #408), which explicitly
+# supersedes CF-SLACK-ACTION-ONLY-01's (issue #377) blanket exclusion of
+# `COMPLETE:` for final delegated-task outcomes: `finished` (OWNER's own
+# `COMPLETE:`, header "FINISHED") and `stopped` (OWNER's own definitively
+# terminal `BLOCKED: AI`/`BLOCKED: EXTERNAL`, header "STOPPED").
 #
 # <comments_json>/<created_at> are optional: when both are given (the
 # thread's prior comments, and this comment's own created_at), a terminal
-# that runtime_slack_is_duplicate finds restates the same still-open Calvin
-# gate — keyed by canonical item + Slack kind + open/resolved state, per
+# that runtime_slack_is_duplicate finds restates the same still-open gate —
+# keyed by canonical item + Slack kind + open/resolved state, per
 # CF-SLACK-DEDUPE-02, never by a worker attempt ID — is also treated as
-# ineligible (return 1). This covers both the #365 class (BUILD's alert and
-# OWNER's reconciling restatement of the same actionable blocker) and any
-# other actor restating the same unresolved gate, without depending on one
-# comment literally referencing another's attempt ID. Omitting them skips
-# the duplicate check (always eligible on its own terms), which is correct
-# for a call site with no thread to consult, such as a fresh OWNER-relay
-# transport-failure receipt.
+# ineligible (return 1), which bounds every kind (including `finished`/
+# `stopped`) to at most one same-outcome notification. This covers both the
+# #365 class (BUILD's alert and OWNER's reconciling restatement of the same
+# actionable blocker) and any other actor restating the same unresolved
+# gate, without depending on one comment literally referencing another's
+# attempt ID. Omitting them skips the duplicate check (always eligible on
+# its own terms), which is correct for a call site with no thread to
+# consult, such as a fresh OWNER-relay transport-failure receipt.
 calvin_slack_payload() {
-  local raw="$1" repo="$2" comment_url="$3" comments_json="${4:-}" created_at="${5:-}" line kind header
-  line="$(runtime_terminal_line "$raw")"
-  line="$(printf '%s' "$line" | sed -E 's/[[:space:]]*\[OWNER_ATTEMPT_ID:[^]]+\][[:space:]]*$//')"
-  kind="$(runtime_slack_kind "$line")"
+  local raw="$1" repo="$2" comment_url="$3" comments_json="${4:-}" created_at="${5:-}" line kind header pingable
+  kind="$(runtime_slack_kind "$raw")"
   case "$kind" in
-    calvin_required) header="CALVIN REQUIRED" ;;
-    actionable_blocked) header="ACTIONABLE BLOCKED" ;;
+    calvin_required) header="CALVIN REQUIRED"; pingable=true ;;
+    actionable_blocked) header="ACTIONABLE BLOCKED"; pingable=true ;;
+    finished) header="FINISHED"; pingable=false ;;
+    stopped) header="STOPPED"; pingable=false ;;
     *) return 1 ;;
   esac
   if [ -n "$comments_json" ] && [ -n "$created_at" ] \
     && [ "$(runtime_slack_is_duplicate "$comments_json" "$created_at" "$raw")" = true ]; then
     return 1
   fi
-  # These are the only Slack-eligible states in the runtime: a real Calvin
-  # decision/action gate. Include one channel mention so Slack creates an
-  # actual notification instead of only dropping a quiet webhook message.
-  jq -n --arg h "$header" --arg repo "$repo" --arg line "$line" --arg url "$comment_url" \
-    '{text: ($h + " — " + $repo + "\n" + $line + "\n" + $url + "\n<!channel>")}'
+  line="$(runtime_terminal_line "$raw")"
+  line="$(printf '%s' "$line" | sed -E 's/[[:space:]]*\[(BUILD|REVIEW|OWNER)_ATTEMPT_ID:[^]]+\][[:space:]]*$//')"
+  if [ "$pingable" = true ]; then
+    # A real Calvin decision/action gate. Include one channel mention so
+    # Slack creates an actual notification instead of only dropping a
+    # quiet webhook message.
+    jq -n --arg h "$header" --arg repo "$repo" --arg line "$line" --arg url "$comment_url" \
+      '{text: ($h + " — " + $repo + "\n" + $line + "\n" + $url + "\n<!channel>")}'
+  else
+    # A one-time informational notice: no action is implied, so no ping.
+    jq -n --arg h "$header" --arg repo "$repo" --arg line "$line" --arg url "$comment_url" \
+      '{text: ($h + " — " + $repo + "\n" + $line + "\n" + $url)}'
+  fi
 }
 
 # calvin_slack_send <line> <repo> <comment_url> [<comments_json> <created_at>]

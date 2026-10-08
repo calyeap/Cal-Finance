@@ -55,7 +55,7 @@ Use when the bounded parent/outcome is durably complete and no already-authorise
 Terminal:
 `COMPLETE: <meaningful completed parent/outcome>`
 
-`COMPLETE:` is not Slack-eligible (CF-SLACK-ACTION-ONLY-01): GitHub is the durable record of completion, and Slack interrupts Calvin only for a genuine action gate (`CALVIN REQUIRED:` / `BLOCKED: ACTIONABLE`).
+`COMPLETE:` sends one informational Slack `FINISHED` notification (CF-TERMINAL-NOTIFY-RELIABILITY-01, issue #408 — explicitly superseding CF-SLACK-ACTION-ONLY-01's blanket exclusion for this final delegated-task case): GitHub stays the durable record of completion, but Calvin is also told once, with no action implied. Write the terminal text as the actual grounded outcome (shipped, investigated/no code change, or otherwise finished) — never claim a product shipped merely because the task closed.
 
 ### BLOCKED
 Use when continuation cannot safely proceed and there is no permitted deterministic next mutation.
@@ -63,6 +63,8 @@ Use when continuation cannot safely proceed and there is no permitted determinis
 - `BLOCKED: AI — ...` for machine/runtime/evidence problems Calvin cannot usefully resolve — includes a stale contract fence exit (`BLOCKED: AI — STALE_CONTRACT: ...`, see Stale contract fence).
 - `BLOCKED: EXTERNAL — ...` when a third party is the real dependency and Calvin need not chase.
 - `BLOCKED: ACTIONABLE — ...` only for a concrete human-only action such as permission/credential access. This class may alert Calvin.
+
+This OWNER terminal's own `BLOCKED: AI`/`BLOCKED: EXTERNAL` — a definitive stop with no continuing owner/worker — sends one informational Slack `STOPPED` notification (CF-TERMINAL-NOTIFY-RELIABILITY-01, issue #408), never a `CALVIN REQUIRED`/`BLOCKED: ACTIONABLE` action gate. A transient child `BLOCKED:` that this OWNER attempt is still reconciling is not yet this case and stays Slack-silent until OWNER's own terminal lands. A stale-contract fence exit stays Slack-silent regardless: it carries no product signal about the outcome.
 
 A missing worker terminal is **not** permission to re-fire that worker. Liveness fails closed to BLOCKED.
 

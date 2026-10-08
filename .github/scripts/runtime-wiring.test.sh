@@ -53,11 +53,14 @@ require "$OWNER" '^### BLOCKED$' 'BLOCKED parent terminal'
 require "$OWNER" '^### CALVIN REQUIRED$' 'CALVIN REQUIRED parent terminal'
 forbid "$OWNER" 'WAIT:|DISPATCHED:' 'legacy parent terminal vocabulary'
 
-# Slack is terminal-driven: genuine ask / actionable block only (never
-# COMPLETE — CF-SLACK-ACTION-ONLY-01).
+# Slack is terminal-driven: genuine ask / actionable block, plus one
+# informational completion/stop notification per
+# CF-TERMINAL-NOTIFY-RELIABILITY-01 (issue #408), which explicitly
+# supersedes CF-SLACK-ACTION-ONLY-01's (issue #377) blanket exclusion of
+# COMPLETE for OWNER's own final delegated-task outcome.
 require "$SLACK" 'calvin-slack-notify\.sh' 'shared Slack payload/send, reused by direct relay call sites'
 forbid "$SLACK" 'WORKFLOW BLOCKED|OWNER LIVENESS EXHAUSTED' 'legacy liveness-specific notification vocabulary'
-forbid "$SLACK" "'COMPLETE:'" 'CF-SLACK-ACTION-ONLY-01: job-level gate no longer admits COMPLETE'
+require "$SLACK" "'COMPLETE:'" 'CF-TERMINAL-NOTIFY-RELIABILITY-01: job-level gate admits COMPLETE for one informational FINISHED notification'
 
 # CF-WORKFLOW-RESET-TERMINAL-HANDOFF-REPAIR-02: a workflow-authored
 # (GH_TOKEN-authored) terminal comment cannot recursively trigger the

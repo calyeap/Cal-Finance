@@ -27,14 +27,22 @@ assert_eq "$(runtime_is_child_terminal 'BLOCKED: AI — parent stopped [OWNER_AT
 assert_eq "$(runtime_parent_terminal_kind 'CONTINUE: existing authorised issue #9 [OWNER_ATTEMPT_ID: O1]')" CONTINUE
 assert_eq "$(runtime_parent_terminal_kind 'COMPLETE: parent outcome done [OWNER_ATTEMPT_ID: O1]')" COMPLETE
 
-# Slack is an interrupt channel for genuine Calvin action only
-# (CF-SLACK-ACTION-ONLY-01, issue #377): COMPLETE stays a valid parent
-# terminal (GitHub's durable completion record) but is never Slack-eligible.
+# Slack is an interrupt/inform channel. CF-SLACK-ACTION-ONLY-01 (issue #377)
+# made CALVIN REQUIRED/BLOCKED: ACTIONABLE the only eligible kinds.
+# CF-TERMINAL-NOTIFY-RELIABILITY-01 (issue #408) explicitly supersedes that
+# for OWNER's own final delegated-task outcome: COMPLETE is now one
+# informational `finished` notification, and OWNER's own definitively
+# terminal BLOCKED: AI/BLOCKED: EXTERNAL is now `stopped` — neither is an
+# action gate.
 assert_eq "$(runtime_slack_kind 'CALVIN REQUIRED: choose A or B')" calvin_required
 assert_eq "$(runtime_slack_kind 'BLOCKED: ACTIONABLE — refresh secret')" actionable_blocked
-assert_eq "$(runtime_slack_kind 'BLOCKED: AI — worker timed out')" none
-assert_eq "$(runtime_slack_kind 'COMPLETE: meaningful parent outcome')" none "COMPLETE is Slack-ineligible"
+assert_eq "$(runtime_slack_kind 'BLOCKED: AI — worker timed out [BUILD_ATTEMPT_ID: B1]')" none "transient child BLOCKED stays silent pending OWNER reconciliation"
+assert_eq "$(runtime_slack_kind 'BLOCKED: AI — worker timed out')" none "an untagged BLOCKED fails closed to silent rather than guessing it is OWNER's own"
+assert_eq "$(runtime_slack_kind 'COMPLETE: meaningful parent outcome [OWNER_ATTEMPT_ID: O1]')" finished "OWNER's own COMPLETE is one informational FINISHED notification"
+assert_eq "$(runtime_slack_kind 'COMPLETE: meaningful parent outcome')" finished "COMPLETE is OWNER-only vocabulary, so it classifies even without a tag"
 assert_eq "$(runtime_parent_terminal_kind 'COMPLETE: meaningful parent outcome')" COMPLETE "COMPLETE remains a valid parent terminal"
+assert_eq "$(runtime_slack_kind 'BLOCKED: AI — no viable path [OWNER_ATTEMPT_ID: O1]')" stopped "OWNER's own definitively terminal BLOCKED: AI is one informational STOPPED notification"
+assert_eq "$(runtime_slack_kind 'BLOCKED: EXTERNAL — third-party outage [OWNER_ATTEMPT_ID: O1]')" stopped "OWNER's own definitively terminal BLOCKED: EXTERNAL is one informational STOPPED notification"
 assert_eq "$(runtime_slack_kind 'CONTINUE: next child')" none
 
 # CF-WORKFLOW-TERMINAL-NORMALIZE-01 (issue #375): a standalone attempt-
@@ -48,7 +56,9 @@ assert_eq "$(runtime_is_calvin_required $'[BUILD_ATTEMPT_ID: BUILD-1-1]\nCALVIN 
 assert_eq "$(runtime_slack_kind $'[BUILD_ATTEMPT_ID: BUILD-1-1]\nCALVIN REQUIRED: pick A or B')" calvin_required "metadata-first BUILD terminal still Slack-eligible"
 assert_eq "$(runtime_is_correct $'[REVIEW_ATTEMPT_ID: REVIEW-2-1]\nCORRECT: fix one thing')" true "metadata-first REVIEW terminal recognised"
 assert_eq "$(runtime_parent_terminal_kind $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCOMPLETE: parent outcome done')" COMPLETE "metadata-first OWNER terminal recognised"
-assert_eq "$(runtime_slack_kind $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCOMPLETE: parent outcome done')" none "metadata-first OWNER COMPLETE terminal remains Slack-ineligible"
+assert_eq "$(runtime_slack_kind $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCOMPLETE: parent outcome done')" finished "metadata-first OWNER COMPLETE terminal is Slack-eligible as an informational FINISHED"
+assert_eq "$(runtime_slack_kind $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nBLOCKED: AI — no viable path')" stopped "metadata-first OWNER BLOCKED: AI terminal is Slack-eligible as an informational STOPPED"
+assert_eq "$(runtime_slack_kind $'[BUILD_ATTEMPT_ID: BUILD-3-1]\nBLOCKED: AI — worker timed out')" none "metadata-first child BLOCKED: AI terminal stays silent pending OWNER reconciliation"
 assert_eq "$(runtime_is_child_terminal $'[OWNER_ATTEMPT_ID: OWNER-3-1]\nCALVIN REQUIRED: needs a call')" false "metadata-first OWNER receipt still excluded from child-terminal routing"
 assert_eq "$(runtime_is_calvin_required $'Some narrative update.\n\nCALVIN REQUIRED: quoted later, not a terminal')" false "prose followed later by CALVIN REQUIRED remains ineligible"
 assert_eq "$(runtime_slack_kind $'Some narrative update.\n\nCALVIN REQUIRED: quoted later, not a terminal')" none "prose followed later by CALVIN REQUIRED remains Slack-ineligible"
@@ -226,6 +236,13 @@ STALE_LINE='BLOCKED: AI — STALE_CONTRACT: canonical contract changed since STA
 assert_eq "$(runtime_slack_kind "$STALE_LINE")" none "stale exit never reaches Slack, even for a would-be CALVIN REQUIRED/ACTIONABLE gate"
 runtime_terminal_is_typed BUILD "$(runtime_terminal_line "$STALE_LINE")" || fail "stale exit is a typed BUILD terminal"
 assert_eq "$(runtime_is_child_terminal "$STALE_LINE")" true "stale BUILD/REVIEW exit still reaches OWNER for reconciliation"
+
+# CF-TERMINAL-NOTIFY-RELIABILITY-01 (issue #408): OWNER's own BLOCKED: AI is
+# now Slack-eligible as `stopped`, but a stale-contract fence exit must stay
+# Slack-silent even when OWNER itself carries the tag — it carries no
+# product signal about the outcome, by design.
+STALE_LINE_OWNER='BLOCKED: AI — STALE_CONTRACT: canonical contract changed since START (loaded abc123def456, current 999999999999); no route/merge/alert taken. [OWNER_ATTEMPT_ID: O9]'
+assert_eq "$(runtime_slack_kind "$STALE_LINE_OWNER")" none "OWNER's own stale-contract fence exit also never reaches Slack, even though it carries an OWNER tag"
 
 # Closing a stale attempt with this terminal releases it exactly like any
 # other typed terminal — existing admission/resume machinery then resumes

@@ -12,7 +12,10 @@ jobs:
   notify-calvin:
     if: >-
       contains(github.event.comment.body, 'CALVIN REQUIRED:') ||
-      contains(github.event.comment.body, 'BLOCKED: ACTIONABLE')
+      contains(github.event.comment.body, 'BLOCKED: ACTIONABLE') ||
+      contains(github.event.comment.body, 'COMPLETE:') ||
+      contains(github.event.comment.body, 'BLOCKED: AI') ||
+      contains(github.event.comment.body, 'BLOCKED: EXTERNAL')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
@@ -27,7 +30,14 @@ jobs:
         run: |
           set -uo pipefail
           source .github/scripts/runtime-lib.sh
-          KIND="$(runtime_slack_kind "$(runtime_terminal_line "$COMMENT_BODY")")"
+          # runtime_slack_kind itself extracts the terminal line and, for
+          # the OWNER-only `stopped` kind, needs the full raw body to find
+          # an OWNER_ATTEMPT_ID tag that may live on a preceding metadata
+          # line (runtime_terminal_tag_text) — pre-extracting here would
+          # lose that tag. The job-level `if:` above is a cheap coarse
+          # prefilter; this is the one precise classifier it must agree
+          # with (CF-TERMINAL-NOTIFY-RELIABILITY-01, issue #408).
+          KIND="$(runtime_slack_kind "$COMMENT_BODY")"
           echo "kind=$KIND" >> "$GITHUB_OUTPUT"
 
       # calvin-slack-notify.sh owns payload construction (including
