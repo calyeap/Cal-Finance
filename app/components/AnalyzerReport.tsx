@@ -6,6 +6,7 @@ import { ValuationStrip } from "./ValuationStrip";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 import { boundState, NOT_COMPUTED_BINDING, type BoundState } from "@/lib/analyzer/notComputed";
+import { notComputedLine } from "@/lib/analyzer/overviewCopy";
 import type {
   AnalysisResult,
   ComputedValue,
@@ -712,7 +713,19 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                 <td className={diagnostics.fcfYieldGrowth.precondition === "PRECONDITION FAILED" ? "state" : undefined}>
                   {diagnostics.fcfYieldGrowth.precondition === "PRECONDITION FAILED" ? (
                     <>
-                      <span className="name">PRECONDITION FAILED</span>
+                      {/* CF-ANALYZER-USER-READY-01 correction — same defect
+                          class DO item 3 names ("raw PRECONDITION FAILED...
+                          on normal tab surfaces"): this cell used to render
+                          the bare state name with no explanation. overviewCopy.ts's
+                          notComputedLine() is the instrument every other normal
+                          surface (Overview, right rail, scenario strip)
+                          already uses for this same state; the raw name
+                          moves into the existing opt-in Disclosure mechanism,
+                          auditable but no longer the primary reading text. */}
+                      <span className="cause">{notComputedLine("PRECONDITION FAILED", "")}</span>
+                      <Disclosure label="Show the diagnostic state name">
+                        <span className="name">PRECONDITION FAILED</span>
+                      </Disclosure>
                     </>
                   ) : diagnostics.fcfYieldGrowth.output ? (
                     <FigureValue figure={diagnostics.fcfYieldGrowth.output} format={pct} />

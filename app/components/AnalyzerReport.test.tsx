@@ -54,9 +54,34 @@ describe("AnalyzerReport — MSFT", () => {
     expect(screen.getAllByText("20.9%").length).toBeGreaterThan(0);
   });
 
-  it("shows PRECONDITION FAILED for FCF yield + growth, matching the mock", () => {
-    render(<AnalyzerReport result={result} />);
+  it("explains FCF yield + growth's PRECONDITION FAILED in plain language on the normal surface, not the raw state name (CF-ANALYZER-USER-READY-01)", () => {
+    const { container } = render(<AnalyzerReport result={result} />);
+    expect(
+      screen.getAllByText("the conditions this measure needs do not hold for this company", { exact: false }).length
+    ).toBeGreaterThan(0);
+    // The raw diagnostic state is still present and auditable — just confined
+    // to the opt-in Disclosure, not the primary reading text (checked
+    // precisely by the containment test below).
     expect(screen.getAllByText("PRECONDITION FAILED").length).toBeGreaterThan(0);
+    expect(container.querySelector("section#D details.disclose")).not.toBeNull();
+  });
+
+  it("keeps the raw PRECONDITION FAILED token confined to its opt-in disclosure — never the primary reading text (CF-ANALYZER-USER-READY-01)", () => {
+    const { container } = render(<AnalyzerReport result={result} />);
+    const cells = Array.from(container.querySelectorAll("section#D td.state"));
+    const cell = cells.find((td) => td.textContent?.includes("PRECONDITION FAILED")) as HTMLElement;
+    expect(cell).toBeTruthy();
+    const disclosure = cell.querySelector("details.disclose") as HTMLElement;
+    expect(disclosure).not.toBeNull();
+    expect(disclosure.textContent).toContain("PRECONDITION FAILED");
+    // Outside the disclosure, within the same cell, the raw token never
+    // appears — only the human explanation does.
+    const outsideText = Array.from(cell.childNodes)
+      .filter((n) => n !== disclosure)
+      .map((n) => (n as HTMLElement).textContent ?? (n.textContent ?? ""))
+      .join(" ");
+    expect(outsideText).not.toContain("PRECONDITION FAILED");
+    expect(outsideText).toContain("the conditions this measure needs do not hold for this company");
   });
 
   it("never renders Sections I/I2 as populated — no interpretation or challenger call exists yet (Milestone 8)", () => {
