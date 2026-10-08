@@ -1,0 +1,28 @@
+[
+  {
+    "label": "baseline",
+    "firstLoadMs": 1259,
+    "tabTimings": {
+      "business": 911,
+      "financials": 1216,
+      "valuation": 896,
+      "risks": 1112,
+      "market": 882,
+      "evidence": 1177
+    },
+    "reloadMs": 1168
+  },
+  {
+    "label": "head",
+    "firstLoadMs": 1097,
+    "tabTimings": {
+      "business": 1166,
+      "financials": 1191,
+      "valuation": 1131,
+      "risks": 1134,
+      "market": 885,
+      "evidence": 1177
+    },
+    "reloadMs": 1158
+  }
+]
