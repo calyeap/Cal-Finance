@@ -202,19 +202,45 @@ runtime_parent_terminal_kind() {
   esac
 }
 
-# runtime_slack_kind <line>
-# Slack is an interrupt channel for genuine Calvin action, not a progress
-# feed (CF-SLACK-ACTION-ONLY-01, issue #377): only a real human gate is
-# Slack-eligible. `COMPLETE:` remains a valid parent terminal
-# (runtime_parent_terminal_kind) — it is simply never Slack-eligible.
+# runtime_slack_kind <body>
+# Slack is an interrupt/inform channel for genuine Calvin-visible terminal
+# outcomes. CF-SLACK-ACTION-ONLY-01 (issue #377) made it an action-only
+# channel: `calvin_required`/`actionable_blocked` are real human gates.
+# CF-TERMINAL-NOTIFY-RELIABILITY-01 (issue #408) explicitly supersedes that
+# choice for final delegated-task outcomes: OWNER's own `COMPLETE:` is now
+# `finished`, and OWNER's own definitively terminal `BLOCKED: AI`/
+# `BLOCKED: EXTERNAL` (no continuing owner/worker) is now `stopped` — both
+# one-time informational notifications, never an action gate.
+#
+# A transient child `BLOCKED: AI`/`BLOCKED: EXTERNAL` (BUILD/REVIEW, not yet
+# reconciled by OWNER) stays `none`: OWNER is still reconciling it, so it
+# is distinguished from OWNER's own terminal the same way
+# runtime_is_child_terminal does — by the absence of an OWNER_ATTEMPT_ID tag
+# (via runtime_terminal_tag_text, which also covers a metadata-first tag
+# line). An untagged BLOCKED fails closed to `none` rather than guessing it
+# is OWNER's own. A stale-contract fence exit (body contains
+# `STALE_CONTRACT`) stays `none` regardless of actor — it carries no
+# product signal about the outcome (see BUILD.md's Stale contract fence).
 runtime_slack_kind() {
-  local line
-  line="$(runtime_terminal_line "$1")"
+  local body="$1" line tag_text
+  line="$(runtime_terminal_line "$body")"
   case "$line" in
-    "CALVIN REQUIRED:"*) echo calvin_required ;;
-    "BLOCKED: ACTIONABLE"*) echo actionable_blocked ;;
-    *) echo none ;;
+    "CALVIN REQUIRED:"*) echo calvin_required; return ;;
+    "BLOCKED: ACTIONABLE"*) echo actionable_blocked; return ;;
+    "COMPLETE:"*) echo finished; return ;;
   esac
+  case "$line" in
+    *STALE_CONTRACT*) echo none; return ;;
+  esac
+  case "$line" in
+    "BLOCKED: AI"*|"BLOCKED: EXTERNAL"*)
+      tag_text="$(runtime_terminal_tag_text "$body")"
+      case "$tag_text" in
+        *"[OWNER_ATTEMPT_ID: "*) echo stopped; return ;;
+      esac
+      ;;
+  esac
+  echo none
 }
 
 # runtime_is_calvin_ruling_line <line>
@@ -277,7 +303,7 @@ runtime_slack_is_duplicate() {
   kind="$(runtime_slack_kind "$this_raw")"
   if [ "$kind" = none ]; then echo false; return; fi
 
-  local earlier_bodies body term first k
+  local earlier_bodies body first k
   earlier_bodies="$(jq -c --arg before "$before" '
     [ .[] | select(.created_at < $before) ] | sort_by(.created_at) | reverse | .[].body
   ' <<< "$comments_json")"
@@ -290,8 +316,12 @@ runtime_slack_is_duplicate() {
       echo false
       return
     fi
-    term="$(runtime_terminal_line "$body")"
-    k="$(runtime_slack_kind "$term")"
+    # Classify from the raw body, not a pre-extracted terminal line: an
+    # earlier metadata-first OWNER terminal (the [OWNER_ATTEMPT_ID: ...]
+    # tag on its own line above the typed terminal) needs runtime_slack_kind
+    # to see that tag text to classify as `stopped`, which runtime_terminal_line
+    # alone already strips away.
+    k="$(runtime_slack_kind "$body")"
     if [ "$k" = "$kind" ]; then
       echo true
       return
