@@ -1,4 +1,4 @@
-import { computeAnalysisForRun } from "./gate";
+import { computeAnalysisForRun, type GateState } from "./gate";
 import { getAiOutputs, saveAiOutputs } from "./aiOutputStore";
 import { runAiLayer, mergeAiLayer, type AiLayerOutputs } from "./ai/run";
 import { analystCallIfConfigured, ANALYST_MODEL } from "./ai/anthropicCall";
@@ -130,13 +130,19 @@ function generateOnce(
  * The call is a parameter so tests can drive it without a network or a key,
  * and so the one place that decides whether a live call is possible
  * (`analystCallIfConfigured`) is visible in the signature rather than buried.
+ *
+ * `preloadedState`, optional, forwards straight to computeAnalysisForRun's
+ * own seam — see that function's doc comment. It changes nothing about the
+ * AI layer below; it only avoids a second loadGateState call when the caller
+ * already has one from earlier in the same request.
  */
 export async function analysisForReport(
   runId: string,
-  call: AnalystCall | null = analystCallIfConfigured()
+  call: AnalystCall | null = analystCallIfConfigured(),
+  preloadedState?: GateState
 ): Promise<ReportAnalysis> {
   // First, and independently of everything below.
-  const result = await computeAnalysisForRun(runId);
+  const result = await computeAnalysisForRun(runId, preloadedState);
 
   // Already run for this run. The words a report shows must not change under
   // the reader on a refresh, and re-rolling them would also re-bill the call.

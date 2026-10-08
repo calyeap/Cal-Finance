@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import Decimal from "decimal.js";
 import { secClientFromEnv, cikForTicker, type SecClient } from "./secClient";
-import type { CompanyFactsDocument, SubmissionsDocument } from "./secClient";
+import type { CompanyFactsDocument, CompanyTickerDirectory, SubmissionsDocument } from "./secClient";
 import { acquire, type AcquisitionResult, type PriceQuote } from "./acquire";
 import { runCrossChecks, assertEveryInputReported, type CrossCheckReport } from "../crosschecks/run";
 import { extractItem1 } from "./item1Extraction";
@@ -64,8 +64,28 @@ interface CacheEntry {
 const TTL_MS = 15 * 60 * 1000;
 const cache = new Map<string, CacheEntry>();
 
+// CF-ANALYZER-USABLE-REPORT-REPAIR-01 — the ticker->CIK directory is the
+// SAME multi-MB document for every company and ticker, so it does not
+// belong keyed per-ticker the way `cache` above is. It was being re-fetched
+// in full on every acquisition-cache miss (a fresh process, a 15-minute TTL
+// expiry, or a different price timestamp — see acquireCompany's cache key)
+// even when nothing about the directory itself could have changed in that
+// time. Same TTL, same one-entry-per-process reasoning as `cache`, just one
+// shared key instead of one per ticker.
+let tickerDirectoryCache: { at: number; value: CompanyTickerDirectory } | null = null;
+
+async function cachedCompanyTickers(client: SecClient): Promise<CompanyTickerDirectory> {
+  if (tickerDirectoryCache !== null && Date.now() - tickerDirectoryCache.at < TTL_MS) {
+    return tickerDirectoryCache.value;
+  }
+  const value = await client.companyTickers();
+  tickerDirectoryCache = { at: Date.now(), value };
+  return value;
+}
+
 /** Test seam and cache reset. Never called by application code. */
 export function __resetAcquisitionCache(): void {
+  tickerDirectoryCache = null;
   cache.clear();
 }
 
@@ -356,13 +376,26 @@ async function businessNarrativeFrom(
 
 async function fromEdgar(ticker: string, options: AcquireOptions): Promise<AcquiredCompany> {
   const client = secClientFromEnv();
-  const directory = await client.companyTickers();
+  const directory = await cachedCompanyTickers(client);
   const found = cikForTicker(directory, ticker);
   if (found === null) {
     throw new Error(`${ticker} is not in the SEC ticker directory`);
   }
 
-  const companyFacts = await client.companyFacts(found.cik);
+  // companyFacts and submissions each depend only on `found.cik`, never on
+  // each other's result, so there is no reason the second must wait for the
+  // first's full round trip — that ordering cost every acquisition one
+  // request's full latency for nothing. A companyFacts failure still
+  // propagates exactly as before (Promise.all rejects with it); a
+  // submissions failure is still the one caught below, not a second place
+  // this function can throw from.
+  const [companyFacts, submissionsOutcome] = await Promise.all([
+    client.companyFacts(found.cik),
+    client.submissions(found.cik).then(
+      (submissions): { ok: true; submissions: SubmissionsDocument } => ({ ok: true, submissions }),
+      (err: unknown): { ok: false; err: unknown } => ({ ok: false, err })
+    ),
+  ]);
 
   let classification: { sic: string | null; sicDescription: string | null } = {
     sic: null,
@@ -374,21 +407,23 @@ async function fromEdgar(ticker: string, options: AcquireOptions): Promise<Acqui
       "The SEC submissions lookup that names the company's filings did not complete, so no 10-K could be located.",
   };
   let latestFiling: LatestFiling | null = null;
-  try {
-    const submissions: SubmissionsDocument = await client.submissions(found.cik);
-    classification = {
-      sic: submissions.sic ?? null,
-      sicDescription: submissions.sicDescription ?? null,
-    };
-    // A failure inside businessNarrativeFrom resolves to an unavailable
-    // reason rather than throwing, so it cannot fall into this catch and
-    // wrongly null out a classification that DID succeed.
-    business = await businessNarrativeFrom(client, found.cik, submissions);
-    latestFiling = latestMaterialFiling(submissions);
-  } catch {
-    // Gate 0 fails closed on a missing classification (§5.3, §6.1). A failed
-    // lookup leaves both null; neither may default to something classifiable.
-    classification = { sic: null, sicDescription: null };
+  if (submissionsOutcome.ok) {
+    try {
+      const submissions = submissionsOutcome.submissions;
+      classification = {
+        sic: submissions.sic ?? null,
+        sicDescription: submissions.sicDescription ?? null,
+      };
+      // A failure inside businessNarrativeFrom resolves to an unavailable
+      // reason rather than throwing, so it cannot fall into this catch and
+      // wrongly null out a classification that DID succeed.
+      business = await businessNarrativeFrom(client, found.cik, submissions);
+      latestFiling = latestMaterialFiling(submissions);
+    } catch {
+      // Gate 0 fails closed on a missing classification (§5.3, §6.1). A failed
+      // lookup leaves both null; neither may default to something classifiable.
+      classification = { sic: null, sicDescription: null };
+    }
   }
 
   // The approved fallback, applied once here so every consumer of this
