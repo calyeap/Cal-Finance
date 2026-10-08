@@ -295,13 +295,41 @@ export function checkBriefAcceptance({ ticker, policy, report, overviewText }: B
       if (!finite(fairValueRange.bear) || !finite(fairValueRange.bull)) bad.push("range bounds");
       if (!finite(values.bear) || !finite(values.base) || !finite(values.bull)) bad.push("bear/base/bull values");
       if (!finite(location)) bad.push("current price's position within the range");
+
+      // CF-ANALYZER-MSFT-NUMERIC-INTEGRITY-01 — presence/finiteness above
+      // does not catch a brief whose displayed figures contradict each
+      // other. Both checks below are independent of the field they verify:
+      // never comparing a figure to itself, only to the other already-
+      // computed figures it is defined from (assemble.ts, modules/
+      // scenarioOutputs.ts). A real price legitimately outside bear-bull
+      // still passes here — only the arithmetic identity is checked, never
+      // whether the price lands inside the range.
+      const inconsistent: string[] = [];
+      if (bad.length === 0) {
+        if (!fairValueRange.bear.equals(values.bear) || !fairValueRange.bull.equals(values.bull)) {
+          inconsistent.push(
+            `the fair-value range ($${fairValueRange.bear.toFixed(2)}-$${fairValueRange.bull.toFixed(2)}) does not match the computed bear/bull scenario values ($${values.bear.toFixed(2)}-$${values.bull.toFixed(2)})`
+          );
+        } else if (location !== null) {
+          const span = fairValueRange.bull.minus(fairValueRange.bear);
+          const expectedLocation = span.isZero() ? new Decimal(0) : result.price.value.minus(fairValueRange.bear).dividedBy(span);
+          if (!location.equals(expectedLocation)) {
+            inconsistent.push(
+              `price's position within the range (${location.mul(100).toFixed(1)}%) does not equal (price − bear) ÷ (bull − bear) = ${expectedLocation.mul(100).toFixed(1)}%`
+            );
+          }
+        }
+      }
+
       item =
-        bad.length === 0
-          ? {
-              status: "CONTENT",
-              detail: `Bear $${values.bear.toFixed(0)} · Base $${values.base.toFixed(0)} · Bull $${values.bull.toFixed(0)} · price ${location!.mul(100).toFixed(0)}% of the way from bear to bull`,
-            }
-          : { status: "MISSING", detail: `not finite: ${bad.join(", ")}` };
+        bad.length > 0
+          ? { status: "MISSING", detail: `not finite: ${bad.join(", ")}` }
+          : inconsistent.length > 0
+            ? { status: "MISSING", detail: inconsistent.join("; ") }
+            : {
+                status: "CONTENT",
+                detail: `Bear $${values.bear.toFixed(0)} · Base $${values.base.toFixed(0)} · Bull $${values.bull.toFixed(0)} · price ${location!.mul(100).toFixed(0)}% of the way from bear to bull`,
+              };
     } else {
       item = { status: "CONTENT", detail: "pre-revenue distribution (failure / success / cash floor)" };
     }

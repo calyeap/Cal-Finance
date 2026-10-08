@@ -1,4 +1,5 @@
 import { describe, it, expect } from "vitest";
+import Decimal from "decimal.js";
 import { assembleAnalysisResult, type CompanyFixture } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import type { AnalysisResult, InterpretationStatement, PageOneProse } from "@/lib/analyzer/types";
@@ -168,6 +169,60 @@ describe("MSFT — the full brief", () => {
     expect(acceptance.pass).toBe(false);
     expect(acceptance.forbidden.map((f) => f.label)).toContain("INCOMPLETE");
     expect(acceptance.failures.join("\n")).toContain("The check that would size that effect is INCOMPLETE.");
+  });
+});
+
+describe("CF-ANALYZER-MSFT-NUMERIC-INTEGRITY-01 — the displayed scenario/range/price-position figures must reconcile", () => {
+  const msftResult = assembleAnalysisResult(MSFT_FIXTURE);
+
+  it("a range whose bear/bull bounds do not match the computed scenario values fails, with both figures named", () => {
+    const mutated: AnalysisResult = {
+      ...msftResult,
+      fairValueRange:
+        msftResult.fairValueRange.kind === "range"
+          ? { ...msftResult.fairValueRange, bear: new Decimal(200) }
+          : msftResult.fairValueRange,
+    };
+    expect(msftResult.fairValueRange.kind).toBe("range"); // guards the cast above
+    const acceptance = check("MSFT", "FULL_BRIEF", reportFor(complete(mutated)));
+
+    expect(acceptance.pass).toBe(false);
+    expect(acceptance.failures.join("\n")).toContain(
+      "the fair-value range ($200.00-$650.00) does not match the computed bear/bull scenario values ($265.00-$650.00)"
+    );
+  });
+
+  it("a price-location figure that does not equal (price - bear) / (bull - bear) fails, naming the expected value", () => {
+    const mutated: AnalysisResult = {
+      ...msftResult,
+      scenarioOutputs: { ...msftResult.scenarioOutputs, priceLocationWithinRange: new Decimal("0.5") },
+    };
+    const acceptance = check("MSFT", "FULL_BRIEF", reportFor(complete(mutated)));
+
+    expect(acceptance.pass).toBe(false);
+    expect(acceptance.failures.join("\n")).toMatch(/does not equal \(price − bear\) ÷ \(bull − bear\) = 63\.7%/);
+  });
+
+  it("a real price legitimately outside the bear-bull range still passes — only the arithmetic identity is checked, never whether price is inside the range", () => {
+    const outsideFixture: CompanyFixture = {
+      ...MSFT_FIXTURE,
+      price: { value: new Decimal("700"), timestamp: MSFT_FIXTURE.price.timestamp },
+      enterpriseValue: { ...MSFT_FIXTURE.enterpriseValue, price: { value: new Decimal("700"), provenance: MSFT_FIXTURE.enterpriseValue.price!.provenance } },
+    };
+    const result = assembleAnalysisResult(outsideFixture);
+    expect(result.fairValueRange.kind).toBe("range");
+    expect(result.scenarioOutputs.priceLocationWithinRange!.greaterThan(1)).toBe(true); // above the bull case
+
+    const acceptance = check("MSFT", "FULL_BRIEF", reportFor(complete(result)));
+    expect(acceptance.sections.find((s) => s.id === 5)!.status).toBe("CONTENT");
+    expect(acceptance.failures.join("\n")).not.toContain("does not match");
+    expect(acceptance.failures.join("\n")).not.toContain("does not equal");
+  });
+
+  it("an unmutated MSFT report's range and price-location figures reconcile (no false positive)", () => {
+    const acceptance = check("MSFT", "FULL_BRIEF", reportFor(complete(msftResult)));
+    expect(acceptance.sections.find((s) => s.id === 5)!.status).toBe("CONTENT");
+    expect(acceptance.pass).toBe(true);
   });
 });
 
