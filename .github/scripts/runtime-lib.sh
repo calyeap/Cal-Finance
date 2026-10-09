@@ -356,6 +356,31 @@ runtime_gate_action_ref() {
 #     A ref-less gate (no identifiable required action to compare) keeps
 #     the pre-existing #391 behaviour, where a re-drive receipt is the only
 #     available signal that the prior attempt's blocker was cleared;
+#
+#     KNOWN, REPORTED LIMITATION (PR #423 REVIEW, second CORRECT cycle):
+#     this means a ref-bearing gate's *only* reset path is an explicit
+#     CALVIN RULING or a differing ref — a documented re-drive (reapplying
+#     `needs-build-wake`/`needs-cc-rereview`) does NOT reset it, even though
+#     issue #422 VERIFY (d) asks for "documented deliberate retry/re-drive
+#     → correct reset" on every gate, ref-bearing ones included. The
+#     "BUILD START:"/"REVIEW START:" comment a deliberate Calvin re-drive
+#     produces is byte-for-byte the same shape as the one an ordinary
+#     same-head re-review produces (cc-auto-fire.yml's label- and
+#     comment-triggered fire paths post an identical line either way) —
+#     there is no comment-text-only signal in this seam to tell them apart,
+#     and distinguishing them deterministically would mean stamping a
+#     trigger-source marker into that receipt from inside the fire-build/
+#     fire-review GitHub routing jobs, which issue #422 explicitly puts out
+#     of scope ("do not change the GitHub routing jobs ... do not broaden
+#     the project"). Per #422's own VERIFY ("If distinct gates cannot be
+#     safely differentiated with a small deterministic patch, STOP and
+#     report the exact limitation rather than widen scope"), this is left
+#     fail-closed on purpose: the alternative (treating every START: as a
+#     reset for ref-bearing gates too) would reopen the exact PR #420
+#     duplicate-alert bug this outcome exists to fix, which is the worse of
+#     the two failure modes. Resolving a ref-bearing gate for real requires
+#     either an explicit CALVIN RULING comment, or Calvin posting a new,
+#     genuinely distinct required action (a differing ref/ticker).
 #   - hitting a different-kind alert first is a distinct gate; it neither
 #     resolves nor restates this one, so the scan continues past it.
 # No earlier resolution, re-drive receipt, or alert at all (including an
