@@ -132,6 +132,56 @@ runtime_is_calvin_ruling_line 'CALVIN RULING: approve' || fail "colon CALVIN RUL
 runtime_is_calvin_ruling_line 'quoting: CALVIN RULING — APPROVE OPTION B was mentioned earlier' && fail "CALVIN RULING not at line start is not a marker"
 true
 
+# CF-SLACK-REVIEW-GATE-DEDUPE-01 (issue #422): runtime_gate_action_ref
+# extraction itself — explicit ref=/ticker= tokens win; otherwise the first
+# bare commit-SHA-looking token (must contain a letter, so a plain decimal
+# number never false-positives as a ref); empty when neither shape exists.
+assert_eq "$(runtime_gate_action_ref 'BLOCKED: ACTIONABLE — proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT)')" "ref=8930faa79d7f7567777c1b57d7701a5a20a2c120;ticker=msft;" "explicit ref=/ticker= tokens extracted"
+assert_eq "$(runtime_gate_action_ref 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa (MSFT FAIL)')" "8930faa" "bare commit-SHA-looking token extracted when no ref=/ticker= label exists"
+assert_eq "$(runtime_gate_action_ref 'BLOCKED: ACTIONABLE — PR #37873636301 needs attention')" "" "a plain decimal number is never mistaken for a ref"
+assert_eq "$(runtime_gate_action_ref 'BLOCKED: ACTIONABLE — Supabase service-role key must be granted by Calvin')" "" "free text with no ref/ticker shape extracts nothing"
+
+# CF-SLACK-REVIEW-GATE-DEDUPE-01 (issue #422): the real PR #420 failure
+# shape — independent REVIEW and OWNER both restate the exact same
+# still-unresolved live-proof action for the exact same commit, with an
+# ordinary same-head "REVIEW START:" (no Calvin ruling, no documented
+# re-drive) and an "OWNER START:" reconciliation wake in between. Neither
+# is resolution of the prior human gate, so the restated blocker must stay
+# deduped — the bug this outcome fixes: the pre-existing code treated any
+# "REVIEW START:"/"BUILD START:" as an unconditional reset regardless of
+# whether the required action (here, the exact ref+ticker) ever changed.
+PR_420_SHAPE=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-08T10:00:00Z"},
+  {body: "REVIEW START: OUTCOME-ID=CF-420 TIER=NORMAL [REVIEW_ATTEMPT_ID: R2]", created_at: "2026-10-08T10:05:00Z"},
+  {body: "OWNER START: wake=TERMINAL [OWNER_ATTEMPT_ID: O1]", created_at: "2026-10-08T10:06:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$PR_420_SHAPE" "2026-10-08T10:07:00Z" 'BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [OWNER_ATTEMPT_ID: O1]')" true "PR #420 regression: an ordinary same-head REVIEW START and OWNER reconciliation do not reset a still-open, identifiable gate — the restated blocker stays deduped"
+
+# Same shape but via the bare-commit-SHA fallback (no explicit ref=/ticker=
+# labels) — the exact wording analyzer-live-proof.yml itself posts.
+LIVE_PROOF_SHAPE=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa (MSFT FAIL) — the cause of every failure is printed below; fix only those, then rerun once. [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-08T10:00:00Z"},
+  {body: "REVIEW START: OUTCOME-ID=CF-420 TIER=NORMAL [REVIEW_ATTEMPT_ID: R2]", created_at: "2026-10-08T10:05:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$LIVE_PROOF_SHAPE" "2026-10-08T10:06:00Z" 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa (MSFT FAIL) — the cause of every failure is printed below; fix only those, then rerun once. [REVIEW_ATTEMPT_ID: R2]')" true "bare-SHA live-proof shape: an ordinary REVIEW START on the same unchanged commit still dedupes"
+
+# A genuinely distinct later gate — a different ref AND a different
+# ticker — must still alert once, even though it shares the exact same
+# Slack kind as the still-open prior gate and nothing resolved it.
+DISTINCT_REF_SHAPE=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-08T10:00:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$DISTINCT_REF_SHAPE" "2026-10-08T11:00:00Z" 'BLOCKED: ACTIONABLE — a new, later live proof needed (ref=aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00, ticker=NVDA) [REVIEW_ATTEMPT_ID: R3]')" false "a different ref/ticker is a genuinely new human gate, eligible once, even with no intervening resolution or re-drive at all"
+
+# When only the newer comment names a specific ref but the earlier
+# same-kind alert does not, there is no way to confirm they are the same
+# gate — fail open (not a duplicate) rather than risk silently dropping a
+# genuinely new actionable gate.
+AMBIGUOUS_REF_SHAPE=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — Supabase service-role key must be granted by Calvin [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-08T10:00:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$AMBIGUOUS_REF_SHAPE" "2026-10-08T11:00:00Z" 'BLOCKED: ACTIONABLE — live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R3]')" false "fail-open: an earlier same-kind alert with no identifiable ref of its own never confirms a match against a ref-bearing later one"
+
 # Admission regression coverage.
 assert_eq "$(runtime_admission_decision issue 10 '' '' true)" IN_FLIGHT "#188 same-target duplicate build suppressed"
 assert_eq "$(runtime_admission_decision issue 10 '' '12' false)" EXISTING_PR:12 "existing PR suppresses new BUILD"

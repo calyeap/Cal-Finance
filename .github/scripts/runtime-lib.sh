@@ -272,6 +272,40 @@ runtime_is_gate_reset_line() {
   esac
 }
 
+# runtime_gate_action_ref <line>
+# CF-SLACK-REVIEW-GATE-DEDUPE-01 (issue #422): a deterministic, narrow
+# fingerprint of *which* concrete human action a Slack-eligible terminal
+# line names — e.g. the exact commit/ref and ticker a live-proof BLOCKED:
+# ACTIONABLE asks Calvin to act on — so a still-open gate can be told apart
+# from a genuinely distinct later one even when both happen to share a
+# Slack kind. Deliberately narrow: no free-text similarity/NLP, no new
+# classifier — only two literal, already-used shapes:
+#   1. an explicit `ref=<token>` and/or `ticker=<token>` key=value pair
+#      (case-insensitive key), or
+#   2. failing that, the first bare commit-SHA-looking token (7-40 lower-
+#      case hex chars, containing at least one a-f letter so an ordinary
+#      decimal issue/attempt number never matches) — the shape
+#      analyzer-live-proof.yml's own `at ${SHORT} (${joined})` wording
+#      uses.
+# Empty when neither shape is present — callers must then fall back to
+# kind-only comparison (the pre-existing, still-correct behaviour for a
+# free-text blocker with no identifying ref/ticker of its own).
+runtime_gate_action_ref() {
+  local line="$1" out tok
+  out="$(printf '%s' "$line" | grep -ioE '(ref|ticker)=[^][ ,()]+' | tr '[:upper:]' '[:lower:]' | sort -u | tr '\n' ';')"
+  if [ -n "$out" ]; then
+    printf '%s' "$out"
+    return 0
+  fi
+  for tok in $(printf '%s' "$line" | grep -oE '\b[0-9a-f]{7,40}\b'); do
+    if [[ "$tok" =~ [a-f] ]]; then
+      printf '%s' "$tok"
+      return 0
+    fi
+  done
+  printf ''
+}
+
 # runtime_slack_is_duplicate <comments_json> <this_created_at> <this_raw>
 # Pure. CF-SLACK-DEDUPE-02: dedupes by the underlying still-open Calvin
 # gate — a deterministic key of (canonical item, implicit in <comments_json>
@@ -287,23 +321,38 @@ runtime_is_gate_reset_line() {
 # a Calvin resolution (runtime_is_calvin_ruling_line), a gate-reset re-drive
 # receipt (runtime_is_gate_reset_line), or itself Slack-eligible decides the
 # outcome:
-#   - hitting a resolution or re-drive receipt first means any prior gate
-#     was already closed, so <this_raw> opens a fresh gate — not a
-#     duplicate, whatever its kind;
+#   - hitting a resolution first means any prior gate was already closed,
+#     so <this_raw> opens a fresh gate — not a duplicate, whatever its
+#     kind;
 #   - hitting a same-kind alert first means an unresolved alert for this
 #     exact gate already reached Slack — a duplicate, regardless of which
-#     actor authored either comment or how either is worded;
+#     actor authored either comment or how either is worded — UNLESS
+#     <this_raw> carries a runtime_gate_action_ref and that alert's own ref
+#     differs, in which case it is a genuinely distinct human action and
+#     not a duplicate (CF-SLACK-REVIEW-GATE-DEDUPE-01, issue #422);
+#   - hitting a gate-reset re-drive receipt (runtime_is_gate_reset_line)
+#     closes the prior gate exactly like a resolution does — but only when
+#     <this_raw> has no runtime_gate_action_ref of its own. A worker simply
+#     restarting review/build on an unchanged head posts the same
+#     "BUILD START:"/"REVIEW START:" shape as a genuine Calvin re-drive and
+#     carries no evidence either way; per issue #422 this must not, on its
+#     own, reopen a gate whose required action (ref/ticker) is identifiable
+#     and unchanged — only an actual resolution or a differing ref does.
+#     A ref-less gate (no identifiable required action to compare) keeps
+#     the pre-existing #391 behaviour, where a re-drive receipt is the only
+#     available signal that the prior attempt's blocker was cleared;
 #   - hitting a different-kind alert first is a distinct gate; it neither
 #     resolves nor restates this one, so the scan continues past it.
 # No earlier resolution, re-drive receipt, or alert at all (including an
 # empty/omitted history) means this is the first alert for the gate: not a
 # duplicate.
 runtime_slack_is_duplicate() {
-  local comments_json="$1" before="$2" this_raw="$3" kind
+  local comments_json="$1" before="$2" this_raw="$3" kind this_ref
   kind="$(runtime_slack_kind "$this_raw")"
   if [ "$kind" = none ]; then echo false; return; fi
+  this_ref="$(runtime_gate_action_ref "$(runtime_terminal_line "$this_raw")")"
 
-  local earlier_bodies body first k
+  local earlier_bodies body first k body_ref
   earlier_bodies="$(jq -c --arg before "$before" '
     [ .[] | select(.created_at < $before) ] | sort_by(.created_at) | reverse | .[].body
   ' <<< "$comments_json")"
@@ -312,7 +361,11 @@ runtime_slack_is_duplicate() {
     [ -z "$body" ] && continue
     body="$(jq -r . <<< "$body")"
     first="$(runtime_first_line "$body")"
-    if runtime_is_calvin_ruling_line "$first" || runtime_is_gate_reset_line "$first"; then
+    if runtime_is_calvin_ruling_line "$first"; then
+      echo false
+      return
+    fi
+    if [ -z "$this_ref" ] && runtime_is_gate_reset_line "$first"; then
       echo false
       return
     fi
@@ -323,6 +376,19 @@ runtime_slack_is_duplicate() {
     # alone already strips away.
     k="$(runtime_slack_kind "$body")"
     if [ "$k" = "$kind" ]; then
+      if [ -n "$this_ref" ]; then
+        body_ref="$(runtime_gate_action_ref "$(runtime_terminal_line "$body")")"
+        if [ -n "$body_ref" ]; then
+          [ "$body_ref" = "$this_ref" ] && echo true || echo false
+          return
+        fi
+        # <this_raw> names a specific action but this earlier same-kind
+        # alert does not — ambiguous whether it is the same gate. Fail
+        # open per issue #422's VERIFY: never silently swallow a possibly
+        # genuinely new actionable gate.
+        echo false
+        return
+      fi
       echo true
       return
     fi
