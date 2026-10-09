@@ -79,6 +79,21 @@ jobs:
             KIND=issue
           fi
 
+          # CF-SLACK-REVIEW-GATE-DEDUPE-01 (Calvin's bounded-repair
+          # authorisation, PR #423 issuecomment-6074231232): a
+          # deterministic, trusted marker of which GitHub event caused this
+          # fire — derived ONLY from github.event_name/label, never from
+          # worker free text — so runtime_slack_is_duplicate can tell a
+          # documented deliberate re-drive (reapplying the
+          # needs-build-wake label) apart from an ordinary same-head
+          # continuation (REVIEW's CORRECT: comment firing another BUILD
+          # round). A label-triggered wake also covers OWNER's own
+          # automated CONTINUE re-drive, not only a human applying the
+          # label by hand — this records the mechanical cause only, never
+          # a claim that a human (Calvin) specifically authorised it.
+          CAUSE=label-redrive
+          [ "$EVENT_NAME" = "issue_comment" ] && CAUSE=comment-rereview
+
           TARGET=$(gh api "repos/${REPO}/issues/${NUMBER}")
           BODY=$(jq -r '.body // ""' <<< "$TARGET")
           OUTCOME_ID="$(runtime_outcome_id "$BODY")"
@@ -166,6 +181,7 @@ jobs:
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "outcome_id=$OUTCOME_ID" >> "$GITHUB_OUTPUT"
           echo "tier=$TIER" >> "$GITHUB_OUTPUT"
+          echo "cause=$CAUSE" >> "$GITHUB_OUTPUT"
           echo "attempt_id=BUILD-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
           # CF-CONTRACT-FENCE-01: this attempt's loaded contract fingerprint,
           # stamped into the START receipt and handed to the worker so it can
@@ -184,6 +200,7 @@ jobs:
           TIER: ${{ steps.resolve.outputs.tier }}
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
           CONTRACT: ${{ steps.resolve.outputs.contract }}
+          CAUSE: ${{ steps.resolve.outputs.cause }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
@@ -206,7 +223,7 @@ jobs:
             SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/build.json)
             URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/build.json)
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
-              -f body="BUILD START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}] [CONTRACT: ${CONTRACT}]"
+              -f body="BUILD START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [BUILD_ATTEMPT_ID: ${ATTEMPT_ID}] [CONTRACT: ${CONTRACT}] [CAUSE: ${CAUSE}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
@@ -320,8 +337,10 @@ jobs:
             NUMBER="$(runtime_done_pr_number "$COMMENT_BODY")"
             if [ -z "$NUMBER" ] && [ -n "${{ github.event.issue.pull_request.url }}" ]; then NUMBER="${{ github.event.issue.number }}"; fi
             if [ -z "$NUMBER" ]; then echo "skip=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+            CAUSE=comment-rereview
           else
             NUMBER="${{ github.event.pull_request.number || github.event.issue.number }}"
+            CAUSE=label-redrive
           fi
 
           PR=$(gh api "repos/${REPO}/pulls/${NUMBER}" 2>/dev/null || true)
@@ -421,6 +440,7 @@ jobs:
           echo "number=$NUMBER" >> "$GITHUB_OUTPUT"
           echo "outcome_id=$OUTCOME_ID" >> "$GITHUB_OUTPUT"
           echo "tier=$TIER" >> "$GITHUB_OUTPUT"
+          echo "cause=$CAUSE" >> "$GITHUB_OUTPUT"
           echo "attempt_id=REVIEW-${{ github.run_id }}-${{ github.run_attempt }}" >> "$GITHUB_OUTPUT"
           # CF-CONTRACT-FENCE-01: see the matching fire-build comment above.
           # A failed source-issue fetch emits an empty CONTRACT rather than
@@ -443,6 +463,7 @@ jobs:
           TIER: ${{ steps.resolve.outputs.tier }}
           ATTEMPT_ID: ${{ steps.resolve.outputs.attempt_id }}
           CONTRACT: ${{ steps.resolve.outputs.contract }}
+          CAUSE: ${{ steps.resolve.outputs.cause }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
@@ -461,7 +482,7 @@ jobs:
             SESSION=$(jq -r '.claude_code_session_id // "unknown"' /tmp/review.json)
             URL=$(jq -r '.claude_code_session_url // "unknown"' /tmp/review.json)
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" \
-              -f body="REVIEW START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}] [CONTRACT: ${CONTRACT}]"
+              -f body="REVIEW START: OUTCOME-ID=${OUTCOME_ID} TIER=${TIER} · session ${SESSION} (${URL}) [REVIEW_ATTEMPT_ID: ${ATTEMPT_ID}] [CONTRACT: ${CONTRACT}] [CAUSE: ${CAUSE}]"
             echo "ok=true" >> "$GITHUB_OUTPUT"
           else
             if [ "$(fire_auth_status "$CODE")" = auth ] || [ "$CODE" = missing_secret ]; then
