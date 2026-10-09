@@ -272,6 +272,33 @@ runtime_is_gate_reset_line() {
   esac
 }
 
+# runtime_gate_reset_cause <line>
+# CF-SLACK-REVIEW-GATE-DEDUPE-01 (Calvin's bounded-repair authorisation,
+# PR #423 issuecomment-6074231232): extracts the `[CAUSE: <value>]` marker
+# cc-auto-fire.yml's fire-build/fire-review jobs stamp onto their own
+# "BUILD START:"/"REVIEW START:" receipt — `label-redrive` when the fire
+# was triggered by (re)applying the needs-build-wake/needs-cc-rereview
+# wake label (the documented deliberate re-drive mechanism: OWNER.md's own
+# CONTINUE handoff, a transport-failure recovery, or Calvin reapplying it
+# by hand — this marker only records which GitHub event fired the run, not
+# who caused it, since a worker's own label-apply call and a human's are
+# indistinguishable in the event payload), or `comment-rereview` when it
+# was an ordinary same-head continuation (REVIEW's CORRECT: comment firing
+# another BUILD round, or BUILD's DONE: comment firing the next REVIEW
+# round). Derived there only from trusted github.event_name/label context,
+# never from worker-authored comment text, so a worker cannot forge this
+# value into its own DONE:/CORRECT:/BLOCKED: comment — that text is never a
+# "BUILD START:"/"REVIEW START:" line to begin with, so
+# runtime_is_gate_reset_line already excludes it before this is ever
+# called. Empty when the line carries no such marker (every START receipt
+# posted before this marker existed), so an older, unmarked reset-line
+# receipt keeps the exact pre-existing behaviour (see
+# runtime_slack_is_duplicate) instead of being treated as a proven
+# deliberate re-drive it never claimed to be.
+runtime_gate_reset_cause() {
+  printf '%s' "$1" | sed -nE 's/.*\[CAUSE: ([^]]+)\].*/\1/p'
+}
+
 # runtime_gate_action_ref <line>
 # CF-SLACK-REVIEW-GATE-DEDUPE-01 (issue #422, corrected per PR #423 REVIEW):
 # a deterministic, narrow fingerprint of *which* concrete human action a
@@ -346,41 +373,29 @@ runtime_gate_action_ref() {
 #     differs, in which case it is a genuinely distinct human action and
 #     not a duplicate (CF-SLACK-REVIEW-GATE-DEDUPE-01, issue #422);
 #   - hitting a gate-reset re-drive receipt (runtime_is_gate_reset_line)
-#     closes the prior gate exactly like a resolution does — but only when
-#     <this_raw> has no runtime_gate_action_ref of its own. A worker simply
-#     restarting review/build on an unchanged head posts the same
-#     "BUILD START:"/"REVIEW START:" shape as a genuine Calvin re-drive and
-#     carries no evidence either way; per issue #422 this must not, on its
-#     own, reopen a gate whose required action (ref/ticker) is identifiable
-#     and unchanged — only an actual resolution or a differing ref does.
-#     A ref-less gate (no identifiable required action to compare) keeps
-#     the pre-existing #391 behaviour, where a re-drive receipt is the only
-#     available signal that the prior attempt's blocker was cleared;
-#
-#     KNOWN, REPORTED LIMITATION (PR #423 REVIEW, second CORRECT cycle):
-#     this means a ref-bearing gate's *only* reset path is an explicit
-#     CALVIN RULING or a differing ref — a documented re-drive (reapplying
-#     `needs-build-wake`/`needs-cc-rereview`) does NOT reset it, even though
-#     issue #422 VERIFY (d) asks for "documented deliberate retry/re-drive
-#     → correct reset" on every gate, ref-bearing ones included. The
-#     "BUILD START:"/"REVIEW START:" comment a deliberate Calvin re-drive
-#     produces is byte-for-byte the same shape as the one an ordinary
-#     same-head re-review produces (cc-auto-fire.yml's label- and
-#     comment-triggered fire paths post an identical line either way) —
-#     there is no comment-text-only signal in this seam to tell them apart,
-#     and distinguishing them deterministically would mean stamping a
-#     trigger-source marker into that receipt from inside the fire-build/
-#     fire-review GitHub routing jobs, which issue #422 explicitly puts out
-#     of scope ("do not change the GitHub routing jobs ... do not broaden
-#     the project"). Per #422's own VERIFY ("If distinct gates cannot be
-#     safely differentiated with a small deterministic patch, STOP and
-#     report the exact limitation rather than widen scope"), this is left
-#     fail-closed on purpose: the alternative (treating every START: as a
-#     reset for ref-bearing gates too) would reopen the exact PR #420
-#     duplicate-alert bug this outcome exists to fix, which is the worse of
-#     the two failure modes. Resolving a ref-bearing gate for real requires
-#     either an explicit CALVIN RULING comment, or Calvin posting a new,
-#     genuinely distinct required action (a differing ref/ticker).
+#     closes the prior gate exactly like a resolution does when either
+#     <this_raw> has no runtime_gate_action_ref of its own (the
+#     pre-existing #391 behaviour: a ref-less gate has no other signal that
+#     the prior blocker was cleared), or the reset receipt itself carries a
+#     `[CAUSE: label-redrive]` marker (CF-SLACK-REVIEW-GATE-DEDUPE-01,
+#     Calvin's bounded-repair authorisation on PR #423 — see
+#     runtime_gate_reset_cause) — a deterministic, trusted signal, stamped
+#     by cc-auto-fire.yml itself from github.event_name/label and never
+#     from worker text, that this particular "BUILD START:"/"REVIEW
+#     START:" was fired by (re)applying the needs-build-wake/
+#     needs-cc-rereview wake label rather than by an ordinary CORRECT:/
+#     DONE:-triggered continuation. That is the one documented deliberate
+#     re-drive mechanism (issue #422 VERIFY (d)), so it resets a ref-bearing
+#     gate too, even when the restated blocker names the exact same
+#     ref/ticker. A reset receipt with no `[CAUSE: ...]` marker at all (an
+#     older receipt, posted before this marker existed) or with
+#     `[CAUSE: comment-rereview]` does NOT, by itself, reset a ref-bearing
+#     gate — a worker simply continuing review/build on an unchanged head
+#     posts that same shape and carries no evidence the required action
+#     was ever addressed; per issue #422 this must not, on its own, reopen
+#     a gate whose required action (ref/ticker) is identifiable and
+#     unchanged (the PR #420 bug) — only an actual resolution, a proven
+#     label-redrive, or a differing ref does;
 #   - hitting a different-kind alert first is a distinct gate; it neither
 #     resolves nor restates this one, so the scan continues past it.
 # No earlier resolution, re-drive receipt, or alert at all (including an
@@ -405,9 +420,11 @@ runtime_slack_is_duplicate() {
       echo false
       return
     fi
-    if [ -z "$this_ref" ] && runtime_is_gate_reset_line "$first"; then
-      echo false
-      return
+    if runtime_is_gate_reset_line "$first"; then
+      if [ -z "$this_ref" ] || [ "$(runtime_gate_reset_cause "$first")" = label-redrive ]; then
+        echo false
+        return
+      fi
     fi
     # Classify from the raw body, not a pre-extracted terminal line: an
     # earlier metadata-first OWNER terminal (the [OWNER_ATTEMPT_ID: ...]

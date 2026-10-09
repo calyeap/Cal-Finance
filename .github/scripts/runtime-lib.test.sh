@@ -191,30 +191,30 @@ assert_eq "$(runtime_slack_is_duplicate "$AMBIGUOUS_REF_SHAPE" "2026-10-08T11:00
 assert_eq "$(runtime_gate_action_ref 'BLOCKED: ACTIONABLE — grant the Supabase service-role secret for head 8930faa79d7f7567777c1b57d7701a5a20a2c120')" "" "a bare SHA merely mentioned in free text, outside the analyzer-live-proof.yml 'at <sha> (' shape, is not an identifiable ref"
 
 # Case 1 (re-review restates the identical unresolved live-proof failure on
-# the same unchanged commit after an ordinary re-drive-shaped REVIEW START):
-# this is the PR #420 bug itself and must stay deduped — unchanged by this
-# correction.
-#
-# KNOWN, REPORTED LIMITATION (PR #423 REVIEW, second CORRECT cycle): this
-# exact fixture is ambiguous in real life — the "REVIEW START:" could be
-# either an ordinary same-head re-review (must stay deduped, the PR #420
-# bug) or a documented deliberate Calvin re-drive via reapplying
-# `needs-cc-rereview` (per issue #422 VERIFY (d), must reset). The two
-# receipts are byte-for-byte identical, and telling them apart
-# deterministically would require stamping a trigger-source marker into
-# the receipt from inside the fire-build/fire-review GitHub routing jobs —
-# out of scope per #422 ("do not change the GitHub routing jobs"). This
-# asserts the current, deliberately fail-closed choice (stays deduped in
-# both cases) because the alternative — resetting on every "REVIEW
-# START:"/"BUILD START:" — would reopen the exact PR #420 duplicate-alert
-# bug this outcome exists to fix. Per #422's own VERIFY, this is reported
-# rather than solved by widening scope; see the RESIDUAL RISKS section of
-# PR #423 and runtime_slack_is_duplicate's own doc comment.
+# the same unchanged commit after an ordinary, comment-triggered REVIEW
+# START): this is the PR #420 bug itself and must stay deduped — unchanged
+# by this correction. The REVIEW START now carries the trusted
+# `[CAUSE: comment-rereview]` marker cc-auto-fire.yml stamps on a
+# CORRECT:/DONE:-triggered fire, so this is no longer the ambiguous shape
+# the previous correction cycle reported as a known limitation (see git
+# history) — it is now provably an ordinary continuation, not a re-drive.
 REVIEW_GATE_CASE_1=$(jq -n '[
   {body: "BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa79d7f7567777c1b57d7701a5a20a2c120 (MSFT FAIL) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
-  {body: "REVIEW START: OUTCOME-ID=CF-420 TIER=NORMAL [REVIEW_ATTEMPT_ID: R2]", created_at: "2026-10-09T10:05:00Z"}
+  {body: "REVIEW START: OUTCOME-ID=CF-420 TIER=NORMAL [REVIEW_ATTEMPT_ID: R2] [CAUSE: comment-rereview]", created_at: "2026-10-09T10:05:00Z"}
 ]')
-assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_1" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa79d7f7567777c1b57d7701a5a20a2c120 (MSFT FAIL) [REVIEW_ATTEMPT_ID: R2]')" true "case 1: the exact same unresolved live-proof failure restated on the same commit after a REVIEW START (ordinary re-review or documented re-drive — the two are indistinguishable, see limitation note above) stays deduped"
+assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_1" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa79d7f7567777c1b57d7701a5a20a2c120 (MSFT FAIL) [REVIEW_ATTEMPT_ID: R2]')" true "case 1: the exact same unresolved live-proof failure restated on the same commit after an ordinary comment-triggered REVIEW START stays deduped (the PR #420 bug)"
+
+# Case 1b (the fix Calvin authorised, PR #423 issuecomment-6074231232): the
+# identical unresolved live-proof failure restated after a REVIEW START
+# that carries `[CAUSE: label-redrive]` — fired by (re)applying
+# `needs-cc-rereview`, the documented deliberate re-drive mechanism — now
+# correctly resets the ref-bearing gate per issue #422 VERIFY (d), instead
+# of staying suppressed forever until an explicit CALVIN RULING.
+REVIEW_GATE_CASE_1B=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa79d7f7567777c1b57d7701a5a20a2c120 (MSFT FAIL) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
+  {body: "REVIEW START: OUTCOME-ID=CF-420 TIER=NORMAL [REVIEW_ATTEMPT_ID: R2] [CAUSE: label-redrive]", created_at: "2026-10-09T10:05:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_1B" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa79d7f7567777c1b57d7701a5a20a2c120 (MSFT FAIL) [REVIEW_ATTEMPT_ID: R2]')" false "case 1b (the fix): the same renewed action after a proven label-redrive REVIEW START now resets a ref-bearing gate, per #422 VERIFY (d)"
 
 # Case 2 (the actual defect PR #423 REVIEW found): a *different* required
 # action that merely names the same commit in passing — not in the
@@ -230,19 +230,66 @@ REVIEW_GATE_CASE_2=$(jq -n '[
 ]')
 assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_2" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — grant the Supabase service-role secret for head 8930faa79d7f7567777c1b57d7701a5a20a2c120 [REVIEW_ATTEMPT_ID: R2]')" false "case 2 (the PR #423 REVIEW finding): a genuinely different required action naming the same commit in passing is a distinct gate, not suppressed by an unrelated earlier live-proof alert on that commit"
 
-# Case 3 (explicit ref=/ticker= gate restated verbatim after a BUILD
-# START): same known, reported limitation as case 1 above — this fixture
-# is ambiguous between an ordinary re-fire and a documented deliberate
-# Calvin re-drive (reapplying `needs-build-wake`), the two receipts are
-# identical, and distinguishing them would require widening scope into the
-# GitHub routing jobs, which #422 forbids. Asserts the current,
-# deliberately fail-closed choice; already covered by PR_420_SHAPE above,
-# kept here as the exact case REVIEW numbered.
+# Case 3 (explicit ref=/ticker= gate restated verbatim after an ordinary,
+# comment-triggered BUILD START): stays deduped, unchanged by this
+# correction — the BUILD START here carries `[CAUSE: comment-rereview]`
+# (fired by REVIEW's own CORRECT:, not a wake-label reapply), so it is
+# provably an ordinary continuation.
 REVIEW_GATE_CASE_3=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
+  {body: "BUILD START: OUTCOME-ID=CF-420 TIER=NORMAL [BUILD_ATTEMPT_ID: B1] [CAUSE: comment-rereview]", created_at: "2026-10-09T10:05:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_3" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [BUILD_ATTEMPT_ID: B2]')" true "case 3: an explicit ref=/ticker= gate restated verbatim after an ordinary comment-triggered BUILD START stays deduped"
+
+# Case 3b (the fix): same explicit ref=/ticker= gate, but the BUILD START
+# now carries `[CAUSE: label-redrive]` (fired by reapplying
+# `needs-build-wake`) — a proven deliberate re-drive, so the renewed action
+# resets the gate even though the ref/ticker is unchanged.
+REVIEW_GATE_CASE_3B=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
+  {body: "BUILD START: OUTCOME-ID=CF-420 TIER=NORMAL [BUILD_ATTEMPT_ID: B1] [CAUSE: label-redrive]", created_at: "2026-10-09T10:05:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_3B" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [BUILD_ATTEMPT_ID: B2]')" false "case 3b (the fix): a proven label-redrive BUILD START resets an explicit ref=/ticker= gate for the renewed action"
+
+# Required test (4) of Calvin's authorisation: a genuinely different
+# blocker on the SAME head/ref remains eligible even without any reset at
+# all — unaffected by the CAUSE marker (already covered by
+# DISTINCT_REF_SHAPE above; this fixture pins it to a label-redrive BUILD
+# START specifically, to confirm CAUSE never masks a real ref difference).
+DISTINCT_REF_AFTER_REDRIVE=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
+  {body: "BUILD START: OUTCOME-ID=CF-420 TIER=NORMAL [BUILD_ATTEMPT_ID: B1] [CAUSE: label-redrive]", created_at: "2026-10-09T10:05:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$DISTINCT_REF_AFTER_REDRIVE" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — a new, later live proof needed (ref=aa11bb22cc33dd44ee55ff66aa77bb88cc99dd00, ticker=NVDA) [BUILD_ATTEMPT_ID: B2]')" false "required test (4): a genuinely different ref/ticker after a label-redrive BUILD START is still eligible once"
+
+# Required test (5) of Calvin's authorisation: a routine label wake (or
+# any worker-authored comment text) must not be able to impersonate the
+# trusted CAUSE marker. A worker's own BLOCKED:/DONE: comment is never a
+# "BUILD START:"/"REVIEW START:" line to begin with, so embedding
+# `[CAUSE: label-redrive]` inside one has no effect — runtime_is_gate_reset_line
+# excludes it before runtime_gate_reset_cause is ever consulted, and the
+# ref-bearing gate stays open (deduped) exactly as if that text were
+# absent.
+FORGED_CAUSE_SHAPE=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
+  {body: "DONE: https://github.com/calyeap/Cal-Finance/pull/420 [BUILD_ATTEMPT_ID: B1] [CAUSE: label-redrive]", created_at: "2026-10-09T10:05:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$FORGED_CAUSE_SHAPE" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [BUILD_ATTEMPT_ID: B2]')" true "required test (5): a worker-authored comment is never a gate-reset line regardless of any CAUSE-looking text it contains, so it cannot impersonate a label-redrive"
+
+# Backwards-compatible with every receipt posted before this marker
+# existed: a reset-line with no `[CAUSE: ...]` tag at all keeps the exact
+# pre-existing #391/#422 behaviour — ref-less gates still reset, ref-bearing
+# gates do not.
+UNMARKED_RESET_SHAPE=$(jq -n '[
   {body: "BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
   {body: "BUILD START: OUTCOME-ID=CF-420 TIER=NORMAL [BUILD_ATTEMPT_ID: B1]", created_at: "2026-10-09T10:05:00Z"}
 ]')
-assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_3" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [BUILD_ATTEMPT_ID: B2]')" true "case 3: an explicit ref=/ticker= gate restated verbatim after a BUILD START (ordinary re-fire or documented re-drive — indistinguishable, see limitation note above) stays deduped"
+assert_eq "$(runtime_slack_is_duplicate "$UNMARKED_RESET_SHAPE" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [BUILD_ATTEMPT_ID: B2]')" true "backwards compatible: an older, unmarked reset-line receipt does not reset a ref-bearing gate"
+
+# runtime_gate_reset_cause extraction itself.
+assert_eq "$(runtime_gate_reset_cause 'BUILD START: OUTCOME-ID=CF-1 TIER=NORMAL [BUILD_ATTEMPT_ID: B1] [CONTRACT: abc123] [CAUSE: label-redrive]')" label-redrive "CAUSE marker extracted alongside other bracketed tags"
+assert_eq "$(runtime_gate_reset_cause 'REVIEW START: OUTCOME-ID=CF-1 TIER=NORMAL [REVIEW_ATTEMPT_ID: R1] [CAUSE: comment-rereview]')" comment-rereview "CAUSE marker extracted for REVIEW START"
+assert_eq "$(runtime_gate_reset_cause 'BUILD START: OUTCOME-ID=CF-1 TIER=NORMAL [BUILD_ATTEMPT_ID: B1]')" "" "no CAUSE marker on an older receipt extracts empty"
 
 # Admission regression coverage.
 assert_eq "$(runtime_admission_decision issue 10 '' '' true)" IN_FLIGHT "#188 same-target duplicate build suppressed"
