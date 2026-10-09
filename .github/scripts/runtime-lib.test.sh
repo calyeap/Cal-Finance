@@ -286,6 +286,31 @@ UNMARKED_RESET_SHAPE=$(jq -n '[
 ]')
 assert_eq "$(runtime_slack_is_duplicate "$UNMARKED_RESET_SHAPE" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [BUILD_ATTEMPT_ID: B2]')" true "backwards compatible: an older, unmarked reset-line receipt does not reset a ref-bearing gate"
 
+# PR #423 REVIEW's second correction (new failure class, not the VERIFY (d)
+# re-drive gap): every real analyzer-live-proof.yml BLOCKED: ACTIONABLE
+# blocker Calvin actually saw on PR #420 writes the key=value pair as
+# `` `ref` = `<sha>` `` / `` `ticker` = `MSFT` `` — backtick-wrapped, spaced
+# `=` — never the bare `ref=<sha>` the original fixtures assumed. The old
+# regex extracted no ref at all from that real wording, so it fell back to
+# the ref-less reset path and let an ordinary re-review alert again.
+assert_eq "$(runtime_gate_action_ref 'BLOCKED: ACTIONABLE — head `8930faa` has no measured end-to-end latency yet. A human or authorised operator needs to run one manual dispatch of the existing, unmodified `.github/workflows/analyzer-live-proof.yml`: Actions → **Analyzer live proof** → `ref` = `8930faa79d7f7567777c1b57d7701a5a20a2c120` → `ticker` = `MSFT`. Its result then comes back to independent REVIEW on this PR.')" "ref=8930faa79d7f7567777c1b57d7701a5a20a2c120;ticker=msft;" "backtick-wrapped, spaced ref=/ticker= wording normalizes to the same key as the bare form"
+
+# Regression built from the verbatim first lines of PR #420's own
+# comments 6062997874 (15:14:38Z) and 6063274976 (15:27:22Z), with the real
+# intervening comment-triggered "REVIEW START:" between them (now carrying
+# the `[CAUSE: comment-rereview]` marker cc-auto-fire.yml stamps on a
+# DONE:-triggered fire) — this is the exact observed PR #420 duplicate
+# alert this outcome exists to fix, and it was still reproducible on head
+# `c125d36` because the real wording never matched the old regex.
+PR_420_REAL_WORDING_SHAPE=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — head `8930faa` has no measured end-to-end latency yet. A human or authorised operator needs to run one manual dispatch of the existing, unmodified `.github/workflows/analyzer-live-proof.yml`: Actions → **Analyzer live proof** → `ref` = `8930faa79d7f7567777c1b57d7701a5a20a2c120` → `ticker` = `MSFT`. Its result then comes back to independent REVIEW on this PR. [REVIEW_ATTEMPT_ID: REVIEW-37798824258-1]", created_at: "2026-10-08T15:14:38Z"},
+  {body: "OWNER START: wake=TERMINAL [OWNER_ATTEMPT_ID: OWNER-37799122282-1]", created_at: "2026-10-08T15:14:51Z"},
+  {body: "BLOCKED: ACTIONABLE — REVIEW'\''s own terminal (REVIEW-37798824258-1) on exact head `8930faa79d7f7567777c1b57d7701a5a20a2c120` already names the human-only action: a human or authorised operator must run one manual `workflow_dispatch` of the existing `.github/workflows/analyzer-live-proof.yml` (unmodified) with `ref` = `8930faa79d7f7567777c1b57d7701a5a20a2c120` and `ticker` = `MSFT`. Its result then goes back to independent REVIEW on this PR. [OWNER_ATTEMPT_ID: OWNER-37799122282-1]", created_at: "2026-10-08T15:17:51Z"},
+  {body: "DONE: https://github.com/calyeap/Cal-Finance/pull/420 [BUILD_ATTEMPT_ID: BUILD-37797445375-1]", created_at: "2026-10-08T15:25:34Z"},
+  {body: "REVIEW START: OUTCOME-ID=CF-ANALYZER-USER-READY-01 TIER=HEAVY [REVIEW_ATTEMPT_ID: REVIEW-37800670152-1] [CAUSE: comment-rereview]", created_at: "2026-10-08T15:25:47Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$PR_420_REAL_WORDING_SHAPE" "2026-10-08T15:27:23Z" 'BLOCKED: ACTIONABLE — head `8930faa` still has no credential-backed live proof, so #419'\''s measured end-to-end latency remains unproven. A human or authorised operator needs to run one manual dispatch of the existing, unmodified `.github/workflows/analyzer-live-proof.yml`: Actions → **Analyzer live proof** → `ref` = `8930faa79d7f7567777c1b57d7701a5a20a2c120` → `ticker` = `MSFT`. Its result then comes back to independent REVIEW on this PR. [REVIEW_ATTEMPT_ID: REVIEW-37800670152-1]')" true "PR #420 real-wording regression: the real backtick-wrapped ref=/ticker= blocker, restated verbatim after an ordinary comment-triggered REVIEW START, stays deduped instead of alerting a second time"
+
 # runtime_gate_reset_cause extraction itself.
 assert_eq "$(runtime_gate_reset_cause 'BUILD START: OUTCOME-ID=CF-1 TIER=NORMAL [BUILD_ATTEMPT_ID: B1] [CONTRACT: abc123] [CAUSE: label-redrive]')" label-redrive "CAUSE marker extracted alongside other bracketed tags"
 assert_eq "$(runtime_gate_reset_cause 'REVIEW START: OUTCOME-ID=CF-1 TIER=NORMAL [REVIEW_ATTEMPT_ID: R1] [CAUSE: comment-rereview]')" comment-rereview "CAUSE marker extracted for REVIEW START"

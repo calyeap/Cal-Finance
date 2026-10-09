@@ -309,7 +309,11 @@ runtime_gate_reset_cause() {
 # similarity/NLP, no new classifier — only two literal, already-used
 # shapes:
 #   1. an explicit `ref=<token>` and/or `ticker=<token>` key=value pair
-#      (case-insensitive key), or
+#      (case-insensitive key), tolerating the real wording Calvin-facing
+#      BLOCKED: ACTIONABLE lines actually use — each of the key and the
+#      value optionally wrapped in a single backtick, and optional spaces
+#      around the `=` (e.g. `` `ref` = `<sha>` `` / `` `ticker` = `MSFT` ``,
+#      not just the bare `ref=<sha>` the original fixtures assumed), or
 #   2. failing that, a bare commit-SHA-looking token (7-40 lowercase hex
 #      chars, containing at least one a-f letter so an ordinary decimal
 #      issue/attempt number never matches) *anchored to the exact
@@ -330,9 +334,20 @@ runtime_gate_reset_cause() {
 # Empty when neither shape is present — callers must then fall back to
 # kind-only comparison (the pre-existing, still-correct behaviour for a
 # free-text blocker with no identifying ref/ticker of its own).
+# REVIEW's second PR #423 correction (new failure class, not the VERIFY (d)
+# re-drive gap): the real analyzer-live-proof.yml BLOCKED: ACTIONABLE
+# wording Calvin actually sees backtick-wraps the key and the value and
+# spaces the `=` (`` `ref` = `<sha>` ``), which the original
+# `(ref|ticker)=[^][ ,()]+` regex never matched — so every restatement of
+# that real blocker extracted no ref at all and fell through to the
+# ref-less reset path, letting an ordinary REVIEW/OWNER re-review alert
+# again even though the required action had not changed. The backticks and
+# spacing are stripped before lowercasing/joining so a backtick-wrapped
+# restatement and a bare `ref=<sha>` restatement of the same action
+# normalize to the identical key.
 runtime_gate_action_ref() {
   local line="$1" out match tok
-  out="$(printf '%s' "$line" | grep -ioE '(ref|ticker)=[^][ ,()]+' | tr '[:upper:]' '[:lower:]' | sort -u | tr '\n' ';')"
+  out="$(printf '%s' "$line" | grep -ioE '`?(ref|ticker)`?[[:space:]]*=[[:space:]]*`?[^][ ,()`]+`?' | tr -d ' `' | tr '[:upper:]' '[:lower:]' | sort -u | tr '\n' ';')"
   if [ -n "$out" ]; then
     printf '%s' "$out"
     return 0
