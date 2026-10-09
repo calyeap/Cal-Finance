@@ -1,6 +1,8 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import Decimal from "decimal.js";
 import { AnalyzerReport } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
@@ -941,6 +943,36 @@ describe("AnalyzerReport — table header semantics (M9-ACCESSIBILITY-01)", () =
     // position within each row, not by index attributes alone.
     const targetCell = rowChildren[r8Index];
     expect(targetCell.getAttribute("role")).toBe("cell");
+  });
+
+  // CF-ANALYZER-USER-READY-01 — Calvin's authorised mobile layout resume:
+  // at 390px this grid's fixed columns did not fit and the page itself
+  // scrolled sideways (page width 517px against a 390px viewport), cutting
+  // off the R = 10% and R = 12% columns. jsdom computes no real CSS layout
+  // (getBoundingClientRect/scrollWidth are always zero here), so this
+  // cannot re-measure the actual overflow the way the manual Playwright
+  // verification in this fix's PR receipt did — captured at 375/390/430px
+  // and 1440px desktop, screenshots delivered to Calvin directly, the same
+  // path REVIEW used for its own 8930faa evidence pack. What a DOM test CAN
+  // pin is the two structural facts that mechanism depends on: the grid
+  // sits inside its own named scroll wrapper (not loose in the tab body,
+  // where overflow would reach the page), and that wrapper's CSS rule
+  // actually exists. Losing either regresses the page-wide-scroll defect
+  // silently, with no visual diff to catch it.
+  it("the reverse-DCF grid sits inside its own .gridscroll wrapper — the overflow container the mobile fix depends on", () => {
+    const { container } = render(<AnalyzerReport result={assembleAnalysisResult(MSFT_FIXTURE)} />);
+    const grid = container.querySelector(".grid[role='table']") as HTMLElement;
+    const wrapper = grid.closest(".gridscroll");
+    expect(wrapper).not.toBeNull();
+    // The grid must be the wrapper's own content — not merely a distant
+    // ancestor match — so .gridscroll's overflow-x actually bounds it.
+    expect(wrapper?.contains(grid)).toBe(true);
+  });
+
+  it("globals.css still gives .gridscroll horizontal overflow and .grid a floor width — the two rules the mobile fix is made of", () => {
+    const css = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
+    expect(css).toMatch(/\.cb-analyzer\s+\.gridscroll\s*\{[^}]*overflow-x:\s*auto/);
+    expect(css).toMatch(/\.cb-analyzer\s+\.grid\s*\{[^}]*min-width:\s*\d/);
   });
 });
 

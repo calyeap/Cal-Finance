@@ -1075,31 +1075,48 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
               changes no shipped rule. aria-rowindex/aria-colindex stay on
               the cells as position hints; with real rows present they are
               redundant but harmless. */}
-          <div className="grid" role="table" aria-label="Reverse DCF grid — margin level by discount rate">
-            <div role="row" style={{ display: "contents" }}>
-              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={1}></div>
-              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={2}>
-                r = 8%
-              </div>
-              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={3}>
-                r = 10%
-              </div>
-              <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={4}>
-                r = 12%
-              </div>
-            </div>
-            {(["current", "median", "stress"] as const).map((level, li) => (
-              <div key={level} role="row" style={{ display: "contents" }}>
-                <div className="rowhead" role="rowheader" aria-rowindex={li + 2} aria-colindex={1}>
-                  {level}
+          {/* CF-ANALYZER-USER-READY-01 correction — Calvin's authorised
+              mobile layout resume: at 390px this grid's four fixed columns
+              (120px row-header + three cells) do not fit, and grid items'
+              default min-width: auto refuses to shrink a cell below its
+              content, so the grid pushed the whole page 517px wide instead
+              of staying inside the viewport. The established fix for
+              exactly this shape elsewhere in this file is a scroll
+              container around the content, not a change to the content
+              itself — the seven-tab rail (.az-tabs) and the Holdings/
+              Dashboard editor tables (.editor-table) both already scroll
+              inside their own box this same way. Same instrument, applied
+              here: the grid's own four columns, every cell, every figure
+              and the labelled aria-label stay exactly as they were: only
+              this wrapper is new, and it is invisible wherever the grid
+              already fit (desktop, and the two wider columns' content). */}
+          <div className="gridscroll">
+            <div className="grid" role="table" aria-label="Reverse DCF grid — margin level by discount rate">
+              <div role="row" style={{ display: "contents" }}>
+                <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={1}></div>
+                <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={2}>
+                  r = 8%
                 </div>
-                {priceImplied.reverseDcfGrid
-                  .filter((c) => c.marginLevel === level)
-                  .map((c, ci) => (
-                    <ReverseDcfCellView cell={c} key={`${level}-${c.rate}`} ariaRowIndex={li + 2} ariaColIndex={ci + 2} />
-                  ))}
+                <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={3}>
+                  r = 10%
+                </div>
+                <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={4}>
+                  r = 12%
+                </div>
               </div>
-            ))}
+              {(["current", "median", "stress"] as const).map((level, li) => (
+                <div key={level} role="row" style={{ display: "contents" }}>
+                  <div className="rowhead" role="rowheader" aria-rowindex={li + 2} aria-colindex={1}>
+                    {level}
+                  </div>
+                  {priceImplied.reverseDcfGrid
+                    .filter((c) => c.marginLevel === level)
+                    .map((c, ci) => (
+                      <ReverseDcfCellView cell={c} key={`${level}-${c.rate}`} ariaRowIndex={li + 2} ariaColIndex={ci + 2} />
+                    ))}
+                </div>
+              ))}
+            </div>
           </div>
           <table className="t" style={{ marginTop: "20px" }}>
             <tbody>
