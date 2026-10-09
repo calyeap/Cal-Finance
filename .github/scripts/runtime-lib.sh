@@ -273,36 +273,51 @@ runtime_is_gate_reset_line() {
 }
 
 # runtime_gate_action_ref <line>
-# CF-SLACK-REVIEW-GATE-DEDUPE-01 (issue #422): a deterministic, narrow
-# fingerprint of *which* concrete human action a Slack-eligible terminal
-# line names — e.g. the exact commit/ref and ticker a live-proof BLOCKED:
-# ACTIONABLE asks Calvin to act on — so a still-open gate can be told apart
-# from a genuinely distinct later one even when both happen to share a
-# Slack kind. Deliberately narrow: no free-text similarity/NLP, no new
-# classifier — only two literal, already-used shapes:
+# CF-SLACK-REVIEW-GATE-DEDUPE-01 (issue #422, corrected per PR #423 REVIEW):
+# a deterministic, narrow fingerprint of *which* concrete human action a
+# Slack-eligible terminal line names — e.g. the exact commit/ref and ticker
+# a live-proof BLOCKED: ACTIONABLE asks Calvin to act on — so a still-open
+# gate can be told apart from a genuinely distinct later one even when both
+# happen to share a Slack kind. Deliberately narrow: no free-text
+# similarity/NLP, no new classifier — only two literal, already-used
+# shapes:
 #   1. an explicit `ref=<token>` and/or `ticker=<token>` key=value pair
 #      (case-insensitive key), or
-#   2. failing that, the first bare commit-SHA-looking token (7-40 lower-
-#      case hex chars, containing at least one a-f letter so an ordinary
-#      decimal issue/attempt number never matches) — the shape
-#      analyzer-live-proof.yml's own `at ${SHORT} (${joined})` wording
-#      uses.
+#   2. failing that, a bare commit-SHA-looking token (7-40 lowercase hex
+#      chars, containing at least one a-f letter so an ordinary decimal
+#      issue/attempt number never matches) *anchored to the exact
+#      `at <sha> (` context* analyzer-live-proof.yml's own
+#      `at ${SHORT} (${joined})` wording uses — not any bare hex-looking
+#      token appearing anywhere in the line.
+# REVIEW's PR #423 correction: matching shape 2 anywhere in the line (not
+# just that anchored context) let a genuinely distinct later BLOCKED:
+# ACTIONABLE that merely *mentions* the same commit in passing (e.g. "...
+# grant the Supabase service-role secret for head 8930faa...") be
+# fingerprinted with the same ref as an earlier, unrelated live-proof
+# failure on that commit — silently conflating two different required
+# actions into one gate. Anchoring to the literal `at <sha> (` shape keeps
+# the fallback scoped to the one workflow wording it was always meant to
+# recognize; a free-text mention with no identifiable ref of its own
+# correctly falls back to kind-only/reset-line comparison instead (see
+# runtime_slack_is_duplicate), which still fails open rather than guessing.
 # Empty when neither shape is present — callers must then fall back to
 # kind-only comparison (the pre-existing, still-correct behaviour for a
 # free-text blocker with no identifying ref/ticker of its own).
 runtime_gate_action_ref() {
-  local line="$1" out tok
+  local line="$1" out match tok
   out="$(printf '%s' "$line" | grep -ioE '(ref|ticker)=[^][ ,()]+' | tr '[:upper:]' '[:lower:]' | sort -u | tr '\n' ';')"
   if [ -n "$out" ]; then
     printf '%s' "$out"
     return 0
   fi
-  for tok in $(printf '%s' "$line" | grep -oE '\b[0-9a-f]{7,40}\b'); do
+  match="$(printf '%s' "$line" | grep -oE '\bat [0-9a-f]{7,40} \(' | head -n1)"
+  if [ -n "$match" ]; then
+    tok="$(printf '%s' "$match" | grep -oE '[0-9a-f]{7,40}')"
     if [[ "$tok" =~ [a-f] ]]; then
       printf '%s' "$tok"
       return 0
     fi
-  done
+  fi
   printf ''
 }
 

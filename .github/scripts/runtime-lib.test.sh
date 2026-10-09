@@ -182,6 +182,48 @@ AMBIGUOUS_REF_SHAPE=$(jq -n '[
 ]')
 assert_eq "$(runtime_slack_is_duplicate "$AMBIGUOUS_REF_SHAPE" "2026-10-08T11:00:00Z" 'BLOCKED: ACTIONABLE — live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R3]')" false "fail-open: an earlier same-kind alert with no identifiable ref of its own never confirms a match against a ref-bearing later one"
 
+# PR #423 REVIEW CORRECT regression (same outcome, same OUTCOME-ID): the
+# bare-SHA fallback must only fire on the exact `at <sha> (` shape
+# analyzer-live-proof.yml posts, never on any hex-looking token mentioned
+# anywhere in free text — otherwise a genuinely distinct later blocker that
+# merely references the same commit in passing gets silently conflated with
+# an unrelated earlier gate on that commit.
+assert_eq "$(runtime_gate_action_ref 'BLOCKED: ACTIONABLE — grant the Supabase service-role secret for head 8930faa79d7f7567777c1b57d7701a5a20a2c120')" "" "a bare SHA merely mentioned in free text, outside the analyzer-live-proof.yml 'at <sha> (' shape, is not an identifiable ref"
+
+# Case 1 (re-review restates the identical unresolved live-proof failure on
+# the same unchanged commit after an ordinary re-drive-shaped REVIEW START):
+# this is the PR #420 bug itself and must stay deduped — unchanged by this
+# correction.
+REVIEW_GATE_CASE_1=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa79d7f7567777c1b57d7701a5a20a2c120 (MSFT FAIL) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
+  {body: "REVIEW START: OUTCOME-ID=CF-420 TIER=NORMAL [REVIEW_ATTEMPT_ID: R2]", created_at: "2026-10-09T10:05:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_1" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa79d7f7567777c1b57d7701a5a20a2c120 (MSFT FAIL) [REVIEW_ATTEMPT_ID: R2]')" true "case 1: the exact same unresolved live-proof failure restated on the same commit after an ordinary re-review stays deduped"
+
+# Case 2 (the actual defect PR #423 REVIEW found): a *different* required
+# action that merely names the same commit in passing — not in the
+# analyzer-live-proof.yml 'at <sha> (' shape — must not be conflated with
+# the unrelated earlier live-proof gate just because both mention that
+# commit. It has no identifiable ref of its own, so it correctly falls back
+# to the pre-existing reset-line check, which does see the intervening
+# REVIEW START and treats it as a reset — a genuinely new gate, eligible
+# once.
+REVIEW_GATE_CASE_2=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — Analyzer live proof FAIL at 8930faa79d7f7567777c1b57d7701a5a20a2c120 (MSFT FAIL) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
+  {body: "REVIEW START: OUTCOME-ID=CF-420 TIER=NORMAL [REVIEW_ATTEMPT_ID: R2]", created_at: "2026-10-09T10:05:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_2" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — grant the Supabase service-role secret for head 8930faa79d7f7567777c1b57d7701a5a20a2c120 [REVIEW_ATTEMPT_ID: R2]')" false "case 2 (the PR #423 REVIEW finding): a genuinely different required action naming the same commit in passing is a distinct gate, not suppressed by an unrelated earlier live-proof alert on that commit"
+
+# Case 3 (explicit ref=/ticker= gate restated verbatim after a re-drive-
+# shaped BUILD START): still the PR #420 bug shape and must stay deduped —
+# unchanged by this correction; already covered by PR_420_SHAPE above, kept
+# here as the exact case REVIEW numbered.
+REVIEW_GATE_CASE_3=$(jq -n '[
+  {body: "BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [REVIEW_ATTEMPT_ID: R1]", created_at: "2026-10-09T10:00:00Z"},
+  {body: "BUILD START: OUTCOME-ID=CF-420 TIER=NORMAL [BUILD_ATTEMPT_ID: B1]", created_at: "2026-10-09T10:05:00Z"}
+]')
+assert_eq "$(runtime_slack_is_duplicate "$REVIEW_GATE_CASE_3" "2026-10-09T10:06:00Z" 'BLOCKED: ACTIONABLE — same exact manual live proof needed (ref=8930faa79d7f7567777c1b57d7701a5a20a2c120, ticker=MSFT) [BUILD_ATTEMPT_ID: B2]')" true "case 3: an explicit ref=/ticker= gate restated verbatim after a re-drive-shaped BUILD START stays deduped"
+
 # Admission regression coverage.
 assert_eq "$(runtime_admission_decision issue 10 '' '' true)" IN_FLIGHT "#188 same-target duplicate build suppressed"
 assert_eq "$(runtime_admission_decision issue 10 '' '12' false)" EXISTING_PR:12 "existing PR suppresses new BUILD"
