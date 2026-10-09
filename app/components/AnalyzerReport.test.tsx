@@ -1,11 +1,19 @@
 // @vitest-environment jsdom
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen, within } from "@testing-library/react";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import Decimal from "decimal.js";
 import { AnalyzerReport } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import { OKLO_FIXTURE } from "@/lib/analyzer/fixtures/oklo";
+import { CLEAN_PROVENANCE } from "@/lib/analyzer/provenance";
+import type { AnalysisResult, SourcedValue, SuppressedValue } from "@/lib/analyzer/types";
+
+function sourcedFor(value: Decimal): SourcedValue<Decimal> {
+  return { value, provenance: CLEAN_PROVENANCE };
+}
 
 afterEach(cleanup);
 
@@ -48,9 +56,34 @@ describe("AnalyzerReport — MSFT", () => {
     expect(screen.getAllByText("20.9%").length).toBeGreaterThan(0);
   });
 
-  it("shows PRECONDITION FAILED for FCF yield + growth, matching the mock", () => {
-    render(<AnalyzerReport result={result} />);
+  it("explains FCF yield + growth's PRECONDITION FAILED in plain language on the normal surface, not the raw state name (CF-ANALYZER-USER-READY-01)", () => {
+    const { container } = render(<AnalyzerReport result={result} />);
+    expect(
+      screen.getAllByText("the conditions this measure needs do not hold for this company", { exact: false }).length
+    ).toBeGreaterThan(0);
+    // The raw diagnostic state is still present and auditable — just confined
+    // to the opt-in Disclosure, not the primary reading text (checked
+    // precisely by the containment test below).
     expect(screen.getAllByText("PRECONDITION FAILED").length).toBeGreaterThan(0);
+    expect(container.querySelector("section#D details.disclose")).not.toBeNull();
+  });
+
+  it("keeps the raw PRECONDITION FAILED token confined to its opt-in disclosure — never the primary reading text (CF-ANALYZER-USER-READY-01)", () => {
+    const { container } = render(<AnalyzerReport result={result} />);
+    const cells = Array.from(container.querySelectorAll("section#D td.state"));
+    const cell = cells.find((td) => td.textContent?.includes("PRECONDITION FAILED")) as HTMLElement;
+    expect(cell).toBeTruthy();
+    const disclosure = cell.querySelector("details.disclose") as HTMLElement;
+    expect(disclosure).not.toBeNull();
+    expect(disclosure.textContent).toContain("PRECONDITION FAILED");
+    // Outside the disclosure, within the same cell, the raw token never
+    // appears — only the human explanation does.
+    const outsideText = Array.from(cell.childNodes)
+      .filter((n) => n !== disclosure)
+      .map((n) => (n as HTMLElement).textContent ?? (n.textContent ?? ""))
+      .join(" ");
+    expect(outsideText).not.toContain("PRECONDITION FAILED");
+    expect(outsideText).toContain("the conditions this measure needs do not hold for this company");
   });
 
   it("never renders Sections I/I2 as populated — no interpretation or challenger call exists yet (Milestone 8)", () => {
@@ -103,6 +136,131 @@ describe("AnalyzerReport — MSFT", () => {
     expect(section.textContent).toMatch(/project-debt cost not configured/);
     expect(section.textContent).not.toMatch(/pre-revenue unlevered rate 0%/);
     expect(section.textContent).not.toMatch(/project-debt cost 0%/);
+  });
+});
+
+// CF-ANALYZER-USER-READY-01 correction (second pass) — REVIEW's remaining
+// list of raw-engine-state leaks on the normal Financials/Valuation
+// surfaces, beyond the FCF cell already fixed above: StateBlock (the shared
+// renderer behind every other suppressed figure), the Reinvestment/RONIC
+// ladder, Section H's fair-value range, and the base-rate growth/CAGR
+// restatement. Each gets the same treatment proven above — a plain-English
+// line as the primary reading text, the raw diagnostic code moved into the
+// existing opt-in Disclosure, never left as the only representation.
+//
+// Built on the assembled real-scale MSFT result (same fixture the compact-
+// dollar and FCF-cell tests above use), with only the targeted figure
+// overridden to force each suppression — the established pattern
+// AnalyzerOverview.test.tsx and QuickRead.test.tsx already use for paths the
+// baseline fixture does not itself reach.
+describe("AnalyzerReport — remaining raw engine-state translations (CF-ANALYZER-USER-READY-01 correction)", () => {
+  const base = assembleAnalysisResult(MSFT_FIXTURE);
+
+  function withMarginHistorySuppressed(): AnalysisResult {
+    return {
+      ...base,
+      diagnostics: {
+        ...base.diagnostics,
+        marginHistory: { suppressed: true, state: "HISTORY INSUFFICIENT", cause: "fewer than 5 filed years" },
+      },
+    };
+  }
+
+  function withRonicLadderCellNotMeaningful(): AnalysisResult {
+    const ronic = base.diagnostics.reinvestmentRonic.ronic;
+    if (ronic.suppressed) throw new Error("fixture precondition: MSFT's RONIC ladder must not be suppressed");
+    return {
+      ...base,
+      diagnostics: {
+        ...base.diagnostics,
+        reinvestmentRonic: {
+          ...base.diagnostics.reinvestmentRonic,
+          ronic: {
+            ...ronic,
+            value: {
+              cells: ronic.value.cells.map((c, i) => (i === 0 ? { ...c, state: "RONIC NOT MEANINGFUL" as const } : c)),
+            },
+          },
+        },
+      },
+    };
+  }
+
+  function withFairValueRangeSuppressed(): AnalysisResult {
+    return {
+      ...base,
+      fairValueRange: { kind: "suppressed", state: "NOT COMPUTABLE", cause: "the model has no stable solution" },
+    };
+  }
+
+  function withBaseRateCellSuppressed(): AnalysisResult {
+    const suppressedGrowth: SuppressedValue = { suppressed: true, state: "NOT COMPUTABLE", cause: "no stable solution in the policy bracket" };
+    return {
+      ...base,
+      priceImplied: {
+        ...base.priceImplied,
+        reverseDcfGrid: base.priceImplied.reverseDcfGrid.map((c) =>
+          c.marginLevel === "current" && c.rate === 0.08 ? { ...c, fiveYearGrowth: suppressedGrowth, tenYearCagr: suppressedGrowth } : c
+        ),
+      },
+    };
+  }
+
+  it("StateBlock (margin history, Section D): plain English is the primary text, raw state confined to Disclosure", () => {
+    const { container } = render(<AnalyzerReport result={withMarginHistorySuppressed()} />);
+    const sectionD = container.querySelector("section#D") as HTMLElement;
+    expect(within(sectionD).getByText(/filed history/)).not.toBeNull();
+    const disclosure = sectionD.querySelector("details.disclose") as HTMLElement;
+    const stateRow = Array.from(sectionD.querySelectorAll("tr")).find((tr) => tr.textContent?.includes("Margin history")) as HTMLElement;
+    const nameInDisclosure = stateRow.querySelector(".state > details.disclose .name");
+    expect(nameInDisclosure?.textContent).toBe("HISTORY INSUFFICIENT");
+    const primaryText = Array.from(stateRow.querySelectorAll(".state > .cause"))[0]?.textContent ?? "";
+    expect(primaryText).not.toContain("HISTORY INSUFFICIENT");
+    expect(disclosure).not.toBeNull();
+  });
+
+  it("RONIC ladder (Section D): RONIC NOT MEANINGFUL is explained in plain words, the raw label stays auditable in Disclosure", () => {
+    const { container } = render(<AnalyzerReport result={withRonicLadderCellNotMeaningful()} />);
+    const sectionD = container.querySelector("section#D") as HTMLElement;
+    expect(within(sectionD).getByText(/not meaningful for this company's recent history/)).not.toBeNull();
+    const ladderCell = Array.from(sectionD.querySelectorAll("tr"))
+      .find((tr) => tr.textContent?.includes("Reinvestment, RONIC"))
+      ?.querySelector("td") as HTMLElement;
+    expect(ladderCell.querySelector("details.disclose .name")?.textContent).toBe("RONIC NOT MEANINGFUL");
+  });
+
+  it("Section H fair-value range suppressed: plain English is the primary text, raw state confined to Disclosure", () => {
+    const { container } = render(<AnalyzerReport result={withFairValueRangeSuppressed()} />);
+    const sectionH = container.querySelector("section#H") as HTMLElement;
+    expect(within(sectionH).getByText(/the model has no meaningful answer for this company at these inputs/)).not.toBeNull();
+    const disclosure = sectionH.querySelector("details.disclose") as HTMLElement;
+    expect(disclosure).not.toBeNull();
+    expect(disclosure.textContent).toContain("NOT COMPUTABLE");
+    const stateDiv = sectionH.querySelector(".hframe + .state, section#H > .state") ?? sectionH.querySelector(".state");
+    const outsideDisclosureText = Array.from((stateDiv as HTMLElement).childNodes)
+      .filter((n) => n !== disclosure)
+      .map((n) => n.textContent ?? "")
+      .join(" ");
+    expect(outsideDisclosureText).not.toContain("NOT COMPUTABLE");
+  });
+
+  it("base-rate growth/CAGR restatement (Section H right column) is plain English, raw state confined to Disclosure", () => {
+    const { container } = render(<AnalyzerReport result={withBaseRateCellSuppressed()} />);
+    const sectionH = container.querySelector("section#H") as HTMLElement;
+    expect(within(sectionH).getAllByText(/the model has no meaningful answer for this company at these inputs/).length).toBeGreaterThan(0);
+    const piRows = Array.from(sectionH.querySelectorAll(".pi"));
+    const growthRow = piRows.find((r) => r.textContent?.includes("Implied growth, yrs 1-5")) as HTMLElement;
+    const cagrRow = piRows.find((r) => r.textContent?.includes("Equivalent ten-year CAGR")) as HTMLElement;
+    for (const row of [growthRow, cagrRow]) {
+      const disclosure = row.querySelector("details.disclose") as HTMLElement;
+      expect(disclosure).not.toBeNull();
+      expect(disclosure.textContent).toContain("NOT COMPUTABLE");
+      const outsideText = Array.from(row.childNodes)
+        .filter((n) => n !== disclosure)
+        .map((n) => n.textContent ?? "")
+        .join(" ");
+      expect(outsideText).not.toContain("NOT COMPUTABLE");
+    }
   });
 });
 
@@ -786,6 +944,36 @@ describe("AnalyzerReport — table header semantics (M9-ACCESSIBILITY-01)", () =
     const targetCell = rowChildren[r8Index];
     expect(targetCell.getAttribute("role")).toBe("cell");
   });
+
+  // CF-ANALYZER-USER-READY-01 — Calvin's authorised mobile layout resume:
+  // at 390px this grid's fixed columns did not fit and the page itself
+  // scrolled sideways (page width 517px against a 390px viewport), cutting
+  // off the R = 10% and R = 12% columns. jsdom computes no real CSS layout
+  // (getBoundingClientRect/scrollWidth are always zero here), so this
+  // cannot re-measure the actual overflow the way the manual Playwright
+  // verification in this fix's PR receipt did — captured at 375/390/430px
+  // and 1440px desktop, screenshots delivered to Calvin directly, the same
+  // path REVIEW used for its own 8930faa evidence pack. What a DOM test CAN
+  // pin is the two structural facts that mechanism depends on: the grid
+  // sits inside its own named scroll wrapper (not loose in the tab body,
+  // where overflow would reach the page), and that wrapper's CSS rule
+  // actually exists. Losing either regresses the page-wide-scroll defect
+  // silently, with no visual diff to catch it.
+  it("the reverse-DCF grid sits inside its own .gridscroll wrapper — the overflow container the mobile fix depends on", () => {
+    const { container } = render(<AnalyzerReport result={assembleAnalysisResult(MSFT_FIXTURE)} />);
+    const grid = container.querySelector(".grid[role='table']") as HTMLElement;
+    const wrapper = grid.closest(".gridscroll");
+    expect(wrapper).not.toBeNull();
+    // The grid must be the wrapper's own content — not merely a distant
+    // ancestor match — so .gridscroll's overflow-x actually bounds it.
+    expect(wrapper?.contains(grid)).toBe(true);
+  });
+
+  it("globals.css still gives .gridscroll horizontal overflow and .grid a floor width — the two rules the mobile fix is made of", () => {
+    const css = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
+    expect(css).toMatch(/\.cb-analyzer\s+\.gridscroll\s*\{[^}]*overflow-x:\s*auto/);
+    expect(css).toMatch(/\.cb-analyzer\s+\.grid\s*\{[^}]*min-width:\s*\d/);
+  });
 });
 
 // CF-PRICE-DISPLAY-HONESTY-RECON-01 — Section A's price row (CONTEXT item
@@ -812,5 +1000,56 @@ describe("AnalyzerReport — Section A price row, no price (CF-PRICE-DISPLAY-HON
     const priceRow = section.querySelector(".pricerow") as HTMLElement;
     expect(priceRow.textContent).toContain(`$${MSFT_FIXTURE.price.value.toFixed(2)}`);
     expect(priceRow.textContent).toContain(MSFT_FIXTURE.price.timestamp);
+  });
+});
+
+// CF-ANALYZER-USER-READY-01 — a real acquired run carries true-USD-scale
+// figures (e.g. TTM revenue $331,839,000,000), unlike this file's other
+// fixtures which use small round numbers for calculation-correctness
+// readability. These two company-scale fields — Section D's run-rate TTM
+// and Section E's reverse-DCF year-10 revenue — rendered through the plain
+// `num().toFixed(0)` helper instead of `formatCompactUsd` (the same
+// instrument every other company-scale figure in this report already uses,
+// per CF-ANALYZER-V1-SETTLE-01's "$1104224240826" fix), so a real run's
+// Financials and Valuation tabs showed raw unbroken digit strings at the
+// exact scale a real company's revenue sits at. Regression guard, not a
+// rendering-logic test: assembleAnalysisResult's arithmetic is proven
+// correct elsewhere (reverseDcf.test.ts, runRate tests); this only pins
+// that the renderer formats a realistic-magnitude dollar value the way
+// every other one on the page is formatted.
+describe("AnalyzerReport — company-scale dollar figures render compact, never as a raw digit string (CF-ANALYZER-USER-READY-01)", () => {
+  const realisticTtm = new Decimal("331839000000"); // MSFT's actual FY TTM revenue, in dollars
+
+  it("Section D's run-rate TTM renders as compact USD, not a raw digit string", () => {
+    const result = assembleAnalysisResult({
+      ...MSFT_FIXTURE,
+      runRate: { ...MSFT_FIXTURE.runRate, ttm: sourcedFor(realisticTtm) },
+    });
+    const { container } = render(<AnalyzerReport result={result} />);
+    const row = rowOf(container.querySelector("section#D") as HTMLElement, "Run-rate comparison");
+    expect(row.textContent).toMatch(/TTM \$331\.8B/);
+    expect(row.textContent).not.toMatch(/331839000000/);
+  });
+
+  it("Section E's reverse-DCF year-10 revenue cells render as compact USD, not a raw digit string", () => {
+    // Scales both the base revenue AND the target enterprise value by the
+    // same factor (billions, same unit the real MSFT capture uses) so the
+    // reverse-DCF solver keeps a consistent EV/revenue ratio and still
+    // solves — only the fixture's deliberately small test-arithmetic scale
+    // changes, not the relationship the solver depends on.
+    const scale = new Decimal("1000000000");
+    const result = assembleAnalysisResult({
+      ...MSFT_FIXTURE,
+      reverseDcf: {
+        ...MSFT_FIXTURE.reverseDcf,
+        baseYearRevenue: sourcedFor(MSFT_FIXTURE.reverseDcf.baseYearRevenue!.value.mul(scale)),
+        targetEnterpriseValue: sourcedFor(MSFT_FIXTURE.reverseDcf.targetEnterpriseValue!.value.mul(scale)),
+      },
+    });
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#E") as HTMLElement;
+    expect(section.textContent).toMatch(/yr-10 revenue\s*\$[\d.]+T/i);
+    // No eleven-plus-digit run anywhere in the diagnostic grid.
+    expect(section.textContent).not.toMatch(/\$\d{10,}/);
   });
 });

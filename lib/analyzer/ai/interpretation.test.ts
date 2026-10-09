@@ -172,6 +172,41 @@ describe("runInterpretation", () => {
     await expect(runInterpretation(msft, call)).rejects.toThrow(/UNKNOWN SLOT/);
   });
 
+  // CF-ANALYZER-USER-READY-01 — Calvin's authorised speed-repair resume on
+  // #420/#419: a credential-backed live-proof run observed the model emit
+  // exactly `policy.reverseDcf.current@0.08.ronic` for RONIC at r = 8% — a
+  // chimera of the policy rate slot family (policy.rateGrid.*, which the
+  // system prompt's own "at 8%, 10%, 12% -> reference the three policy rate
+  // slots" example teaches) grafted onto the unrelated
+  // priceImplied.reverseDcf.*.ronic family. That attempt cost ~98s and the
+  // regenerated attempt another ~75s — nearly the whole measured ~175s
+  // report latency. Regeneration already recovers correctly (the "when the
+  // first output is refused" suite below pins that generally); this guards
+  // the two things that make this SPECIFIC failure cheaper to avoid winning
+  // on the first attempt: the validator's own nearest-match still resolves
+  // to the real slot (so a regeneration is well-informed), and the system
+  // prompt itself now warns against building a slot id by combining a
+  // policy rate slot with a metric name, with this exact slot as the
+  // worked example.
+  it("REFUSES the exact observed chimera (policy rate slot grafted onto a reverseDcf metric), with the real slot suggested", async () => {
+    const call = fakeCall(statementsOf(["Returns on new capital at the lowest rate are {{policy.reverseDcf.current@0.08.ronic}}."]));
+
+    const refusal = await runInterpretation(msft, call).catch((err) => err);
+    expect(refusal).toBeInstanceOf(UntraceableFigureError);
+    expect((refusal as UntraceableFigureError).diagnostic).toContain("UNKNOWN SLOT");
+    expect((refusal as UntraceableFigureError).diagnostic).toContain(
+      "did you mean priceImplied.reverseDcf.current@0.08.ronic?"
+    );
+  });
+
+  it("warns the model, in the system prompt itself, against building a slot id by combining a policy rate slot with a metric name", async () => {
+    const seen: AnalystCallRequest[] = [];
+    await runInterpretation(msft, fakeCall(statementsOf(["Nothing numeric here."]), seen));
+
+    expect(seen[0].system).toContain("A VALUE COMPUTED AT A RATE IS A DIFFERENT SLOT FROM THE RATE ITSELF");
+    expect(seen[0].system).toContain("priceImplied.reverseDcf.current@0.08.ronic");
+  });
+
   it("REFUSES a [C]-authored position (§8.3 limit 1)", async () => {
     const call = fakeCall(statementsOf(["On the evidence here the shares look CHEAP."]));
 

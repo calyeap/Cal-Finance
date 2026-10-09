@@ -68,6 +68,22 @@ describe("analysisForReport", () => {
     expect(report.result.challenger).toBeNull();
   });
 
+  it("CF-ANALYZER-USER-READY-01 — onStage reports one compute and one aiLayer timing per call, whether or not a call runs", async () => {
+    const runId = await decidedRun("MSFT", "Microsoft Corporation");
+    const stages: Array<{ stage: string; ms: number }> = [];
+    const onStage = (stage: "compute" | "aiLayer", ms: number) => stages.push({ stage, ms });
+
+    await analysisForReport(runId, null, onStage);
+
+    expect(stages.map((s) => s.stage)).toEqual(["compute", "aiLayer"]);
+    expect(stages.every((s) => s.ms >= 0)).toBe(true);
+
+    stages.length = 0;
+    await analysisForReport(runId, scriptedCall(), onStage);
+
+    expect(stages.map((s) => s.stage)).toEqual(["compute", "aiLayer"]);
+  });
+
   it("runs both calls and merges them once the analysis exists", async () => {
     const runId = await decidedRun("MSFT", "Microsoft Corporation");
     const seen: AnalystCallRequest[] = [];

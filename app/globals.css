@@ -1800,11 +1800,26 @@ h6 {
   margin-top: 3px;
 }
 
+/* CF-ANALYZER-USER-READY-01 correction — Calvin's authorised mobile layout
+   resume: at narrow widths the grid scrolls inside this wrapper instead of
+   the whole page, the same instrument .editor-table and .az-tabs already
+   use for their own narrow-width overflow. Desktop is unaffected: the
+   wrapper is exactly as wide as its content whenever that content already
+   fits, which it always did before this fix. */
+.cb-analyzer .gridscroll {
+  overflow-x: auto;
+}
 .cb-analyzer .grid {
   display: grid;
   grid-template-columns: 120px repeat(3, 1fr);
   gap: 12px;
   margin-top: 6px;
+  /* Floor under which a rate column would start truncating its own
+     figures/labels — three columns this narrow still read cleanly at the
+     cell's existing 12px padding and font sizes. Below the viewport this
+     makes the grid wider than its wrapper, which is exactly what
+     .gridscroll's overflow-x: auto is for. */
+  min-width: 580px;
 }
 .cb-analyzer .grid .colhead,
 .cb-analyzer .grid .rowhead {
