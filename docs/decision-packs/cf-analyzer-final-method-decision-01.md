@@ -28,13 +28,13 @@ Per issue #429's own instruction, the previously-identified blocked route
 was **not retried**. One bounded `WebSearch` check for already-accessible,
 externally-authored MSFT DCF figures was run instead:
 
-| Source | Value/share | Disclosed basis |
-|---|---|---|
-| valueinvesting.io (4 Jun 2026) | **$395.89** | WACC 8.88%, cost of equity 9.02%, 5-yr growth-exit model |
-| GuruFocus earnings-DCF (10 Aug 2026) | $527.16 | 11% discount rate, 4% terminal growth, earnings basis |
-| GuruFocus FCF-DCF (same date) | $167.67 | Same discount rate, free-cash-flow basis |
-| AlphaSpread (live tool) | ~$395–424 | WACC/terminal growth not disclosed in snippet |
-| StockUnlock (22 Jul 2026) | $629 | 10% discount rate, 24.9x terminal **multiple** (not perpetuity growth) |
+| Source | Value/share | Disclosed basis | Link |
+|---|---|---|---|
+| [valueinvesting.io](https://www.valueinvesting.io/MSFT/valuation/intrinsic-value) (4 Jun 2026 snapshot) | **$395.89** | WACC 8.88%, cost of equity 9.02%, 5-yr growth-exit model | re-verified live this run |
+| [GuruFocus earnings-DCF](https://www.gurufocus.com/news/9020810/msft-dcf-analysis-intrinsic-value-527-vs-price-500) (10 Aug 2026) | $527.16 | Two-stage model, high-growth stage then stable stage, earnings basis | re-verified live this run |
+| [GuruFocus FCF-DCF](https://www.gurufocus.com/news/9020810/msft-dcf-analysis-intrinsic-value-527-vs-price-500) (same article, same date) | $167.67 | Same two-stage model, free-cash-flow basis instead of earnings | re-verified live this run |
+| [AlphaSpread DCF (base case)](https://www.alphaspread.com/security/nasdaq/msft/dcf-valuation/base-case) (live tool; re-checked at two snapshots) | $395.55 (28 Jun 2026) – $424.33 (19 Jul 2026) | WACC/terminal growth not disclosed in the page snippet | re-verified live this run |
+| [StockUnlock](https://stockunlock.com/fair-value/msft.html) (22 Jul 2026) | $629 | 10% discount rate, 24.9x terminal **multiple** (not perpetuity growth) | re-verified live this run |
 
 **Like-for-like read.** valueinvesting.io's disclosed WACC (8.88%) is the closest
 external match to Phase B's own 8.64%, and its value ($395.89) sits ~8.6% below Phase
@@ -43,9 +43,9 @@ table already shows for a sub-1pp WACC/growth perturbation. This is **directiona
 consistent with, not contradictory to**, Phase B. The other three providers use
 materially different bases (earnings instead of FCF, an exit multiple instead of
 perpetuity growth, or an undisclosed WACC) and are not like-for-like comparable; they are
-recorded only because their own $167.67–$629 spread — nearly 4x, for the same stock, same
-week, from commercial providers — is itself evidence *for* Phase B's fragility finding,
-not against it.
+recorded only because their own $167.67–$629 spread — nearly 4x, for the same stock, from
+commercial providers, across dated snapshots spanning **4 Jun – 10 Aug 2026** (not the
+same week) — is itself evidence *for* Phase B's fragility finding, not against it.
 
 **Verdict: EXTERNAL ORACLE still NOT PROVEN** to a Damodaran-grade disclosed-formula
 standard — none of these sources exposes formula cells. One genuinely external,
@@ -68,17 +68,35 @@ assumption-dominated, not settled facts.
   until a concrete candidate and its terms are evidenced.
 - **(C) Stay an honest facts + reverse-DCF / price-implied-expectations tool** — no
   BUY/HOLD/SELL — until a credible, lawful valuation-band evidence path exists. This is
-  the Analyzer's **current, already-accepted** state
-  ([26 Sep freeze](../analyzer-v2-final-acceptance-freeze.md)): every real run already
-  renders `INCOMPLETE` rather than a fabricated verdict, and Calvin has repeatedly
-  declined to short-circuit that (22 Sep #211, 24–25 Sep Ruling C, today's #424).
+  the Analyzer's **current, interim state pending M8**, not a settled end-state: the
+  [26 Sep freeze](../analyzer-v2-final-acceptance-freeze.md) records the dominant
+  `INCOMPLETE` verdict as "an **accepted, permanently recorded known limitation pending
+  M8** — not a claim that verdict completion is solved" (freeze lines 20-22, 54-55), a
+  limitation to be lifted once M8 lands, not a product direction adopted in its place.
+  **This conflicts with other standing authority that points the other way**, named
+  plainly rather than smoothed over: Calvin's 24 Sep ruling states "do **not** accept
+  Analyzer V2 as complete while a successful real run's dominant verdict remains
+  `INCOMPLETE`" ([#210 comment 5807320616](https://github.com/calyeap/Cal-Finance/issues/210#issuecomment-5807320616));
+  `docs/product-decisions.md` item 1 states "Successful-report verdict is always
+  BUY/HOLD/SELL; `INCOMPLETE` never renders as a completed-report verdict"; and the
+  Methodology page's 18 Sep FINAL OWNER RULING likewise fixes a successful analysis's
+  verdict as exactly BUY/HOLD/SELL. Recommending (C) as the Analyzer's ongoing *direction*
+  — rather than as the interim limitation these authorities already accept only pending
+  M8 — would be a **change from that standing authority**, not a confirmation of it.
+  Calvin has repeatedly declined to short-circuit the interim state with an invented
+  band (22 Sep #211, 24–25 Sep Ruling C, today's #424), which supports staying on (C)
+  for now, but does not by itself resolve the tension above for the question of (C) as
+  a lasting direction; §5(2) below asks for that as the named change it is.
 
-**Recommendation: (C), unchanged from today's accepted state** — not a new product
-decision, a confirmation that nothing in Phase B or this run's external check supplies
-the missing evidence HARD BOUNDS would require to move toward (A)'s banding step, and
-nothing evidences a path to (B). The two engineering-ready, zero-new-policy steps that
-*are* dependency-safe under (C) — wiring Ruling C's Steps 2/3/6/7 for MSFT, and retiring
-the stale Notion wording below — do not require choosing (A) or (B) and are named in §6.
+**Recommendation: (C) for now, as the interim state pending M8** — not a new product
+decision confirming today's accepted state, and not a claim that (C) is a settled
+direction: nothing in Phase B or this run's external check supplies the missing evidence
+HARD BOUNDS would require to move toward (A)'s banding step, and nothing evidences a
+path to (B), so no alternative is actionable today — but the tension named above against
+(C) as a lasting direction is real and is put to Calvin as a change, not assumed settled.
+The two engineering-ready, zero-new-policy steps that *are* dependency-safe under (C) —
+wiring Ruling C's Steps 2/3/6/7 for MSFT, and retiring the stale Notion wording below —
+do not require choosing (A) or (B) and are named in §6.
 
 ## 4. Finance-rule authority reconciliation — the alleged 22 Sep bands conflict
 
@@ -131,18 +149,68 @@ edit; §5 below asks for exactly that authorization, named rather than assumed.
 > Ruling C's seven-step structure, with the numeric CHEAP/FAIR/EXPENSIVE band (§11 item
 > 5) as the one still-open, un-invented house-policy item.
 > **(2)** Keep direction (C) — the Analyzer's current honest reverse-DCF/facts-first,
-> no-fabricated-verdict posture — unchanged, rather than forcing a DCF-anchored
-> numeric band now. Reason: Phase B's one-stock DCF, even arithmetic-verified, is
-> fragility-dominated by assumptions (±19–62% swings) no oracle reachable from this
-> environment can check, and this run's external comparison corroborates that fragility
-> rather than resolving it; §11 item 5 cannot lawfully be set without evidence this
-> circularity prevents; every prior ruling on this exact topic has already refused to
-> invent a band. No change to the 26 Sep V2 freeze is requested either way.
+> no-fabricated-verdict posture — unchanged **for now**, rather than forcing a
+> DCF-anchored numeric band now. **Flagged as a change from current authority, not a
+> confirmation of it:** the 26 Sep freeze accepts the dominant `INCOMPLETE` verdict only
+> as "an accepted, permanently recorded known limitation pending M8," while the 24 Sep
+> ruling on #210 ("do not accept Analyzer V2 as complete while a successful real run's
+> dominant verdict remains `INCOMPLETE`"), `docs/product-decisions.md` item 1, and the
+> Methodology page's 18 Sep FINAL OWNER RULING all hold that a successful report's
+> verdict is BUY/HOLD/SELL (see §3(C) above). Confirming (C) here as the Analyzer's
+> ongoing direction, rather than only its interim state pending M8, moves past that
+> standing authority rather than restating it — Calvin's reply is asked as that explicit
+> change, not assumed. Reason offered for making it anyway: Phase B's one-stock DCF,
+> even arithmetic-verified, is fragility-dominated by assumptions (±19–62% swings) no
+> oracle reachable from this environment can check, and this run's external comparison
+> corroborates that fragility rather than resolving it; §11 item 5 cannot lawfully be set
+> without evidence this circularity prevents; every prior ruling on this exact topic has
+> already refused to invent a band. No change to the 26 Sep V2 freeze's own text is
+> requested either way.
 > **(3)** Option B (an independent commercial fair-value provider) stays a live,
 > unevidenced alternative for a later, separate decision once a concrete, licensable
 > candidate exists — not adopted, rejected, or assumed here.
+> **(4)** The governing-methodology clauses issue #429's DO #4 itemizes, each labelled
+> against authority already cited in §4 above and in `docs/verdict-methodology-reconciliation.md`
+> §§4/9–11, not newly decided here:
+> - **Value model & input-source hierarchy — EXISTING APPROVED.** Ruling C's seven-step
+>   structure (`docs/verdict-methodology-reconciliation.md` §§9–10) is applied to the
+>   frozen spec's §10.6.2 (via `CALVIN RULING — B`); every input is a field the analyzer
+>   already computes, evidenced to the standard §3.7/§3.8 already require (primary
+>   filings outrank secondary sources; a REQUIRED input must clear that standard or the
+>   position fails Step 1). No new hierarchy is proposed.
+> - **Growth / margin / reinvestment / discount / terminal conventions — EXISTING
+>   APPROVED.** Governed by `docs/frozen/calfinance-methodology-v2.md` and Ruling C's
+>   Steps 2–3 (RONIC-vs-rate growth licence read against §7.2 M5's ladder); unchanged by
+>   this pack.
+> - **Tax convention (`nopatTaxRate`) — OPEN.** One of the four
+>   `UNDEFINED_POLICY_CONSTANTS` (`lib/analyzer/policy.ts:81-86`); every reverse-DCF cell
+>   returns INCOMPLETE without it, for every company. Command Center's to rule; not
+>   answered here.
+> - **Lease conventions — EXISTING APPROVED.** The finance-lease nesting limitation is
+>   ruled `NONE FOR NOW` (#311); unchanged.
+> - **How missing critical inputs degrade — EXISTING APPROVED.** Step 1's
+>   underwritability gate (frozen §10.6.3's three render conditions, restated as Ruling
+>   C's Step 1): a missing or unevidenced REQUIRED input fails this step and the position
+>   is INCONCLUSIVE — it never degrades to FAIR or to a default HOLD.
+> - **Uncertainty treatment — split.** The underwritability half (whether there is enough
+>   evidence to say anything) is **EXISTING APPROVED** (§9.6 trust status / §10.6.3,
+>   restated as Ruling C's Step 1). The margin-of-safety half (Step 4 — how wide a
+>   cushion genuine forecast uncertainty requires once the gate clears) is **OPEN**:
+>   `docs/verdict-methodology-reconciliation.md` §11 item 1 states "exact policy remains
+>   open," and this pack does not answer it.
+> - **Robust/conditional verdict, no default HOLD — EXISTING APPROVED.** Ruling C fixes
+>   this directly ("no default HOLD when evidence is insufficient"), and Step 6's flip
+>   test issues a verdict only where the growth-inclusive and conservative readings
+>   agree, else INCONCLUSIVE — never a default HOLD.
+> - **Test / acceptance criteria — PROPOSED, by issue #429's own DO #5, not yet
+>   executed.** Independent proof against MSFT plus two deliberately contrasting real
+>   companies, before any BUY/HOLD/SELL label ever renders, per §6 below.
 >
-> Reply **YES** to confirm (1)+(2) as current direction, or name which clause is wrong.
+> This clause authors none of the items marked OPEN above; it only labels each against
+> already-cited authority.
+>
+> Reply **YES** to confirm (1)+(2)+(4) as current direction, or name which clause is
+> wrong.
 
 ## 6. Smallest post-approval engineering finish line, and fallback
 
@@ -154,6 +222,22 @@ plus Calvin's own Notion edit per (1). Independently checked against MSFT plus t
 deliberately contrasting real companies, per issue #429's own finite-ship-proof
 requirement, before any BUY/HOLD/SELL label ever renders — not undertaken by this
 outcome, and not authorized by it.
+
+**The user-visible acceptance chain this finish line serves**, per issue #429's own DO
+#5: ticker in → complete readable report → well-sourced valuation → defensible
+BUY/HOLD/SELL when justified, and a safe `NOT RATED`/`INCONCLUSIVE`/insufficient-evidence
+reading for genuine gaps, never a manufactured HOLD. Every step named above (wiring
+Steps 2/3/6/7, the Notion edit) is dependency-safe work toward that chain's third and
+fourth links; it does not by itself complete them.
+
+**The minimal evidence/calibration that must exist before any BUY/HOLD/SELL label
+activates** — using only existing open items, inventing none: `docs/verdict-methodology-reconciliation.md`
+§11 item 5 (the numeric CHEAP/FAIR/EXPENSIVE cut-point — unanswerable without real
+multi-company observations, per §3 above) must be set from evidence, and that evidence
+is the MSFT-plus-two-contrasting-companies proof named one paragraph above — not a
+single-stock DCF, and not this run's external-oracle check, neither of which is offered
+as sufficient. Until both exist, no label may render regardless of what Steps 2/3/6/7
+wire up.
 
 **Stop/kill criterion:** if a future real-company capture is added and still produces no
 company whose RONIC ladder straddles the 8/10/12% rate grid (the one condition that
