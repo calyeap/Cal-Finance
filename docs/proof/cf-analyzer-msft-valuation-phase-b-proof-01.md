@@ -219,7 +219,7 @@ Full detail: [`scripts/evidence/msft-phase-b/output/sensitivity.json`](../../scr
 
 | Variable | −case | Base ($433.08) | +case | Range as % of base |
 |---|---|---|---|---|
-| Discount rate (WACC, via Rf ∓1pp) | **$561.35** (Rf −1pp) ⚠️ | $433.08 | **$349.55** (Rf +1pp) | −22% / +30% |
+| Discount rate (WACC, via Rf ∓1pp) | **$561.35** (Rf −1pp) ⚠️ | $433.08 | **$349.55** (Rf +1pp) | −19% / +30% |
 | Revenue growth path (Y1 & terminal, ∓2pp) | **$319.51** (−2pp) | $433.08 | **$702.03** (+2pp) ⚠️ | −26% / +62% |
 | Operating margin (terminal target, ∓2pp) | **$416.00** (−2pp) | $433.08 | **$450.15** (+2pp) | −4% / +4% |
 | Reinvestment, via stable terminal ROIC (∓5pp) | **$389.55** (ROIC −5pp) | $433.08 | **$457.68** (ROIC +5pp) | −10% / +6% |
