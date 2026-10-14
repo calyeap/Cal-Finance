@@ -1,0 +1,115 @@
+{
+  "discountRate": {
+    "-1pp": {
+      "wacc": 0.07674185022677828,
+      "valuePerShare": 561.3538414753,
+      "terminalValueShareOfEv": 0.7833198803262982,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.036,
+      "flags": [
+        "TERMINAL_G_GT_RISK_FREE"
+      ]
+    },
+    "base": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 433.0752013036617,
+      "terminalValueShareOfEv": 0.7343602523088893,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.046,
+      "flags": []
+    },
+    "+1pp": {
+      "wacc": 0.09607083701439335,
+      "valuePerShare": 349.54861140586274,
+      "terminalValueShareOfEv": 0.688399431282071,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.056,
+      "flags": []
+    }
+  },
+  "revenueGrowth": {
+    "-2pp": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 319.50667702014994,
+      "terminalValueShareOfEv": 0.6477173957330594,
+      "terminalGrowth": 0.02,
+      "riskFreeRate": 0.046,
+      "flags": []
+    },
+    "base": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 433.0752013036617,
+      "terminalValueShareOfEv": 0.7343602523088893,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.046,
+      "flags": []
+    },
+    "+2pp": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 702.0287585107932,
+      "terminalValueShareOfEv": 0.834572803805618,
+      "terminalGrowth": 0.06,
+      "riskFreeRate": 0.046,
+      "flags": [
+        "TERMINAL_G_GT_RISK_FREE"
+      ]
+    }
+  },
+  "operatingMargin": {
+    "-2pp": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 416.00305630262244,
+      "terminalValueShareOfEv": 0.7303747408885376,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.046,
+      "flags": []
+    },
+    "base": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 433.0752013036617,
+      "terminalValueShareOfEv": 0.7343602523088893,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.046,
+      "flags": []
+    },
+    "+2pp": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 450.147346304701,
+      "terminalValueShareOfEv": 0.7380448635473678,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.046,
+      "flags": []
+    }
+  },
+  "reinvestmentViaTerminalRoic": {
+    "-5pp_ROIC": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 389.55069114887334,
+      "terminalValueShareOfEv": 0.726302613729666,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.046,
+      "flags": []
+    },
+    "base": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 433.0752013036617,
+      "terminalValueShareOfEv": 0.7343602523088893,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.046,
+      "flags": []
+    },
+    "+5pp_ROIC": {
+      "wacc": 0.08640634362058582,
+      "valuePerShare": 457.6760113911507,
+      "terminalValueShareOfEv": 0.7382397590961988,
+      "terminalGrowth": 0.04,
+      "riskFreeRate": 0.046,
+      "flags": []
+    }
+  },
+  "impliedGrowthAtObservedPrice_contextOnly": {
+    "impliedRevenueGrowthY1": 0.1942657470703125,
+    "valuePerShareAtThatGrowth": 499.69694519524023,
+    "targetPrice": 499.7
+  }
+}

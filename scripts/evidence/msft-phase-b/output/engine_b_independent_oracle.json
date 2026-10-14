@@ -1,0 +1,448 @@
+{
+  "engine": "B (independent_oracle.py \u2014 closed-form exponentiation, recorded formula-cell ledger)",
+  "ledger": [
+    {
+      "cell": "B1_historicalPrice",
+      "formula": "= inputs.realDataFromCommittedPriceCapture.historicalClose.val",
+      "value": 499.7
+    },
+    {
+      "cell": "B2_sharesOutstanding",
+      "formula": "= inputs.sharesOutstandingCoverPage.val",
+      "value": 7425545491
+    },
+    {
+      "cell": "B3_marketCap",
+      "formula": "= B1*B2",
+      "value": 3710545081852.6997
+    },
+    {
+      "cell": "B4_debtAndLeaseEquivalents",
+      "formula": "= longTermDebtTotal + financeLeaseLiability + operatingLeaseLiability",
+      "value": 128813000000
+    },
+    {
+      "cell": "B5_weightDebt",
+      "formula": "= B4/(B3+B4)",
+      "value": 0.0335506606192462
+    },
+    {
+      "cell": "B6_weightEquity",
+      "formula": "= 1-B5",
+      "value": 0.9664493393807538
+    },
+    {
+      "cell": "B7_costOfEquity",
+      "formula": "= riskFreeRate + beta*ERP",
+      "value": 0.088
+    },
+    {
+      "cell": "B8_afterTaxCostOfDebt",
+      "formula": "= pretaxCostOfDebt*(1-tax)",
+      "value": 0.04050000000000001
+    },
+    {
+      "cell": "B9_wacc",
+      "formula": "= B6*B7 + B5*B8",
+      "value": 0.08640634362058582
+    },
+    {
+      "cell": "C1_reinvestment_1",
+      "formula": "= ebitAfterTax_1 * reinvestRate_1",
+      "value": 87514880060.592
+    },
+    {
+      "cell": "D1_fcff_1",
+      "formula": "= ebitAfterTax_1 - C1",
+      "value": 58343253373.72801
+    },
+    {
+      "cell": "E1_df_1",
+      "formula": "= (1+wacc)^-1",
+      "value": 0.9204659065846157
+    },
+    {
+      "cell": "F1_pv_1",
+      "formula": "= D1*E1",
+      "value": 53702975609.74449
+    },
+    {
+      "cell": "C2_reinvestment_2",
+      "formula": "= ebitAfterTax_2 * reinvestRate_2",
+      "value": 92935414596.88277
+    },
+    {
+      "cell": "D2_fcff_2",
+      "formula": "= ebitAfterTax_2 - C2",
+      "value": 73608138109.92043
+    },
+    {
+      "cell": "E2_df_2",
+      "formula": "= (1+wacc)^-2",
+      "value": 0.8472574851846385
+    },
+    {
+      "cell": "F2_pv_2",
+      "formula": "= D2*E2",
+      "value": 62365045984.13473
+    },
+    {
+      "cell": "C3_reinvestment_3",
+      "formula": "= ebitAfterTax_3 * reinvestRate_3",
+      "value": 96990434851.39493
+    },
+    {
+      "cell": "D3_fcff_3",
+      "formula": "= ebitAfterTax_3 - C3",
+      "value": 90957536989.82492
+    },
+    {
+      "cell": "E3_df_3",
+      "formula": "= (1+wacc)^-3",
+      "value": 0.7798716292110799
+    },
+    {
+      "cell": "F3_pv_3",
+      "formula": "= D3*E3",
+      "value": 70935202561.28183
+    },
+    {
+      "cell": "C4_reinvestment_4",
+      "formula": "= ebitAfterTax_4 * reinvestRate_4",
+      "value": 99367904721.4603
+    },
+    {
+      "cell": "D4_fcff_4",
+      "formula": "= ebitAfterTax_4 - C4",
+      "value": 110236269300.37
+    },
+    {
+      "cell": "E4_df_4",
+      "formula": "= (1+wacc)^-4",
+      "value": 0.7178452462013979
+    },
+    {
+      "cell": "F4_pv_4",
+      "formula": "= D4*E4",
+      "value": 79132581876.2477
+    },
+    {
+      "cell": "C5_reinvestment_5",
+      "formula": "= ebitAfterTax_5 * reinvestRate_5",
+      "value": 99801272408.92859
+    },
+    {
+      "cell": "D5_fcff_5",
+      "formula": "= ebitAfterTax_5 - C5",
+      "value": 131167386594.59183
+    },
+    {
+      "cell": "E5_df_5",
+      "formula": "= (1+wacc)^-5",
+      "value": 0.6607520753322265
+    },
+    {
+      "cell": "F5_pv_5",
+      "formula": "= D5*E5",
+      "value": 86669122908.281
+    },
+    {
+      "cell": "C6_reinvestment_6",
+      "formula": "= ebitAfterTax_6 * reinvestRate_6",
+      "value": 98092537758.64551
+    },
+    {
+      "cell": "D6_fcff_6",
+      "formula": "= ebitAfterTax_6 - C6",
+      "value": 153347195103.70535
+    },
+    {
+      "cell": "E6_df_6",
+      "formula": "= (1+wacc)^-6",
+      "value": 0.6081997580483441
+    },
+    {
+      "cell": "F6_pv_6",
+      "formula": "= D6*E6",
+      "value": 93265726959.46582
+    },
+    {
+      "cell": "C7_reinvestment_7",
+      "formula": "= ebitAfterTax_7 * reinvestRate_7",
+      "value": 94133003187.20067
+    },
+    {
+      "cell": "D7_fcff_7",
+      "formula": "= ebitAfterTax_7 - C7",
+      "value": 176249027244.12036
+    },
+    {
+      "cell": "E7_df_7",
+      "formula": "= (1+wacc)^-7",
+      "value": 0.5598271416765129
+    },
+    {
+      "cell": "F7_pv_7",
+      "formula": "= D7*E7",
+      "value": 98668989145.34175
+    },
+    {
+      "cell": "C8_reinvestment_8",
+      "formula": "= ebitAfterTax_8 * reinvestRate_8",
+      "value": 87919498329.65686
+    },
+    {
+      "cell": "D8_fcff_8",
+      "formula": "= ebitAfterTax_8 - C8",
+      "value": 199236927666.39984
+    },
+    {
+      "cell": "E8_df_8",
+      "formula": "= (1+wacc)^-8",
+      "value": 0.5153017974939457
+    },
+    {
+      "cell": "F8_pv_8",
+      "formula": "= D8*E8",
+      "value": 102667146953.66707
+    },
+    {
+      "cell": "C9_reinvestment_9",
+      "formula": "= ebitAfterTax_9 * reinvestRate_9",
+      "value": 79564047663.24214
+    },
+    {
+      "cell": "D9_fcff_9",
+      "formula": "= ebitAfterTax_9 - C9",
+      "value": 221589590688.28186
+    },
+    {
+      "cell": "E9_df_9",
+      "formula": "= (1+wacc)^-9",
+      "value": 0.4743177361949467
+    },
+    {
+      "cell": "F9_pv_9",
+      "formula": "= D9*E9",
+      "value": 105103873019.63069
+    },
+    {
+      "cell": "C10_reinvestment_10",
+      "formula": "= ebitAfterTax_10 * reinvestRate_10",
+      "value": 69295394438.52364
+    },
+    {
+      "cell": "D10_fcff_10",
+      "formula": "= ebitAfterTax_10 - C10",
+      "value": 242533880534.83276
+    },
+    {
+      "cell": "E10_df_10",
+      "formula": "= (1+wacc)^-10",
+      "value": 0.4365933050558442
+    },
+    {
+      "cell": "F10_pv_10",
+      "formula": "= D10*E10",
+      "value": 105888668490.72191
+    },
+    {
+      "cell": "G1_sumPvExplicit",
+      "formula": "= SUM(F1:F10)",
+      "value": 858399333508.5171
+    },
+    {
+      "cell": "G2_terminalFcffNextYear",
+      "formula": "= ebitAfterTax_10*(1+g)*(1-terminalReinvestRate)",
+      "value": 252235235756.22607
+    },
+    {
+      "cell": "G3_terminalValueAtYear10",
+      "formula": "= G2/(wacc-g)",
+      "value": 5435361118266.054
+    },
+    {
+      "cell": "G4_pvTerminalValue",
+      "formula": "= G3*E10",
+      "value": 2373042274795.8057
+    },
+    {
+      "cell": "G5_enterpriseValue",
+      "formula": "= G1+G4",
+      "value": 3231441608304.3228
+    },
+    {
+      "cell": "H1_cashAndInvestments",
+      "formula": "= cash + shortTermInvestments + longTermInvestments",
+      "value": 113191000000
+    },
+    {
+      "cell": "H2_equityValue",
+      "formula": "= G5 + H1 - B4",
+      "value": 3215819608304.3228
+    },
+    {
+      "cell": "H3_valuePerShare",
+      "formula": "= H2/B2",
+      "value": 433.07520130366174
+    }
+  ],
+  "rows": [
+    {
+      "year": 1,
+      "revenueGrowth": 0.16,
+      "revenue": 384933240000.0,
+      "operatingMargin": 0.4678,
+      "ebit": 180071769672.0,
+      "taxRate": 0.19,
+      "ebitAfterTax": 145858133434.32,
+      "reinvestmentRate": 0.6,
+      "reinvestment": 87514880060.592,
+      "fcff": 58343253373.72801,
+      "discountFactor": 0.9204659065846157,
+      "pv": 53702975609.74449
+    },
+    {
+      "year": 2,
+      "revenueGrowth": 0.14666666666666667,
+      "revenue": 441390115200.0,
+      "operatingMargin": 0.4658222222222222,
+      "ebit": 205609324329.38666,
+      "taxRate": 0.19,
+      "ebitAfterTax": 166543552706.8032,
+      "reinvestmentRate": 0.5580246913580247,
+      "reinvestment": 92935414596.88277,
+      "fcff": 73608138109.92043,
+      "discountFactor": 0.8472574851846385,
+      "pv": 62365045984.13473
+    },
+    {
+      "year": 3,
+      "revenueGrowth": 0.13333333333333333,
+      "revenue": 500242130560.0,
+      "operatingMargin": 0.46384444444444445,
+      "ebit": 232034533137.30844,
+      "taxRate": 0.19,
+      "ebitAfterTax": 187947971841.21985,
+      "reinvestmentRate": 0.5160493827160494,
+      "reinvestment": 96990434851.39493,
+      "fcff": 90957536989.82492,
+      "discountFactor": 0.7798716292110799,
+      "pv": 70935202561.28183
+    },
+    {
+      "year": 4,
+      "revenueGrowth": 0.12000000000000001,
+      "revenue": 560271186227.2001,
+      "operatingMargin": 0.46186666666666665,
+      "ebit": 258770585212.13614,
+      "taxRate": 0.19,
+      "ebitAfterTax": 209604174021.8303,
+      "reinvestmentRate": 0.4740740740740741,
+      "reinvestment": 99367904721.4603,
+      "fcff": 110236269300.37,
+      "discountFactor": 0.7178452462013979,
+      "pv": 79132581876.2477
+    },
+    {
+      "year": 5,
+      "revenueGrowth": 0.10666666666666667,
+      "revenue": 620033446091.4348,
+      "operatingMargin": 0.4598888888888889,
+      "ebit": 285146492596.9388,
+      "taxRate": 0.19,
+      "ebitAfterTax": 230968659003.52042,
+      "reinvestmentRate": 0.4320987654320988,
+      "reinvestment": 99801272408.92859,
+      "fcff": 131167386594.59183,
+      "discountFactor": 0.6607520753322265,
+      "pv": 86669122908.281
+    },
+    {
+      "year": 6,
+      "revenueGrowth": 0.09333333333333334,
+      "revenue": 677903234393.302,
+      "operatingMargin": 0.4579111111111111,
+      "ebit": 310419423286.8529,
+      "taxRate": 0.19,
+      "ebitAfterTax": 251439732862.35086,
+      "reinvestmentRate": 0.3901234567901234,
+      "reinvestment": 98092537758.64551,
+      "fcff": 153347195103.70535,
+      "discountFactor": 0.6081997580483441,
+      "pv": 93265726959.46582
+    },
+    {
+      "year": 7,
+      "revenueGrowth": 0.08000000000000002,
+      "revenue": 732135493144.7662,
+      "operatingMargin": 0.45593333333333336,
+      "ebit": 333804975841.1371,
+      "taxRate": 0.19,
+      "ebitAfterTax": 270382030431.32104,
+      "reinvestmentRate": 0.34814814814814815,
+      "reinvestment": 94133003187.20067,
+      "fcff": 176249027244.12036,
+      "discountFactor": 0.5598271416765129,
+      "pv": 98668989145.34175
+    },
+    {
+      "year": 8,
+      "revenueGrowth": 0.06666666666666667,
+      "revenue": 780944526021.084,
+      "operatingMargin": 0.45395555555555556,
+      "ebit": 354514106167.9712,
+      "taxRate": 0.19,
+      "ebitAfterTax": 287156425996.0567,
+      "reinvestmentRate": 0.3061728395061728,
+      "reinvestment": 87919498329.65686,
+      "fcff": 199236927666.39984,
+      "discountFactor": 0.5153017974939457,
+      "pv": 102667146953.66707
+    },
+    {
+      "year": 9,
+      "revenueGrowth": 0.053333333333333344,
+      "revenue": 822594900742.2084,
+      "operatingMargin": 0.4519777777777778,
+      "ebit": 371794615248.79504,
+      "taxRate": 0.19,
+      "ebitAfterTax": 301153638351.524,
+      "reinvestmentRate": 0.26419753086419756,
+      "reinvestment": 79564047663.24214,
+      "fcff": 221589590688.28186,
+      "discountFactor": 0.4743177361949467,
+      "pv": 105103873019.63069
+    },
+    {
+      "year": 10,
+      "revenueGrowth": 0.04000000000000001,
+      "revenue": 855498696771.8967,
+      "operatingMargin": 0.45,
+      "ebit": 384974413547.3535,
+      "taxRate": 0.19,
+      "ebitAfterTax": 311829274973.3564,
+      "reinvestmentRate": 0.2222222222222222,
+      "reinvestment": 69295394438.52364,
+      "fcff": 242533880534.83276,
+      "discountFactor": 0.4365933050558442,
+      "pv": 105888668490.72191
+    }
+  ],
+  "wacc": 0.08640634362058582,
+  "weightEquity": 0.9664493393807538,
+  "weightDebt": 0.0335506606192462,
+  "costOfEquity": 0.088,
+  "afterTaxCostOfDebt": 0.04050000000000001,
+  "sumPvExplicit": 858399333508.5171,
+  "terminalFcffNextYear": 252235235756.22607,
+  "terminalValueAtYearN": 5435361118266.054,
+  "pvTerminalValue": 2373042274795.8057,
+  "enterpriseValue": 3231441608304.3228,
+  "terminalValueShareOfEv": 0.7343602523088893,
+  "cashAndInvestments": 113191000000,
+  "debtAndLeaseEquivalents": 128813000000,
+  "equityValue": 3215819608304.3228,
+  "sharesOutstanding": 7425545491,
+  "valuePerShare": 433.07520130366174
+}
