@@ -1002,6 +1002,24 @@ export interface GrowthLicenceResult {
 }
 
 // ---------------------------------------------------------------------------
+// CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 (REVIEW correction) — §10.6.2's
+// explicit, testable blocker classification. Schema lives here, independent
+// of the module that computes it (`lib/analyzer/verdictBlockers.ts`), matching
+// this file's own convention for every other M-module result above.
+// ---------------------------------------------------------------------------
+
+export type VerdictBlockerKind = "OPEN POLICY" | "DATA" | "CODE";
+
+export interface VerdictBlocker {
+  /** Which step of the §10.6.2 seven-step derivation this blocks, or
+   * "policy constants" for the §7.1 register (not itself one of the seven
+   * steps). */
+  step: string;
+  kind: VerdictBlockerKind;
+  cause: string;
+}
+
+// ---------------------------------------------------------------------------
 // Full Analysis's Business and Market Context sections. M9-ITEM5-CONTENT-01,
 // implementing Calvin's 21 Sep 2026 10:39:55Z ruling (issue #195, Option B).
 // ---------------------------------------------------------------------------
@@ -1117,6 +1135,16 @@ export interface AnalysisResult {
   // UNKNOWN otherwise, with the precise cause — never a default and never a
   // fabricated cell choice (§11 items 2 and 4 remain open house policy).
   growthLicence: GrowthLicenceResult;
+  // CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 (REVIEW correction) — the ordered
+  // blocker classification `lib/analyzer/verdictBlockers.ts` reads off this
+  // run's own `trust` and `policy.undefinedConstants`, never off
+  // `growthLicence` or `deriveVerdict`'s own wording (both unchanged by it).
+  // Always present as a real array: empty only where trust is not UNUSABLE
+  // for this run AND every UNDEFINED_POLICY_CONSTANTS field is configured —
+  // which never happens today, since the Step 3 and Step 4/5 entries are
+  // unconditional open-house-policy blockers for every company (see that
+  // module's own doc comment).
+  verdictBlockers: VerdictBlocker[];
   // Populated only for the pre-revenue profile.
   preRevenue: PreRevenueModule | null;
   // Populated only after the independent blind-challenger call completes

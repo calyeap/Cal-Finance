@@ -78,6 +78,47 @@ describe("growthLicence on a real acquired MSFT run (no DB)", () => {
     expect(result.diagnostics.enterpriseValue.suppressed).toBe(true);
     expect(result.growthLicence.status).toBe("YES");
   });
+
+  it("verdictBlockers: names MSFT's post-Phase-A Step 1 block as its own separate blocker, not folded into Step 3's OPEN POLICY item", async () => {
+    // This run's scenario dollar values are fixture-carried (A4,
+    // CF-ANALYZER-INTEGRITY-PHASE-A-01), which suppresses the fair-value
+    // range and makes trust UNUSABLE — a real, material Step 1 block that
+    // is NOT the Step 3/4/5 open-policy gap every company shares.
+    const run = await buildAcquiredRun({
+      ticker: "MSFT",
+      price: { value: MSFT_CAPTURE_CLOSE, timestamp: "2026-09-04", source: "recorded capture" },
+      source: "CAPTURE",
+      nonOperatingInvestments: { tags: [], value: new Decimal(0), errorDirection: null },
+      profileHumanConfirmed: true,
+    });
+
+    const result = assembleAnalysisResult(run.fixture);
+
+    expect(result.trust.status).toBe("UNUSABLE");
+    expect(result.fairValueRange.kind).toBe("suppressed");
+
+    const step1 = result.verdictBlockers.find((b) => b.step === "Step 1");
+    expect(step1).toBeDefined();
+    expect(step1?.kind).toBe("DATA");
+    expect(step1?.cause).toContain("scenario dollar values");
+
+    // The Step 3 OPEN POLICY entry is its own, separate blocker — it does
+    // not absorb or restate MSFT's own Step 1 cause.
+    const step3 = result.verdictBlockers.find((b) => b.step === "Step 3");
+    expect(step3).toBeDefined();
+    expect(step3?.kind).toBe("OPEN POLICY");
+    expect(step3?.cause).not.toContain("scenario dollar values");
+
+    const step45 = result.verdictBlockers.find((b) => b.step === "Step 4/5");
+    expect(step45).toBeDefined();
+    expect(step45?.kind).toBe("OPEN POLICY");
+    expect(step45?.cause).toContain("waiting for policy");
+    expect(step45?.cause).not.toContain("HOLD");
+
+    // Step 1 is reported first, ahead of the open-policy entries every
+    // company shares.
+    expect(result.verdictBlockers[0].step).toBe("Step 1");
+  });
 });
 
 async function completeSpotCheck(runId: string): Promise<void> {
@@ -108,6 +149,33 @@ describe("growthLicence on real acquired NVDA and OKLO runs (DB-backed gated pat
     expect(result.growthLicence.reason).toContain("75.2385");
   });
 
+  it("NVDA — verdictBlockers names the same real Step 1 block (LEVERAGE UNSUPPORTED IN v1) as its own entry", async () => {
+    const runId = await createRun("NVDA", "NVIDIA Corporation");
+    await completeSpotCheck(runId);
+    const state = await loadGateState(runId);
+    await recordProfileDecision(runId, "CONFIRMED", state.fixture.profile.recommended, null);
+    const result = await computeAnalysisForRun(runId);
+
+    expect(result.trust.status).toBe("UNUSABLE");
+    const step1 = result.verdictBlockers.find((b) => b.step === "Step 1");
+    expect(step1).toBeDefined();
+    expect(step1?.kind).toBe("DATA");
+    expect(step1?.cause).toContain("LEVERAGE UNSUPPORTED IN v1");
+
+    expect(result.verdictBlockers.some((b) => b.step === "Step 3")).toBe(true);
+    expect(result.verdictBlockers.some((b) => b.step === "Step 4/5")).toBe(true);
+
+    // NVDA's own configured register still leaves preRevenueUnleveredRate/
+    // projectDebtCost null (it is not a pre-revenue company) — reported, not
+    // defaulted away.
+    const policyConstants = result.verdictBlockers.find((b) => b.step === "policy constants");
+    expect(policyConstants).toBeDefined();
+    expect(policyConstants?.kind).toBe("DATA");
+    expect(policyConstants?.cause).toContain("preRevenueUnleveredRate");
+    expect(policyConstants?.cause).toContain("projectDebtCost");
+    expect(policyConstants?.cause).not.toContain("nopatTaxRate");
+  });
+
   it("OKLO — UNKNOWN, fail-closed on the unacquired RONIC ladder, never defaulted to NO", async () => {
     const runId = await createRun("OKLO", "Oklo Inc.");
     await completeSpotCheck(runId);
@@ -118,5 +186,27 @@ describe("growthLicence on real acquired NVDA and OKLO runs (DB-backed gated pat
     expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
     expect(result.growthLicence.status).toBe("UNKNOWN");
     expect(result.growthLicence.reason).toContain("RONIC ladder itself is unavailable");
+  });
+
+  it("OKLO — verdictBlockers names its own Step 1 block and its own still-undefined policy constant", async () => {
+    const runId = await createRun("OKLO", "Oklo Inc.");
+    await completeSpotCheck(runId);
+    const state = await loadGateState(runId);
+    await recordProfileDecision(runId, "CONFIRMED", state.fixture.profile.recommended, null);
+    const result = await computeAnalysisForRun(runId);
+
+    expect(result.trust.status).toBe("UNUSABLE");
+    const step1 = result.verdictBlockers.find((b) => b.step === "Step 1");
+    expect(step1).toBeDefined();
+    expect(step1?.kind).toBe("DATA");
+    expect(step1?.cause).toContain("LEVERAGE UNSUPPORTED IN v1");
+
+    // OKLO's own configured register leaves only stressMarginLevel null.
+    const policyConstants = result.verdictBlockers.find((b) => b.step === "policy constants");
+    expect(policyConstants).toBeDefined();
+    expect(policyConstants?.cause).toContain("stressMarginLevel");
+    expect(policyConstants?.cause).not.toContain("nopatTaxRate");
+    expect(policyConstants?.cause).not.toContain("preRevenueUnleveredRate");
+    expect(policyConstants?.cause).not.toContain("projectDebtCost");
   });
 });

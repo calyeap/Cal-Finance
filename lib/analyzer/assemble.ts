@@ -12,6 +12,7 @@ import {
   type ImpliedReturnOnNewCapitalInput,
 } from "./modules/reinvestmentRonic";
 import { evaluateGrowthLicence } from "./growthLicence";
+import { evaluateVerdictBlockers } from "./verdictBlockers";
 import { computeSteadyStateEvPvgo } from "./modules/steadyStateEvPvgo";
 import { computeReverseDcfGrid, type ReverseDcfInput } from "./modules/reverseDcf";
 import { computeTerminalDiagnostics } from "./modules/terminalDiagnostics";
@@ -1098,6 +1099,34 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     sensitivity,
   };
 
+  // Named rather than inlined into the return, same reason `diagnostics` is
+  // above: `verdictBlockers` below reads this same computed value rather
+  // than re-deriving §9.6 rule 1 a second time.
+  const trust = computeTrustStatus({
+    fairValueRange,
+    states: { suppressing, qualifying },
+    facts: fixture.facts,
+    diagnostics,
+    profileHumanConfirmed: fixture.trustInputs.profileHumanConfirmed,
+    crossCheckFailedFactIds: fixture.trustInputs.crossCheckFailedFactIds,
+    // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
+    // COMPLETE RM-BRIEF PROOF (PR #399): "[manual profile confirmation]
+    // must not block obvious supported operating companies... Classify
+    // them deterministically/automatically." Gate 0 (§6.1) is already the
+    // deterministic, fail-closed test for "is this company's profile
+    // unambiguous" — it refuses every asset-based/financial/insurance/
+    // reserve-extraction row, which is exactly the set the old PROFILE NOT
+    // CONFIRMED qualifier existed to catch a human rubber-stamp for. So:
+    // on the pure automatic path (profileAutoResolved set, never a human
+    // decision — autoRun.ts Step 6) AND Gate 0 PASS, no new human act adds
+    // information this run does not already have, and §6.3's own *Cannot
+    // judge* escape hatch (a real human decision) still raises the
+    // qualifier normally, because that path never sets profileAutoResolved
+    // (autoRun.ts only resolves automatically where no decision exists).
+    profileAutomaticallyUnambiguous:
+      fixture.trustInputs.profileAutoResolved !== null && gate0.result === "PASS",
+  });
+
   return {
     schemaVersion: fixture.schemaVersion,
     runId: fixture.runId,
@@ -1126,35 +1155,12 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       impliedExitMultiple,
     },
     fairValueRange,
-    // §9.6, computed LAST of the deterministic members because every input it
-    // reads is one of them — and reading `fairValueRange` rather than
-    // re-deriving §10.3 is what keeps the status and the refusal one fact.
-    trust: computeTrustStatus({
-      fairValueRange,
-      states: { suppressing, qualifying },
-      facts: fixture.facts,
-      diagnostics,
-      profileHumanConfirmed: fixture.trustInputs.profileHumanConfirmed,
-      crossCheckFailedFactIds: fixture.trustInputs.crossCheckFailedFactIds,
-      // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
-      // COMPLETE RM-BRIEF PROOF (PR #399): "[manual profile confirmation]
-      // must not block obvious supported operating companies... Classify
-      // them deterministically/automatically." Gate 0 (§6.1) is already the
-      // deterministic, fail-closed test for "is this company's profile
-      // unambiguous" — it refuses every asset-based/financial/insurance/
-      // reserve-extraction row, which is exactly the set the old PROFILE NOT
-      // CONFIRMED qualifier existed to catch a human rubber-stamp for. So:
-      // on the pure automatic path (profileAutoResolved set, never a human
-      // decision — autoRun.ts Step 6) AND Gate 0 PASS, no new human act adds
-      // information this run does not already have, and §6.3's own *Cannot
-      // judge* escape hatch (a real human decision) still raises the
-      // qualifier normally, because that path never sets profileAutoResolved
-      // (autoRun.ts only resolves automatically where no decision exists).
-      profileAutomaticallyUnambiguous:
-        fixture.trustInputs.profileAutoResolved !== null && gate0.result === "PASS",
-    }),
+    // §9.6 — reading the `trust` computed above rather than re-deriving
+    // §10.3 is what keeps the status and the refusal one fact.
+    trust,
     achievedRevenueCagr: fixture.achievedRevenueCagr,
     growthLicence: evaluateGrowthLicence(reinvestmentRonic.ronic),
+    verdictBlockers: evaluateVerdictBlockers({ trust, undefinedConstants: fixture.configuredConstants }),
     preRevenue,
     // Both members are the AI layer's, and the AI layer runs AFTER this
     // function: §8.1 puts calculation on one side of the boundary and
