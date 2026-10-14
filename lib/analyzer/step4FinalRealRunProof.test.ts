@@ -151,9 +151,16 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
   it("MSFT — trust, EV bridge, leverage, range, price, full tornado, Step 4 reading, verdict", async () => {
     const result = await openMsftRunWithRuling();
 
-    // Trust.
-    expect(result.trust.status).toBe("PARTIAL");
-    expect(result.trust.determinedBy.some((d) => d.kind === "qualifying flag" && d.detail.includes("MARGIN AT HISTORICAL HIGH"))).toBe(true);
+    // Trust. A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — the fair-value range is
+    // now honestly suppressed (its scenario dollar values are the
+    // validation fixture's, never a real computation for this real run),
+    // so §9.6 rule 1 fires and returns before rule 2 ever adds a qualifying-
+    // flag entry; MARGIN AT HISTORICAL HIGH still fires as a states.
+    // qualifying entry (asserted below), independent of trust's own
+    // determinedBy list.
+    expect(result.trust.status).toBe("UNUSABLE");
+    expect(result.trust.determinedBy.some((d) => d.kind === "suppressing state" && d.detail.includes("scenario dollar values"))).toBe(true);
+    expect(result.states.qualifying.some((q) => q.flag === "MARGIN AT HISTORICAL HIGH")).toBe(true);
 
     // Gate 0 — sector/industry classification, named gate ahead of the EV bridge.
     expect(result.gates.gate0.result).toBe("PASS");
@@ -168,11 +175,11 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     expect(result.gates.leverage.result).toBe("PASS");
     expect(result.gates.leverage.netDebtRatio).not.toBeNull();
 
-    // Scenario range.
-    expect(result.fairValueRange.kind).toBe("range");
-    if (result.fairValueRange.kind === "range") {
-      expect(result.fairValueRange.bear.toFixed(2)).toBe("265.00");
-      expect(result.fairValueRange.bull.toFixed(2)).toBe("650.00");
+    // Scenario range — A4: honestly suppressed, never the validation
+    // fixture's $265/$650 presented as this real run's computed range.
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    if (result.fairValueRange.kind === "suppressed") {
+      expect(result.fairValueRange.cause).toContain("scenario dollar values");
     }
 
     // Price — a real recorded capture close, not the $0 sentinel.
@@ -207,13 +214,14 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
       expect(reading.tier).toBe("HIGH");
     }
 
-    // Verdict — still INCOMPLETE, for the §10.6.2 comparator-unavailable
-    // cause, and the rendered hero state this cause drives
+    // Verdict — still INCOMPLETE, now for A4's scenario-dollar-values cause
+    // (trust.status === "UNUSABLE" is deriveVerdict's own first-checked
+    // branch), and the rendered hero state this cause drives
     // (`DominantVerdictSlot.tsx:41-48`, keyed only on `verdict.status` /
     // `verdict.reason`, not on which company — confirmed by direct read).
     const verdict = deriveVerdict(result);
     expect(verdict.status).toBe("INCOMPLETE");
-    expect(verdict.reason).toContain("required-versus-achieved growth comparator");
+    expect(verdict.reason).toContain("scenario dollar values");
   });
 
   it("OKLO — trust, EV bridge, leverage, suppressed range, price, tornado unavailable, Step 4 unavailable, verdict", async () => {

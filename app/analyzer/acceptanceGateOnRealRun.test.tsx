@@ -156,7 +156,13 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       expect(result.diagnostics.multiples.fcfYieldOnMarketCap.suppressed).toBe(false);
       expect(result.gates.leverage.result).toBe("PASS");
       expect(result.gates.leverage.netDebtRatio).not.toBeNull();
-      expect(result.trust.status).not.toBe("UNUSABLE");
+      // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — trust itself now reads
+      // UNUSABLE on every MSFT real run, for an entirely unrelated reason
+      // (the fair-value range's scenario dollar values are the validation
+      // fixture's, never a real computation for this real run — §9.6 rule
+      // 1). EV, FCF yield and leverage above are the claim this test is
+      // actually about, and none of them is suppressed.
+      expect(result.trust.status).toBe("UNUSABLE");
     });
 
     it("Key Stats populate market cap, FCF yield and the leverage metric on a fresh automatic run", async () => {
@@ -218,33 +224,47 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
     // real-run test instead asserts the hero's new, correct Overview/
     // Evidence content for the state MSFT's automatic run now actually
     // reaches — the still-open M8 growth-comparator gap.
-    it("Overview shows the price-vs-range headline, not raw INCOMPLETE; Evidence shows the full verbatim reason", async () => {
+    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — MSFT's fair-value range is now
+    // honestly suppressed (its scenario dollar values are the validation
+    // fixture's, never a real computation for this real run), so there is
+    // no bear/bull position left to headline; Overview shows the plain-
+    // English "no valuation verdict" copy instead of a percentage, and
+    // Evidence's verbatim reason is A4's own cause, not the M8 growth-
+    // comparator gap this run no longer reaches first.
+    it("Overview shows the plain-English no-valuation headline, never raw INCOMPLETE; Evidence shows the full verbatim reason", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
 
       const overview = await renderTab(runId, "overview");
       const overviewVerdict = overview.container.querySelector(".verdictslot") as HTMLElement;
       expect(overviewVerdict.textContent).not.toContain("INCOMPLETE");
       expect(overviewVerdict.textContent).not.toContain("PROFILE NOT CONFIRMED");
-      expect(overviewVerdict.textContent).toContain("of the way from the bear case to the bull case");
+      expect(overviewVerdict.textContent).toContain("No valuation verdict for this company yet");
       cleanup();
 
       const evidence = await renderTab(runId, "evidence");
       const evidenceVerdict = evidence.container.querySelector(".verdictslot") as HTMLElement;
       expect(evidenceVerdict.textContent).toContain("INCOMPLETE");
-      expect(evidenceVerdict.textContent).toContain("growth comparator");
+      expect(evidenceVerdict.textContent).toContain("scenario dollar values");
     });
 
     // CF-ANALYZER-V1-SETTLE-01's automatic-profile-confirmation fix means a
     // fresh MSFT automatic run (Gate 0 PASS) no longer suppresses the
-    // valuation position the way an explicit, unresolved profile decision
-    // still would — superseding REVIEW's earlier `CORRECT:` (comment
-    // 5932208513), which predates the RM-brief ruling's item 2.
-    it("shows the bear-to-bull location percentage on a fresh automatic run (Gate 0 PASS stands in for confirmation)", async () => {
+    // valuation position FOR A PROFILE-CONFIRMATION REASON the way an
+    // explicit, unresolved profile decision still would — superseding
+    // REVIEW's earlier `CORRECT:` (comment 5932208513), which predates the
+    // RM-brief ruling's item 2. A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01)
+    // separately and correctly removes the position now, for an unrelated
+    // reason (the range's own scenario dollar values are the validation
+    // fixture's) — the plain-English "no fair-value range" copy this
+    // produces is still never "Valuation position — suppressed" (the raw
+    // PROFILE NOT CONFIRMED framing this test originally guarded against).
+    it("shows the honest no-fair-value-range copy on a fresh automatic run — never a bear-to-bull percentage built on validation-fixture numbers, and never the raw PROFILE NOT CONFIRMED framing", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
       const { container } = await renderTab(runId);
       const hero = container.querySelector(".scenariorangestrip") as HTMLElement;
       expect(hero).not.toBeNull();
-      expect(hero.textContent ?? "").toMatch(/of the way from bear to bull/);
+      expect(hero.textContent ?? "").not.toMatch(/of the way from bear to bull/);
+      expect(hero.textContent ?? "").toContain("No fair-value range for this company yet");
       expect(hero.textContent ?? "").not.toContain("Valuation position — suppressed");
     });
 

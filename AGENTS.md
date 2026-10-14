@@ -27,8 +27,9 @@ verbatim historical quote. New/current-facing product prose and UI use
   Cal Finance Project Home — see [`docs/CURRENT-AUTHORITY.md`](docs/CURRENT-AUTHORITY.md)
   for how to reconstruct it. Don't infer current state from filenames,
   branch names, or doc age in this repo.
-- **Cal Finance Methodology** (external) owns finance semantics — what a
-  metric means, how it's computed, what counts as correct.
+- **[Cal Finance — Methodology](https://app.notion.com/p/3d20ca9a8fd08144ad14e66530f86e30)**
+  (external) owns finance semantics — what a metric means, how it's
+  computed, what counts as correct.
 - **Product Decision Log** (external, superseded) previously owned settled
   product decisions; that authority is now
   [`docs/product-decisions.md`](docs/product-decisions.md) — see

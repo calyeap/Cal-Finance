@@ -436,3 +436,79 @@ export function quarterlySeries(
     value: row.val,
   }));
 }
+
+const DAY_MS = 86_400_000;
+/** Same-day tolerance for "immediately follows" across weekends/filer-specific fiscal calendars. */
+const ADJACENT_TOLERANCE_DAYS = 4;
+/** A derived fourth quarter must span roughly nine months, not some other partial window. */
+const NINE_MONTHS_DAYS = { min: 250, max: 300 };
+
+/**
+ * `quarterlySeries`, with one addition: where a fiscal year's 10-K is filed
+ * (a complete annual observation exists) and EXACTLY its first three
+ * quarters are separately reported, the fourth is derived as
+ * `fiscal year total − first three quarters` (§1's "exact 12-month period
+ * semantics", fiscal-Q4-by-subtraction) — the one case SEC filers never
+ * disclose as a discrete quarter (no 10-Q is filed for Q4; it is only ever
+ * visible inside the 10-K's annual total).
+ *
+ * Deliberately NARROW: this derives Q4 and nothing else. It does not fill an
+ * isolated gap, does not estimate from fewer than three quarters (that is
+ * exactly the "three quarters annualised" estimate `ttmFrom` refuses), and
+ * only fires when the three quarters it has are contiguous and together
+ * cover the first nine months of THAT SAME fiscal year — never a derived
+ * value built from quarters that skip a month or belong to the wrong year.
+ */
+export function quarterlySeriesWithDerivedQ4(
+  doc: CompanyFactsDocument,
+  candidates: readonly TagCandidate[]
+): QuarterObservation[] {
+  const quarters = quarterlySeries(doc, candidates);
+  const annual = annualSeries(doc, candidates);
+  if (annual === null || quarters.length === 0) return quarters;
+
+  const derived: QuarterObservation[] = [];
+
+  for (const fy of annual.observations) {
+    const fyStart = Date.parse(fy.periodStart);
+    const fyEnd = Date.parse(fy.periodEnd);
+
+    const inYear = quarters
+      .filter((q) => Date.parse(q.periodStart) >= fyStart && Date.parse(q.periodEnd) <= fyEnd)
+      .sort((a, b) => Date.parse(a.periodStart) - Date.parse(b.periodStart));
+
+    // Q4 already discrete-reported, or fewer than three quarters on record —
+    // neither is the "exactly the first three" case this derives.
+    if (inYear.length !== 3) continue;
+
+    const first = inYear[0];
+    const last = inYear[inYear.length - 1];
+
+    // The three must be contiguous (no skipped quarter) and must start where
+    // the fiscal year starts — otherwise they are not provably "the first
+    // nine months" and no fourth-quarter subtraction is valid.
+    const startsAtFiscalYearStart = Math.abs(Date.parse(first.periodStart) - fyStart) <= ADJACENT_TOLERANCE_DAYS * DAY_MS;
+    const contiguous = inYear.every((q, i) => {
+      if (i === 0) return true;
+      const gap = Date.parse(q.periodStart) - Date.parse(inYear[i - 1].periodEnd);
+      return gap >= 0 && gap <= ADJACENT_TOLERANCE_DAYS * DAY_MS;
+    });
+    const nineMonthSpan = (Date.parse(last.periodEnd) - fyStart) / DAY_MS;
+    const coversNineMonths = nineMonthSpan >= NINE_MONTHS_DAYS.min && nineMonthSpan <= NINE_MONTHS_DAYS.max;
+
+    if (!startsAtFiscalYearStart || !contiguous || !coversNineMonths) continue;
+
+    // Room left in the fiscal year for a fourth quarter at all.
+    const q4StartMs = Date.parse(last.periodEnd) + DAY_MS;
+    if (q4StartMs >= fyEnd) continue;
+
+    const q4Start = new Date(q4StartMs).toISOString().slice(0, 10);
+    const sumFirstThree = inYear.reduce((acc, q) => acc + q.value, 0);
+
+    derived.push({ periodStart: q4Start, periodEnd: fy.periodEnd, value: fy.value - sumFirstThree });
+  }
+
+  if (derived.length === 0) return quarters;
+
+  return [...quarters, ...derived].sort((a, b) => Date.parse(a.periodEnd) - Date.parse(b.periodEnd));
+}

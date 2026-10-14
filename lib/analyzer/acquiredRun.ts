@@ -124,6 +124,15 @@ export interface AcquiredRunInputs {
 
 export interface BuildAcquiredRunOptions {
   ticker: string;
+  /**
+   * A5 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — this run's own database id,
+   * threaded to `analystInputsFor` so an AI-proposed bundle this run
+   * already resolved is pinned and reread rather than re-proposed on a
+   * later reopen. Optional: callers with no run yet (a script, a
+   * standalone acquisition probe, most of this file's own tests) are
+   * unaffected and keep today's ticker-only, in-memory-cached behaviour.
+   */
+  runId?: string;
   price: { value: Decimal; timestamp: string; source: string } | null;
   /**
    * §4.4's judgment, once the analyst has made it. Null means enterprise value
@@ -156,7 +165,7 @@ export interface BuildAcquiredRunOptions {
 export async function buildAcquiredRun(
   options: BuildAcquiredRunOptions
 ): Promise<AcquiredRunInputs> {
-  const bundle = await analystInputsFor(options.ticker);
+  const bundle = await analystInputsFor(options.ticker, options.runId);
   if (bundle === null) throw new AnalystInputsUnavailableError(options.ticker);
 
   const acquiredBeforeFallback = await acquireCompany(options.ticker, {

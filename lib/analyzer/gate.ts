@@ -386,6 +386,7 @@ export async function loadGateState(runId: string): Promise<GateState> {
   const epsForward = eps?.epsForward ?? null;
   const withoutJudgment = await buildAcquiredRun({
     ticker: run.ticker,
+    runId,
     price,
     fiftyTwoWeek,
     epsTrailing,
@@ -413,6 +414,7 @@ export async function loadGateState(runId: string): Promise<GateState> {
       ? withoutJudgment
       : await buildAcquiredRun({
           ticker: run.ticker,
+          runId,
           price,
           fiftyTwoWeek,
           epsTrailing,

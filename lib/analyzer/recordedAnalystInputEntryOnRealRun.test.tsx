@@ -281,7 +281,11 @@ describe("analystInputsFor stays the one resolver — no second resolution path"
   });
 
   it("both existing call sites still resolve through analystInputsFor, not a second function", () => {
-    expect(read("lib/analyzer/acquiredRun.ts")).toContain("await analystInputsFor(options.ticker)");
+    // A5 (CF-ANALYZER-INTEGRITY-PHASE-A-01) threads an optional runId
+    // through acquiredRun.ts's own call so a resolved AI-proposed bundle
+    // can be pinned to the run that opened it — still the ONE resolver,
+    // never a second function.
+    expect(read("lib/analyzer/acquiredRun.ts")).toContain("await analystInputsFor(options.ticker, options.runId)");
     expect(read("scripts/analyzer/calibrate-position.ts")).toContain("await analystInputsFor(company.ticker)");
   });
 

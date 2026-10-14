@@ -8,7 +8,7 @@ import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
 import { AnalyzerOverview } from "./AnalyzerOverview";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
-import { priceVsRangeHeadline } from "@/lib/analyzer/trustCopy";
+import { priceVsRangeHeadline, incompleteVerdictExplanation } from "@/lib/analyzer/trustCopy";
 
 // ---------------------------------------------------------------------------
 // CF-S44-RECORD-01 — the rendering half of MSFT's recorded §4.4 ruling: the
@@ -76,10 +76,18 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     expect(ids).toEqual(OVERVIEW_TAB_SLOT_ORDER);
   });
 
-  it("the shared hero states the price-vs-range position, never the literal word INCOMPLETE or verdict.reason, outside Evidence", async () => {
+  // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — MSFT's fair-value range is now
+  // honestly suppressed (its scenario dollar values are the validation
+  // fixture's, never a real computation for this real run), so
+  // `priceVsRangeHeadline` correctly returns null (`fairValueRange.kind !==
+  // "range"`) and the hero falls back to `incompleteVerdictExplanation`'s
+  // own suppressed-range branch instead — still never the literal word
+  // INCOMPLETE or verdict.reason leaked outside Evidence.
+  it("the shared hero states the suppressed-range explanation, never the literal word INCOMPLETE or verdict.reason, outside Evidence", async () => {
     const { result } = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
     expect(verdict.status).toBe("INCOMPLETE");
+    expect(result.fairValueRange.kind).toBe("suppressed");
 
     const { container } = render(
       <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="overview">
@@ -89,26 +97,29 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
     // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
     // COMPLETE RM-BRIEF PROOF (PR #399, comment 5952716764), REMOVE/BYPASS
-    // item 1: a defensible range + a confirmed profile must not reduce the
-    // hero to the literal word "INCOMPLETE" — the price-vs-range headline
-    // takes over instead (DominantVerdictSlot.tsx, trustCopy.ts's
-    // `priceVsRangeHeadline`).
+    // item 1: the hero must not reduce to the literal word "INCOMPLETE" —
+    // trustCopy.ts's own plain-English explanation takes over instead
+    // (DominantVerdictSlot.tsx).
     expect(hero.textContent).not.toContain("INCOMPLETE");
     // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399): outside
     // Evidence the hero never leaks verdict.reason verbatim — see
     // DominantVerdictSlot.tsx and the design contract's §4 V1 narrowing.
     expect(hero.textContent).not.toContain(verdict.reason);
-    const headline = priceVsRangeHeadline({
-      fairValueRange: result.fairValueRange,
-      priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
+    expect(
+      priceVsRangeHeadline({
+        fairValueRange: result.fairValueRange,
+        priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
+        trustStatus: result.trust.status,
+        profileNotConfirmed: false,
+      })
+    ).toBeNull();
+    const explanation = incompleteVerdictExplanation({
       trustStatus: result.trust.status,
+      fairValueRange: result.fairValueRange,
+      leverage: result.gates.leverage,
       profileNotConfirmed: false,
     });
-    expect(headline).not.toBeNull();
-    expect(hero.textContent).toContain(headline);
-    // §2.1 slot 2 — the qualitative evidence-status label (never a
-    // numeric confidence figure) now renders beside the price-vs-range
-    // headline, the same treatment the completed-verdict path already has.
-    expect(hero.querySelector(".confidence")).not.toBeNull();
+    expect(explanation).toContain("No valuation verdict for this company yet");
+    expect(hero.textContent).toContain(explanation);
   });
 });

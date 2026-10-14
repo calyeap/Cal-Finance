@@ -7,6 +7,7 @@ import {
   filedAnnualYearsCount,
   latestAnnualFiscalYear,
   quarterlySeries,
+  quarterlySeriesWithDerivedQ4,
 } from "./history";
 import { TAG_MAP } from "./tagMap";
 import type { CompanyFactsDocument } from "./secClient";
@@ -136,6 +137,84 @@ describe("quarterlySeries — discrete quarters, never year-to-date", () => {
   it("is chronological, oldest first", () => {
     const ends = quarterlySeries(capture("msft"), revenueTags).map((q) => q.periodEnd);
     expect([...ends].sort()).toEqual(ends);
+  });
+});
+
+describe("quarterlySeriesWithDerivedQ4 — A1 (CF-ANALYZER-INTEGRITY-PHASE-A-01): the fiscal Q4 no 10-Q ever discloses", () => {
+  // The exact defect the 14 Oct audit reported, reproduced against real SEC
+  // captures: a naive last-four-quarters sum skips the undisclosed Q4 and
+  // reaches one quarter further back instead, landing on a number that
+  // looks plausible but is neither FY2026's true total nor any real twelve-
+  // month window.
+  it("MSFT: the naive last-four-of-quarterlySeries sum reproduces the audit's bogus ~311.9B TTM", () => {
+    const naive = quarterlySeries(capture("msft"), revenueTags).slice(-4);
+    const sum = naive.reduce((acc, q) => acc + q.value, 0);
+    expect(sum).toBe(311898000000);
+  });
+
+  it("MSFT: derives the undisclosed Q4 and the corrected last four quarters now sum to FY2026's own filed total (331,839,000,000)", () => {
+    const withQ4 = quarterlySeriesWithDerivedQ4(capture("msft"), revenueTags);
+    const last4 = withQ4.slice(-4);
+    const sum = last4.reduce((acc, q) => acc + q.value, 0);
+    expect(sum).toBe(331839000000);
+
+    // The derived quarter itself: FY2026's filed total minus its own first
+    // three filed quarters, labelled as the fiscal year's remaining window.
+    const derivedQ4 = last4[last4.length - 1];
+    expect(derivedQ4.periodStart).toBe("2026-04-01");
+    expect(derivedQ4.periodEnd).toBe("2026-06-30");
+    expect(derivedQ4.value).toBe(90007000000);
+  });
+
+  it("NVDA: the naive sum reproduces the audit's bogus ~281.6B TTM, and the derived series corrects it to ~302.9B — an independent, period-explicit filing total neither side of the fix invents", () => {
+    const naiveSum = quarterlySeries(capture("nvda"), revenueTags)
+      .slice(-4)
+      .reduce((acc, q) => acc + q.value, 0);
+    expect(naiveSum).toBe(281585000000);
+
+    const withQ4 = quarterlySeriesWithDerivedQ4(capture("nvda"), revenueTags);
+    const last4 = withQ4.slice(-4);
+    const correctedSum = last4.reduce((acc, q) => acc + q.value, 0);
+    expect(correctedSum).toBe(302969000000);
+
+    // Independent oracle: NVDA's own FY2026 annual total (215,938,000,000),
+    // minus its own first three FY2026 quarters, is this exact derived Q4 —
+    // computed here from the SAME raw filed figures the fix reads, not a
+    // second copy of quarterlySeriesWithDerivedQ4's own code.
+    const fy2026 = annualSeries(capture("nvda"), revenueTags)!.observations.find((o) => o.fiscalYear === 2026)!;
+    const fy2026Quarters = quarterlySeries(capture("nvda"), revenueTags).filter(
+      (q) => Date.parse(q.periodStart) >= Date.parse(fy2026.periodStart) && Date.parse(q.periodEnd) <= Date.parse(fy2026.periodEnd)
+    );
+    expect(fy2026Quarters).toHaveLength(3);
+    const independentQ4 = fy2026.value - fy2026Quarters.reduce((acc, q) => acc + q.value, 0);
+    const derivedQ4 = last4.find((q) => q.periodEnd === fy2026.periodEnd)!;
+    expect(derivedQ4.value).toBe(independentQ4);
+  });
+
+  it("never fabricates a quarter from fewer than three real ones — no overlap, no estimate", () => {
+    // §5.1: "not by an interpolation". A fiscal year with zero or one or two
+    // discrete quarters on record gets no derived Q4 at all, from either
+    // real capture.
+    for (const ticker of ["msft", "nvda"]) {
+      const quarters = quarterlySeries(capture(ticker), revenueTags);
+      const withQ4 = quarterlySeriesWithDerivedQ4(capture(ticker), revenueTags);
+      const derived = withQ4.filter((q) => !quarters.some((r) => r.periodEnd === q.periodEnd && r.periodStart === q.periodStart));
+      for (const d of derived) {
+        // Every derived entry spans roughly a quarter, never more — a
+        // genuine fourth-quarter window, not several quarters folded
+        // together.
+        const days = (Date.parse(d.periodEnd) - Date.parse(d.periodStart)) / 86_400_000;
+        expect(days).toBeGreaterThan(60);
+        expect(days).toBeLessThan(120);
+      }
+    }
+  });
+
+  it("OKLO regression: too few quarters on record for any derivation — returns the untouched series, unavailable rather than invented", () => {
+    const quarters = quarterlySeries(capture("oklo"), revenueTags);
+    const withQ4 = quarterlySeriesWithDerivedQ4(capture("oklo"), revenueTags);
+    expect(withQ4).toEqual(quarters);
+    expect(withQ4.length).toBeLessThan(4);
   });
 });
 

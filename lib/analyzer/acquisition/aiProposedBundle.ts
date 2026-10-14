@@ -283,6 +283,10 @@ async function resolveAiProposedAnalystInputBundle(
       },
       scenarios,
       scenarioValues: null,
+      // A4 — scenarioValues is already null here (the dynamic M15 path
+      // supplies the fair value instead); not the committed validation
+      // fixture either way.
+      scenarioValuesAreFixtureCarried: false,
       revalueBaseCaseAtRate: null,
       configuredConstants: {
         nopatTaxRate: proposal.nopatTaxRate,

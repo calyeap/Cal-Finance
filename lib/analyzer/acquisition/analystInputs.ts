@@ -8,6 +8,7 @@ import { acquireCompany, type AcquiredCompany } from "./provider";
 import { analystCallIfConfigured } from "../ai/anthropicCall";
 import { writeAnalystLog } from "../ai/analystCall";
 import { aiProposedAnalystInputBundle } from "./aiProposedBundle";
+import { getAiProposedBundleSnapshot, saveAiProposedBundleSnapshot } from "./aiProposedBundleSnapshot";
 
 // Same switch gate.ts's own isOffline() reads (private there) — never a
 // second ANALYZER_OFFLINE meaning, just this file's own read of the one
@@ -64,6 +65,13 @@ function bundleFrom(fixture: typeof MSFT_FIXTURE): AnalystInputBundle {
       profile: fixture.profile,
       scenarios: fixture.scenarios,
       scenarioValues: fixture.scenarioValues,
+      // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — every bundle built here is
+      // one of the two COMMITTED validation fixtures (MSFT_FIXTURE/
+      // OKLO_FIXTURE), carried into a real run exactly as this file's own
+      // header says. `scenarioValues` above is never a computed fair value
+      // for the real company; assembly (CompanyFixture.
+      // scenarioValuesAreFixtureCarried) must not present it as one.
+      scenarioValuesAreFixtureCarried: true,
       revalueBaseCaseAtRate: fixture.revalueBaseCaseAtRate,
       configuredConstants: fixture.configuredConstants,
       preRevenue: fixture.preRevenue,
@@ -174,6 +182,21 @@ function okloBundle(): AnalystInputBundle {
         bull: { ...s.bull, ...unauthored },
       },
       revalueBaseCaseAtRate: null,
+      // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) deliberately does NOT extend
+      // to OKLO, unlike `bundleFrom`'s own default: OKLO is pre-revenue, so
+      // its real headline fair-value diagnostic is already the honest
+      // `pre-revenue-distribution` cash-floor/success-range shape
+      // (assemble.ts) and never reads `scenarioValues` at all — the harm
+      // A4 targets (a validation constant shown as a real company's
+      // computed fair value) does not occur for OKLO's own report. Section
+      // G's secondary "Scenario outputs" row is the one place OKLO's own
+      // fixture-carried $3.10/$31/$48 reach the UI, and it is already
+      // labelled "distribution is display only, never a headline" —
+      // forcing it to NOT COMPUTED here would also break
+      // scenarioOutputs.values' NaN round-trip through JSON snapshot
+      // storage (a separate, pre-existing serialization gap, out of this
+      // outcome's bounded scope).
+      scenarioValuesAreFixtureCarried: false,
     },
     note:
       bundle.note +
@@ -203,12 +226,26 @@ const BUNDLES: Record<string, AnalystInputBundle> = {
  * than caching around the change (SCOPE item 2). The committed bundles are
  * checked first and returned synchronously-fast, so MSFT and OKLO are
  * unaffected by the database ever being asked.
+ *
+ * `runId`, optional (A5, CF-ANALYZER-INTEGRITY-PHASE-A-01): when supplied
+ * and NEITHER a committed NOR a recorded bundle exists, this run's own
+ * already-pinned AI-proposed bundle (migration
+ * 009_ai_proposed_bundle_snapshot.sql) is read BEFORE a fresh model call —
+ * see that migration's header for the reproducibility defect this closes.
+ * The precedence this resolver already had is unchanged: a committed or
+ * recorded bundle still wins over a pin, every time, including on a run
+ * that pinned an AI proposal before either existed.
  */
-export async function analystInputsFor(ticker: string): Promise<AnalystInputBundle | null> {
+export async function analystInputsFor(ticker: string, runId?: string): Promise<AnalystInputBundle | null> {
   const committed = BUNDLES[ticker.toUpperCase()];
   if (committed !== undefined) return committed;
   const recorded = await recordedAnalystInputBundle(ticker);
   if (recorded !== null) return recorded;
+
+  if (runId !== undefined) {
+    const pinned = await getAiProposedBundleSnapshot(runId);
+    if (pinned !== null) return pinned;
+  }
 
   // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (issue #399). The same one
   // resolver (CF-ANALYST-INPUT-ENTRY-01's own rule: no second resolution
@@ -245,7 +282,16 @@ export async function analystInputsFor(ticker: string): Promise<AnalystInputBund
     return null;
   }
 
-  return aiProposedAnalystInputBundle(ticker, acquired.acquisition.companyName, acquired, call);
+  const resolved = await aiProposedAnalystInputBundle(ticker, acquired.acquisition.companyName, acquired, call);
+  // A5 — pin this run's own first successful resolution so a later reopen
+  // (cache expiry, process restart) reads it back instead of calling the
+  // model again. Never for a failed resolution (`resolved === null`): a
+  // refusal carries nothing worth pinning, and the next open should retry
+  // exactly as it does today.
+  if (runId !== undefined && resolved !== null) {
+    await saveAiProposedBundleSnapshot(runId, resolved);
+  }
+  return resolved;
 }
 
 /** The tickers whose analyst inputs are committed in code, never recorded

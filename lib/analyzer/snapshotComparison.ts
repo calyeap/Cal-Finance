@@ -71,6 +71,18 @@ const FIELD_SPECS: { field: string; get: (s: StoredSnapshot) => unknown }[] = [
  */
 function valuesEqual(a: unknown, b: unknown): boolean {
   if (a instanceof Decimal || b instanceof Decimal) {
+    if (a instanceof Decimal && b instanceof Decimal && a.isNaN() && b.isNaN()) {
+      // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — notComputed.ts's own
+      // documented convention: NaN here means "not computed", never a real
+      // value, on BOTH an output's not-computed states this comparison
+      // reads (scenarioOutputs.values when the fair-value range is honestly
+      // suppressed). `Decimal#equals` is IEEE-correct that NaN never equals
+      // NaN, but this comparison's own question is "did anything move" —
+      // and "still not computed" on both sides is not a move. Without this,
+      // reopening the SAME immutable snapshot twice (CF-V2-PROOF-01) would
+      // spuriously report scenarioOutputs.values as changed every time.
+      return true;
+    }
     return a instanceof Decimal && b instanceof Decimal && a.equals(b);
   }
   if (Array.isArray(a) || Array.isArray(b)) {

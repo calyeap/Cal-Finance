@@ -148,19 +148,21 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
   it("MSFT (§4.4 ruled) — option A renders a real range; option B carries no SECONDARY/UNVERIFIED/AI-EXTRACTED flag", async () => {
     const result = await openMsftRunWithRuling();
 
-    expect(result.trust.status).toBe("PARTIAL");
+    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — the fair-value range no
+    // longer presents MSFT_FIXTURE's own $265/$510/$650 as this real run's
+    // computed scenario values; it is honestly suppressed, and trust (§9.6
+    // rule 1) and Section G's scenario-values row follow that exactly as
+    // they already do for any other suppressed range.
+    expect(result.trust.status).toBe("UNUSABLE");
     expect(result.gates.gate1.state).toBeNull();
     expect(result.gates.gate1.filedYearsCount).toBe(13);
-    expect(result.fairValueRange.kind).toBe("range");
-    if (result.fairValueRange.kind === "range") {
-      expect(result.fairValueRange.bear.toFixed(2)).toBe("265.00");
-      expect(result.fairValueRange.bull.toFixed(2)).toBe("650.00");
-      expect(result.fairValueRange.weightedValueInside.toDecimalPlaces(2).toString()).toBe("475");
-      expect(result.fairValueRange.scenarioLabelsWarning).toBe(true);
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    if (result.fairValueRange.kind === "suppressed") {
+      expect(result.fairValueRange.cause).toContain("scenario dollar values");
     }
-    expect(result.scenarioOutputs.values.bear.toFixed(2)).toBe("265.00");
-    expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("510.00");
-    expect(result.scenarioOutputs.values.bull.toFixed(2)).toBe("650.00");
+    expect(result.scenarioOutputs.values.bear.isNaN()).toBe(true);
+    expect(result.scenarioOutputs.values.base.isNaN()).toBe(true);
+    expect(result.scenarioOutputs.values.bull.isNaN()).toBe(true);
     expect(result.states.qualifying.map((q) => q.flag)).toEqual(["MARGIN AT HISTORICAL HIGH"]);
     expect(provenanceQualifierFlagsPresent(result.states.qualifying)).toEqual([]);
     expect(result.facts).toHaveLength(20);

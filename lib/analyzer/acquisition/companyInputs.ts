@@ -7,6 +7,7 @@ import {
   operatingMarginSeries,
   filedAnnualYearsCount,
   quarterlySeries,
+  quarterlySeriesWithDerivedQ4,
   type AnnualSeries,
 } from "./history";
 import { computeAcquiredCashBasis, type AcquiredCashBasisResult } from "../modules/preRevenue";
@@ -84,6 +85,8 @@ export interface AnalystInputs {
   /** Step 7. Not facts, not acquired. */
   scenarios: CompanyFixture["scenarios"];
   scenarioValues: CompanyFixture["scenarioValues"];
+  /** A4 — see `CompanyFixture.scenarioValuesAreFixtureCarried`'s own doc comment. */
+  scenarioValuesAreFixtureCarried: boolean;
   revalueBaseCaseAtRate: CompanyFixture["revalueBaseCaseAtRate"];
   configuredConstants: CompanyFixture["configuredConstants"];
   preRevenue: CompanyFixture["preRevenue"];
@@ -277,6 +280,10 @@ export function buildCompanyInputs(
   const achievedRevenueCagrResult = achievedRevenueCagr(revenueAnnualSeries, 10, revenueRecency);
   const marginDecimals = (margins?.years ?? []).map((y) => new Decimal(y.margin));
   const quarters = quarterlySeries(companyFacts, revenueTags);
+  // TTM alone needs the derived fiscal Q4 (A1): the other quarter offsets
+  // below (`quarterSourced`) read actually-filed discrete quarters only, by
+  // design, and are unaffected.
+  const quartersWithQ4 = quarterlySeriesWithDerivedQ4(companyFacts, revenueTags);
 
   const nonOp = analyst.nonOperatingInvestments;
   const nonOpSourced: SourcedValue<Decimal> | null =
@@ -603,7 +610,7 @@ export function buildCompanyInputs(
       sameQuarterYear1Prior: quarterSourced(6),
       sameQuarterYear2: quarterSourced(9),
       sameQuarterYear2Prior: quarterSourced(10),
-      ttm: ttmFrom(quarters),
+      ttm: ttmFrom(quartersWithQ4),
     },
 
     shapeMismatch: { guidedNearTermGrowth: null, impliedConstantGrowth: null },
@@ -613,6 +620,7 @@ export function buildCompanyInputs(
 
     scenarios: analyst.scenarios,
     scenarioValues: analyst.scenarioValues,
+    scenarioValuesAreFixtureCarried: analyst.scenarioValuesAreFixtureCarried,
     revalueBaseCaseAtRate: analyst.revalueBaseCaseAtRate,
     configuredConstants: analyst.configuredConstants,
     achievedRevenueCagr: achievedRevenueCagrResult,
@@ -746,17 +754,43 @@ function medianOf(values: Decimal[]): SourcedValue<Decimal> | null {
   return { value: median, provenance: CLEAN_PROVENANCE };
 }
 
+const DAY_MS = 86_400_000;
+/** A genuine trailing twelve months, not the ~9- or ~15-month span a gap or an overlap would produce. */
+const TTM_SPAN_DAYS = { min: 350, max: 380 };
+/** Same tolerance `quarterlySeriesWithDerivedQ4` uses for "immediately follows". */
+const ADJACENT_TOLERANCE_DAYS = 4;
+
 /**
- * Trailing twelve months from four discrete quarters.
+ * Trailing twelve months from four discrete, CONSECUTIVE quarters —
+ * `quarters` already includes any derived fiscal Q4
+ * (`quarterlySeriesWithDerivedQ4`), so "discrete" no longer means "actually
+ * filed as its own 10-Q", but it still means every quarter in the window is
+ * individually evidenced, never a three-quarter annualisation.
  *
- * Null unless FOUR are present. Three quarters annualised is an estimate, and
- * §5.1 admits no estimate anywhere — "not by an interpolation".
+ * Null unless FOUR are present AND they are contiguous and span one true
+ * year (§5.1 admits no estimate anywhere — "not by an interpolation"). A
+ * raw `quarters` array can be missing exactly one quarter in the middle
+ * (e.g. an un-derivable Q4 from an incomplete fiscal year): the naive
+ * `slice(-4)` would then silently sum four quarters that skip a month and
+ * reach back into the wrong window — the defect this function existed to
+ * fix was exactly that blended, non-consecutive four-quarter sum.
  */
 function ttmFrom(
-  quarters: { value: number }[]
+  quarters: { periodStart: string; periodEnd: string; value: number }[]
 ): SourcedValue<Decimal> | null {
   if (quarters.length < 4) return null;
   const last4 = quarters.slice(-4);
+
+  const contiguous = last4.every((q, i) => {
+    if (i === 0) return true;
+    const gap = Date.parse(q.periodStart) - Date.parse(last4[i - 1].periodEnd);
+    return gap >= 0 && gap <= ADJACENT_TOLERANCE_DAYS * DAY_MS;
+  });
+  if (!contiguous) return null;
+
+  const spanDays = (Date.parse(last4[last4.length - 1].periodEnd) - Date.parse(last4[0].periodStart)) / DAY_MS;
+  if (spanDays < TTM_SPAN_DAYS.min || spanDays > TTM_SPAN_DAYS.max) return null;
+
   const sum = last4.reduce((acc, q) => acc.plus(q.value), new Decimal(0));
   return { value: sum, provenance: CLEAN_PROVENANCE };
 }
