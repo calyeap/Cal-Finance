@@ -145,9 +145,14 @@ stdlib, no network, no production-code imports):
   total debt-equivalent (long-term debt + finance leases + operating leases =
   $128,813M, only ≈3.4% of invested capital).
 - **Terminal value**: Gordon-growth, `TV₁₀ = FCFF₁₁ ÷ (WACC − g)`.
-- **Equity bridge**: `Equity value = Enterprise value + cash & marketable securities +
-  non-operating equity/cost-method investments − (debt + finance leases + operating
-  leases)`, divided by the cover-page share count.
+- **Equity bridge**: `Equity value = Enterprise value + cash & marketable securities −
+  (debt + finance leases + operating leases)`, divided by the cover-page share count.
+  `EquityMethodInvestments` ($12,000M) and `EquitySecuritiesWithoutReadilyDeterminableFairValueAmount`
+  ($12,400M) are disclosed in the inputs but **not** added separately: in the committed
+  capture both are consistently subsets of `LongTermInvestments`, already inside "cash &
+  marketable securities" above (e.g. $12.0B/$12.4B of $36.3B at 2026-06-30, and a matching
+  $8.9B/$15.4B-of-pattern at 2025-06-30) — adding them again would double-count ≈$24.4B
+  of equity.
 
 ### Base-case result
 
@@ -159,13 +164,12 @@ stdlib, no network, no production-code imports):
 | **Terminal value share of enterprise value** | **73.4%** (below the 85% candor threshold) |
 | Enterprise value | $3,231.4B |
 | + Cash & marketable securities | $113.2B |
-| + Non-operating investments | $24.4B |
 | − Debt & lease equivalents | $128.8B |
-| Equity value | $3,240.2B |
+| Equity value | $3,215.8B |
 | ÷ Shares outstanding | 7,425,545,491 |
-| **Value per share (base case)** | **$436.36** |
+| **Value per share (base case)** | **$433.08** |
 
-Base case is ≈12.7% below the $499.70 historical captured price. **This is reported
+Base case is ≈13.3% below the $499.70 historical captured price. **This is reported
 neutrally, as the issue requires — it is not a BUY/HOLD/SELL call**, and no input was
 tuned to move this number toward or away from the market price.
 
@@ -188,12 +192,12 @@ disclosed assumption path both engines consume) — built without reading or cop
 instead of an accumulation loop for discounting; debt-weight-first instead of
 equity-weight-first for WACC; a reordered equity bridge), and recording every
 intermediate step as an explicit formula-cell ledger (cell name, formula text, computed
-value — 97 rows, committed at
+value — 57 rows, committed at
 [`scripts/evidence/msft-phase-b/output/formula_ledger.csv`](../../scripts/evidence/msft-phase-b/output/formula_ledger.csv)),
 in the spirit of "recorded formula cells."
 
 **Result:** Engine A and Engine B agree to floating-point precision —
-value per share $436.3611551813362 (A) vs $436.36115518133624 (B), a discrepancy of
+value per share $433.0752013036617 (A) vs $433.07520130366174 (B), a discrepancy of
 1.3×10⁻¹⁴ %, orders of magnitude inside the 0.5% target. Full reconciliation at
 [`scripts/evidence/msft-phase-b/output/reconciliation.json`](../../scripts/evidence/msft-phase-b/output/reconciliation.json).
 
@@ -213,42 +217,67 @@ this proof's headline verdict is NOT PROVEN rather than PASS.
 
 Full detail: [`scripts/evidence/msft-phase-b/output/sensitivity.json`](../../scripts/evidence/msft-phase-b/output/sensitivity.json).
 
-| Variable | −case | Base ($436.36) | +case | Range as % of base |
+| Variable | −case | Base ($433.08) | +case | Range as % of base |
 |---|---|---|---|---|
-| Discount rate (WACC, via Rf ∓1pp) | **$564.64** (Rf −1pp) | $436.36 | **$352.83** (Rf +1pp) | −19% / +29% |
-| Revenue growth path (Y1 & terminal, ∓2pp) | **$322.79** (−2pp) | $436.36 | **$705.31** (+2pp) | −26% / +62% |
-| Operating margin (terminal target, ∓2pp) | **$419.29** (−2pp) | $436.36 | **$453.43** (+2pp) | −4% / +4% |
-| Reinvestment, via stable terminal ROIC (∓5pp) | **$392.84** (ROIC −5pp) | $436.36 | **$460.96** (ROIC +5pp) | −10% / +6% |
+| Discount rate (WACC, via Rf ∓1pp) | **$561.35** (Rf −1pp) ⚠️ | $433.08 | **$349.55** (Rf +1pp) | −22% / +30% |
+| Revenue growth path (Y1 & terminal, ∓2pp) | **$319.51** (−2pp) | $433.08 | **$702.03** (+2pp) ⚠️ | −26% / +62% |
+| Operating margin (terminal target, ∓2pp) | **$416.00** (−2pp) | $433.08 | **$450.15** (+2pp) | −4% / +4% |
+| Reinvestment, via stable terminal ROIC (∓5pp) | **$389.55** (ROIC −5pp) | $433.08 | **$457.68** (ROIC +5pp) | −10% / +6% |
 
-**Candor flags checked automatically on every scenario above:** terminal-value share
-of enterprise value > 85% (none triggered — base case 73.4%, highest seen across these
+⚠️ = flagged `TERMINAL_G_GT_RISK_FREE` (see below) — a non-economic combination, not a
+clean read of this proof's own stable-growth rule.
+
+**Candor flags checked automatically on every scenario above:** terminal-value share of
+enterprise value > 85% (none triggered — base case 73.4%, highest seen across these
 one-variable sweeps was 83.5% at revenue growth +2pp); WACC ≤ terminal growth, i.e.
-r ≤ g (none triggered — tightest spread, at Rf +1pp, is still 9.61% − 4.00% = 5.61pp).
+r ≤ g (none triggered — tightest spread, at Rf +1pp, is still 9.61% − 4.00% = 5.61pp);
+**terminal growth g > risk-free rate** (this proof's own stable-growth convention, set
+in `inputs.json`: "g ≤ risk-free rate"). This third flag **does trigger**, on two of the
+eight non-base scenarios above:
+- `discountRate` **Rf −1pp**: Rf drops to 3.6% while terminal g stays fixed at the base
+  4.0%, so g (4.0%) > Rf (3.6%). The reported **$561.35** figure is a **non-economic
+  scenario**, not a clean "lower discount rate raises value" read — it only shows what
+  this model's formula does if g and Rf are left inconsistent, not a defensible
+  valuation.
+- `revenueGrowth` **+2pp**: the terminal fade target (`revenueGrowthFadeTo`) rises to
+  6.0% while Rf stays fixed at the base 4.6%, so g (6.0%) > Rf (4.6%). The reported
+  **$702.03** figure — the largest upside number in this whole proof — is likewise a
+  **non-economic scenario** under this model's own stable-growth rule, not a credible
+  "high-growth" case.
 
-**Reading this candidly:** the model is **most fragile to the discount rate and to the
-revenue growth path** — a ±2pp growth swing alone moves value per share from $322.79 to
-$705.31, a wider band than the historical price itself sits inside. Operating margin
-and the reinvestment/ROIC assumption move the answer far less in comparison. This
-asymmetry is itself informative: anyone relying on this kind of model for MSFT should
-spend their diligence on the growth and discount-rate assumptions, not on the
-reinvestment mechanics, which is a limitation candidly disclosed here precisely because
-it was found, not smoothed over.
+Both scenarios are left in the sweep (rather than silently re-run with terminal g held
+at its base value) specifically so this flag, and the sweep design that lets terminal g
+drift during a one-variable perturbation, are visible rather than hidden. Full detail,
+including the per-scenario `terminalGrowth`/`riskFreeRate`/`flags` fields, is in
+`sensitivity.json`.
+
+**Reading this candidly:** discarding the two flagged, non-economic scenarios above, the
+model is still **most fragile to the discount rate and to the revenue growth path** —
+the economically clean ends of those two sweeps are Rf +1pp ($349.55) and revenue growth
+−2pp ($319.51), both well below base, while the flagged high-side numbers ($561.35,
+$702.03) should not be read as upside case studies at all. Operating margin and the
+reinvestment/ROIC assumption move the answer far less in comparison, and neither
+produces a flagged scenario. This asymmetry is itself informative: anyone relying on
+this kind of model for MSFT should spend their diligence on the growth and
+discount-rate assumptions — and on keeping g and Rf jointly consistent under any
+perturbation — not on the reinvestment mechanics, which is a limitation candidly
+disclosed here precisely because it was found, not smoothed over.
 
 **Implied growth at the observed price (context only, not an input):** holding every
 other base-case assumption fixed, the year-1 revenue growth rate that reconciles the
-model's value per share to the $499.70 historical price is **≈19.3%**, vs. the 16.0%
-assumed in the base case — a 3.3pp gap, not an extreme one. No input was altered to
+model's value per share to the $499.70 historical price is **≈19.4%**, vs. the 16.0%
+assumed in the base case — a 3.4pp gap, not an extreme one. No input was altered to
 produce this reconciliation; it is reported strictly as context, per the issue's
 instruction, and is not treated as validating or invalidating the base case.
 
 ## Unsupported data / limitations (candid)
 
 - **Change in net working capital** is not modeled (no XBRL tag for it survived the
-  trimmed capture); reinvestment is capex-and-D&A-only. This likely understates
-  reinvestment somewhat in a company with growing deferred/unearned revenue, which is
-  a source of negative working-capital drag relative to this proof's numbers.
-  Not fixed here — named as missing evidence, not guessed around.
-  Reinvestment rate, growth and ROIC are nonetheless Damodaran-consistent in structure.
+  trimmed capture); reinvestment is capex-and-D&A-only. Growing deferred/unearned
+  revenue is a cash *inflow*, not a drag, so omitting it likely **overstates**
+  measured reinvestment somewhat, if anything — not understates it. Not fixed here —
+  named as missing evidence, not guessed around. Reinvestment rate, growth and ROIC
+  are nonetheless Damodaran-consistent in structure.
 - **Tax rate held flat at 19%** for all 10 forecast years; ignores any drift from OECD
   Pillar Two minimum-tax implementation or shifts in the US/foreign income mix that
   produced the FY2025→FY2026 18%→19% move itself.

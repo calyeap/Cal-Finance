@@ -24,15 +24,22 @@ def load_inputs():
 def run_one(inp):
     drv = driver_schedule.build(inp)
     result = shadow_dcf.run(inp, drv)
+    risk_free_rate = inp["externallySourcedAssumptions_mustBeReadAsAssumptionsNotFacts"]["riskFreeRate"]["val"]
     flags = []
     if result["terminalValueShareOfEv"] > 0.85:
         flags.append("TERMINAL_VALUE_OVER_85_PCT_OF_EV")
     if result["wacc"]["wacc"] <= result["terminalGrowth"]:
         flags.append("R_LE_G_TERMINAL_VALUE_UNDEFINED_OR_NEGATIVE")
+    if result["terminalGrowth"] > risk_free_rate:
+        # Breaks this proof's own stable-growth rule (issue #427 DO 4: "identify
+        # ... non-economic combinations"): terminal g should sit at/below Rf.
+        flags.append("TERMINAL_G_GT_RISK_FREE")
     return {
         "wacc": result["wacc"]["wacc"],
         "valuePerShare": result["valuePerShare"],
         "terminalValueShareOfEv": result["terminalValueShareOfEv"],
+        "terminalGrowth": result["terminalGrowth"],
+        "riskFreeRate": risk_free_rate,
         "flags": flags,
     }
 

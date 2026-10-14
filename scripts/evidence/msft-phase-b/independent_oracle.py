@@ -102,17 +102,17 @@ def run(inp=None, drivers=None):
 
     enterprise_value = cell("G5_enterpriseValue", "= G1+G4", sum_pv_explicit + pv_terminal_value)
 
+    # No separate non-operating-investments add-back: EquityMethodInvestments and
+    # EquitySecuritiesWithoutReadilyDeterminableFairValueAmount are consistently
+    # subsets of LongTermInvestments in the committed capture, not amounts outside
+    # it; adding both on top of H1 would double-count ~$24.4B.
     cash_and_investments = cell(
         "H1_cashAndInvestments", "= cash + shortTermInvestments + longTermInvestments",
         sec["cashUsd"]["val"] + sec["shortTermInvestmentsUsd"]["val"] + sec["longTermInvestmentsUsd"]["val"],
     )
-    non_operating_assets = cell(
-        "H2_nonOperatingAssets", "= equityMethodInvestments + equitySecuritiesNoFv",
-        sec["equityMethodInvestmentsUsd"]["val"] + sec["equitySecuritiesNoReadilyDeterminableFvUsd"]["val"],
-    )
-    equity_value = cell("H3_equityValue", "= G5 + H1 + H2 - B4",
-                         enterprise_value + cash_and_investments + non_operating_assets - debt)
-    value_per_share = cell("H4_valuePerShare", "= H3/B2", equity_value / shares)
+    equity_value = cell("H2_equityValue", "= G5 + H1 - B4",
+                         enterprise_value + cash_and_investments - debt)
+    value_per_share = cell("H3_valuePerShare", "= H2/B2", equity_value / shares)
 
     return {
         "engine": "B (independent_oracle.py — closed-form exponentiation, recorded formula-cell ledger)",
@@ -130,7 +130,6 @@ def run(inp=None, drivers=None):
         "enterpriseValue": enterprise_value,
         "terminalValueShareOfEv": pv_terminal_value / enterprise_value,
         "cashAndInvestments": cash_and_investments,
-        "nonOperatingAssets": non_operating_assets,
         "debtAndLeaseEquivalents": debt,
         "equityValue": equity_value,
         "sharesOutstanding": shares,

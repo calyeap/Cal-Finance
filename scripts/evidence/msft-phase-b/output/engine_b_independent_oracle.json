@@ -277,19 +277,14 @@
       "value": 113191000000
     },
     {
-      "cell": "H2_nonOperatingAssets",
-      "formula": "= equityMethodInvestments + equitySecuritiesNoFv",
-      "value": 24400000000
+      "cell": "H2_equityValue",
+      "formula": "= G5 + H1 - B4",
+      "value": 3215819608304.3228
     },
     {
-      "cell": "H3_equityValue",
-      "formula": "= G5 + H1 + H2 - B4",
-      "value": 3240219608304.3228
-    },
-    {
-      "cell": "H4_valuePerShare",
-      "formula": "= H3/B2",
-      "value": 436.36115518133624
+      "cell": "H3_valuePerShare",
+      "formula": "= H2/B2",
+      "value": 433.07520130366174
     }
   ],
   "rows": [
@@ -446,9 +441,8 @@
   "enterpriseValue": 3231441608304.3228,
   "terminalValueShareOfEv": 0.7343602523088893,
   "cashAndInvestments": 113191000000,
-  "nonOperatingAssets": 24400000000,
   "debtAndLeaseEquivalents": 128813000000,
-  "equityValue": 3240219608304.3228,
+  "equityValue": 3215819608304.3228,
   "sharesOutstanding": 7425545491,
-  "valuePerShare": 436.36115518133624
+  "valuePerShare": 433.07520130366174
 }

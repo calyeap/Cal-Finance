@@ -61,26 +61,26 @@ def compute_wacc(inp):
 
 
 def equity_bridge(inp, enterprise_value):
+    """No separate non-operating-investments add-back: in the committed capture,
+    EquityMethodInvestments and EquitySecuritiesWithoutReadilyDeterminableFairValueAmount
+    are consistently subsets of LongTermInvestments (8.9B/15.4B at 2025-06-30 and
+    24.4B/36.3B at 2026-06-30), not amounts sitting outside it. Adding both would
+    double-count ~$24.4B already inside cash_and_investments."""
     sec = inp["realDataFromCommittedSecCapture"]
     cash_and_investments = (
         sec["cashUsd"]["val"]
         + sec["shortTermInvestmentsUsd"]["val"]
         + sec["longTermInvestmentsUsd"]["val"]
     )
-    non_operating_assets = (
-        sec["equityMethodInvestmentsUsd"]["val"]
-        + sec["equitySecuritiesNoReadilyDeterminableFvUsd"]["val"]
-    )
     debt = (
         sec["longTermDebtTotalUsd"]["val"]
         + sec["financeLeaseLiabilityUsd"]["val"]
         + sec["operatingLeaseLiabilityUsd"]["val"]
     )
-    equity_value = enterprise_value + cash_and_investments + non_operating_assets - debt
+    equity_value = enterprise_value + cash_and_investments - debt
     shares = sec["sharesOutstandingCoverPage"]["val"]
     return {
         "cashAndInvestments": cash_and_investments,
-        "nonOperatingAssets": non_operating_assets,
         "debtAndLeaseEquivalents": debt,
         "equityValue": equity_value,
         "sharesOutstanding": shares,
