@@ -11,6 +11,7 @@ import {
   type RonicInput,
   type ImpliedReturnOnNewCapitalInput,
 } from "./modules/reinvestmentRonic";
+import { evaluateGrowthLicence } from "./growthLicence";
 import { computeSteadyStateEvPvgo } from "./modules/steadyStateEvPvgo";
 import { computeReverseDcfGrid, type ReverseDcfInput } from "./modules/reverseDcf";
 import { computeTerminalDiagnostics } from "./modules/terminalDiagnostics";
@@ -1153,6 +1154,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         fixture.trustInputs.profileAutoResolved !== null && gate0.result === "PASS",
     }),
     achievedRevenueCagr: fixture.achievedRevenueCagr,
+    growthLicence: evaluateGrowthLicence(reinvestmentRonic.ronic),
     preRevenue,
     // Both members are the AI layer's, and the AI layer runs AFTER this
     // function: §8.1 puts calculation on one side of the boundary and

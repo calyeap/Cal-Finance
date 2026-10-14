@@ -987,6 +987,21 @@ export interface AchievedGrowth {
 }
 
 // ---------------------------------------------------------------------------
+// CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 — §10.6.2 Step 2's growth licence.
+// Schema lives here, independent of the module that computes it
+// (`lib/analyzer/growthLicence.ts`), matching this file's own convention for
+// every other M-module result above. See that module's doc comment for what
+// this is and is not allowed to decide.
+// ---------------------------------------------------------------------------
+
+export type GrowthLicenceStatus = "YES" | "NO" | "UNKNOWN";
+
+export interface GrowthLicenceResult {
+  status: GrowthLicenceStatus;
+  reason: string;
+}
+
+// ---------------------------------------------------------------------------
 // Full Analysis's Business and Market Context sections. M9-ITEM5-CONTENT-01,
 // implementing Calvin's 21 Sep 2026 10:39:55Z ruling (issue #195, Option B).
 // ---------------------------------------------------------------------------
@@ -1092,6 +1107,16 @@ export interface AnalysisResult {
   // real RawInput: a value, or the stated reason there is none — never a
   // silent gap and never fabricated.
   achievedRevenueCagr: RawInput<AchievedGrowth>;
+  // CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 — §10.6.2 Step 2's growth licence
+  // (`lib/analyzer/growthLicence.ts`), read from the already-approved RONIC
+  // ladder (`diagnostics.reinvestmentRonic.ronic`) against the
+  // already-approved rate grid (`POLICY.rateGrid`). Exposed here for
+  // inspection/testing, independent of `deriveVerdict`'s own user-facing
+  // reason text (unchanged by this field — no UX/wording change). Always
+  // present: YES/NO only where every rate-grid cell agrees unequivocally,
+  // UNKNOWN otherwise, with the precise cause — never a default and never a
+  // fabricated cell choice (§11 items 2 and 4 remain open house policy).
+  growthLicence: GrowthLicenceResult;
   // Populated only for the pre-revenue profile.
   preRevenue: PreRevenueModule | null;
   // Populated only after the independent blind-challenger call completes
