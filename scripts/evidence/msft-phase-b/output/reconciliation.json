@@ -1,0 +1,11 @@
+{
+  "engineAValuePerShare": 436.3611551813362,
+  "engineBValuePerShare": 436.36115518133624,
+  "discrepancyPct": 1.3026690892590085e-16,
+  "toleranceApplied": 0.0005,
+  "withinTolerance": true,
+  "engineAEnterpriseValue": 3231441608304.3223,
+  "engineBEnterpriseValue": 3231441608304.3228,
+  "engineAWacc": 0.08640634362058582,
+  "engineBWacc": 0.08640634362058582
+}

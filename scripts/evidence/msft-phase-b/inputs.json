@@ -1,0 +1,54 @@
+{
+  "_meta": {
+    "outcomeId": "CF-ANALYZER-MSFT-VALUATION-PHASE-B-PROOF-01",
+    "purpose": "Frozen, fully-sourced input vector for a one-off, non-governing MSFT shadow FCFF DCF evidence proof. Every numeric field below carries its own source. This file is read by shadow_dcf.py AND independent_oracle.py so both engines value the exact same input vector.",
+    "valuationDate": "2026-10-14",
+    "asOfFiscalYearEnd": "2026-06-30",
+    "notBasedOn": "lib/analyzer/modules/scenarioOutputs.ts (production DCF) was not read, run or reused as a source for any number here."
+  },
+  "realDataFromCommittedSecCapture": {
+    "source": "lib/analyzer/acquisition/captures/msft-companyfacts.json (real SEC XBRL /api/xbrl/companyfacts/CIK0000789019.json, capturedAt 2026-09-24T18:40:18.211Z)",
+    "fy2026_10K": { "accn": "0001193125-26-323660", "filed": "2026-07-29", "periodEnd": "2026-06-30" },
+    "revenueUsd": { "fy2024": 245122000000, "fy2025": 281724000000, "fy2026": 331839000000, "tag": "RevenueFromContractWithCustomerExcludingAssessedTax", "note": "FY2026 331,839M matches the A1 derived-Q4 corrected TTM figure from PR #426's commit message; NOT the pre-fix naive-sum TTM." },
+    "operatingIncomeUsd": { "fy2024": 109433000000, "fy2025": 128528000000, "fy2026": 155237000000, "tag": "OperatingIncomeLoss" },
+    "depreciationUsd": { "fy2026": 34300000000, "tag": "Depreciation" },
+    "amortizationOfIntangiblesUsd": { "fy2026": 4700000000, "tag": "AmortizationOfIntangibleAssets" },
+    "capexUsd": { "fy2024": 44477000000, "fy2025": 64551000000, "fy2026": 115948000000, "tag": "PaymentsToAcquirePropertyPlantAndEquipment", "note": "FY2026 capex is a real, large step-up (FY2025->FY2026 +79.6%) consistent with Microsoft's disclosed AI/datacenter buildout; this is a genuine current driver of near-term FCFF compression, not a data error." },
+    "cfoUsd": { "fy2026": 182935000000, "tag": "NetCashProvidedByUsedInOperatingActivities" },
+    "shareBasedCompUsd": { "fy2026": 12405000000, "tag": "ShareBasedCompensation" },
+    "cashUsd": { "asOf": "2026-06-30", "val": 20935000000, "tag": "CashAndCashEquivalentsAtCarryingValue" },
+    "shortTermInvestmentsUsd": { "asOf": "2026-06-30", "val": 55908000000, "tag": "ShortTermInvestments" },
+    "longTermInvestmentsUsd": { "asOf": "2026-06-30", "val": 36348000000, "tag": "LongTermInvestments" },
+    "equityMethodInvestmentsUsd": { "asOf": "2026-06-30", "val": 12000000000, "tag": "EquityMethodInvestments", "treatment": "non-operating asset, added back in equity bridge" },
+    "equitySecuritiesNoReadilyDeterminableFvUsd": { "asOf": "2026-06-30", "val": 12400000000, "tag": "EquitySecuritiesWithoutReadilyDeterminableFairValueAmount", "treatment": "non-operating asset, added back in equity bridge" },
+    "longTermDebtTotalUsd": { "asOf": "2026-06-30", "val": 40294000000, "tagCurrent": "LongTermDebtCurrent=9227000000", "tagNoncurrent": "LongTermDebtNoncurrent=31067000000" },
+    "financeLeaseLiabilityUsd": { "asOf": "2026-06-30", "val": 66594000000, "tag": "FinanceLeaseLiability", "note": "Unusually large vs. long-term debt; consistent with real, disclosed sale-leaseback-financed AI/datacenter capacity additions. Treated as debt-equivalent per Damodaran convention." },
+    "operatingLeaseLiabilityUsd": { "asOf": "2026-06-30", "val": 21925000000, "tagNoncurrent": "OperatingLeaseLiabilityNoncurrent=16532000000", "treatment": "debt-equivalent per Damodaran convention" },
+    "sharesOutstandingCoverPage": { "asOf": "2026-07-23", "val": 7425545491, "tag": "dei:EntityCommonStockSharesOutstanding", "note": "10-K cover-page count, 23 days after FYE; used over the balance-sheet CommonStockSharesOutstanding (7,427M at 2026-06-30) as the more current count. Mismatch vs. the historical price date (2026-09-04) below is ~6 weeks; share count drift over that window is immaterial and not separately adjusted." },
+    "dilutedWeightedAvgSharesFy2026": 7453000000,
+    "basicWeightedAvgSharesFy2026": 7429000000
+  },
+  "realDataFromCommittedPriceCapture": {
+    "source": "lib/analyzer/acquisition/captures/prices.json (recorded 2026-09-08, provider YAHOO, used offline-mode only in the app)",
+    "historicalClose": { "val": 499.70, "date": "2026-09-04", "label": "HISTORICAL — explicitly not treated as a live/current price" }
+  },
+  "externallySourcedAssumptions_mustBeReadAsAssumptionsNotFacts": {
+    "note": "Everything in this block was fetched via WebSearch (no live filing/spreadsheet fetch was possible in this execution environment: pages.stern.nyu.edu and www.sec.gov both failed DNS/CONNECT resolution through the sandboxed network proxy, 2026-10-14 — a tested, not assumed, network limitation). Each field states what it is and its uncertainty band; the report treats every one of these as a test-only, disputable scenario input, not policy.",
+    "effectiveTaxRateFy2026": { "val": 0.19, "source": "Microsoft FY2026 10-K Note 11 text, quoted via WebSearch snippet: 'Our effective tax rate for fiscal years 2026 and 2025 was 19% and 18%, respectively.'", "crossCheck": "32,185M provision / 165,934M implied pretax income (133,749M net income / (1-0.19)) = 19.4%, consistent." },
+    "riskFreeRate": { "val": 0.046, "range": [0.044, 0.048], "source": "10yr UST ~4.79% (2026-09-02 snapshot) and ~4.66% (Fed H.15 weekly, week of 2026-07-24); no exact 2026-10-14 reading was retrievable in this environment. Point estimate 4.6% is a rounded mid-point of the two most recent real readings found, NOT a live quote." },
+    "equityRiskPremium": { "val": 0.042, "source": "Damodaran implied ERP: 4.23% (Jan 2026 update), 4.20% (July 2026 update, post Moody's US downgrade adjustment)." },
+    "beta": { "val": 1.00, "range": [0.87, 1.13], "source": "GuruFocus 1.1097 (Jun 26 2026), Google Finance ~1.13 (Jul 2026), Infront Analytics 1-yr 0.87 (undated, likely stale). Point estimate 1.00 is a judgment call rounding toward the middle of a wide, source-dependent range — flagged as a disputable assumption, sensitivity-tested." },
+    "pretaxCostOfDebt": { "val": 0.050, "range": [0.046, 0.059], "method": "Damodaran synthetic-rating approach: EBIT/cash-interest-paid coverage = 155,237M / ~1,500M (10-K 'cash paid for interest' for FY2026, from WebSearch snippet) ~= 103x, mapping to a top-tier (AAA-like) synthetic spread of ~0.4-0.5pp over the risk-free rate.", "crossCheck": "GuruFocus third-party 'effective interest rate on debt' = 5.90% (Jun 2026) is in the same ballpark and used only as a sanity check, not as the primary method (its exact computation methodology is not disclosed)." },
+    "terminalGrowthRate": { "val": 0.040, "source": "Set below the risk-free-rate point estimate (4.6%), consistent with the Damodaran stable-growth constraint g <= risk-free rate." },
+    "stableTerminalRoic": { "val": 0.18, "source": "Judgment call: comfortably above terminal WACC (~8.6%) reflecting a durable (but moderating from today's unsustainably high) competitive-advantage return; flagged as the single most consequential unsupported/debatable assumption, sensitivity-tested." }
+  },
+  "forecastDrivers": {
+    "horizonYears": 10,
+    "revenueGrowthY1": 0.16,
+    "revenueGrowthFadeTo": 0.040,
+    "operatingMarginFy2026Actual": 0.4678,
+    "operatingMarginFadeTo": 0.45,
+    "reinvestmentRateY1": 0.60,
+    "reinvestmentRateFadeTo_terminal_g_over_ROIC": "computed = terminalGrowthRate / stableTerminalRoic"
+  }
+}

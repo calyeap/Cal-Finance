@@ -22,3 +22,4 @@ calboard-dashboard-mock-v7.html
 # Live acceptance probe output — written by scripts/analyzer/acceptance-run.ts,
 # uploaded as the live-proof workflow's artifact, never committed
 /proof/
+__pycache__/
