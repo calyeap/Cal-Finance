@@ -328,6 +328,9 @@ export async function recordedAnalystInputBundle(ticker: string): Promise<Analys
         base: requireDecimal(row.scenario_values.base, "base scenario value"),
         bull: requireDecimal(row.scenario_values.bull, "bull scenario value"),
       },
+      // A4 — a recorded bundle is a real human-approved analyst entry, never
+      // the committed validation fixture.
+      scenarioValuesAreFixtureCarried: false,
       revalueBaseCaseAtRate: null,
       configuredConstants: {
         nopatTaxRate: optionalDecimal(row.configured_constants.nopatTaxRate, "nopatTaxRate"),

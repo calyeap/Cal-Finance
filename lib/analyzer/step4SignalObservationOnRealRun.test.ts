@@ -3,6 +3,7 @@ import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
 import { recordAnalystBundle, type RecordedAnalystBundleInput } from "./acquisition/recordedBundles";
+import { boundState, NOT_COMPUTED_BINDING } from "./notComputed";
 import type { AnalysisResult, QualifyingFlag } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -148,19 +149,21 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
   it("MSFT (§4.4 ruled) — option A renders a real range; option B carries no SECONDARY/UNVERIFIED/AI-EXTRACTED flag", async () => {
     const result = await openMsftRunWithRuling();
 
-    expect(result.trust.status).toBe("PARTIAL");
+    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — the fair-value range no
+    // longer presents MSFT_FIXTURE's own $265/$510/$650 as this real run's
+    // computed scenario values; it is honestly suppressed, and trust (§9.6
+    // rule 1) and Section G's scenario-values row follow that exactly as
+    // they already do for any other suppressed range.
+    expect(result.trust.status).toBe("UNUSABLE");
     expect(result.gates.gate1.state).toBeNull();
     expect(result.gates.gate1.filedYearsCount).toBe(13);
-    expect(result.fairValueRange.kind).toBe("range");
-    if (result.fairValueRange.kind === "range") {
-      expect(result.fairValueRange.bear.toFixed(2)).toBe("265.00");
-      expect(result.fairValueRange.bull.toFixed(2)).toBe("650.00");
-      expect(result.fairValueRange.weightedValueInside.toDecimalPlaces(2).toString()).toBe("475");
-      expect(result.fairValueRange.scenarioLabelsWarning).toBe(true);
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    if (result.fairValueRange.kind === "suppressed") {
+      expect(result.fairValueRange.cause).toContain("scenario dollar values");
     }
-    expect(result.scenarioOutputs.values.bear.toFixed(2)).toBe("265.00");
-    expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("510.00");
-    expect(result.scenarioOutputs.values.bull.toFixed(2)).toBe("650.00");
+    expect(result.scenarioOutputs.values.bear.isNaN()).toBe(true);
+    expect(result.scenarioOutputs.values.base.isNaN()).toBe(true);
+    expect(result.scenarioOutputs.values.bull.isNaN()).toBe(true);
     expect(result.states.qualifying.map((q) => q.flag)).toEqual(["MARGIN AT HISTORICAL HIGH"]);
     expect(provenanceQualifierFlagsPresent(result.states.qualifying)).toEqual([]);
     expect(result.facts).toHaveLength(20);
@@ -169,7 +172,7 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
     expect(result.facts.filter((f) => f.verificationState === "NOT CONFIRMED")).toHaveLength(0);
   });
 
-  it("OKLO (unchanged) — option A's rendered range is suppressed, but the raw scenario dispersion still computes; SHORT HISTORY is the only carried flag, and trust is already UNUSABLE before it is ever read", async () => {
+  it("OKLO (unchanged) — option A's rendered range is suppressed and the raw scenario dispersion is honestly NOT COMPUTED (A4); SHORT HISTORY is the only carried flag, and trust is already UNUSABLE before it is ever read", async () => {
     const result = await openOkloRunUnchanged();
 
     expect(result.gates.gate1.state).toBe("SHORT HISTORY");
@@ -178,14 +181,19 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
     if (result.fairValueRange.kind === "suppressed") {
       expect(result.fairValueRange.state).toBe("LEVERAGE UNSUPPORTED IN v1");
     }
-    // Option A's raw dispersion reading is available even though the
-    // rendered FairValueRange is not — the pre-revenue scenario values
-    // compute independent of the leverage suppression that removes the
-    // range itself.
-    expect(result.scenarioOutputs.values.bear.toFixed(2)).toBe("3.10");
-    expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("31.00");
-    expect(result.scenarioOutputs.values.bull.toFixed(2)).toBe("48.00");
-    expect(result.scenarioOutputs.weightedDistribution.toFixed(2)).toBe("27.37");
+    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01, REVIEW-38537849376-1 CORRECT) —
+    // option A's raw dispersion reading is no longer available: those
+    // $3.10/$31/$48 values are OKLO_FIXTURE's own validation constants, not
+    // a computation over this real run, so they are honestly NOT COMPUTED
+    // the same way MSFT's are, rather than surfacing as a real dispersion
+    // reading the leverage suppression merely hides from the headline range.
+    expect(result.scenarioOutputs.values.bear.isNaN()).toBe(true);
+    expect(result.scenarioOutputs.values.base.isNaN()).toBe(true);
+    expect(result.scenarioOutputs.values.bull.isNaN()).toBe(true);
+    expect(result.scenarioOutputs.weightedDistribution.isNaN()).toBe(true);
+    const bound = boundState(result.states, NOT_COMPUTED_BINDING.scenarioValues);
+    expect(bound?.state).toBe("INCOMPLETE");
+    expect(bound?.cause).toMatch(/M5\/M7 validation fixture/);
 
     expect(result.states.qualifying.map((q) => q.flag)).toEqual(["SHORT HISTORY"]);
     expect(provenanceQualifierFlagsPresent(result.states.qualifying)).toEqual([]);

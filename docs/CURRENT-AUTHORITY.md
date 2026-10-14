@@ -38,7 +38,8 @@ summarises.
   reconstruction matches a fresh Project Home read field-for-field; `BUILD.md`
   and `OWNER.md` are where these fields get produced and kept current.
 - **Finance semantics** (what a metric means, how it's computed, what counts
-  as correct) → current Cal Finance Methodology.
+  as correct) → current
+  [Cal Finance — Methodology](https://app.notion.com/p/3d20ca9a8fd08144ad14e66530f86e30).
 - **Settled product semantics / Calvin rulings** →
   [`docs/product-decisions.md`](product-decisions.md).
 - **Strategic sequencing** (what's next and why, beyond one bounded task) →

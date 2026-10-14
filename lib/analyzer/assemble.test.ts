@@ -880,3 +880,119 @@ describe("assembleAnalysisResult — dynamic scenario values (null fixture.scena
     expect(boundState(result.states, NOT_COMPUTED_BINDING.scenarioValues)).toBeNull();
   });
 });
+
+// ---------------------------------------------------------------------------
+// A2 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — multiples wiring. companyInputs.ts
+// sets multiplesInput.enterpriseValue to null on every real acquired run
+// ("filled by assemble from M1's own output"); until this fix nothing did
+// the filling, so EV/EBIT, EV/EBITDA and EV/Revenue were INCOMPLETE on
+// every acquired run regardless of whether the company actually had a
+// usable M1 enterprise value. MSFT_FIXTURE itself supplies a real
+// multiplesInput.enterpriseValue directly (fixtures/msft.ts), which is
+// exactly why this defect was invisible to every fixture-only test —
+// reproduced here by nulling it out, the one thing an acquired run does
+// differently.
+// ---------------------------------------------------------------------------
+describe("assembleAnalysisResult — M2 multiples read M1's own enterprise value (A2)", () => {
+  it("threads the computed EV into EV/EBIT, EV/EBITDA and EV/Revenue when multiplesInput supplies none of its own", () => {
+    const withM1EvOnly = {
+      ...MSFT_FIXTURE,
+      multiplesInput: { ...MSFT_FIXTURE.multiplesInput, enterpriseValue: null },
+    };
+    const result = assembleAnalysisResult(withM1EvOnly);
+    const withFixtureEv = assembleAnalysisResult(MSFT_FIXTURE);
+
+    expect(result.diagnostics.multiples.evToEbit.suppressed).toBe(false);
+    expect(result.diagnostics.multiples.evToEbitda.suppressed).toBe(false);
+    expect(result.diagnostics.multiples.evToRevenue.value.suppressed).toBe(false);
+
+    // The SAME figures the fixture's own direct enterpriseValue already
+    // produced — M1's bridge and the fixture's own constant agree exactly
+    // (fixtures/msft.ts derives both from the same inputs), so this proves
+    // the computed EV is actually reaching the multiple, not merely present.
+    if (!result.diagnostics.multiples.evToEbit.suppressed && !withFixtureEv.diagnostics.multiples.evToEbit.suppressed) {
+      expect(result.diagnostics.multiples.evToEbit.value.toString()).toBe(
+        withFixtureEv.diagnostics.multiples.evToEbit.value.toString()
+      );
+    }
+  });
+
+  it("still fails each EV-based multiple closed, independently, when its OTHER required operand is missing — never fabricates EBITDA", () => {
+    const fixture = {
+      ...MSFT_FIXTURE,
+      multiplesInput: { ...MSFT_FIXTURE.multiplesInput, enterpriseValue: null, ebitda: null },
+    };
+    const result = assembleAnalysisResult(fixture);
+
+    expect(result.diagnostics.multiples.evToEbit.suppressed).toBe(false);
+    expect(result.diagnostics.multiples.evToEbitda.suppressed).toBe(true);
+  });
+
+  it("stays INCOMPLETE where M1 itself is suppressed — never a zero enterprise value substituted in", () => {
+    const fixture = {
+      ...MSFT_FIXTURE,
+      multiplesInput: { ...MSFT_FIXTURE.multiplesInput, enterpriseValue: null },
+      enterpriseValue: { ...MSFT_FIXTURE.enterpriseValue, totalDebt: null },
+    };
+    const result = assembleAnalysisResult(fixture);
+
+    expect(result.diagnostics.multiples.evToEbit.suppressed).toBe(true);
+  });
+
+  it("a fixture's own directly-supplied multiplesInput.enterpriseValue still wins — never overridden by M1's", () => {
+    // MSFT_FIXTURE supplies its own value already; confirm the fix's `??`
+    // reads it first rather than preferring M1's bridge regardless.
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+    expect(result.diagnostics.multiples.evToEbit.suppressed).toBe(false);
+    if (!result.diagnostics.multiples.evToEbit.suppressed) {
+      expect(result.diagnostics.multiples.evToEbit.value.toString()).not.toBe("0");
+    }
+  });
+});
+
+// ---------------------------------------------------------------------------
+// A3 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — the implied exit-multiple
+// numerator. assemble.ts passed `currentEnterpriseValue` (TODAY's EV) to
+// computeImpliedExitMultiple, whose first parameter is named `terminalValue`
+// — a future-year DCF terminal valuation, never today's EV. The genuinely
+// corresponding figure is `fixture.terminalValuePv`, which is null on every
+// acquired run today (no acquisition-time terminal-value path exists yet —
+// see CompanyFixture.terminalValuePv's own doc comment) and null on both
+// hand-authored fixtures (MSFT_FIXTURE.terminalValuePv, OKLO_FIXTURE.
+// terminalValuePv) — so the honest state is NOT COMPUTED, not a same-period
+// approximation.
+// ---------------------------------------------------------------------------
+describe("assembleAnalysisResult — implied exit multiple divides terminal value, never today's EV (A3)", () => {
+  it("is suppressed INCOMPLETE on MSFT_FIXTURE — terminalValuePv is null, exactly as currentEnterpriseValue being real must not paper over", () => {
+    expect(MSFT_FIXTURE.terminalValuePv).toBeNull();
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+
+    expect(result.diagnostics.impliedExitMultiple.value.suppressed).toBe(true);
+    if (result.diagnostics.impliedExitMultiple.value.suppressed) {
+      expect(result.diagnostics.impliedExitMultiple.value.cause).toContain("terminalValue");
+    }
+  });
+
+  it("computes only from a real terminalValuePv, at the fixture's own current EV-derived enterprise value never substituted in", () => {
+    const terminalValuePv = new Decimal("5000");
+    const fixture = { ...MSFT_FIXTURE, terminalValuePv };
+    const result = assembleAnalysisResult(fixture);
+    const withoutTerminal = assembleAnalysisResult(MSFT_FIXTURE);
+
+    expect(result.diagnostics.impliedExitMultiple.value.suppressed).toBe(false);
+    if (!result.diagnostics.impliedExitMultiple.value.suppressed) {
+      const metric = MSFT_FIXTURE.impliedExitMultipleMetric.value!.value;
+      expect(result.diagnostics.impliedExitMultiple.value.value.toString()).toBe(
+        terminalValuePv.dividedBy(metric).toString()
+      );
+      // Genuinely different from what the old (wrong) current-EV numerator
+      // would have produced — proving this is really terminalValuePv in the
+      // numerator, not currentEnterpriseValue relabelled.
+      if (!withoutTerminal.diagnostics.impliedExitMultiple.value.suppressed) {
+        expect(result.diagnostics.impliedExitMultiple.value.value.toString()).not.toBe(
+          withoutTerminal.diagnostics.impliedExitMultiple.value.value.toString()
+        );
+      }
+    }
+  });
+});

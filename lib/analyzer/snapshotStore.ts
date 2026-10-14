@@ -25,7 +25,13 @@ const DECIMAL_TAG = "__decimal__";
  * string. Tagging first, in a walk that runs before JSON.stringify touches
  * the tree, is what makes the round trip exact rather than merely plausible.
  */
-function toStorable(value: unknown): unknown {
+/**
+ * Exported for `acquisition/aiProposedBundleSnapshot.ts` (A5,
+ * CF-ANALYZER-INTEGRITY-PHASE-A-01) — the identical round-trip problem
+ * (a Decimal-heavy tree that must survive a JSONB column exactly), reusing
+ * this one tagging scheme rather than inventing a second.
+ */
+export function toStorable(value: unknown): unknown {
   if (value === null || value === undefined) return null;
   if (value instanceof Decimal) return { [DECIMAL_TAG]: value.toString() };
   if (Array.isArray(value)) return value.map(toStorable);
@@ -39,7 +45,8 @@ function toStorable(value: unknown): unknown {
   return value;
 }
 
-function fromStorable(value: unknown): unknown {
+/** Exported alongside `toStorable` — see its own comment. */
+export function fromStorable(value: unknown): unknown {
   if (value === null || value === undefined) return value;
   if (Array.isArray(value)) return value.map(fromStorable);
   if (typeof value === "object") {

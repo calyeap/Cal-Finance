@@ -84,27 +84,28 @@ describe("CF-S44-RECORD-01 — MSFT's §4.4 ruling recorded on a real run", () =
     expect(result.gates.leverage.netDebtRatio!.lessThan(POLICY.leverageThreshold)).toBe(true);
   });
 
-  it("trust moves to PARTIAL, not CLEAN — RONIC, reinvestment, the FCF definitions and P/E stay independently INCOMPLETE", async () => {
+  it("trust is UNUSABLE — A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) honestly suppresses the range's validation-fixture-carried scenario values, never RONIC/reinvestment/FCF/P/E's own independent INCOMPLETE states", async () => {
     const result = await openMsftRunWithRuling();
 
-    expect(result.trust.status).toBe("PARTIAL");
-    expect(result.trust.status).not.toBe("CLEAN");
-    expect(result.trust.status).not.toBe("UNUSABLE");
+    expect(result.trust.status).toBe("UNUSABLE");
+    if (result.fairValueRange.kind === "suppressed") {
+      expect(result.fairValueRange.cause).toContain("scenario dollar values");
+    }
   });
 
-  it("the fair-value range unsuppresses into the ordinary bear/base/bull range, not suppressed", async () => {
+  it("the fair-value range stays honestly suppressed (A4) — never the validation fixture's $265/$510/$650 presented as this real run's computed range", async () => {
     const result = await openMsftRunWithRuling();
 
-    expect(result.fairValueRange.kind).toBe("range");
+    expect(result.fairValueRange.kind).toBe("suppressed");
   });
 
-  it("the verdict stays INCOMPLETE for the separate, already-frozen §10.6.2 reason — never the old LEVERAGE UNSUPPORTED IN v1 cause", async () => {
+  it("the verdict stays INCOMPLETE, now for A4's scenario-values cause — never the old LEVERAGE UNSUPPORTED IN v1 cause", async () => {
     const result = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
 
     expect(verdict.status).toBe("INCOMPLETE");
     expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
-    expect(verdict.reason).toContain("growth comparator");
+    expect(verdict.reason).toContain("scenario dollar values");
   });
 
   it("a selection combining the ruled tag with a narrower one double-counts — the ruled run never carries the all-candidates sum", async () => {

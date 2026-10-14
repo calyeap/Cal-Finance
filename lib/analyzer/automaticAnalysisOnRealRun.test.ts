@@ -232,10 +232,21 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
         // human confirmation (see analyzeByHand's doc comment), so its
         // automatic run no longer carries PROFILE NOT CONFIRMED the way the
         // explicit-Cannot-judge hand run still does.
-        expect(automatic.trust.status).toBe("PARTIAL");
+        // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — the fair-value range no
+        // longer renders MSFT_FIXTURE's own validation constants as this
+        // real run's computed scenario values, so the range is honestly
+        // suppressed and trust reflects that exactly as it already does for
+        // any other suppressed range (trust.ts rule 1).
+        expect(automatic.trust.status).toBe("UNUSABLE");
         expect(deriveVerdict(automatic).reason).not.toContain("PROFILE NOT CONFIRMED");
-        expect(byHand.trust.status).toBe("PARTIAL");
-        expect(deriveVerdict(byHand).reason).toContain("PROFILE NOT CONFIRMED");
+        expect(byHand.trust.status).toBe("UNUSABLE");
+        // verdict.ts checks trust.status === "UNUSABLE" before it ever
+        // reaches its own PROFILE NOT CONFIRMED check (line ~93) — A4 makes
+        // rule 1 fire for every MSFT real run, so this path is identical to
+        // the automatic one now; PROFILE NOT CONFIRMED's own verdict-reason
+        // precedence is independently covered with synthetic inputs in
+        // verdict.test.ts.
+        expect(deriveVerdict(byHand).reason).toContain("scenario dollar values");
       } else {
         // OKLO's range is already suppressed for an unrelated reason
         // (LEVERAGE UNSUPPORTED IN v1), so trust/verdict are unaffected and
@@ -262,12 +273,17 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
         // confirmation, so PROFILE NOT CONFIRMED no longer fires either —
         // INCOMPLETE now reads for the one real gap that remains: M8's
         // required-versus-achieved growth comparator has not been acquired.
+        // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — MSFT's fair-value range is
+        // now honestly suppressed rather than showing the validation
+        // fixture's own $265/$510/$650 as this real run's computed scenario
+        // values; trust and the verdict's own reason reflect that, the same
+        // existing mechanism any other suppressed range already uses.
         expect(result.gates.leverage.result).toBe("PASS");
-        expect(result.trust.status).toBe("PARTIAL");
-        expect(result.fairValueRange.kind).toBe("range");
+        expect(result.trust.status).toBe("UNUSABLE");
+        expect(result.fairValueRange.kind).toBe("suppressed");
         expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
         expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
-        expect(verdict.reason).toContain("growth comparator");
+        expect(verdict.reason).toContain("scenario dollar values");
       } else {
         // OKLO has zero tagged non-operating-investment candidates
         // (docs/m9-real-company-validation-findings.md), so no override —
@@ -312,7 +328,7 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
   // is MSFT's alone: the §4.4 ruling's recorded state is still reachable, and
   // still the same state, on top of an automatically analyzed run.
   // -------------------------------------------------------------------------
-  it("MSFT's recorded §4.4 state (CF-S44-RECORD-01) is unchanged — recording the ruling on the detail route still reaches PASS / PARTIAL / range", async () => {
+  it("MSFT's recorded §4.4 state (CF-S44-RECORD-01) is unchanged — recording the ruling on the detail route still reaches PASS leverage, and the EV bridge is unsuppressed, under A4's now-honestly-suppressed range", async () => {
     const runId = await createRun("MSFT", "Microsoft Corporation");
     await advanceRunAutomatically(runId);
 
@@ -327,8 +343,9 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
 
     const result = await computeAnalysisForRun(runId);
     expect(result.gates.leverage.result).toBe("PASS");
-    expect(result.trust.status).toBe("PARTIAL");
-    expect(result.fairValueRange.kind).toBe("range");
+    // A4 — see the shared block's identical assertion above.
+    expect(result.trust.status).toBe("UNUSABLE");
+    expect(result.fairValueRange.kind).toBe("suppressed");
 
     const ev = result.diagnostics.enterpriseValue;
     expect(ev.suppressed).toBe(false);
@@ -414,9 +431,18 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       expect(price.verificationOrigin).toBe("AUTOMATIC");
       expect(price.verificationReasonCode).toBe("CONTRADICTED BY SOURCE");
 
-      // §9.6 — and the run's own trust register names the fact, so the reason
-      // is not only on the fact row.
-      expect(result.trust.determinedBy.map((d) => d.detail)).toContain("Price is NOT CONFIRMED");
+      // §9.6 rule 1 (UNUSABLE, the fair-value range suppressed) now fires
+      // for every MSFT real run regardless of this cross-check (A4,
+      // CF-ANALYZER-INTEGRITY-PHASE-A-01: the range's validation-fixture-
+      // carried scenario values are honestly not computed here) and
+      // returns before rule 2 ever inspects facts — trust.ts's own
+      // documented "FIRST MATCH WINS" order, unchanged by this outcome.
+      // Rule 2's fact-level reasoning (including this exact "<name> is NOT
+      // CONFIRMED" detail) is independently covered end-to-end with
+      // synthetic inputs in trust.test.ts; this test keeps its real claim
+      // about the fact row itself, asserted above.
+      expect(result.trust.status).toBe("UNUSABLE");
+      expect(result.trust.determinedBy.map((d) => d.detail).join(" ")).toContain("scenario dollar values");
     });
   });
 

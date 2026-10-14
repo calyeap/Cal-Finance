@@ -1011,6 +1011,14 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
   // where this run has no price (modules/scenarioOutputs.ts), the same
   // treatment as rateAtWhichBaseEqualsPrice just above.
   const priceLocationWithinRangeState = boundState(states, NOT_COMPUTED_BINDING.priceLocationWithinRange);
+  // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — Section G's "Bear / base / bull
+  // values" row read `scenarioOutputs.values` directly, unconditionally,
+  // with no state check: the one §10 G figure that had no honest-absence
+  // guard despite `assemble.ts` already binding NOT_COMPUTED_BINDING.
+  // scenarioValues whenever those values are not a real computation for
+  // this run (includes the fixture-carried-validation case this outcome
+  // adds, not only the pre-existing AI-proposed-bundle-missing-inputs case).
+  const scenarioValuesState = boundState(states, NOT_COMPUTED_BINDING.scenarioValues);
   const baseRateCell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
   // `fairValueRange.kind === "range"` does not by itself imply a real price:
   // `assemble.ts`'s leverage precondition uses `fixture.leverage.
@@ -1245,9 +1253,13 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
               <tr>
                 <th scope="row">Bear / base / bull values</th>
                 <td>
-                  <span className="v">
-                    ${num(scenarioOutputs.values.bear, 0)} / ${num(scenarioOutputs.values.base, 0)} / ${num(scenarioOutputs.values.bull, 0)}
-                  </span>
+                  {scenarioValuesState !== null ? (
+                    <BoundStateBlock bound={scenarioValuesState} />
+                  ) : (
+                    <span className="v">
+                      ${num(scenarioOutputs.values.bear, 0)} / ${num(scenarioOutputs.values.base, 0)} / ${num(scenarioOutputs.values.bull, 0)}
+                    </span>
+                  )}
                 </td>
               </tr>
               <tr>
@@ -1262,7 +1274,11 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                   <div className="sub">display only, never a headline</div>
                 </th>
                 <td>
-                  <span className="v">${num(scenarioOutputs.weightedDistribution, 0)}</span>
+                  {scenarioValuesState !== null ? (
+                    <BoundStateBlock bound={scenarioValuesState} />
+                  ) : (
+                    <span className="v">${num(scenarioOutputs.weightedDistribution, 0)}</span>
+                  )}
                 </td>
               </tr>
               <tr>

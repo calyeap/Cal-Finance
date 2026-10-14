@@ -73,10 +73,17 @@ describe("§6.5 leverage on an acquired MSFT run", () => {
     expect(ratio.mul(100).toNumber()).toBeLessThan(1.1);
   });
 
-  it("still renders a fair-value range when nothing suppresses it (Fix 1 does not over-suppress)", async () => {
+  it("does not suppress the range FOR A LEVERAGE REASON when nothing about leverage suppresses it (Fix 1 does not over-suppress)", async () => {
     // The other half of Fix 1, on real data: a run whose gates all pass must
-    // keep its range. A fix that removed the range everywhere would pass every
-    // suppression test in this milestone and be just as wrong.
+    // not have ITS LEVERAGE GATE be why the range is gone. A fix that
+    // suppressed on leverage everywhere would pass every suppression test in
+    // this milestone and be just as wrong.
+    //
+    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) separately and correctly
+    // suppresses MSFT's real-run range for an unrelated reason — its
+    // scenario dollar values are carried from the validation fixture, not
+    // computed for this real acquired report — so the range IS suppressed
+    // here now, but never attributes that to leverage.
     const run = await buildAcquiredRun({
       ticker: "MSFT",
       price: { value: MSFT_CAPTURE_CLOSE, timestamp: "2026-09-04", source: "recorded capture" },
@@ -89,8 +96,11 @@ describe("§6.5 leverage on an acquired MSFT run", () => {
 
     expect(result.gates.gate0.result).toBe("PASS");
     expect(result.gates.leverage.result).toBe("PASS");
-    expect(result.fairValueRange.kind).not.toBe("suppressed");
-    expect(result.trust.status).not.toBe("UNUSABLE");
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    if (result.fairValueRange.kind === "suppressed") {
+      expect(result.fairValueRange.state).not.toBe("LEVERAGE UNSUPPORTED IN v1");
+      expect(result.fairValueRange.cause).toContain("scenario dollar values");
+    }
   });
 
   it("still fails closed where the EV bridge is genuinely INCOMPLETE (§5.3, V8)", async () => {

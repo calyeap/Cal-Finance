@@ -181,6 +181,23 @@ export interface CompanyFixture {
   // model. An explicit analyst bundle (MSFT, NVDA) still supplies these
   // directly and always overrides the dynamic computation.
   scenarioValues: { bear: Decimal; base: Decimal; bull: Decimal } | null;
+  // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — true only where the explicit
+  // dollar values above are carried from a COMMITTED VALIDATION FIXTURE
+  // (analystInputs.ts's MSFT/OKLO bundles: MSFT_FIXTURE's own hardcoded
+  // 265/510/650), supplied to a REAL acquired run rather than to the
+  // fixture's own direct unit/snapshot tests. Those numbers were never a
+  // computed fair value for the real company and must never be shown as
+  // one: when true, assembly treats `scenarioValues` as absent AND refuses
+  // the M15 dynamic fallback too (the fallback's own drivers are the SAME
+  // validation-fixture authorship, so it would only substitute a different
+  // fictional number for a real company's report) — it reports the
+  // fair-value range NOT COMPUTED through the existing missing-REQUIRED-
+  // input mechanism, never a speculative second valuation. Absent/false
+  // everywhere else: every hand-authored fixture (MSFT_FIXTURE/OKLO_FIXTURE
+  // used directly in assemble.test.ts/AnalyzerReport.test.tsx), every
+  // recorded human-approved analyst bundle, and every AI-proposed bundle
+  // (whose scenarioValues is already null) are unaffected.
+  scenarioValuesAreFixtureCarried?: boolean;
   // null where the fixture has no real revaluation-at-rate solver — see
   // computeScenarioOutputs's own doc comment (CB-AUDIT-01 H2). Never a
   // placeholder formula standing in for one.
@@ -340,8 +357,20 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   });
 
   // --- M2 — multiples --------------------------------------------------------
+  //
+  // Same seam as §6.5's leverage precondition and M7's reverse-DCF grid,
+  // above: companyInputs.ts sets `multiplesInput.enterpriseValue` to null
+  // because it is filled by assemble from M1's own output, and until this
+  // fix nothing did the filling here — so every acquired run returned
+  // EV/EBIT, EV/EBITDA and EV/Revenue INCOMPLETE regardless of whether the
+  // company actually had a usable enterprise value. The fixture's own value
+  // still wins where it supplies one (A2); where M1 is itself suppressed,
+  // `currentEnterpriseValue` is null and each EV-based multiple fails closed
+  // exactly as before — missing EBIT/EBITDA/revenue still independently
+  // suppresses its own multiple without touching the others.
   const multiples = computeMultiples({
     ...fixture.multiplesInput,
+    enterpriseValue: fixture.multiplesInput.enterpriseValue ?? currentEnterpriseValue,
     gate1State: gate1.state,
     triggerBFired: triggerB.fired,
   });
@@ -424,8 +453,21 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   });
 
   // --- M9 — implied exit multiple, labelled by the metric it actually divides
+  //
+  // A3 correction: `computeImpliedExitMultiple`'s first parameter is named
+  // `terminalValue` — the DCF's own terminal valuation — not today's
+  // enterprise value. `currentEnterpriseValue` was being passed here, which
+  // silently computed "today's EV ÷ a future year's metric" and called it an
+  // implied EXIT multiple. The genuinely corresponding figure is
+  // `fixture.terminalValuePv` (M8's terminal PV, from the same approved DCF
+  // path `computeTerminalDiagnostics` reads below) — which is null for every
+  // acquired run today (see `CompanyFixture.terminalValuePv`'s own doc
+  // comment: no acquisition-time terminal-value path is wired yet). Null
+  // input correctly suppresses this diagnostic as INCOMPLETE/NOT COMPUTED
+  // rather than substituting a same-period approximation.
+  const terminalValuePvSourced = fixture.terminalValuePv !== null ? sourced(fixture.terminalValuePv) : null;
   const impliedExitMultiple = computeImpliedExitMultiple(
-    currentEnterpriseValue,
+    terminalValuePvSourced,
     fixture.impliedExitMultipleMetric.value,
     fixture.impliedExitMultipleMetric.metricName
   );
@@ -562,7 +604,13 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // itself missing — scenarioValuesMissing names which, and the fair-value
   // range reports INCOMPLETE exactly as it already does for any other
   // missing REQUIRED input of it.
-  let scenarioValuesMissing: string | null = null;
+  // A4 — see `CompanyFixture.scenarioValuesAreFixtureCarried`'s own doc
+  // comment. Checked before either `fixture.scenarioValues` or the dynamic
+  // fallback below is read, so a fixture-carried real run reaches neither.
+  const scenarioValuesBlockedAsFixtureCarried = fixture.scenarioValuesAreFixtureCarried === true;
+  let scenarioValuesMissing: string | null = scenarioValuesBlockedAsFixtureCarried
+    ? "this run's scenario dollar values are carried from the M5/M7 validation fixture (analystInputs.ts), not computed for this real acquired report — no acquisition-time valuation path supplies them yet (A4, CF-ANALYZER-INTEGRITY-PHASE-A-01)"
+    : null;
   const dynamicScenarioValue = (key: keyof ScenarioSet): Decimal => {
     const driver = fixture.scenarios[key];
     if (baseRevenueSourced === null) {
@@ -605,14 +653,15 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   };
 
   const dynamicScenarioValues =
-    fixture.scenarioValues === null
+    fixture.scenarioValues === null && !scenarioValuesBlockedAsFixtureCarried
       ? { bear: dynamicScenarioValue("bear"), base: dynamicScenarioValue("base"), bull: dynamicScenarioValue("bull") }
       : null;
 
+  const effectiveScenarioValues = scenarioValuesBlockedAsFixtureCarried ? null : fixture.scenarioValues;
   const scenarioOutputs = computeScenarioOutputs({
-    bearValue: fixture.scenarioValues?.bear ?? dynamicScenarioValues?.bear ?? new Decimal(NaN),
-    baseValue: fixture.scenarioValues?.base ?? dynamicScenarioValues?.base ?? new Decimal(NaN),
-    bullValue: fixture.scenarioValues?.bull ?? dynamicScenarioValues?.bull ?? new Decimal(NaN),
+    bearValue: effectiveScenarioValues?.bear ?? dynamicScenarioValues?.bear ?? new Decimal(NaN),
+    baseValue: effectiveScenarioValues?.base ?? dynamicScenarioValues?.base ?? new Decimal(NaN),
+    bullValue: effectiveScenarioValues?.bull ?? dynamicScenarioValues?.bull ?? new Decimal(NaN),
     // Equal-weight, summing to 1 — display only, never a headline. Was
     // {1,1,1}, which sums to 3 and turned the weighted average into a
     // plain sum (B1, third-pass fix; authorised for this one line only).
@@ -762,6 +811,19 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         NOT_COMPUTED_BINDING.priceLocationWithinRange,
         "INCOMPLETE",
         "missing REQUIRED input: a price for this run — none was available, so today's price has no position to report within the scenario range"
+      )
+    );
+  } else if (scenarioOutputs.priceLocationWithinRange.isNaN()) {
+    // A4 — a real price but NaN bear/bull values (scenarioValuesMissing above:
+    // either an AI-proposed bundle's own missing drivers, pre-existing, or
+    // this outcome's fixture-carried-validation block) has no real range to
+    // locate the price within. Same binding/cause family as the null case
+    // above — never a rendered "NaN%".
+    suppressing.push(
+      notComputed(
+        NOT_COMPUTED_BINDING.priceLocationWithinRange,
+        "INCOMPLETE",
+        scenarioValuesMissing ?? "the scenario bear/bull values this position would be located within are not computed"
       )
     );
   }

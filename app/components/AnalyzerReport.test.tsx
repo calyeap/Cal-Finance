@@ -1053,3 +1053,81 @@ describe("AnalyzerReport — company-scale dollar figures render compact, never 
     expect(section.textContent).not.toMatch(/\$\d{10,}/);
   });
 });
+
+// ---------------------------------------------------------------------------
+// A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — Section G's "Bear / base / bull
+// values" and "Scenario-weighted value" rows read scenarioOutputs.values/
+// weightedDistribution directly, unconditionally, with no honest-absence
+// guard — the one spot MSFT_FIXTURE's own $265/$510/$650 (and derived
+// $475 weighted value) would have reached a REAL acquired run's page
+// looking exactly like a computed figure. scenarioValuesAreFixtureCarried
+// is never set on MSFT_FIXTURE itself (so every OTHER test in this file,
+// which renders that fixture directly, is unaffected) — it is set only by
+// companyInputs.ts on a real acquired run's own CompanyFixture, reproduced
+// here the same way assemble.test.ts's A2/A3 tests reproduce an acquired
+// run's shape: by overriding the one field a real run sets differently.
+// ---------------------------------------------------------------------------
+describe("AnalyzerReport — Section G scenario-values row, honestly suppressed on a fixture-carried real run (A4)", () => {
+  it("renders the real $265/$510/$650 figures and $475 weighted value on the ordinary MSFT fixture — unaffected by A4", () => {
+    const result = assembleAnalysisResult(MSFT_FIXTURE);
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#G") as HTMLElement;
+
+    expect(valueOf(section, "Bear / base / bull values").textContent).toContain("$265");
+    expect(valueOf(section, "Scenario-weighted value").textContent).toContain("$475");
+  });
+
+  it("renders NOT COMPUTED, never the validation fixture's $265/$510/$650, when this run's scenario values are fixture-carried", () => {
+    const result = assembleAnalysisResult({
+      ...MSFT_FIXTURE,
+      scenarioValuesAreFixtureCarried: true,
+    });
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#G") as HTMLElement;
+
+    const bearBaseBullCell = valueOf(section, "Bear / base / bull values");
+    expect(bearBaseBullCell.textContent).not.toContain("265");
+    expect(bearBaseBullCell.textContent).not.toContain("650");
+    expect(bearBaseBullCell.textContent).toMatch(/INCOMPLETE/);
+
+    const weightedCell = valueOf(section, "Scenario-weighted value");
+    expect(weightedCell.textContent).not.toContain("475");
+    expect(weightedCell.textContent).toMatch(/INCOMPLETE/);
+
+    // The disclosed cause names the real source.
+    expect(section.textContent).toMatch(/validation fixture/);
+  });
+
+  // REVIEW-38537849376-1 (CORRECT) — the same harm A4 targets for MSFT
+  // reaches OKLO's page too: OKLO's headline fair-value diagnostic is the
+  // honest pre-revenue-distribution shape and never reads `scenarioValues`,
+  // but Section G's secondary "Scenario outputs" row and the price-location
+  // diagnostic both read `scenarioOutputs.values`/`priceLocationWithinRange`,
+  // which are built from the SAME fixture-carried validation set. Reproduced
+  // the same way as the MSFT case above: by overriding the one field a real
+  // OKLO run sets differently from OKLO_FIXTURE's own direct unit tests.
+  it("OKLO: renders NOT COMPUTED, never the validation fixture's $3.10/$31/$48 or a price-location %, when this run's scenario values are fixture-carried", () => {
+    const result = assembleAnalysisResult({
+      ...OKLO_FIXTURE,
+      scenarioValuesAreFixtureCarried: true,
+    });
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#G") as HTMLElement;
+
+    const bearBaseBullCell = valueOf(section, "Bear / base / bull values");
+    expect(bearBaseBullCell.textContent).not.toContain("3.10");
+    expect(bearBaseBullCell.textContent).not.toContain("31");
+    expect(bearBaseBullCell.textContent).not.toContain("48");
+    expect(bearBaseBullCell.textContent).toMatch(/INCOMPLETE/);
+
+    const weightedCell = valueOf(section, "Scenario-weighted value");
+    expect(weightedCell.textContent).not.toContain("27");
+    expect(weightedCell.textContent).toMatch(/INCOMPLETE/);
+
+    const locationCell = valueOf(section, "Location of current price within the scenario range");
+    expect(locationCell.textContent).not.toMatch(/\d+%/);
+    expect(locationCell.textContent).toMatch(/INCOMPLETE/);
+
+    expect(section.textContent).toMatch(/validation fixture/);
+  });
+});

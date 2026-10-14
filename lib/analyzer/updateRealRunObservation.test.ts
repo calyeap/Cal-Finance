@@ -138,18 +138,18 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
           // override (Calvin ruling 2) now resolves MSFT's enterprise
           // value/leverage on this automatically-driven run, exactly as
           // automaticAnalysisOnRealRun.test.ts's "still reads INCOMPLETE"
-          // case independently proves. `openObservedRun` records no human
-          // profile confirmation, but the RM-brief ruling's automatic-
-          // profile-confirmation fix (item 2) means this run's Gate 0 PASS
-          // now stands in for one, so PROFILE NOT CONFIRMED no longer fires
-          // either — this run's own INCOMPLETE reason is now the one real
-          // gap that remains: M8's required-versus-achieved growth
-          // comparator has not been acquired.
+          // case independently proves. A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01)
+          // now suppresses MSFT's fair-value range unconditionally (its
+          // scenario dollar values are the validation fixture's, never a
+          // real computation for this real run), and verdict.ts/trust.ts
+          // both read that before they would ever reach PROFILE NOT
+          // CONFIRMED or the growth-comparator fallback — so this run's own
+          // INCOMPLETE reason is now A4's.
           expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
-          expect(verdict.reason).toContain("growth comparator");
-          expect(result.trust.status).toBe("PARTIAL");
+          expect(verdict.reason).toContain("scenario dollar values");
+          expect(result.trust.status).toBe("UNUSABLE");
           expect(result.gates.leverage.result).toBe("PASS");
-          expect(result.fairValueRange.kind).toBe("range");
+          expect(result.fairValueRange.kind).toBe("suppressed");
           expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
         } else {
           // OKLO has zero tagged non-operating-investment candidates
