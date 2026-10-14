@@ -168,6 +168,20 @@ function msftBundle(): AnalystInputBundle {
  * second as a finding about the company. Supplied here as absent instead, so
  * both report INCOMPLETE. The fixture itself is untouched: it reproduces the
  * mock, and its placeholders are part of what it reproduces against.
+ *
+ * `scenarioValuesAreFixtureCarried` is left at `bundleFrom`'s own default
+ * (`true`), not overridden to `false` here (REVIEW-38537849376-1, CORRECT):
+ * OKLO's headline fair-value diagnostic is the honest `pre-revenue-
+ * distribution` cash-floor/success-range shape and never reads
+ * `scenarioValues`, but Section G's secondary "Scenario outputs" row and the
+ * price-location diagnostic do read `scenarioOutputs.values`/
+ * `priceLocationWithinRange` — both derived from this same fixture-carried
+ * validation set — so leaving the override at `false` let OKLO_FIXTURE's own
+ * $3.10/$31/$48 and a real price's location within them reach a real run's
+ * page exactly as the committed MSFT constants did before A4. Inheriting
+ * `true` routes both through the same existing NOT_COMPUTED_BINDING.
+ * scenarioValues / .priceLocationWithinRange suppression `bundleFrom`'s
+ * default already drives for MSFT — no new mechanism.
  */
 function okloBundle(): AnalystInputBundle {
   const bundle = bundleFrom(OKLO_FIXTURE);
@@ -182,21 +196,6 @@ function okloBundle(): AnalystInputBundle {
         bull: { ...s.bull, ...unauthored },
       },
       revalueBaseCaseAtRate: null,
-      // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) deliberately does NOT extend
-      // to OKLO, unlike `bundleFrom`'s own default: OKLO is pre-revenue, so
-      // its real headline fair-value diagnostic is already the honest
-      // `pre-revenue-distribution` cash-floor/success-range shape
-      // (assemble.ts) and never reads `scenarioValues` at all — the harm
-      // A4 targets (a validation constant shown as a real company's
-      // computed fair value) does not occur for OKLO's own report. Section
-      // G's secondary "Scenario outputs" row is the one place OKLO's own
-      // fixture-carried $3.10/$31/$48 reach the UI, and it is already
-      // labelled "distribution is display only, never a headline" —
-      // forcing it to NOT COMPUTED here would also break
-      // scenarioOutputs.values' NaN round-trip through JSON snapshot
-      // storage (a separate, pre-existing serialization gap, out of this
-      // outcome's bounded scope).
-      scenarioValuesAreFixtureCarried: false,
     },
     note:
       bundle.note +

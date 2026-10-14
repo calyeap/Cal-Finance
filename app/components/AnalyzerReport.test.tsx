@@ -1097,4 +1097,37 @@ describe("AnalyzerReport — Section G scenario-values row, honestly suppressed 
     // The disclosed cause names the real source.
     expect(section.textContent).toMatch(/validation fixture/);
   });
+
+  // REVIEW-38537849376-1 (CORRECT) — the same harm A4 targets for MSFT
+  // reaches OKLO's page too: OKLO's headline fair-value diagnostic is the
+  // honest pre-revenue-distribution shape and never reads `scenarioValues`,
+  // but Section G's secondary "Scenario outputs" row and the price-location
+  // diagnostic both read `scenarioOutputs.values`/`priceLocationWithinRange`,
+  // which are built from the SAME fixture-carried validation set. Reproduced
+  // the same way as the MSFT case above: by overriding the one field a real
+  // OKLO run sets differently from OKLO_FIXTURE's own direct unit tests.
+  it("OKLO: renders NOT COMPUTED, never the validation fixture's $3.10/$31/$48 or a price-location %, when this run's scenario values are fixture-carried", () => {
+    const result = assembleAnalysisResult({
+      ...OKLO_FIXTURE,
+      scenarioValuesAreFixtureCarried: true,
+    });
+    const { container } = render(<AnalyzerReport result={result} />);
+    const section = container.querySelector("section#G") as HTMLElement;
+
+    const bearBaseBullCell = valueOf(section, "Bear / base / bull values");
+    expect(bearBaseBullCell.textContent).not.toContain("3.10");
+    expect(bearBaseBullCell.textContent).not.toContain("31");
+    expect(bearBaseBullCell.textContent).not.toContain("48");
+    expect(bearBaseBullCell.textContent).toMatch(/INCOMPLETE/);
+
+    const weightedCell = valueOf(section, "Scenario-weighted value");
+    expect(weightedCell.textContent).not.toContain("27");
+    expect(weightedCell.textContent).toMatch(/INCOMPLETE/);
+
+    const locationCell = valueOf(section, "Location of current price within the scenario range");
+    expect(locationCell.textContent).not.toMatch(/\d+%/);
+    expect(locationCell.textContent).toMatch(/INCOMPLETE/);
+
+    expect(section.textContent).toMatch(/validation fixture/);
+  });
 });
