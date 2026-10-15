@@ -185,6 +185,12 @@ const ALLOWED_DRAFT_REFERENCES = new Set([
   // explaining where the durably-seeded values came from, never imports or
   // reads the artefact file itself at runtime.
   "migrations/008_nvda_recorded_bundle_seed.sql",
+  // CF-MSFT-STEP7-SOURCED-DRAFT-01 (issue #435) — this regex's own
+  // `analyst-drafts` alternative matches ANY file naming that directory,
+  // not only the NVDA one; the companion MSFT draft's own validation test
+  // cites its own draft's path in prose the same way every entry above
+  // does, never importing it.
+  "lib/analyzer/acquisition/msftAnalystDraftValidation.test.ts",
 ]);
 
 function findDraftReferences(dir: string, results: string[]): void {
