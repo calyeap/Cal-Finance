@@ -5,6 +5,7 @@ import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } 
 import { computeAnalysisForRun, loadGateState } from "../gate";
 import { recordAnalystBundle, hasRecordedAnalystBundle, type RecordedAnalystBundleInput } from "./recordedBundles";
 import { computeScenarioEnterpriseValue } from "../modules/scenarioOutputs";
+import type { TwoWayTableResult } from "../modules/sensitivity";
 import { buildFixedShapeGrowthPath } from "../growthPath";
 import { POLICY } from "../policy";
 
@@ -283,6 +284,37 @@ describe("CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 — bounded net-of-D&A / positi
     expect(result.scenarios.bear.terminalRoic?.toString()).toBe("0.1");
     expect(result.scenarios.base.terminalRoic?.toString()).toBe("0.11");
     expect(result.scenarios.bull.terminalRoic?.toString()).toBe("0.125");
+
+    // REVIEW-38749099399-1, CORRECT — M14's sensitivity tornado/two-way
+    // machinery (assemble.ts's own `scenarioValueAt` closure, ~L564-573) is
+    // the OTHER real production call site of computeScenarioEnterpriseValue
+    // besides M15's dynamicScenarioValue (assemble.ts:656-665) proved above.
+    // `sensitivityRangesFor` is non-null only for MSFT, so MSFT is the one
+    // ticker where a mismatch between the two call sites would silently
+    // compute the tornado/growth-margin table on the stale r+3pp=13% default
+    // while the headline base scenario uses this candidate's own 11%. Proves
+    // the forward: every cell of the growth x margin table equals the SAME
+    // production function, called with the base scenario's own terminalRoic,
+    // never read back from assemble.ts's own output.
+    const twoWayGrowthMargin = result.diagnostics.sensitivity.twoWayGrowthMargin as TwoWayTableResult;
+    expect(twoWayGrowthMargin.available).toBe(true);
+    if (!twoWayGrowthMargin.available) return;
+    const { rowValues: m14Growth, columnValues: m14Margin, cells: m14Cells } = twoWayGrowthMargin;
+    for (let i = 0; i < m14Growth.length; i++) {
+      for (let j = 0; j < m14Margin.length; j++) {
+        const expectedCell = computeScenarioEnterpriseValue(
+          baseRevenue.value,
+          buildFixedShapeGrowthPath(m14Growth[i]),
+          m14Margin[j],
+          new Decimal("0.20"), // the candidate's own base reinvestmentCapitalIntensity
+          POLICY.rateGrid[1],
+          nopatTaxRate,
+          undefined,
+          new Decimal("0.11") // the candidate's own base terminalRoic
+        ).toString();
+        expect(m14Cells[i][j].toString()).toBe(expectedCell);
+      }
+    }
   });
 
   it("regression — a bundle recorded with no terminalRoic on any scenario (every other existing recorded/fixture bundle in this codebase, MSFT's own committed fixture and NVDA's migration-008 seed included) computes IDENTICALLY to before this outcome's plumbing change", async () => {
@@ -334,5 +366,30 @@ describe("CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 — bounded net-of-D&A / positi
       .dividedBy(new Decimal(dilutedShares))
       .toString();
     expect(result.fairValueRange.bear.toString()).toBe(expectedBear);
+
+    // REVIEW-38749099399-1, CORRECT — the negative half, for M14: with no
+    // terminalRoic authored anywhere (this test's own bundle), the growth x
+    // margin table's cells must stay EXACTLY the old r+3pp=13% default —
+    // unchanged from before this outcome's plumbing change, on the SAME
+    // production call site the positive-case test above just proved forwards
+    // a candidate's terminalRoic when one IS authored.
+    const twoWayGrowthMargin = result.diagnostics.sensitivity.twoWayGrowthMargin as TwoWayTableResult;
+    expect(twoWayGrowthMargin.available).toBe(true);
+    if (!twoWayGrowthMargin.available) return;
+    const { rowValues: m14Growth, columnValues: m14Margin, cells: m14Cells } = twoWayGrowthMargin;
+    for (let i = 0; i < m14Growth.length; i++) {
+      for (let j = 0; j < m14Margin.length; j++) {
+        const expectedCell = computeScenarioEnterpriseValue(
+          baseRevenue.value,
+          buildFixedShapeGrowthPath(m14Growth[i]),
+          m14Margin[j],
+          new Decimal("0.20"), // the candidate's own base reinvestmentCapitalIntensity
+          POLICY.rateGrid[1],
+          nopatTaxRate
+          // terminalGrowth/terminalRoic omitted — EXACTLY the prior r+3pp behaviour.
+        ).toString();
+        expect(m14Cells[i][j].toString()).toBe(expectedCell);
+      }
+    }
   });
 });

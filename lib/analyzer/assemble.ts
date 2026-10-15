@@ -569,7 +569,8 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
               sensitivityBaseCapitalIntensity,
               rate,
               nopatTaxRateForRun,
-              terminalGrowth
+              terminalGrowth,
+              sensitivityBaseScenario.terminalRoic
             );
           const baseCaseValue = scenarioValueAt(sensitivityBaseGrowth, sensitivityBaseMargin);
 
