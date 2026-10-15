@@ -695,8 +695,53 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     !scenarioValuesBlockedAsFixtureCarried &&
     fixture.recordedScenarioValuesComputeFromDrivers === true;
 
+  // CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 (REVIEW-38680230521-1, CORRECT) —
+  // `driver.shareCount` inside `dynamicScenarioValue` above divides a
+  // raw-USD equity value, so it must be this run's own absolute diluted
+  // share count. On the recorded-bundle entry path (recordedBundles.ts)
+  // that field carries no stored unit contract — an analyst can type "7430"
+  // meaning millions or "24.1" meaning billions, not the raw count — and
+  // nothing before this outcome caught the mismatch (test 4's own
+  // recomputation repeated the identical division, so it agreed with the
+  // error instead of catching it). Checked only for a fully-driven recorded
+  // bundle: an AI-proposed bundle's own `shareCount` is a buyback/dilution
+  // MULTIPLE of the current share count, already converted to an absolute,
+  // correctly-scaled count by aiProposedBundle.ts's `toScenarioDriverInputs`
+  // before it ever reaches here, and is deliberately allowed to differ
+  // across bear/base/bull (CF-ANALYZER-V1-SETTLE-01) — untouched by this
+  // check.
+  //
+  // `dilutedSharesForRun` is this run's own M1 quantity, read back the same
+  // way `netDebtBridge` above already inverts M1's enterprise-value formula
+  // rather than re-deriving a second one (marketCap = dilutedShares * price,
+  // so dilutedShares = marketCap / price). The band is a plumbing sanity
+  // bound — not a finance assumption and never used to pick or weight a
+  // valuation — wide enough for ordinary drift between when the bundle was
+  // recorded and this run's own as-of date, and more than tight enough to
+  // catch a thousand- or billion-scale unit mistake, which misses it by many
+  // orders of magnitude.
+  const dilutedSharesForRun: Decimal | null =
+    currentMarketCap !== null && currentPrice !== null && !currentPrice.isZero()
+      ? currentMarketCap.dividedBy(currentPrice)
+      : null;
+  const RECORDED_SHARE_COUNT_SANITY_BAND = { lo: new Decimal("0.8"), hi: new Decimal("1.2") };
+  const recordedShareCountImplausible =
+    recordedBundleFullyDriven &&
+    dilutedSharesForRun !== null &&
+    (["bear", "base", "bull"] as const).some((key) => {
+      const ratio = fixture.scenarios[key].shareCount.dividedBy(dilutedSharesForRun);
+      return ratio.lessThan(RECORDED_SHARE_COUNT_SANITY_BAND.lo) || ratio.greaterThan(RECORDED_SHARE_COUNT_SANITY_BAND.hi);
+    });
+
   let dynamicScenarioValues: { bear: Decimal; base: Decimal; bull: Decimal } | null = null;
-  if ((fixture.scenarioValues === null || recordedBundleFullyDriven) && !scenarioValuesBlockedAsFixtureCarried) {
+  if (recordedShareCountImplausible) {
+    // Fail closed — never an absurd per-share figure, and never the typed
+    // fixture.scenarioValues fallback below, which would silently reproduce
+    // the first correction's own defect (a typed number standing in for a
+    // genuine M1-M15 computation).
+    scenarioValuesMissing =
+      "this run's recorded share count is not plausible as an absolute raw share count for this run's own enterprise-value bridge (expected close to this run's own diluted share count; recordedBundles.ts stores no unit contract for it)";
+  } else if ((fixture.scenarioValues === null || recordedBundleFullyDriven) && !scenarioValuesBlockedAsFixtureCarried) {
     const scenarioValuesMissingBeforeTrial = scenarioValuesMissing;
     const trial = { bear: dynamicScenarioValue("bear"), base: dynamicScenarioValue("base"), bull: dynamicScenarioValue("bull") };
     const trialFullyComputed = !trial.bear.isNaN() && !trial.base.isNaN() && !trial.bull.isNaN();
@@ -712,7 +757,9 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   }
 
   const effectiveScenarioValues =
-    scenarioValuesBlockedAsFixtureCarried || dynamicScenarioValues !== null ? null : fixture.scenarioValues;
+    scenarioValuesBlockedAsFixtureCarried || recordedShareCountImplausible || dynamicScenarioValues !== null
+      ? null
+      : fixture.scenarioValues;
   const scenarioOutputs = computeScenarioOutputs({
     bearValue: effectiveScenarioValues?.bear ?? dynamicScenarioValues?.bear ?? new Decimal(NaN),
     baseValue: effectiveScenarioValues?.base ?? dynamicScenarioValues?.base ?? new Decimal(NaN),
@@ -911,12 +958,15 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     );
   }
   // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A. scenarioValuesMissing is
-  // set above only where fixture.scenarioValues is null (an AI-proposed
-  // bundle, never an explicit analyst bundle) AND the dynamic computation
-  // through the existing M15 model could not run. Scoped explicitly to the
-  // range itself — the same override cashPerShare's own check below uses —
-  // since these values ARE the range's bear/base/bull (§9.6 rule 1's second
-  // clause), not a display figure of their own.
+  // set above where fixture.scenarioValues is null (an AI-proposed bundle,
+  // never an explicit analyst bundle) AND the dynamic computation through
+  // the existing M15 model could not run — or (CF-ANALYZER-REAL-VALUATION-
+  // UNBLOCK-01, REVIEW-38680230521-1) where a fully-driven recorded bundle's
+  // own share count failed the plausibility check above, which fails this
+  // closed rather than ever falling back to that bundle's typed figure.
+  // Scoped explicitly to the range itself — the same override cashPerShare's
+  // own check below uses — since these values ARE the range's bear/base/bull
+  // (§9.6 rule 1's second clause), not a display figure of their own.
   if (scenarioValuesMissing !== null) {
     suppressing.push({
       ...notComputed(NOT_COMPUTED_BINDING.scenarioValues, "INCOMPLETE", scenarioValuesMissing),

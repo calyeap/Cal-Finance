@@ -143,9 +143,7 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
     expect(reverted?.inputs.scenarioValuesAreFixtureCarried).toBe(true);
   });
 
-  it("a real, explicitly recorded MSFT forecast computes a genuine fair-value range from real SEC facts through the existing M1-M15 pipeline — an independent recomputation, never this test's own typed placeholders, never the old fixture's $265/$510/$650", async () => {
-    await recordAnalystBundle("MSFT", TEST_INPUT);
-
+  it("a real, explicitly recorded MSFT forecast computes a genuine fair-value range from real SEC facts through the existing M1-M15 pipeline — an independent recomputation on this run's own per-share scale, never this test's own typed placeholders, never the old fixture's $265/$510/$650", async () => {
     // Same steps as openMsftRunWithRuling, kept inline (not the shared
     // helper) because this test also needs the runId afterwards, to read
     // back the same fixture computeAnalysisForRun ran on and independently
@@ -159,7 +157,37 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
     );
     await completeSpotCheck(runId);
     const state = await loadGateState(runId);
-    await recordProfileDecision(runId, "CONFIRMED", state.fixture.profile.recommended, null);
+
+    // This run's own absolute diluted share count (M1's own dilutedShares —
+    // sharesOutstanding + treasuryMethodDilution, modules/enterpriseValue.ts
+    // — independent of any recorded bundle). REVIEW-38680230521-1: a
+    // recorded bundle's own shareCount must be on this exact scale — raw
+    // shares, never a thousand/million/billion shorthand — for the dynamic
+    // recomputation below to use it; this is the value a real analyst would
+    // have had to type for the plumbing fix to be real.
+    const sharesOutstanding = state.fixture.enterpriseValue.sharesOutstanding;
+    const treasuryMethodDilution = state.fixture.enterpriseValue.treasuryMethodDilution;
+    expect(sharesOutstanding).not.toBeNull();
+    expect(treasuryMethodDilution).not.toBeNull();
+    if (sharesOutstanding === null || treasuryMethodDilution === null) return;
+    const dilutedShares = sharesOutstanding.value.plus(treasuryMethodDilution.value).toString();
+
+    await recordAnalystBundle("MSFT", {
+      ...TEST_INPUT,
+      scenarios: {
+        bear: { ...TEST_INPUT.scenarios.bear, shareCount: dilutedShares },
+        base: { ...TEST_INPUT.scenarios.base, shareCount: dilutedShares },
+        bull: { ...TEST_INPUT.scenarios.bull, shareCount: dilutedShares },
+      },
+    });
+
+    // Re-read gate state now that the bundle is recorded — fixture.
+    // configuredConstants.nopatTaxRate and fixture.profile.recommended
+    // below are the resolved bundle's own fields (analystInputsFor is
+    // re-resolved on every loadGateState call, never cached from `state`
+    // above), so the independent recomputation has to read them fresh too.
+    const postRecordState = await loadGateState(runId);
+    await recordProfileDecision(runId, "CONFIRMED", postRecordState.fixture.profile.recommended, null);
     const result = await computeAnalysisForRun(runId);
 
     // A4's fixture-carried suppression no longer fires: the fair-value
@@ -177,12 +205,14 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
 
     // Independent recomputation: the same base revenue and nopatTaxRate
     // this run's own fixture carries, the same bear/base/bull drivers
-    // TEST_INPUT recorded, run through computeScenarioEnterpriseValue
-    // (unmodified) and bridged to equity/share — never read from assemble.ts
-    // itself, so this proves the pipeline computed the range rather than
-    // merely echoing it.
-    const baseRevenue = state.fixture.reverseDcf.baseYearRevenue;
-    const nopatTaxRate = state.fixture.configuredConstants.nopatTaxRate;
+    // recorded above, run through computeScenarioEnterpriseValue
+    // (unmodified) and bridged to equity/share on this run's own diluted
+    // share count — never read from assemble.ts itself, so this proves the
+    // pipeline computed the range rather than merely echoing it, and on the
+    // run's own per-share scale rather than whatever scale a typed
+    // placeholder happened to be at.
+    const baseRevenue = postRecordState.fixture.reverseDcf.baseYearRevenue;
+    const nopatTaxRate = postRecordState.fixture.configuredConstants.nopatTaxRate;
     expect(baseRevenue).not.toBeNull();
     expect(nopatTaxRate).not.toBeNull();
     if (baseRevenue === null || nopatTaxRate === null) return;
@@ -190,7 +220,7 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
     const bridge = result.diagnostics.enterpriseValue.value;
     const netDebtBridge = bridge.enterpriseValue.minus(bridge.marketCap);
 
-    const expectedPerShare = (growth: string, margin: string, reinvestment: string, shareCount: string): string =>
+    const expectedPerShare = (growth: string, margin: string, reinvestment: string): string =>
       computeScenarioEnterpriseValue(
         baseRevenue.value,
         buildFixedShapeGrowthPath(new Decimal(growth)),
@@ -200,12 +230,19 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
         nopatTaxRate
       )
         .minus(netDebtBridge)
-        .dividedBy(new Decimal(shareCount))
+        .dividedBy(new Decimal(dilutedShares))
         .toString();
 
-    expect(result.fairValueRange.bear.toString()).toBe(expectedPerShare("0.10", "0.38", "0.1", "7430"));
-    expect(result.scenarioOutputs.values.base.toString()).toBe(expectedPerShare("0.137", "0.418", "0.1", "7430"));
-    expect(result.fairValueRange.bull.toString()).toBe(expectedPerShare("0.185", "0.468", "0.1", "7430"));
+    expect(result.fairValueRange.bear.toString()).toBe(expectedPerShare("0.10", "0.38", "0.1"));
+    expect(result.scenarioOutputs.values.base.toString()).toBe(expectedPerShare("0.137", "0.418", "0.1"));
+    expect(result.fairValueRange.bull.toString()).toBe(expectedPerShare("0.185", "0.468", "0.1"));
+
+    // On this run's own per-share scale (tens to low hundreds of dollars for
+    // a mega-cap at ~7.4B diluted shares) — never the ~$220M-$445M/share
+    // this exact test, before this correction, independently "recomputed"
+    // by repeating the same wrong-scale division it should have caught.
+    expect(result.fairValueRange.bear.greaterThan(1)).toBe(true);
+    expect(result.fairValueRange.bull.lessThan(10000)).toBe(true);
 
     // Never this test's own typed dollar placeholders on the recorded row
     // (TEST_INPUT.scenarioValues) — the engine recomputed them, it did not
@@ -215,5 +252,35 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
     expect(result.fairValueRange.bull.toString()).not.toBe("333.33");
     expect(result.fairValueRange.bear.toString()).not.toBe("265");
     expect(result.fairValueRange.bull.toString()).not.toBe("650");
+  });
+
+  it("REVIEW-38680230521-1 — a recorded bundle whose share count is off by orders of magnitude from this run's own diluted share count fails closed, never an absurd per-share figure and never a silent fallback to its own typed placeholder", async () => {
+    // TEST_INPUT's shareCount ("7430") is thousands of times smaller than
+    // MSFT's real diluted share count (~7.4 billion raw shares) — exactly
+    // the class of unit mismatch (thousand/million/billion shorthand typed
+    // where an absolute raw count belongs) that, before this correction,
+    // silently produced a ~$220M-$445M-per-share "range" instead of refusing.
+    await recordAnalystBundle("MSFT", TEST_INPUT);
+
+    const runId = await createRun("MSFT", "Microsoft Corporation");
+    await recordJudgment(
+      runId,
+      "NON-OPERATING INVESTMENTS",
+      "us-gaap:LongTermInvestments",
+      "Calvin's §4.4 ruling, 2026-09-21T08:19:14Z, issue #188."
+    );
+    await completeSpotCheck(runId);
+    const state = await loadGateState(runId);
+    await recordProfileDecision(runId, "CONFIRMED", state.fixture.profile.recommended, null);
+    const result = await computeAnalysisForRun(runId);
+
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    if (result.fairValueRange.kind !== "suppressed") return;
+    expect(result.fairValueRange.state).toBe("INCOMPLETE");
+    expect(result.fairValueRange.cause).toContain("not plausible as an absolute raw share count");
+
+    // Never the typed placeholder standing in silently, and never an absurd
+    // per-share figure computed from the wrong-scale count.
+    expect(result.scenarioOutputs.values.base.toString()).not.toBe("222.22");
   });
 });
