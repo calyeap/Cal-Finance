@@ -96,7 +96,7 @@ function msftDraftInput(): RecordedAnalystBundleInput {
       revenueScale: "large",
       fcfCharacter: "positive_stable",
       revenueGrowthBand: "10-30%",
-      capitalIntensity: "0.3494",
+      capitalIntensity: "0.4236",
       cyclicality: { tenYearMarginRange: "0.1673", worstSingleYearChange: "0.0028" },
       balanceSheetNature: "asset-heavy",
     },

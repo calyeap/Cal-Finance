@@ -20,20 +20,31 @@ Calvin reviewed the prior head (`11fbfd2b`) and ruled **CHANGES NEEDED**,
 naming three specific corrections plus one separately-named blocker that
 stays explicitly open. This draft now addresses all three:
 
-1. **Capital intensity and reinvestment** — reconciled the draft's gross
-   cash-capex/revenue measure against §7.2 M5's governing lease-inclusive
-   net-reinvestment formula. See "Gross capital intensity vs. the governing
-   net-reinvestment definition" below: two of that formula's five REQUIRED
-   inputs (`acquisitions`, `deltaNwc`) have no tag mapping anywhere in this
-   codebase and are never acquired for any company, a real pre-existing gap
-   named rather than papered over. The best currently-answerable partial
-   reconstruction (capex + finance-lease ROU additions − D&A) is computed
-   for the full ten-year window and is materially lower than the gross
-   measure throughout, but — because the forward `reinvestmentCapitalIntensity`
-   driver is, by §5.4's own existing design, the same gross-style measure
-   the runtime scenario function actually consumes — this reconciliation
-   does not warrant changing the proposed 12% / 22% / 30% scenario drivers,
-   named explicitly rather than defaulted.
+1. **Capital intensity and reinvestment** — **further corrected
+   (REVIEW-38703686322-1):** the §6.3 classification `capitalIntensity`
+   field now uses the governing methodology's own lease-inclusive
+   definition (`docs/frozen/calboard-valuation-methodology.md` §1:
+   "Capital intensity: (capex + acquisitions + finance-lease right-of-use
+   assets obtained in the period) as % of revenue"), not cash capex alone:
+   **0.4236** (42.36%) FY2026 — (`$115,948M` capex + `$24,608M`
+   finance-lease ROU additions) ÷ `$331,839M` revenue, a named lower bound
+   because `acquisitions` is untagged — superseding the prior head's
+   0.3494 cash-capex-only figure, which is retained only as a labelled
+   comparison. See "Capital intensity: classification vs. forward scenario
+   driver" below. Two of §7.2 M5's own net-reinvestment formula's five
+   REQUIRED inputs (`acquisitions`, `deltaNwc`) still have no tag mapping
+   anywhere in this codebase and are hardcoded `null` in
+   `companyInputs.ts`, a real pre-existing gap named rather than papered
+   over, not specific to MSFT. The prior head's claim that the forward
+   `reinvestmentCapitalIntensity` scenario driver is, "by this codebase's
+   own existing design," the same gross measure as the (then cash-capex)
+   classification figure was uncited and is withdrawn: the two fields are
+   not shown to share a basis, and which basis the forward driver should
+   use is now a precise, named open item for Calvin rather than a settled
+   reconciliation — see below. The 12% / 22% / 30% proposed scenario
+   drivers are unchanged by this correction; whether they should be
+   restated on a different basis is exactly the open question named
+   below.
 2. **Classification** — `fcfCharacter` is now justified primarily from real
    `us-gaap:NetCashProvidedByUsedInOperatingActivities` cash-flow evidence
    (ten years positive, one shallow single-year decline), not operating-margin
@@ -97,7 +108,7 @@ cross-check, not as this draft's source.
 
 | Field | Value | Provenance |
 |---|---|---|
-| `profile` | `MATURE_PROFITABLE_STABLE_FCF` | **AI INFERENCE** — no classifier exists for this field in this codebase (`AnalystBundleForm.tsx`'s own text: "No classifier recommends a profile... this is the analyst's own classification"). Reasoning: FY2026 revenue growth of 17.79% (see `revenueGrowthBand` below) sits mid-band, not high-growth; the ten-year operating-margin history below is unusually tight (16.73pt range, essentially no single-year decline) — the "stable, durable margin structure through a cycle" this profile's name requires. This matches MSFT's already-committed classification (`lib/analyzer/fixtures/msft.ts`) — not inherited from it, independently reasoned from the real capture, and landing in the same place. **Flagged for Calvin regardless**: FY2026 cash capex is 34.94% of revenue, roughly triple the FY2016–2023 historical range (8–13%, see `capitalIntensity` below) — the single largest real change since that fixture was built. It does not change this profile recommendation on its own (margin stability is what the profile mainly reads), but it is the fact most likely to force a different classification at a future review if the elevated reinvestment pace persists and begins pressuring margin. |
+| `profile` | `MATURE_PROFITABLE_STABLE_FCF` | **AI INFERENCE** — no classifier exists for this field in this codebase (`AnalystBundleForm.tsx`'s own text: "No classifier recommends a profile... this is the analyst's own classification"). Reasoning: FY2026 revenue growth of 17.79% (see `revenueGrowthBand` below) sits mid-band, not high-growth; the ten-year operating-margin history below is unusually tight (16.73pt range, essentially no single-year decline) — the "stable, durable margin structure through a cycle" this profile's name requires. This matches MSFT's already-committed classification (`lib/analyzer/fixtures/msft.ts`) — not inherited from it, independently reasoned from the real capture, and landing in the same place. **Flagged for Calvin regardless**: FY2026 cash capex alone is 34.94% of revenue, roughly triple the FY2016–2023 historical range (8–13%; on the governing lease-inclusive basis the classification `capitalIntensity` field below now uses, FY2026 is 42.36% — see "Capital intensity: classification vs. forward scenario driver" below) — the single largest real change since that fixture was built. It does not change this profile recommendation on its own (margin stability is what the profile mainly reads), but it is the fact most likely to force a different classification at a future review if the elevated reinvestment pace persists and begins pressuring margin. |
 
 ### Classification inputs (§6.3 evidence beside the profile)
 
@@ -106,20 +117,37 @@ cross-check, not as this draft's source.
 | `revenueScale` | `large` | **AI INFERENCE** — no scale thresholds are defined anywhere in this codebase; informed by the OBSERVED FY2026 revenue figure below ($331,839M), "large" under any plausible reading. |
 | `fcfCharacter` | `positive_stable` | **OBSERVED FACT (primary) + AI INFERENCE (corroborating).** **Correction (CALVIN RULING — CHANGES NEEDED, item 2):** the original draft reasoned this field from operating-margin stability alone; margin stability is evidence of earnings quality, not of cash-flow character, so it is demoted here to corroborating. The primary evidence is `us-gaap:NetCashProvidedByUsedInOperatingActivities` itself, the real cash-flow-statement line, for the same ten-year window used elsewhere in this draft: FY2017 $39,507M, FY2018 $43,884M, FY2019 $52,185M, FY2020 $60,675M, FY2021 $76,740M, FY2022 $89,035M, FY2023 $87,582M, FY2024 $118,548M, FY2025 $136,162M, FY2026 $182,935M — every single year operating-cash-flow-POSITIVE, with exactly one year-over-year decline in the whole window (FY2022→FY2023, $89,035M→$87,582M, **−1.63%**) and nine years of growth, including the three-year AI-buildout acceleration. This is now direct cash-flow evidence for `positive_stable` (positive throughout, materially stable, one shallow dip), not an inference from margin alone. The corroborating margin-stability reasoning (16.73pt ten-year range, 0.28pt worst single-year decline, below) is retained as a second, consistent signal, not the sole basis. |
 | `revenueGrowthBand` | `10-30%` | **OBSERVED FACT** — computed from `us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax` (current for this filer; MSFT has not stopped reporting it, unlike NVIDIA's retired-tag case in the companion NVDA draft): FY2025 revenue $281,724M (period 2025-06-30, one year) → FY2026 revenue $331,839M (period 2026-06-30), both accession 0001193125-26-323660 (FY2026 10-K). Growth = (331,839 − 281,724) / 281,724 = **17.7887%**. |
-| `capitalIntensity` | `0.3494` | **OBSERVED FACT**, FY2026: `us-gaap:PaymentsToAcquirePropertyPlantAndEquipment` $115,948M (period 2025-07–2026-06, accession 0001193125-26-323660) ÷ `us-gaap:Revenues` candidate's winning tag, same period/accession, revenue $331,839M = **34.94%**. This is a real, disclosed step-up — not a data artifact: the same ratio was 8.42%–13.26% every year FY2017–FY2023, then 18.14% (FY2024), 22.91% (FY2025), 34.94% (FY2026) — a three-year acceleration consistent with the AI/datacenter capex buildout, the same figure the Phase B shadow-DCF proof already cites and flags identically ("real, disclosed step-up ... not a data artifact"). **This is a GROSS, cash-capex-only measure — see "Gross capital intensity vs. the governing net-reinvestment definition" below (CALVIN RULING — CHANGES NEEDED, item 1) for the reconciliation against §7.2 M5's lease-inclusive net reinvestment formula.** Flagged as a limitation of the ratio, not resolved: this is cash PP&E capex only; it does not capture off-balance-sheet, lease- or supply-agreement-financed datacenter capacity, which is not tagged under any candidate this mapping reads (the same limitation the companion NVDA draft names for its own capex ratio). |
+| `capitalIntensity` | `0.4236` | **OBSERVED FACT, lease-inclusive basis — corrected (REVIEW-38703686322-1).** The governing methodology (`docs/frozen/calboard-valuation-methodology.md` §1) defines this field as **(capex + acquisitions + finance-lease right-of-use assets obtained) ÷ revenue**, citing MSFT FY26 at $140.6B / 42.4% against $115.9B / 34.9% on cash capex alone. Computed from this same capture: `us-gaap:PaymentsToAcquirePropertyPlantAndEquipment` $115,948M + `us-gaap:RightOfUseAssetObtainedInExchangeForFinanceLeaseLiability` $24,608M = $140,556M (matching the methodology's own cited $140.6B), ÷ `us-gaap:Revenues` candidate's winning tag $331,839M = **42.36%** (period 2025-07–2026-06, accession 0001193125-26-323660). This is a **named lower bound**: `acquisitions` has no tag mapping anywhere in this codebase (`tagMap.ts`) and is hardcoded `null` in `companyInputs.ts` — see "Capital intensity: classification vs. forward scenario driver" below. **Cash capex alone, the prior head's figure, is retained only as a labelled comparison**: $115,948M ÷ $331,839M = 34.94% — a real, disclosed step-up, not a data artifact: the same cash-capex ratio was 8.42%–13.26% every year FY2017–FY2023, then 18.14% (FY2024), 22.91% (FY2025), 34.94% (FY2026), the same figure the Phase B shadow-DCF proof already cites and flags identically. Flagged as a limitation of both measures, not resolved: neither captures off-balance-sheet or supply-agreement-financed datacenter capacity not tagged under any candidate this mapping reads (the same limitation the companion NVDA draft names for its own capex ratio). |
 | `cyclicality.tenYearMarginRange` | `0.1673` (16.73pt) | **OBSERVED FACT**, derived from `us-gaap:OperatingIncomeLoss` ÷ the winning revenue tag for the ten most recent fiscal years both tags cover: FY2017–FY2026 (FY2016 is the eleventh year both tags cover and is excluded to keep exactly ten, per the same "ten most recent" rule the companion NVDA draft applies). Margins: FY2017 30.06%, FY2018 31.77%, FY2019 34.14%, FY2020 37.03%, FY2021 41.59%, FY2022 42.06%, FY2023 41.77%, FY2024 44.64%, FY2025 45.62%, FY2026 46.78%. Max 46.78% (FY2026) − min 30.06% (FY2017) = **16.73pt**. |
 | `cyclicality.worstSingleYearChange` | `0.0028` (0.28pt) | **OBSERVED FACT**, same ten-year series: the only year-over-year decline in the window is FY2022 (42.06%) → FY2023 (41.77%) = **0.28pt** — computed the same way `lib/analyzer/marginMath.ts`'s `worstSingleYearDecline` computes it (largest positive decline between adjacent entries). Every other year-over-year change in the window is an increase. |
-| `balanceSheetNature` | `asset-heavy` | **AI INFERENCE — corrected (CALVIN RULING — CHANGES NEEDED, item 2).** The original draft called this `asset-light` from a pure equity-vs-debt balance-sheet snapshot (equity $442,387M vs. debt+leases $106,888M), which Calvin's ruling asked to be reassessed against genuine asset/capital-intensity evidence rather than that snapshot alone. This codebase already has exactly one other place that classifies this same field from real data, mechanically: `lib/analyzer/acquisition/aiProposedBundle.ts:144-145`'s AI-proposed-bundle path (authorised by `CALVIN RULING — A`, issue #399, `CF-ANALYZER-V1-SETTLE-01`) sets `balanceSheetNature = "asset-light"` only when the company's own reinvestment/capital-intensity figure is **below 10% of revenue**, and `"asset-heavy"` otherwise — capital intensity alone, not the equity/debt composition test. Applying that SAME approved, mechanical, already-in-production threshold to MSFT's own real capital intensity — 34.94% FY2026 gross (above), or 30.60% even on the lease-inclusive net-of-D&A reconstruction below — both land far above the 10% line. On the one existing codebase convention for this exact judgment, MSFT is `asset-heavy`, not `asset-light`; this draft now calls it that. **Named alternative, not silently dropped**: the equity-vs-debt snapshot (equity dwarfing debt-equivalent liabilities) is real and still true, and is retained below as the named counter-reading a reviewer could instead weigh more heavily — but it is no longer this draft's own call, because Calvin's instruction was specifically to weigh capital-intensity evidence, including the datacenter investment cycle, over that snapshot. `us-gaap:FinanceLeaseLiability` ($66,594M) now EXCEEDS `us-gaap:LongTermDebt` ($40,294M) for the first time in this window, and finance-lease ROU additions have grown from $3,128M (FY2023) to $24,608M (FY2026) — real, disclosed, accelerating evidence of a structurally more capital-intensive, infrastructure-owning business, consistent with flipping this classification. |
+| `balanceSheetNature` | `asset-heavy` | **AI INFERENCE — corrected (CALVIN RULING — CHANGES NEEDED, item 2).** The original draft called this `asset-light` from a pure equity-vs-debt balance-sheet snapshot (equity $442,387M vs. debt+leases $106,888M), which Calvin's ruling asked to be reassessed against genuine asset/capital-intensity evidence rather than that snapshot alone. This codebase already has exactly one other place that classifies this same field from real data, mechanically: `lib/analyzer/acquisition/aiProposedBundle.ts:144-145`'s AI-proposed-bundle path (authorised by `CALVIN RULING — A`, issue #399, `CF-ANALYZER-V1-SETTLE-01`) sets `balanceSheetNature = "asset-light"` only when the company's own reinvestment/capital-intensity figure is **below 10% of revenue**, and `"asset-heavy"` otherwise — capital intensity alone, not the equity/debt composition test. Applying that SAME approved, mechanical, already-in-production threshold to MSFT's own real capital intensity — 42.36% FY2026 on the governing lease-inclusive basis (above; a lower bound, acquisitions untagged), 34.94% on cash capex alone, or 30.60% on the net-of-D&A partial reconstruction below — all land far above the 10% line. On the one existing codebase convention for this exact judgment, MSFT is `asset-heavy`, not `asset-light`; this draft now calls it that. **Named alternative, not silently dropped**: the equity-vs-debt snapshot (equity dwarfing debt-equivalent liabilities) is real and still true, and is retained below as the named counter-reading a reviewer could instead weigh more heavily — but it is no longer this draft's own call, because Calvin's instruction was specifically to weigh capital-intensity evidence, including the datacenter investment cycle, over that snapshot. `us-gaap:FinanceLeaseLiability` ($66,594M) now EXCEEDS `us-gaap:LongTermDebt` ($40,294M) for the first time in this window, and finance-lease ROU additions have grown from $3,128M (FY2023) to $24,608M (FY2026) — real, disclosed, accelerating evidence of a structurally more capital-intensive, infrastructure-owning business, consistent with flipping this classification. |
 
-### Gross capital intensity vs. the governing net-reinvestment definition (CALVIN RULING — CHANGES NEEDED, item 1)
+### Capital intensity: classification vs. forward scenario driver (CALVIN RULING — CHANGES NEEDED, item 1; corrected further per REVIEW-38703686322-1)
 
-**What `capitalIntensity` above is, and is not.** The §6.3 classification field
-above (34.94% FY2026) and each scenario's `reinvestmentCapitalIntensity`
-driver below (12% / 22% / 30%) are both the **gross, cash-capex-only**
-measure: `capex ÷ revenue`, no other component. This codebase's own governing
-net-reinvestment definition is a different, materially more complete
-formula, implemented in production today for a different diagnostic (M5,
-§7.2, `lib/analyzer/modules/reinvestmentRonic.ts`'s `computeReinvestment`):
+**What `capitalIntensity` above now is.** The §6.3 classification field
+above is the methodology's own governing definition
+(`docs/frozen/calboard-valuation-methodology.md` §1): **(capex +
+acquisitions + finance-lease right-of-use assets obtained) ÷ revenue** —
+**0.4236** (42.36%) FY2026, a named lower bound since `acquisitions` is
+untagged (see below). **Correction (REVIEW-38703686322-1):** the prior
+head instead set this field to the gross, cash-capex-only measure
+(`capex ÷ revenue`, 34.94%) and claimed, uncited, that this was the
+methodology's basis for the field; the methodology document itself gives
+MSFT FY26 as $140.6B / 42.4% on the lease-inclusive basis, against
+$115.9B / 34.9% "on cash capex alone" — contradicting that claim. Cash
+capex alone (34.94%) is retained above only as a labelled comparison, not
+the classification value.
+
+**Each scenario's `reinvestmentCapitalIntensity` driver below (12% / 22% /
+30%) remains on the gross, cash-capex-only basis** (`capex ÷ revenue`,
+anchored to the historical cash-capex range — see each scenario's own
+provenance). Whether that is the right basis for this forward driver is a
+separate, still-open question — see "Does this change the proposed
+scenario drivers?" below — not resolved by correcting the classification
+field above. This codebase's own net-reinvestment definition is a
+different, materially more complete formula again, implemented in
+production today for a different diagnostic (M5, §7.2,
+`lib/analyzer/modules/reinvestmentRonic.ts`'s `computeReinvestment`):
 
 > Reinvestment = capex + acquisitions + finance-lease ROU assets obtained −
 > D&A + ΔNWC
@@ -172,24 +200,48 @@ likely push it down further) — not resolved here, flagged as missing
 evidence, consistent with the Phase B shadow-DCF proof naming the identical
 ΔNWC gap for its own reinvestment-rate calculation.
 
-**Does this change the proposed scenario drivers? No — named explicitly,
-not defaulted.** `lib/analyzer/modules/scenarioOutputs.ts`'s
-`computeScenarioEnterpriseValue` (the function that would actually run
-against a recorded, fully-driven bundle — see "Terminal ROIC" below) drives
-its forward reinvestment term directly off `reinvestmentCapitalIntensity` as
-`revenue × intensity` — the same simple, gross, capex-style convention
-§5.4's scenario matrix was designed around, not M5's net-reinvestment
-formula. The two were never meant to be the same number: §6.3's historical
-classification and §5.4's forward scenario driver are both, by this
-codebase's own existing design, the simpler gross measure, and M5's
-lease-inclusive net formula is a separate historical diagnostic feeding a
-different module (RONIC) entirely. Reconciling the definitions, as Calvin's
-ruling asks, therefore does not by itself warrant changing the bear/base/bull
-12% / 22% / 30% proposals below — they already express gross capital
-intensity, which is the input the runtime driver this bundle would actually
-feed is built to consume. The net-reinvestment reconstruction above is cited
-as fuller context for judging true reinvestment intensity, not as a
-replacement driver.
+**Does this change the proposed scenario drivers? Open — named precisely
+for Calvin, not resolved either way (REVIEW-38703686322-1).** A prior head
+of this draft claimed the forward `reinvestmentCapitalIntensity` driver
+and the §6.3 classification field were, "by this codebase's own existing
+design," the same gross measure, and concluded on that basis that
+reconciling the definitions did not warrant changing 12% / 22% / 30%. That
+claim was uncited and is withdrawn: the classification field is now the
+methodology's lease-inclusive basis (above), while the scenario driver
+remains gross cash-capex-only, so the two are no longer shown to share a
+basis, and nothing already decided settles what the scenario driver's
+basis ought to be.
+
+`lib/analyzer/modules/scenarioOutputs.ts`'s `computeScenarioEnterpriseValue`
+(the function that would actually run against a recorded, fully-driven
+bundle — see "Terminal ROIC" below) computes FCFF_t = NOPAT_t −
+Revenue_t × `reinvestmentCapitalIntensity`. NOPAT is already post-D&A
+(NOPAT = EBIT × (1 − tax), and EBIT already expenses D&A), so the term
+this formula subtracts functions as a **net-of-D&A** reinvestment rate —
+closer in shape to the "Net/revenue (partial)" column above (2.18%–30.60%
+across the ten-year window) than to the gross cash-capex range (8.42%–
+34.94%) the 12% / 22% / 30% drivers below were actually anchored to, or to
+the lease-inclusive-gross classification basis above (not separately
+computed for the five explicit-period intermediate years, but strictly
+above cash-capex at FY2026: 42.36% vs. 34.94%).
+
+Restating 12% / 22% / 30% on the net-of-D&A basis the FCFF formula implies
+would mean re-anchoring each scenario to a different historical range
+(bear toward FY2017–2023's net-of-D&A range of 2.18%–8.37%, not its
+8.4%–13.3% gross range; base toward FY2025's 20.25% net, not 22.91% gross;
+bull toward FY2026's 30.60% net, not 34.94% gross) and recomputing every
+downstream scenario value, runtime-equivalent figure and sensitivity row
+below. That is a new analyst judgment, not a mechanical reconciliation, so
+it is not made in this correction cycle. **Precise open question for
+Calvin, not defaulted to either basis:** should the three
+`reinvestmentCapitalIntensity` drivers be restated on the net-of-D&A basis
+`computeScenarioEnterpriseValue`'s own FCFF formula implies, instead of
+the cash-capex basis currently proposed? Until answered, 12% / 22% / 30%
+and every table below that uses them stay on the cash-capex basis,
+labelled as such here, not silently assumed correct. See "The single
+closed Calvin approval question" at the end of this draft, where this is
+named as a second open item alongside the existing terminal-ROIC
+divergence.
 
 ### Scenarios
 
@@ -233,7 +285,7 @@ real run's own share-count fact would read.
 |---|---|---|
 | `revenueGrowthOrPath` | `0.08` | ANALYST JUDGEMENT PROPOSAL — a slowdown from the OBSERVED FY2026 rate (17.79%) toward the bottom of the "10-30%" band, consistent with Trigger A having fired (see `writtenAnchor`), but not a contraction. |
 | `operatingMargin` | `0.4168` | ANALYST JUDGEMENT PROPOSAL — reverts fully to the OBSERVED ten-year median (41.68%, computed above), the same "reverts to the historical median" convention the companion NVDA draft and MSFT's own committed bear case both use. |
-| `reinvestmentCapitalIntensity` | `0.12` | ANALYST JUDGEMENT PROPOSAL — reverts most of the way toward the pre-AI-buildout historical range (FY2016–FY2023: 8.4%–13.3% of revenue, see `capitalIntensity` evidence above), reflecting a pullback in AI/datacenter capacity investment in a demand correction. |
+| `reinvestmentCapitalIntensity` | `0.12` | ANALYST JUDGEMENT PROPOSAL, cash-capex basis — reverts most of the way toward the pre-AI-buildout historical range (FY2016–FY2023: 8.4%–13.3% of revenue, see `capitalIntensity` evidence above), reflecting a pullback in AI/datacenter capacity investment in a demand correction. **Basis still open (REVIEW-38703686322-1):** see "Capital intensity: classification vs. forward scenario driver" above — whether this should instead be stated net-of-D&A is a named, unresolved question for Calvin. |
 | `writtenAnchor` | "Trigger A has fired on this run's own real data: current margin (46.78%) sits exactly at the ten-year window's own max, and the window range (16.73pt) exceeds the 15pt policy threshold (`policy.ts` `triggerAWindowRangePoints`). Trigger B has not fired — the worst single-year decline in the window is 0.28pt, nowhere near the 10pt policy threshold — so this is a margin-reversion case, not a margin-collapse case: growth slows and margin reverts to its ten-year median, but does not contemplate a sharp single-year deterioration, because none is in the real record to anchor one to. The capex pullback mirrors this: a demand correction plausibly reduces AI/datacenter capacity investment back toward the pre-buildout range." | Analyst's own stated reasoning (ANALYST JUDGEMENT PROPOSAL), same convention as the companion NVDA draft's `writtenAnchor` fields. |
 
 #### Base
@@ -242,7 +294,7 @@ real run's own share-count fact would read.
 |---|---|---|
 | `revenueGrowthOrPath` | `0.14` | ANALYST JUDGEMENT PROPOSAL — a moderate deceleration from the OBSERVED FY2026 rate (17.79%), remaining in the "10-30%" band, reflecting some normalization of AI/cloud demand growth off a much larger base. |
 | `operatingMargin` | `0.45` | ANALYST JUDGEMENT PROPOSAL — below the OBSERVED FY2026 level (46.78%) but well above the ten-year median (41.68%). Reasoned from real evidence, not a round-number guess: OBSERVED depreciation + amortization nearly tripled from $20.0B (FY2024: $15.2B + $4.8B) to $39.0B (FY2026: $34.3B + $4.7B) as the capex supercycle begins depreciating — a real, disclosed mechanical drag on margin this scenario anticipates continuing, partially offset by revenue growth and operating leverage elsewhere. |
-| `reinvestmentCapitalIntensity` | `0.22` | ANALYST JUDGEMENT PROPOSAL — close to the OBSERVED FY2025 ratio (22.91%), reflecting continued elevated but not accelerating capacity investment, a step down from FY2026's 34.94% peak. |
+| `reinvestmentCapitalIntensity` | `0.22` | ANALYST JUDGEMENT PROPOSAL, cash-capex basis — close to the OBSERVED FY2025 ratio (22.91%), reflecting continued elevated but not accelerating capacity investment, a step down from FY2026's 34.94% peak. **Basis still open (REVIEW-38703686322-1):** see "Capital intensity: classification vs. forward scenario driver" above. |
 | `writtenAnchor` | "AI/datacenter demand continues but the growth rate normalizes materially off the FY2026 base; the real, disclosed D&A step-up from the FY2024–FY2026 capex supercycle (see `operatingMargin` provenance) continues to compress margin somewhat as those assets depreciate, while growth stays in the middle of the '10-30%' band rather than reverting to bear-case levels. Capital intensity steps down from FY2026's peak but stays well above the pre-FY2024 historical range, reflecting that at least some of the AI buildout is durable, not purely cyclical." | Analyst's own stated reasoning (ANALYST JUDGEMENT PROPOSAL). |
 
 #### Bull
@@ -251,7 +303,7 @@ real run's own share-count fact would read.
 |---|---|---|
 | `revenueGrowthOrPath` | `0.20` | ANALYST JUDGEMENT PROPOSAL — slightly above the OBSERVED FY2026 rate (17.79%), assuming AI/cloud monetization accelerates faster than the FY2026 realized pace, crossing into the top of the "10-30%" band. |
 | `operatingMargin` | `0.4678` | ANALYST JUDGEMENT PROPOSAL — holds at the OBSERVED FY2026 level (46.78%, the ten-year window max), assuming revenue growth and software-margin mix outpace the D&A step-up named in the base case. |
-| `reinvestmentCapitalIntensity` | `0.30` | ANALYST JUDGEMENT PROPOSAL — near, but below, the OBSERVED FY2026 peak (34.94%), reflecting sustained aggressive capacity investment continuing near its current pace rather than decelerating. |
+| `reinvestmentCapitalIntensity` | `0.30` | ANALYST JUDGEMENT PROPOSAL, cash-capex basis — near, but below, the OBSERVED FY2026 peak (34.94%), reflecting sustained aggressive capacity investment continuing near its current pace rather than decelerating. **Basis still open (REVIEW-38703686322-1):** see "Capital intensity: classification vs. forward scenario driver" above. |
 | `writtenAnchor` | "AI/cloud demand sustains and accelerates past the FY2026 realized rate; margin holds at its current real ten-year high because revenue growth and favorable mix outrun the depreciation step-up the base case concedes. Capital intensity stays near its FY2026 real peak rather than reverting, reflecting continued large-scale, high-conviction capacity investment." | Analyst's own stated reasoning (ANALYST JUDGEMENT PROPOSAL). |
 
 ### Terminal ROIC — a new required scenario driver, not a fact
@@ -554,10 +606,17 @@ choose between, and not an Analyzer output today.
   both are hardcoded `null` in `companyInputs.ts`), so §7.2 M5's own
   governing net-reinvestment formula (`computeReinvestment`) is structurally
   `INCOMPLETE` for MSFT, and for every other company this codebase acquires
-  — a pre-existing acquisition-pipeline gap this draft surfaces (see "Gross
-  capital intensity vs. the governing net-reinvestment definition" above),
+  — a pre-existing acquisition-pipeline gap this draft surfaces (see
+  "Capital intensity: classification vs. forward scenario driver" above),
   not one it can fix (HARD BOUNDS: no runtime change) or that is specific to
-  MSFT.
+  MSFT. The same gap makes the classification `capitalIntensity` figure
+  above (0.4236) a named lower bound, not an exact figure.
+- **Which basis each scenario's `reinvestmentCapitalIntensity` driver
+  should use (cash-capex, lease-inclusive-gross, or net-of-D&A) is a
+  precise, named open item, not resolved here** (REVIEW-38703686322-1) —
+  see "Capital intensity: classification vs. forward scenario driver"
+  above and "The single closed Calvin approval question" below. The 12% /
+  22% / 30% proposals are currently on the cash-capex basis only.
 - **The AI/datacenter capex step-up (FY2024–FY2026) is too recent for this
   draft to say whether it is cyclical or structural** — three data points
   (18.14%, 22.91%, 34.94% of revenue) show acceleration, not yet a new
@@ -568,12 +627,13 @@ choose between, and not an Analyzer output today.
 - **The §4.4 non-operating-investments judgment is explicitly not made
   here** (HARD BOUNDS) — see the net-debt/EV-bridge section above for the
   three candidate tags and their FY2026 book values.
-- **Off-balance-sheet / lease- and supply-agreement-financed AI capacity is
-  not captured by the cash-capex ratio** used for `capitalIntensity` and for
-  each scenario's `reinvestmentCapitalIntensity` — the same limitation the
-  companion NVDA draft names for its own capex ratio, and the same one the
-  Phase B shadow-DCF proof names for its reinvestment rate. Not resolved
-  here; flagged as a likely understatement of true reinvestment, if
+- **Off-balance-sheet / supply-agreement-financed AI capacity (not under a
+  finance lease) is not captured by either `capitalIntensity` basis above**
+  or by each scenario's cash-capex-basis `reinvestmentCapitalIntensity` —
+  the same limitation the companion NVDA draft names for its own capex
+  ratio, and the same one the Phase B shadow-DCF proof names for its
+  reinvestment rate. Not resolved here; flagged as a likely understatement
+  of true reinvestment, if
   anything.
 
 ## What approving and running this draft would, and would not, unlock
@@ -645,3 +705,22 @@ does not by itself resolve which treatment governs a recorded MSFT bundle
 — that is a separate, still-open question this draft surfaces but does not
 answer, left for the next phase (recording) or a follow-up ruling, not a
 silent default to either figure.
+
+**Second named open item, also not folded into the question above
+(REVIEW-38703686322-1).** Each scenario's `reinvestmentCapitalIntensity`
+driver (12% / 22% / 30%) is proposed on the gross, cash-capex-only basis,
+anchored to the historical cash-capex range. The runtime function that
+would recompute these scenarios' values (`computeScenarioEnterpriseValue`)
+subtracts this driver directly from post-D&A NOPAT, which functions as a
+net-of-D&A reinvestment rate, not a gross one — see "Capital intensity:
+classification vs. forward scenario driver" above for the three candidate
+bases (cash-capex 8.42%–34.94%, the governing lease-inclusive-gross basis
+now used for the §6.3 classification field, 42.36% at FY2026, and the
+net-of-D&A partial reconstruction, 2.18%–30.60%) and the different
+historical ranges each would anchor these scenarios to. This draft does
+not choose among them or recompute the scenario values, runtime-equivalent
+figures or sensitivity rows above on a different basis: **should the three
+`reinvestmentCapitalIntensity` drivers be restated on the net-of-D&A basis
+the runtime's own FCFF formula implies, instead of the cash-capex basis
+currently proposed?** Left open for Calvin or a follow-up ruling, not
+defaulted silently to the cash-capex basis currently shown.
