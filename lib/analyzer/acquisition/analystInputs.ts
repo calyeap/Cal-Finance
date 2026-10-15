@@ -222,24 +222,37 @@ const BUNDLES: Record<string, AnalystInputBundle> = {
  * analyzer_recorded_analyst_bundles. Async because the second source is a
  * database read; both call sites (acquiredRun.ts, calibrate-position.ts)
  * already run inside an async function and now await this one too, rather
- * than caching around the change (SCOPE item 2). The committed bundles are
- * checked first and returned synchronously-fast, so MSFT and OKLO are
- * unaffected by the database ever being asked.
+ * than caching around the change (SCOPE item 2).
+ *
+ * CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 (issue #433) — the recorded source is
+ * now checked BEFORE the committed one, not after. The two committed bundles
+ * above are M5/M7 VALIDATION-FIXTURE carry-overs (this file's own header),
+ * never a real analyst's view of MSFT or OKLO; a row actually written through
+ * recordAnalystBundle — the same explicit, human-driven act that already
+ * durably resolves NVDA (migration 008) — is a genuine reviewed forecast and
+ * must not be permanently shadowed by that fixture carry-over once one exists.
+ * This changes nothing observable today: nobody has recorded MSFT or OKLO
+ * through that path (OKLO's PRE_REVENUE_UNPROFITABLE profile cannot be —
+ * recordedBundles.ts's RECORDABLE_PROFILES excludes it), so both still
+ * resolve to their committed bundle exactly as before. It only stops being a
+ * no-op the moment someone explicitly records one — never silently, never
+ * auto-approved, the same one write path NVDA's own real valuation already
+ * proves end to end.
  *
  * `runId`, optional (A5, CF-ANALYZER-INTEGRITY-PHASE-A-01): when supplied
- * and NEITHER a committed NOR a recorded bundle exists, this run's own
+ * and NEITHER a recorded NOR a committed bundle exists, this run's own
  * already-pinned AI-proposed bundle (migration
  * 009_ai_proposed_bundle_snapshot.sql) is read BEFORE a fresh model call —
  * see that migration's header for the reproducibility defect this closes.
- * The precedence this resolver already had is unchanged: a committed or
- * recorded bundle still wins over a pin, every time, including on a run
- * that pinned an AI proposal before either existed.
+ * The precedence this resolver already had is unchanged on this point: a
+ * committed or recorded bundle still wins over a pin, every time, including
+ * on a run that pinned an AI proposal before either existed.
  */
 export async function analystInputsFor(ticker: string, runId?: string): Promise<AnalystInputBundle | null> {
-  const committed = BUNDLES[ticker.toUpperCase()];
-  if (committed !== undefined) return committed;
   const recorded = await recordedAnalystInputBundle(ticker);
   if (recorded !== null) return recorded;
+  const committed = BUNDLES[ticker.toUpperCase()];
+  if (committed !== undefined) return committed;
 
   if (runId !== undefined) {
     const pinned = await getAiProposedBundleSnapshot(runId);
