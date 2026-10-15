@@ -87,6 +87,9 @@ export interface AnalystInputs {
   scenarioValues: CompanyFixture["scenarioValues"];
   /** A4 — see `CompanyFixture.scenarioValuesAreFixtureCarried`'s own doc comment. */
   scenarioValuesAreFixtureCarried: boolean;
+  /** CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — see
+   * `CompanyFixture.recordedScenarioValuesComputeFromDrivers`'s own doc comment. */
+  recordedScenarioValuesComputeFromDrivers?: boolean;
   revalueBaseCaseAtRate: CompanyFixture["revalueBaseCaseAtRate"];
   configuredConstants: CompanyFixture["configuredConstants"];
   preRevenue: CompanyFixture["preRevenue"];
@@ -621,6 +624,7 @@ export function buildCompanyInputs(
     scenarios: analyst.scenarios,
     scenarioValues: analyst.scenarioValues,
     scenarioValuesAreFixtureCarried: analyst.scenarioValuesAreFixtureCarried,
+    recordedScenarioValuesComputeFromDrivers: analyst.recordedScenarioValuesComputeFromDrivers,
     revalueBaseCaseAtRate: analyst.revalueBaseCaseAtRate,
     configuredConstants: analyst.configuredConstants,
     achievedRevenueCagr: achievedRevenueCagrResult,

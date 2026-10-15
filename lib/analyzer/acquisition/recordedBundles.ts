@@ -331,6 +331,16 @@ export async function recordedAnalystInputBundle(ticker: string): Promise<Analys
       // A4 — a recorded bundle is a real human-approved analyst entry, never
       // the committed validation fixture.
       scenarioValuesAreFixtureCarried: false,
+      // CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 (REVIEW-38678066585-1, CORRECT)
+      // — see `CompanyFixture.recordedScenarioValuesComputeFromDrivers`'s own
+      // doc comment. True only when every scenario's three drivers are
+      // authored, so assembly recomputes the range from real SEC facts
+      // instead of passing this row's typed `scenarioValues` straight
+      // through. SCENARIO_KEYS/NULLABLE_DRIVER_KEYS are the same two
+      // constants `recordAnalystBundle` validates against above.
+      recordedScenarioValuesComputeFromDrivers: SCENARIO_KEYS.every((key) =>
+        NULLABLE_DRIVER_KEYS.every((driverKey) => scenarios[key][driverKey] !== null)
+      ),
       revalueBaseCaseAtRate: null,
       configuredConstants: {
         nopatTaxRate: optionalDecimal(row.configured_constants.nopatTaxRate, "nopatTaxRate"),
