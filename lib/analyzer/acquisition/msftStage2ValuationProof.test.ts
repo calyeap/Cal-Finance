@@ -4,7 +4,7 @@ import { getPool } from "../../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "../runStore";
 import { computeAnalysisForRun, loadGateState } from "../gate";
 import { recordAnalystBundle, hasRecordedAnalystBundle, type RecordedAnalystBundleInput } from "./recordedBundles";
-import { computeScenarioEnterpriseValue } from "../modules/scenarioOutputs";
+import { computeScenarioEnterpriseValue, buildFadingReinvestmentIntensityPath } from "../modules/scenarioOutputs";
 import type { TwoWayTableResult } from "../modules/sensitivity";
 import { buildFixedShapeGrowthPath } from "../growthPath";
 import { POLICY } from "../policy";
@@ -230,12 +230,25 @@ describe("CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 — bounded net-of-D&A / positi
     // from assemble.ts's own output — proves the pipeline computed the
     // range using each scenario's own candidate terminalRoic, not the old
     // r+3pp default.
+    //
+    // CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 (2026-10-15) —
+    // the explicit-period reinvestment intensity is no longer flat across
+    // all ten years: years 6-10 fade toward the terminal formula's own
+    // implied level (buildFadingReinvestmentIntensityPath), computed here
+    // independently from the SAME exported helper assemble.ts's
+    // dynamicScenarioValue calls, never read back from its output.
     const expectedPerShare = (growth: string, margin: string, reinvestment: string, terminalRoic: string): string =>
       computeScenarioEnterpriseValue(
         baseRevenue.value,
         buildFixedShapeGrowthPath(new Decimal(growth)),
         new Decimal(margin),
-        new Decimal(reinvestment),
+        buildFadingReinvestmentIntensityPath(
+          new Decimal(reinvestment),
+          new Decimal(margin),
+          nopatTaxRate,
+          POLICY.terminalGrowth,
+          new Decimal(terminalRoic)
+        ),
         POLICY.rateGrid[1],
         nopatTaxRate,
         undefined,
@@ -306,7 +319,18 @@ describe("CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 — bounded net-of-D&A / positi
           baseRevenue.value,
           buildFixedShapeGrowthPath(m14Growth[i]),
           m14Margin[j],
-          new Decimal("0.20"), // the candidate's own base reinvestmentCapitalIntensity
+          // CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01
+          // (2026-10-15) — the fade's terminal-implied level depends on
+          // THIS cell's own margin (m14Margin[j]), the same
+          // self-consistency this table's own terminalRoic forwarding
+          // already requires.
+          buildFadingReinvestmentIntensityPath(
+            new Decimal("0.20"), // the candidate's own base reinvestmentCapitalIntensity
+            m14Margin[j],
+            nopatTaxRate,
+            POLICY.terminalGrowth,
+            new Decimal("0.11") // the candidate's own base terminalRoic
+          ),
           POLICY.rateGrid[1],
           nopatTaxRate,
           undefined,

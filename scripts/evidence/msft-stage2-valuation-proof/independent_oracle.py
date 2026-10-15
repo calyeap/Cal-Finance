@@ -27,10 +27,21 @@ independently re-derives the SAME production bridge `modules/enterpriseValue.ts`
 computes (debt + finance leases - cash/marketable securities - §4.4
 non-operating-equity-investments, then diluted shares = raw shares +
 treasury-method dilution), not the earlier simplified net-debt-only bridge.
-It reproduces the production per-share figures ($217.54/$268.08/$366.31) to
-the cent, prints the full year-by-year NOPAT/reinvestment/FCFF/PV path and
-the year-10-to-terminal transition per scenario (issue #439 authority
-item DO-5), and fails closed on a non-positive terminalRoic.
+It reproduces the production per-share figures ($214.26/$283.31/$402.73,
+post-CALVIN-RULING-correction below) to the cent, prints the full
+year-by-year NOPAT/reinvestment/FCFF/PV path and the year-10-to-terminal
+transition per scenario (issue #439 authority item DO-5), and fails closed
+on a non-positive terminalRoic.
+
+CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 (2026-10-15) — this
+file now independently re-implements the fading net-reinvestment path
+years 6-10 fade toward (margin x (1 - TAX) x (G / terminalRoic)) the
+TypeScript production path now applies
+(lib/analyzer/modules/scenarioOutputs.ts's
+buildFadingReinvestmentIntensityPath), closing the forecast-to-terminal
+coherence gap Calvin's ruling named a material blocker (year-10 implied
+RONIC below cost of capital, terminal FCF jumps up to x2.49 of year-10
+FCF). See `fading_intensity_path` below.
 """
 import json
 from decimal import Decimal, getcontext
@@ -167,14 +178,39 @@ R = Decimal("0.10")    # EXISTING APPROVED — POLICY.rateGrid[1], the scenario-
 G = Decimal("0.03")    # EXISTING APPROVED — POLICY.terminalGrowth.
 
 
-def path_shape(const_growth, years=10):
+def path_shape(const_value, terminal_value, years=10):
+    """§7.1's fixed shape: constant for years 1-5, linear fade to
+    terminal_value over years 6-10. Shared by the revenue-growth path (fading
+    to G, the policy terminal growth) and, as of the CALVIN RULING below, the
+    reinvestment-intensity path (fading to the terminal formula's own implied
+    rate) — same shape, different target, never two implementations."""
     path = []
     for _t in range(1, 6):
-        path.append(const_growth)
+        path.append(const_value)
     for t in range(6, 11):
         frac = (t - 5) / 5
-        path.append(const_growth + (G - const_growth) * Decimal(frac))
+        path.append(const_value + (terminal_value - const_value) * Decimal(frac))
     return path
+
+
+def fading_intensity_path(explicit_intensity, margin, terminal_roic):
+    """CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 (2026-10-15):
+    forecast growth, reinvestment, incremental returns and the year-10 ->
+    terminal boundary must be mutually consistent, not a flat explicit-period
+    reinvestment rate jumping straight into the terminal formula's own
+    implied rate. That formula already embeds one: terminal reinvestment (in
+    dollars) is terminalNopat x (G / terminal_roic) — the standard
+    sustainable-growth identity g = ROIC x (reinvestment / NOPAT). As a
+    fraction of terminal revenue (terminalNopat / terminalRevenue =
+    margin x (1 - TAX) exactly, the (1+g) factor cancelling), that is
+    margin x (1 - TAX) x (G / terminal_roic) — exactly the model already
+    computes, not a number chosen to erase the jump. This fades the
+    analyst's own explicit-period intensity toward that level over years
+    6-10 using the SAME fixed-shape fade path_shape already provides for
+    revenue growth (mirrors lib/analyzer/modules/scenarioOutputs.ts's
+    buildFadingReinvestmentIntensityPath, independently re-implemented)."""
+    terminal_intensity = Decimal(str(margin)) * (1 - TAX) * (G / Decimal(str(terminal_roic)))
+    return path_shape(Decimal(str(explicit_intensity)), terminal_intensity)
 
 
 def run_scenario(name, growth, margin, intensity, terminal_roic, net_debt_bridge=NET_DEBT_BRIDGE,
@@ -187,7 +223,8 @@ def run_scenario(name, growth, margin, intensity, terminal_roic, net_debt_bridge
     if term_roic <= 0:
         raise ValueError(f"{name}: terminal_roic must be positive, got {term_roic}")
 
-    growth_path = path_shape(Decimal(str(growth)))
+    growth_path = path_shape(Decimal(str(growth)), G)
+    intensity_path = fading_intensity_path(intensity, margin, term_roic)
     revs = [BASE_REVENUE]
     rev = BASE_REVENUE
     for t in range(10):
@@ -197,7 +234,7 @@ def run_scenario(name, growth, margin, intensity, terminal_roic, net_debt_bridge
     pv_sum = Decimal(0)
     for t in range(1, 11):
         nopat = revs[t] * Decimal(str(margin)) * (1 - TAX)
-        reinvestment = revs[t] * Decimal(str(intensity))
+        reinvestment = revs[t] * intensity_path[t - 1]
         fcff = nopat - reinvestment
         pv = fcff / ((1 + R) ** t)
         pv_sum += pv
@@ -236,20 +273,25 @@ def run_scenario(name, growth, margin, intensity, terminal_roic, net_debt_bridge
 
 
 def coherence(growth, margin, intensity, terminal_roic):
-    growth_path = path_shape(Decimal(str(growth)))
+    term_roic = Decimal(str(terminal_roic))
+    growth_path = path_shape(Decimal(str(growth)), G)
+    intensity_path = fading_intensity_path(intensity, margin, term_roic)
     revs = [BASE_REVENUE]
     rev = BASE_REVENUE
     for t in range(10):
         rev = rev * (1 + growth_path[t])
         revs.append(rev)
     nopats = [BASE_REVENUE * Decimal(str(margin)) * (1 - TAX)]
-    reinvests = [BASE_REVENUE * Decimal(str(intensity))]
+    reinvests = [BASE_REVENUE * intensity_path[0]]
     for t in range(1, 11):
         nopats.append(revs[t] * Decimal(str(margin)) * (1 - TAX))
-        reinvests.append(revs[t] * Decimal(str(intensity)))
+        reinvests.append(revs[t] * intensity_path[t - 1])
+    # Explicit-period RONIC, re-based on the SAME faded reinvestment path:
+    # year-1 incremental NOPAT over year-0's own (unfaded, since the fade is
+    # years 6-10 only) reinvestment — unchanged in shape from before this
+    # correction, just reading the faded path's own year-1 entry.
     ronic_explicit = (nopats[1] - nopats[0]) / reinvests[0]
     ronic_year10 = (nopats[10] - nopats[9]) / reinvests[9]
-    term_roic = Decimal(str(terminal_roic))
     terminal_fcf = nopats[10] * (1 + G) * (1 - G / term_roic)
     year10_fcf = nopats[10] - reinvests[10]
     return dict(ronic_explicit=ronic_explicit, ronic_year10=ronic_year10,
@@ -307,7 +349,7 @@ def main():
         print()
 
     print("== Reproduction check — this oracle's per-share figures vs. the production run's own figures ==")
-    expected = {"bear": "217.54", "base": "268.08", "bull": "366.31"}
+    expected = {"bear": "214.26", "base": "283.31", "bull": "402.73"}
     for name, res in candidate_results.items():
         rounded = f"{float(res['per_share']):.2f}"
         status = "MATCH" if rounded == expected[name] else "MISMATCH"
