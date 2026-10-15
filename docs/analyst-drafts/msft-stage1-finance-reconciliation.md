@@ -24,21 +24,29 @@ second extraction (§5 below) reproduced it, not because it is copied.
 Every fact-labelled figure in #436's draft reproduces, to the dollar and the
 basis point, under a second, independently-coded extraction of the same raw
 SEC capture (§5) — **the arithmetic is not in question**. What remains open
-are three genuine definitional/policy gaps, all now reconciled as far as
+are four genuine definitional/policy gaps, all now reconciled as far as
 current authority and real data allow: (1) which reinvestment basis the
 scenario driver should use, now narrowed to a concrete proposal with
 quantified materiality (≈4–10% per share) rather than left as an abstract
 "open item"; (2) `fcfCharacter`, which does **not** survive unchanged under
 the sourced, after-real-investment FCF basis issue #437 asks for — real free
 cash flow has fallen in each of the last two fiscal years by double digits,
-a materially different picture from operating-cash-flow stability; and (3)
-the scenario-DCF terminal-ROIC divergence, now traced to a specific,
-precedented, backward-compatible software gap rather than a pure policy
-question, with its own materiality quantified (≈6–8% per scenario) and one
-of the three proposed terminal-ROIC inputs (bull, 20% unfaded) shown to
-independently breach the methodology's own 85% terminal-share caution band
-on today's reinvestment-basis choice alone, before the ROIC question is
-even reached.
+a materially different picture from operating-cash-flow stability; (3) the
+scenario-DCF terminal-ROIC divergence, now traced to a specific,
+precedented, backward-compatible gap against the **frozen implementation
+text** — unverified against the current Notion *Cal Finance — Methodology*
+page, which this reconciliation has no access to fetch — with its own
+materiality quantified (≈6–8% per scenario), and, conditional on the bull
+case's own proposed 20%-unfaded terminal ROIC (not the runtime's actual
+13%, under which neither basis breaches), the current cash-capex
+reinvestment basis producing a terminal share of value (86.2%) that
+breaches the methodology's own 85% caution band, versus 80.5% (no breach)
+under the §2.1 net-of-D&A proposal with that same 20% figure held fixed;
+and (4) two confirmed scenario/terminal coherence inconsistencies —
+a cross-scenario return-on-incremental-capital ranking that reverses under
+the §2.1 proposal, and a 1.6×–4.2× discontinuous jump in free cash flow at
+the ten-year terminal boundary on every basis checked — neither corrected
+nor defaulted here.
 
 ## 1. Retained — unchanged by this reconciliation
 
@@ -209,7 +217,7 @@ either: `positive_volatile` is at least as defensible on this sourced FCF
 basis, and arguably the more honest one given the magnitude and recency of
 the two declines. This is the second item carried into §6 for Calvin.
 
-### 2.3 Terminal economics — confirmed implementation gap, not a pure policy question
+### 2.3 Terminal economics — gap against the frozen implementation text, unverified against current authority
 
 **The frozen implementation spec's text is explicit and not ambiguous on
 this point** (`docs/frozen/calboard-valuation-methodology.md` §3.5, line
@@ -262,15 +270,21 @@ runtime's 13% (not fading, because it never had a fade schedule to fail) is
 closer or further from right, and §5.4 shows it is not neutral (+5.7% to
 +7.1%). The bull case is different in kind: its 20%-unfaded figure rests on
 an **AI INFERENCE** durable-moat argument (#436's own label), not a sourced
-fact, and — independent of the terminal-ROIC question — already produces a
-terminal share of value **above** the methodology's own 85% caution
-threshold on the current cash-capex reinvestment basis (86.2%, §2.1 above),
-dropping to 80.5% only if the reinvestment-basis proposal in §2.1 is also
-adopted. That compound sensitivity (two different open items both bearing on
-the same number) means the bull case's terminal-ROIC input is the one of
-the three that is **not yet sufficiently evidenced** to treat as a settled
-analyst judgment — not because 20% is unreasonable, but because its
-consequences are visibly contingent on an unresolved companion choice.
+fact, and — **conditional on that 20%-unfaded figure itself, not independent
+of it** — already produces a terminal share of value **above** the
+methodology's own 85% caution threshold on the current cash-capex
+reinvestment basis (86.2%, §2.1 above). Under the runtime's actual 13%
+terminal ROIC, the same cash-capex basis does **not** breach the band
+(84.9%, §5.4); the breach is a joint consequence of the 20% choice and the
+basis choice together, not of the basis choice alone. Holding that same 20%
+figure fixed, the breach drops to 80.5% (no breach) only if the
+reinvestment-basis proposal in §2.1 is also adopted. That compound
+sensitivity (two different open items both bearing on the same number, and
+the number itself only existing because of a third, the 20% choice) means
+the bull case's terminal-ROIC input is the one of the three that is **not
+yet sufficiently evidenced** to treat as a settled analyst judgment — not
+because 20% is unreasonable, but because its consequences are visibly
+contingent on an unresolved companion choice.
 
 **Exact software consequence for a future, separately authorised Stage 2
 — not performed here (HARD BOUNDS).** `computeScenarioEnterpriseValue`
@@ -358,7 +372,52 @@ HARD BOUNDS against inventing a new finance rule. Both are carried into
   `capitalIntensity` classification figure (42.36%) stays a named lower
   bound, and no basis proposed in §2.1 can be verified against the "true"
   five-component net-reinvestment formula — only against the three
-  three-component proxies this capture actually supports.
+  three-component proxies this capture actually supports. **Exact missing
+  evidence:** the 10-K cash-flow-statement lines for business acquisitions
+  (net of cash acquired) and the change in net working capital — neither is
+  present as an XBRL fact anywhere in the committed capture, so this is a
+  genuinely *missing* input, not one this capture or codebase treats as
+  zero by a judgment call.
+
+  **Sensitivity, independently computed (§5 oracle, new section): what if
+  the missing components are not negligible?** Approximating their combined
+  size as a flat addition to the reinvestment intensity (the only way to
+  test materiality without inventing a specific acquisitions or ΔNWC
+  figure neither this capture nor #436 sources), holding growth, margin,
+  and terminal ROIC fixed exactly as in §5.4's runtime-equivalent (13%)
+  rows — i.e. varying only the one input in question:
+
+  | Scenario | Basis | Baseline (0pp) | +1pp of revenue | +2pp of revenue |
+  |---|---|---|---|---|
+  | Bear | Cash-capex | $204.82 | $200.89 (−1.9%) | $196.96 (−3.8%) |
+  | Base | Cash-capex | $264.54 | $259.46 (−1.9%) | $254.37 (−3.8%) |
+  | Bull | Cash-capex | $339.83 | $333.26 (−1.9%) | $326.69 (−3.9%) |
+  | Bear | Net-of-D&A | $224.45 | $220.52 (−1.8%) | $216.60 (−3.5%) |
+  | Base | Net-of-D&A | $274.70 | $269.62 (−1.9%) | $264.54 (−3.7%) |
+  | Bull | Net-of-D&A | $366.10 | $359.53 (−1.8%) | $352.97 (−3.6%) |
+
+  **Does this range flip §6(a)'s ≈4–10%-per-share basis-adoption
+  conclusion? No, on this approximation.** A flat per-revenue addition moves
+  both the cash-capex and the net-of-D&A baseline down by nearly the same
+  relative amount in every scenario (≈1.8–1.9pp at +1pp, ≈3.5–3.9pp at
+  +2pp), so the *difference between the two bases* — which is what §6(a)
+  asks Calvin to rule on — is essentially unchanged: recomputing the §2.1
+  basis-adoption delta at +1pp gives bear +9.8%, base +3.9%, bull +7.9%
+  (baseline: +9.6%/+3.8%/+7.7%), and at +2pp gives bear +10.0%, base +4.0%,
+  bull +8.0% (table below). The missing-component sensitivity and the reinvestment-basis
+  question move largely independently of each other at this size, because
+  both bases absorb the same flat addition in roughly the same proportion.
+  This does not establish that the true acquisitions/ΔNWC size is actually
+  1–2% of revenue — that remains unsourced — only that *if* it were in that
+  range, it would not change which basis §6(a) should prefer, though it
+  would still lower every scenario's absolute value/share by a few percent
+  in its own right.
+
+  | Scenario | Baseline delta (0pp) | +1pp delta | +2pp delta |
+  |---|---|---|---|
+  | Bear | +9.6% | +9.8% | +10.0% |
+  | Base | +3.8% | +3.9% | +4.0% |
+  | Bull | +7.7% | +7.9% | +8.0% |
 - **No quantified boundary exists in current authority between
   `fcfCharacter`'s "positive but volatile" and "positive and stable (3+
   years)" labels.** §2.2's finding is reported against that gap, not
@@ -366,6 +425,16 @@ HARD BOUNDS against inventing a new finance rule. Both are carried into
   volatility threshold, e.g. on YoY FCF decline magnitude or frequency)
   would be a genuine methodology addition, out of this outcome's scope to
   propose as a number.
+- **Exact missing evidence for §2.3 and §2.2 alike: what the current Notion
+  *Cal Finance — Methodology* page itself states.** This reconciliation has
+  no access to fetch that page, so §2.3's terminal-ROIC fade rule and §2.2's
+  `fcfCharacter` stability boundary are each confirmed only against
+  `docs/frozen/calboard-valuation-methodology.md` (implementation evidence,
+  subordinate per `docs/CURRENT-AUTHORITY.md`'s Precedence), not against the
+  document that actually governs. Until that page is checked, (c)'s and the
+  volatility-threshold half of (b) stay conditional on the frozen text
+  matching current authority — not confirmed outright — and any divergence
+  would be an open conflict per Precedence, not something resolved here.
 - **This capture carries no segment-level revenue breakdown** (Azure /
   Intelligent Cloud vs. More Personal Computing) — every driver above is
   reasoned from consolidated figures only, same limitation #436 already
@@ -478,19 +547,32 @@ under the net-of-D&A basis and the 1.6×–4.2× terminal-boundary FCF jump
 reproduce exactly against a second, independently-coded pass over the same
 formula shape (not a port of §5.4's code).
 
+### 5.6 Unmapped net-reinvestment sensitivity (independent) — see §3 for the full tables and reading
+
+A flat +1pp/+2pp-of-revenue addition to each scenario's reinvestment
+intensity, on both bases, with terminal ROIC held at the runtime-equivalent
+13% exactly as in §5.4's second row — approximating the materiality of the
+unmapped `acquisitions`/`deltaNwc` components named in §3, not a sourced
+figure for either. Reproduces the §3 per-scenario value/share figures and
+the basis-adoption-delta comparison exactly.
+
 ## 6. The one consolidated decision question
 
 Per issue #437's own framing ("one consolidated decision question only if
-actually necessary") — these three are packaged as one Calvin ruling because
+actually necessary") — these four are packaged as one Calvin ruling because
 each is independently material (§2) and none can be defaulted without
 either inventing policy or silently picking one reading over another:
 
 **(a) Reinvestment basis.** Adopt the net-of-D&A reinvestment-driver
 restatement in §2.1 (12/22/30% → 7/20/26%, same reasoning applied to the
 basis the runtime formula actually implies), or keep the current cash-capex
-basis despite the formula mismatch? Materiality: ≈4–10% per share (§2.1),
-and it changes whether the bull case's terminal share independently
-breaches the methodology's 85% band (§2.1, last paragraph).
+basis despite the formula mismatch? Materiality: ≈4–10% per share (§2.1).
+Separately, conditional on the bull case's own proposed 20%-unfaded
+terminal ROIC being held fixed (not on the basis choice alone — under the
+runtime's actual 13% terminal ROIC, neither basis breaches the band), the
+basis choice determines whether that case's terminal share breaches the
+methodology's 85% band: 86.2% (cash-capex, breaches) vs. 80.5% (net-of-D&A,
+does not) (§2.1, last paragraph; §2.3).
 
 **(b) `fcfCharacter`.** Does `positive_stable` survive under the sourced,
 after-cash-capex-and-lease-funded-capacity FCF basis (§2.2), given two
@@ -500,12 +582,21 @@ reading? Not resolved by this document because current authority states no
 quantified volatility threshold (§3); this is squarely the kind of judgment
 call that threshold's absence leaves to Calvin.
 
-**(c) Terminal ROIC treatment.** Confirm the §4 software delta
+**(c) Terminal ROIC treatment.** This item is conditional on evidence this
+reconciliation does not have: §2.3's gap is confirmed only against the
+frozen implementation text (`docs/frozen/calboard-valuation-methodology.md`
+§3.5), not against the current Notion *Cal Finance — Methodology* page,
+which this reconciliation has no access to fetch (§2.3, §3). If that page
+states the same scenario-DCF fade rule, confirm the §4 software delta
 (precedented, backward-compatible optional parameter) as the right minimal
-fix for a future Stage 2, and separately: is the bull case's 20%-unfaded,
-durable-moat-argued terminal ROIC sufficiently evidenced to carry forward,
-given its visible sensitivity to the still-open reinvestment-basis question
-in (a)? Materiality: ≈6–8% per scenario (§2.3).
+fix for a future Stage 2, and separately rule: is the bull case's
+20%-unfaded, durable-moat-argued terminal ROIC sufficiently evidenced to
+carry forward, given its visible sensitivity to the still-open
+reinvestment-basis question in (a)? If the current Methodology instead
+states something different, that is an open conflict per
+`docs/CURRENT-AUTHORITY.md`'s Precedence section, to be resolved before
+either sub-question is actionable, not deferred by assuming the frozen
+text controls. Materiality: ≈6–8% per scenario (§2.3).
 
 **(d) Scenario and terminal coherence.** §2.4 confirms the net-of-D&A
 reinvestment-basis proposal in (a) reverses the bear/base/bull

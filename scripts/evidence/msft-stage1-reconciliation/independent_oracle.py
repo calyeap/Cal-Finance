@@ -334,6 +334,43 @@ def main():
             res = coherence(name, growth, margin, intensity, troic)
             print(f"  {name}: terminal FCF / year-10 FCF = x{float(res['terminal_over_year10']):.2f}")
 
+    # ---- §3 sensitivity: unmapped acquisitions/deltaNwc net-reinvestment,
+    #      approximated as +1pp / +2pp of revenue added to the reinvestment
+    #      intensity each year (same path shape, terminal ROIC fixed at the
+    #      runtime-equivalent 13%, i.e. holding everything else exactly as
+    #      in §5.4's "runtime-equivalent" rows). No new driver values are
+    #      invented; only the stated-size addition itself is tested. ----
+    print()
+    print("== §3 sensitivity: +1pp / +2pp unmapped net-reinvestment (acquisitions + deltaNwc), terminal ROIC fixed 13% ==")
+    baseline_by_basis = {
+        "cash-capex": {"bear": ("0.08", "0.4168", "0.12"), "base": ("0.14", "0.45", "0.22"), "bull": ("0.20", "0.4678", "0.30")},
+        "net-of-D&A": {"bear": ("0.08", "0.4168", "0.07"), "base": ("0.14", "0.45", "0.20"), "bull": ("0.20", "0.4678", "0.26")},
+    }
+    bumped_per_share = {}
+    for basis, scenarios in baseline_by_basis.items():
+        print(f"-- {basis} --")
+        bumped_per_share[basis] = {}
+        for name, (growth, margin, intensity) in scenarios.items():
+            base_res = run_scenario(name, growth, margin, intensity, "0.13")
+            bumped_per_share[basis][name] = {}
+            for bump_label, bump in [("+1pp", "0.01"), ("+2pp", "0.02")]:
+                bumped_intensity = str(Decimal(intensity) + Decimal(bump))
+                bumped_res = run_scenario(name, growth, margin, bumped_intensity, "0.13")
+                bumped_per_share[basis][name][bump_label] = bumped_res["per_share"]
+                delta_pct = (bumped_res["per_share"] - base_res["per_share"]) / base_res["per_share"]
+                print(f"  {name} {bump_label}: per_share=${float(bumped_res['per_share']):.2f} "
+                      f"(baseline ${float(base_res['per_share']):.2f}, {float(delta_pct)*100:+.2f}%)")
+
+    print()
+    print("== §3 sensitivity: does the +1pp/+2pp bump change the §2.1 cash-capex vs. net-of-D&A basis-adoption delta? ==")
+    for bump_label in ["+1pp", "+2pp"]:
+        print(f"-- {bump_label} --")
+        for name in ["bear", "base", "bull"]:
+            cc = bumped_per_share["cash-capex"][name][bump_label]
+            nd = bumped_per_share["net-of-D&A"][name][bump_label]
+            print(f"  {name}: cash-capex=${float(cc):.2f} net-of-D&A=${float(nd):.2f} "
+                  f"delta={float((nd - cc) / cc) * 100:+.2f}%")
+
 
 if __name__ == "__main__":
     main()
