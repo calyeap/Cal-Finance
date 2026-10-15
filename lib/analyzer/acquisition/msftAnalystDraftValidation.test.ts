@@ -86,7 +86,9 @@ function msftDraftScenarios() {
 
 /** The drafted field set exactly as `msft-step7-draft.md` states it, scenario
  * values included: the draft's own isolated, non-persistent plausibility
- * calculation (Bear $187.66, Base $238.01, Bull $356.38), not a hand guess. */
+ * calculation (Bear $193.71, Base $246.97, Bull $370.49, recomputed at the
+ * corrected `nopatTaxRate` = 0.19 per CALVIN RULING — CHANGES NEEDED item 3),
+ * not a hand guess. */
 function msftDraftInput(): RecordedAnalystBundleInput {
   return {
     profile: "MATURE_PROFITABLE_STABLE_FCF",
@@ -96,12 +98,12 @@ function msftDraftInput(): RecordedAnalystBundleInput {
       revenueGrowthBand: "10-30%",
       capitalIntensity: "0.3494",
       cyclicality: { tenYearMarginRange: "0.1673", worstSingleYearChange: "0.0028" },
-      balanceSheetNature: "asset-light",
+      balanceSheetNature: "asset-heavy",
     },
     scenarios: msftDraftScenarios(),
-    scenarioValues: { bear: "187.66", base: "238.01", bull: "356.38" },
+    scenarioValues: { bear: "193.71", base: "246.97", bull: "370.49" },
     configuredConstants: {
-      nopatTaxRate: "0.21",
+      nopatTaxRate: "0.19",
       stressMarginLevel: "0.3006",
       preRevenueUnleveredRate: null,
       projectDebtCost: null,
@@ -127,8 +129,8 @@ describe("CF-MSFT-STEP7-SOURCED-DRAFT-01 — the drafted MSFT bundle behaves as 
     expect(stored?.input.profile).toBe("MATURE_PROFITABLE_STABLE_FCF");
     expect(stored?.input.classificationInputs).toEqual(input.classificationInputs);
     expect(stored?.input.scenarios).toEqual(msftDraftScenarios());
-    expect(stored?.input.scenarioValues).toEqual({ bear: "187.66", base: "238.01", bull: "356.38" });
-    expect(stored?.input.configuredConstants.nopatTaxRate).toBe("0.21");
+    expect(stored?.input.scenarioValues).toEqual({ bear: "193.71", base: "246.97", bull: "370.49" });
+    expect(stored?.input.configuredConstants.nopatTaxRate).toBe("0.19");
     expect(stored?.input.configuredConstants.stressMarginLevel).toBe("0.3006");
     expect(stored?.input.configuredConstants.preRevenueUnleveredRate).toBeNull();
     expect(stored?.input.configuredConstants.projectDebtCost).toBeNull();
