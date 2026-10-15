@@ -1,10 +1,13 @@
+import Decimal from "decimal.js";
 import { describe, it, expect, beforeEach, afterAll, afterEach } from "vitest";
 import { getPool } from "../../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "../runStore";
 import { computeAnalysisForRun, loadGateState } from "../gate";
 import { analystInputsFor, TICKERS_WITH_ANALYST_INPUTS } from "./analystInputs";
 import { recordAnalystBundle, hasRecordedAnalystBundle, type RecordedAnalystBundleInput } from "./recordedBundles";
-import type { AnalysisResult } from "../types";
+import { computeScenarioEnterpriseValue } from "../modules/scenarioOutputs";
+import { buildFixedShapeGrowthPath } from "../growthPath";
+import { POLICY } from "../policy";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 (issue #433).
@@ -88,22 +91,6 @@ async function completeSpotCheck(runId: string): Promise<void> {
   }
 }
 
-// Copied verbatim from step4FinalRealRunProof.test.ts / msftSensitivityCaptureOnRealRun.test.ts's
-// own openMsftRunWithRuling — not invented.
-async function openMsftRunWithRuling(): Promise<AnalysisResult> {
-  const runId = await createRun("MSFT", "Microsoft Corporation");
-  await recordJudgment(
-    runId,
-    "NON-OPERATING INVESTMENTS",
-    "us-gaap:LongTermInvestments",
-    "Calvin's §4.4 ruling, 2026-09-21T08:19:14Z, issue #188."
-  );
-  await completeSpotCheck(runId);
-  const state = await loadGateState(runId);
-  await recordProfileDecision(runId, "CONFIRMED", state.fixture.profile.recommended, null);
-  return computeAnalysisForRun(runId);
-}
-
 describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes precedence over MSFT's committed fixture", () => {
   beforeEach(async () => {
     await getPool().query("TRUNCATE analyzer_run_fact_decisions, analyzer_run_judgments, analyzer_runs CASCADE");
@@ -156,26 +143,29 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
     expect(reverted?.inputs.scenarioValuesAreFixtureCarried).toBe(true);
   });
 
-  it("a real, explicitly recorded MSFT forecast computes a genuine fair-value range from real SEC facts through the existing M1-M15 pipeline — never the fixture's $265/$510/$650, never NOT COMPUTED", async () => {
+  it("a real, explicitly recorded MSFT forecast computes a genuine fair-value range from real SEC facts through the existing M1-M15 pipeline — an independent recomputation, never this test's own typed placeholders, never the old fixture's $265/$510/$650", async () => {
     await recordAnalystBundle("MSFT", TEST_INPUT);
 
-    const result = await openMsftRunWithRuling();
+    // Same steps as openMsftRunWithRuling, kept inline (not the shared
+    // helper) because this test also needs the runId afterwards, to read
+    // back the same fixture computeAnalysisForRun ran on and independently
+    // recompute each scenario from it.
+    const runId = await createRun("MSFT", "Microsoft Corporation");
+    await recordJudgment(
+      runId,
+      "NON-OPERATING INVESTMENTS",
+      "us-gaap:LongTermInvestments",
+      "Calvin's §4.4 ruling, 2026-09-21T08:19:14Z, issue #188."
+    );
+    await completeSpotCheck(runId);
+    const state = await loadGateState(runId);
+    await recordProfileDecision(runId, "CONFIRMED", state.fixture.profile.recommended, null);
+    const result = await computeAnalysisForRun(runId);
 
     // A4's fixture-carried suppression no longer fires: the fair-value
     // range is computed, not suppressed.
     expect(result.fairValueRange.kind).toBe("range");
     if (result.fairValueRange.kind !== "range") return;
-
-    // Real, positive, run-specific figures — never the old committed
-    // fixture's $265 bear / $650 bull, and never this test's own dollar
-    // placeholders (those are scenarioValues on the recorded row; the
-    // report reads scenarioOutputs, computed the same way for every bundle
-    // source — this just pins that recorded dollar figures flow straight
-    // through unmodified, exactly as NVDA's own recorded dollar figures do).
-    expect(result.fairValueRange.bear.toString()).toBe("111.11");
-    expect(result.fairValueRange.bull.toString()).toBe("333.33");
-    expect(result.fairValueRange.bear.toString()).not.toBe("265");
-    expect(result.fairValueRange.bull.toString()).not.toBe("650");
 
     // Trust is no longer forced UNUSABLE by A4's own suppression — the real
     // EV bridge and leverage gate (both already proven on this exact run by
@@ -183,5 +173,47 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
     // facts, untouched by this outcome.
     expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
     expect(result.gates.leverage.result).toBe("PASS");
+    if (result.diagnostics.enterpriseValue.suppressed) return;
+
+    // Independent recomputation: the same base revenue and nopatTaxRate
+    // this run's own fixture carries, the same bear/base/bull drivers
+    // TEST_INPUT recorded, run through computeScenarioEnterpriseValue
+    // (unmodified) and bridged to equity/share — never read from assemble.ts
+    // itself, so this proves the pipeline computed the range rather than
+    // merely echoing it.
+    const baseRevenue = state.fixture.reverseDcf.baseYearRevenue;
+    const nopatTaxRate = state.fixture.configuredConstants.nopatTaxRate;
+    expect(baseRevenue).not.toBeNull();
+    expect(nopatTaxRate).not.toBeNull();
+    if (baseRevenue === null || nopatTaxRate === null) return;
+
+    const bridge = result.diagnostics.enterpriseValue.value;
+    const netDebtBridge = bridge.enterpriseValue.minus(bridge.marketCap);
+
+    const expectedPerShare = (growth: string, margin: string, reinvestment: string, shareCount: string): string =>
+      computeScenarioEnterpriseValue(
+        baseRevenue.value,
+        buildFixedShapeGrowthPath(new Decimal(growth)),
+        new Decimal(margin),
+        new Decimal(reinvestment),
+        POLICY.rateGrid[1],
+        nopatTaxRate
+      )
+        .minus(netDebtBridge)
+        .dividedBy(new Decimal(shareCount))
+        .toString();
+
+    expect(result.fairValueRange.bear.toString()).toBe(expectedPerShare("0.10", "0.38", "0.1", "7430"));
+    expect(result.scenarioOutputs.values.base.toString()).toBe(expectedPerShare("0.137", "0.418", "0.1", "7430"));
+    expect(result.fairValueRange.bull.toString()).toBe(expectedPerShare("0.185", "0.468", "0.1", "7430"));
+
+    // Never this test's own typed dollar placeholders on the recorded row
+    // (TEST_INPUT.scenarioValues) — the engine recomputed them, it did not
+    // pass them through. And never the old committed fixture's $265/$650.
+    expect(result.fairValueRange.bear.toString()).not.toBe("111.11");
+    expect(result.scenarioOutputs.values.base.toString()).not.toBe("222.22");
+    expect(result.fairValueRange.bull.toString()).not.toBe("333.33");
+    expect(result.fairValueRange.bear.toString()).not.toBe("265");
+    expect(result.fairValueRange.bull.toString()).not.toBe("650");
   });
 });

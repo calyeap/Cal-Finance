@@ -181,7 +181,9 @@ export interface CompanyFixture {
   // and EV bridge every other output already uses, from `scenarios` above and
   // `enterpriseValue`/`reverseDcf.baseYearRevenue` — never a second valuation
   // model. An explicit analyst bundle (MSFT, NVDA) still supplies these
-  // directly and always overrides the dynamic computation.
+  // directly and overrides the dynamic computation, UNLESS
+  // `recordedScenarioValuesComputeFromDrivers` below says otherwise (see its
+  // own doc comment).
   scenarioValues: { bear: Decimal; base: Decimal; bull: Decimal } | null;
   // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — true only where the explicit
   // dollar values above are carried from a COMMITTED VALIDATION FIXTURE
@@ -200,6 +202,21 @@ export interface CompanyFixture {
   // recorded human-approved analyst bundle, and every AI-proposed bundle
   // (whose scenarioValues is already null) are unaffected.
   scenarioValuesAreFixtureCarried?: boolean;
+  // CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 (REVIEW-38678066585-1, CORRECT) —
+  // true only where `scenarioValues` above is a recorded, human-approved
+  // bundle (recordedBundles.ts's recordedAnalystInputBundle) AND every
+  // scenario's three drivers (growth, margin, reinvestment) are authored.
+  // When true, assembly ignores the typed `scenarioValues` above and
+  // recomputes the range through the SAME M15 dynamicScenarioValue path an
+  // AI-proposed bundle already uses — a typed dollar figure must not stand
+  // in for a real computation once there is enough to compute one. Absent/
+  // false everywhere else: a hand-authored fixture used directly
+  // (MSFT_FIXTURE/OKLO_FIXTURE in assemble.test.ts/AnalyzerReport.test.tsx),
+  // a committed bundle (A4 above already blocks those), a recorded bundle
+  // with any scenario's drivers left blank (the typed figure is the only
+  // honest source then), and an AI-proposed bundle (whose scenarioValues is
+  // already null) are all unaffected.
+  recordedScenarioValuesComputeFromDrivers?: boolean;
   // null where the fixture has no real revaluation-at-rate solver — see
   // computeScenarioOutputs's own doc comment (CB-AUDIT-01 H2). Never a
   // placeholder formula standing in for one.
@@ -654,12 +671,48 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     return equityValue.dividedBy(driver.shareCount);
   };
 
-  const dynamicScenarioValues =
-    fixture.scenarioValues === null && !scenarioValuesBlockedAsFixtureCarried
-      ? { bear: dynamicScenarioValue("bear"), base: dynamicScenarioValue("base"), bull: dynamicScenarioValue("bull") }
-      : null;
+  // CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 (REVIEW-38678066585-1, CORRECT) —
+  // `fixture.recordedScenarioValuesComputeFromDrivers`'s own doc comment:
+  // only a bundle read back from the recorded store (recordedBundles.ts)
+  // with every scenario's three drivers authored sets this, so a typed
+  // dollar figure on that one source stops standing in for a real
+  // computation once there is enough to compute one, through the SAME
+  // dynamicScenarioValue path above — never a hand-authored test fixture
+  // (MSFT_FIXTURE/OKLO_FIXTURE used directly) or a partially-driven recorded
+  // bundle, both of which keep the typed figure exactly as before.
+  //
+  // The trial below falls back to the typed figure when the recomputation
+  // itself cannot run — e.g. NVDA's own recorded bundle (migration 008) has
+  // every driver authored, but NVDA's EV bridge is INCOMPLETE for reasons
+  // unrelated to this outcome (three pre-existing missing REQUIRED inputs),
+  // so dynamicScenarioValue returns NaN for it. NVDA's already-approved
+  // typed figures ($28.08/$102.38/$296.44) are a genuine recorded analyst
+  // bundle in their own right; losing them to a NaN this outcome did not fix
+  // would be a regression this outcome does not need to cause to unblock
+  // MSFT, whose EV bridge is complete and so recomputes successfully.
+  const recordedBundleFullyDriven =
+    fixture.scenarioValues !== null &&
+    !scenarioValuesBlockedAsFixtureCarried &&
+    fixture.recordedScenarioValuesComputeFromDrivers === true;
 
-  const effectiveScenarioValues = scenarioValuesBlockedAsFixtureCarried ? null : fixture.scenarioValues;
+  let dynamicScenarioValues: { bear: Decimal; base: Decimal; bull: Decimal } | null = null;
+  if ((fixture.scenarioValues === null || recordedBundleFullyDriven) && !scenarioValuesBlockedAsFixtureCarried) {
+    const scenarioValuesMissingBeforeTrial = scenarioValuesMissing;
+    const trial = { bear: dynamicScenarioValue("bear"), base: dynamicScenarioValue("base"), bull: dynamicScenarioValue("bull") };
+    const trialFullyComputed = !trial.bear.isNaN() && !trial.base.isNaN() && !trial.bull.isNaN();
+    if (trialFullyComputed || fixture.scenarioValues === null) {
+      dynamicScenarioValues = trial;
+    } else {
+      // The recomputation did not run to completion and there is a typed
+      // figure to fall back to — revert the cause dynamicScenarioValue
+      // recorded about ITS OWN attempt; it does not apply to the typed
+      // value being used instead.
+      scenarioValuesMissing = scenarioValuesMissingBeforeTrial;
+    }
+  }
+
+  const effectiveScenarioValues =
+    scenarioValuesBlockedAsFixtureCarried || dynamicScenarioValues !== null ? null : fixture.scenarioValues;
   const scenarioOutputs = computeScenarioOutputs({
     bearValue: effectiveScenarioValues?.bear ?? dynamicScenarioValues?.bear ?? new Decimal(NaN),
     baseValue: effectiveScenarioValues?.base ?? dynamicScenarioValues?.base ?? new Decimal(NaN),
