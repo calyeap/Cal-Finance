@@ -167,7 +167,15 @@ export async function recordAnalystBundle(
     for (const driverKey of NULLABLE_DRIVER_KEYS) {
       optionalDecimal(scenario[driverKey], `${key} ${driverKey}`);
     }
-    optionalDecimal(scenario.terminalRoic ?? null, `${key} terminalRoic`);
+    const terminalRoic = optionalDecimal(scenario.terminalRoic ?? null, `${key} terminalRoic`);
+    // REVIEW-38751207194-1, CORRECT — division-safety guard only, no new
+    // economic floor or finance policy. computeScenarioEnterpriseValue
+    // divides by terminalRoic (G.dividedBy(terminalRoic)); a zero or
+    // negative value yields Infinity/a sign-flipped terminal value rather
+    // than a refused write, a silent non-finite valuation downstream.
+    if (terminalRoic !== null && !terminalRoic.greaterThan(0)) {
+      throw new Error(`${key} terminalRoic must be positive`);
+    }
     requireDecimal(input.scenarioValues[key], `${key} scenario value`);
   }
 

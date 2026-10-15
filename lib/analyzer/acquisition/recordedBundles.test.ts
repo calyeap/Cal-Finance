@@ -170,6 +170,18 @@ describe("recordedBundles.ts", () => {
       expect(await hasRecordedAnalystBundle(TICKER)).toBe(false);
     });
 
+    it("refuses a non-positive terminalRoic (REVIEW-38751207194-1 — division-safety guard, G/terminalRoic is otherwise Infinity at 0)", async () => {
+      const zero = validInput();
+      zero.scenarios.base.terminalRoic = "0";
+      await expect(recordAnalystBundle(TICKER, zero)).rejects.toThrow(/terminalRoic must be positive/);
+      expect(await hasRecordedAnalystBundle(TICKER)).toBe(false);
+
+      const negative = validInput();
+      negative.scenarios.bull.terminalRoic = "-0.05";
+      await expect(recordAnalystBundle(TICKER, negative)).rejects.toThrow(/terminalRoic must be positive/);
+      expect(await hasRecordedAnalystBundle(TICKER)).toBe(false);
+    });
+
     it("leaving terminalRoic blank on one scenario does not block recordedScenarioValuesComputeFromDrivers for the others", async () => {
       const input = validInput();
       input.scenarios.base.terminalRoic = "0.11";

@@ -169,7 +169,7 @@ this run:
 
 | Scenario | Per-share fair value | Terminal value share of EV |
 |---|---|---|
-| Bear | $217.54 | 51.7% (independent-oracle figure; see §6 reconciliation note) |
+| Bear | $217.54 | 51.7% |
 | Base | $268.08 | 68.8% |
 | Bull | $366.31 | 78.7% — **§3.5 >75% caution**, not a >85% "multiple in disguise" breach |
 
@@ -179,12 +179,13 @@ count 7,449,545,491 (raw 7,425,545,491 + treasury-method dilution
 24,000,000, this run's own M1 figure — never a hardcoded constant),
 real-run EV bridge: enterprise value $3,716,234,881,852.70, market cap
 $3,722,537,881,852.70 (net cash position, after the §4.4 non-operating
-investments term — see §6). **Observed current price: $499.70** — above
-all three scenario values under this candidate; this candidate's own
-reinvestment/terminal-ROIC choices do not bracket the current price. Stated
-plainly, not adjusted toward the price: this is exactly the kind of
-analyst judgement Calvin's exact-number ruling is for, not something this
-outcome backsolves to a desired answer.
+investments term — see §6, which the independent oracle now re-derives and
+reproduces to the cent, not merely discloses a gap against). **Observed
+current price: $499.70** — above all three scenario values under this
+candidate; this candidate's own reinvestment/terminal-ROIC choices do not
+bracket the current price. Stated plainly, not adjusted toward the price:
+this is exactly the kind of analyst judgement Calvin's exact-number ruling
+is for, not something this outcome backsolves to a desired answer.
 
 A second test in the same file proves the **negative** — a bundle recorded
 with no `terminalRoic` on any scenario (matching every other
@@ -229,50 +230,69 @@ consequence of its full fade to 10%.
 
 Same method as Stage 1 §3 (a flat +1pp / +2pp of revenue addition to the
 reinvestment intensity, approximating the missing acquisitions/ΔNWC
-components), re-run on this candidate's own final drivers:
+components), re-run on this candidate's own final drivers, on the
+independent oracle's own re-derivation of the **real production EV→equity
+bridge** (§6 — not the earlier simplified net-debt-only bridge):
 
 | Scenario | Baseline | +1pp | +2pp |
 |---|---|---|---|
-| Bear | $213.34 | $209.42 (−1.84%) | $205.49 (−3.68%) |
-| Base | $264.05 | $258.97 (−1.92%) | $253.89 (−3.85%) |
-| Bull | $362.60 | $356.03 (−1.81%) | $349.46 (−3.62%) |
+| Bear | $217.54 | $213.62 (−1.80%) | $209.71 (−3.60%) |
+| Base | $268.08 | $263.02 (−1.89%) | $257.95 (−3.78%) |
+| Bull | $366.31 | $359.76 (−1.79%) | $353.21 (−3.57%) |
 
-(Independent-oracle figures, simplified net-debt bridge — see §6.) A few
-percent per scenario at a generous +2pp assumption; does not change the
-relative ordering or materially alter the candidate. Consistent with Stage
-1's own finding that this gap doesn't flip the basis-adoption conclusion.
+A few percent per scenario at a generous +2pp assumption; does not change
+the relative ordering or materially alter the candidate. Consistent with
+Stage 1's own finding that this gap doesn't flip the basis-adoption
+conclusion.
 
-## 6. Independent-oracle reconciliation note
+## 6. Independent-oracle bridge reconciliation note
 
-The Python oracle's net-debt figure (used for §4/§5's sensitivity/
-diagnostic tables above) is a simplified bridge (debt + finance leases −
-cash − short-term investments, matching Stage 1's own oracle) and does
-**not** net the §4.4 non-operating-investments term the real production
-EV bridge applies (Calvin's existing ruling, §2 above) — the real run's
-own net position is a **net cash** position of $6,303,000,000 after that
-term, materially different in sign from the oracle's simplified
-+$30,045,000,000 net-debt figure. This is why §3's real per-share figures
-($217.54/$268.08/$366.31) differ slightly (a few dollars per share, same
-order of magnitude, same ordering) from the independent oracle's own
-EV→equity conversion using its simpler bridge ($213.34/$264.05/$362.60) —
-disclosed here rather than silently reconciled. The EV figures themselves
-(before the net-debt bridge, which is bridge-formula-independent) and the
-terminal-value-share percentages are corroborated to the basis point
-between the TypeScript run and the independent oracle; only the final
-equity/per-share step differs by bridge formula, as expected and as named.
+**REVIEW-38751207194-1, CORRECT — closed.** An earlier revision of
+`independent_oracle.py` used a simplified bridge (debt + finance leases −
+cash − short-term investments, matching Stage 1's own oracle) that did
+**not** net the §4.4 non-operating-investments term the real production EV
+bridge applies (Calvin's existing 2026-09-21 ruling, issue #188,
+`us-gaap:LongTermInvestments`, §2 above), so its per-share figures differed
+from the production run's by a few dollars per scenario. That gap is now
+closed: the oracle independently re-derives the full production bridge
+straight from the raw capture —
+
+- Raw shares outstanding (`dei:EntityCommonStockSharesOutstanding`,
+  as of 2026-07-23): 7,425,545,491.
+- Treasury-method dilution (FY2026,
+  `us-gaap:IncrementalCommonSharesAttributableToShareBasedPaymentArrangements`):
+  24,000,000. Diluted share count: 7,449,545,491 — matches the production
+  run's own M1 figure exactly.
+- Total debt (`LongTermDebt` + `CommercialPaper` + `ShortTermBorrowings`):
+  $40.294B. Finance lease liabilities (`FinanceLeaseLiability`): $66.594B.
+  Cash and marketable debt securities (`CashAndCashEquivalentsAtCarryingValue`
+  + `ShortTermInvestments`): $76.843B. §4.4 non-operating equity
+  investments at book (`LongTermInvestments`): $36.348B.
+- EV bridge term = $40.294B + $66.594B − $76.843B − $36.348B =
+  **−$6.303B** — a **net cash** position of $6,303,000,000, matching the
+  sign and magnitude of the real production run's own bridge exactly.
+
+Re-run with this corrected bridge, the independent oracle reproduces the
+production run's own per-share figures **to the cent**: $217.54 (bear),
+$268.08 (base), $366.31 (bull) — see the "Reproduction check" section of
+the oracle's own output. The §4's RONIC and terminal/year-10 FCF-multiple
+diagnostics are unaffected by this correction: they depend only on NOPAT
+and reinvestment, never on the EV→equity bridge, so they were already
+bridge-independent before this fix and remain so.
 
 ## 7. Compared with the two rejected alternatives (item (c))
 
+On the real production bridge (§6), re-derived independently by the oracle:
+
 | Scenario | This candidate | Universal r+3pp=13% | Bull's own unfaded 20% ask |
 |---|---|---|---|
-| Bear (troic=10%) | $213.34 | $224.45 (+4.95%) | n/a |
-| Base (troic=11%) | $264.05 | $274.70 (+3.88%) | n/a |
-| Bull (troic=12.5%) | $362.60 | $366.10 (+0.96%) | $396.77 (+9.42%, terminal share 80.5%) |
+| Bear (troic=10%) | $217.54 | $228.61 (+5.09%) | n/a |
+| Base (troic=11%) | $268.08 | $278.69 (+3.96%) | n/a |
+| Bull (troic=12.5%) | $366.31 | $369.80 (+0.95%) | $400.37 (+9.30%, terminal share 80.5%) |
 
-(Independent-oracle figures, simplified bridge per §6.) This candidate is
-below the universal-13% alternative in every scenario and well below
-bull's own unfaded-20% ask, consistent with item (c)'s instruction to
-reject both without supported economics.
+This candidate is below the universal-13% alternative in every scenario
+and well below bull's own unfaded-20% ask, consistent with item (c)'s
+instruction to reject both without supported economics.
 
 ## 8. Verification
 
@@ -282,8 +302,10 @@ reject both without supported economics.
   names (`scripts/evidence/selfTest.test.ts`, a Playwright browser-binary
   gap unrelated to this change) reproduces identically on `master`.
 - `python3 -I scripts/evidence/msft-stage2-valuation-proof/independent_oracle.py`:
-  reproduces every figure in §4/§5/§7 above (simplified bridge, as noted in
-  §6).
+  exit 0, reproduces every figure in §3/§4/§5/§7 above on the real
+  production EV→equity bridge (§6), including the $217.54/$268.08/$366.31
+  per-share figures to the cent (its own "Reproduction check" section), and
+  fails closed (raises) on a non-positive `terminalRoic`.
 - `git diff --stat` against `master`: this outcome's own files only — see
   the PR description for the exact list; no `deriveVerdict`, `policy.ts`
   BUY/HOLD/SELL logic, `docs/frozen/`, or UI file touched.
