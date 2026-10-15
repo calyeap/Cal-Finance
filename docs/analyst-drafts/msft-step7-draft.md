@@ -77,6 +77,19 @@ below is asserted as fact; each is **ANALYST JUDGEMENT PROPOSAL**, reasoned
 from the OBSERVED historical series above, and every one of them is exactly
 what Calvin's review is for.
 
+**Distinct from M14's existing MSFT sensitivity axes (DO item 4).** MSFT
+already has a growth axis (10.0% / 13.7% / 18.5%) and an operating-margin
+axis (38.0% / 41.8% / 46.8%) captured for M14's tornado/two-way sensitivity
+tables (`analystInputs.ts`'s `MSFT_GROWTH_RANGE` / `MSFT_OPERATING_MARGIN_RANGE`,
+`CALVIN RULING — A`, issue #324). Those three-point axes are cited directly
+from `MSFT_FIXTURE`'s own committed bear/base/bull scenario values and
+already-acquired M3 diagnostics (median/current margin) — they are **not**
+this draft's real-data-sourced Step-7 forecasts below (growth 8% / 14% /
+20%, margin 41.68% / 45% / 46.78%), which propose different drivers
+entirely. Approving this draft does not change M14's existing
+fixture-sourced sensitivity capture; the two live side by side until a
+future outcome reconciles them, if ever.
+
 **`shareCount` (all three scenarios): `7425545491`** (absolute raw share
 count, not billions) — **OBSERVED FACT**: `dei:EntityCommonStockSharesOutstanding`
 (cover-page shares, §3.5's "most recent... from the filing COVER PAGE"),
@@ -134,13 +147,28 @@ confirm it was never computed for MSFT either. The three values below are
 expects Calvin to review, approve or correct — not yet reviewed or approved
 for MSFT.
 
-`lib/analyzer/modules/scenarioOutputs.ts`'s `computeScenarioEnterpriseValue`
-is **not called** for any of the three figures below: its internal terminal
-ROIC (`rate.plus(POLICY.terminalRoicPremium)`, i.e. a hardcoded `r + 3pp` for
-every caller) is the diagnostic-reverse-DCF-only shortcut, not the scenario
-driver this section drafts — the same defect the companion NVDA draft names
-and leaves raised, not resolved, per the HARD BOUNDS (no bespoke DCF model,
-no edit to that function).
+**Correction (REVIEW-38696980049-1).** The companion NVDA draft's claim that
+`computeScenarioEnterpriseValue` is "wired only into the M14 sensitivity
+tables, never into the path that produces a company's committed
+`scenarioValues`" was accurate when written, but PR #434
+(`CF-ANALYZER-REAL-VALUATION-UNBLOCK-01`) changed that: `assemble.ts`'s
+`dynamicScenarioValue` now calls this exact function to recompute a
+**recorded** bundle's scenario values whenever every scenario's three
+drivers are authored (`recordedScenarioValuesComputeFromDrivers`,
+`recordedBundles.ts:341`) — true for all three scenarios proposed below. So
+`computeScenarioEnterpriseValue` is not a diagnostic-only shortcut this
+draft can set aside; it is the actual function that would run against these
+drivers once this bundle is recorded. Its terminal ROIC
+(`rate.plus(POLICY.terminalRoicPremium)` = `r + 3pp` = **13% for every
+scenario**) is hardcoded and has no parameter for a per-scenario value to
+flow into — it would override, not consume, the three proposed terminal
+ROIC values below. This is a real, unresolved divergence between
+methodology §3.5's "terminal ROIC is an analyst input" rule for the
+scenario DCF and what the runtime actually computes once a bundle is both
+recorded and fully driven; it is named here, not resolved (per the HARD
+BOUNDS, `computeScenarioEnterpriseValue` is not edited by this outcome).
+See "Runtime-equivalent values" below for what recording this bundle, as
+proposed, would actually produce per share.
 
 A rough, non-authoritative cross-check only (not RONIC, not a proposed
 input): current-year NOPAT ÷ (equity + debt + leases − cash & securities) =
@@ -339,6 +367,38 @@ labelled above at its own source.
 | Base | 14% | 45.0% | 22% | 10% (fades to `r`) | 71.6% | 8.14× EV/EBIT | +21.8% / −16.0% | **$238.01** |
 | Bull | 20% | 46.78% | 30% | 20% (durable-moat exception) | 87.3% ⚠️ above 85% band | 9.88× EV/EBIT | +25.3% / −18.4% | **$356.38** |
 
+### Runtime-equivalent values — what recording this bundle would actually produce
+
+**Not the figures above.** Per the correction in "Terminal ROIC" above,
+recording this bundle (once approved) with all three scenarios' drivers
+authored makes `assemble.ts`'s `dynamicScenarioValue` recompute scenario
+values through `computeScenarioEnterpriseValue` itself, whose terminal ROIC
+is fixed at `r + 3pp` = **13%** for every scenario — never this draft's
+proposed per-scenario 10% / 10% / 20%. Recomputing the same drivers
+(growth, margin, reinvestment, revenue, `r`, `g`, `nopatTaxRate`) through
+that exact function, with terminal ROIC = 13% instead of the proposed
+values, gives:
+
+| Scenario | Terminal ROIC the runtime actually uses | Value/share |
+|---|---|---|
+| Bear | 13% (not the proposed 10%) | **≈$198.50** |
+| Base | 13% (not the proposed 10%) | **≈$255.14** |
+| Bull | 13% (not the proposed 20%; durable-moat exception not honoured) | **≈$326.47** |
+
+Computed by running the real `computeScenarioEnterpriseValue` function
+(`lib/analyzer/modules/scenarioOutputs.ts`) against this draft's own
+proposed drivers — not a second hand calculation. **Caveat, not resolved
+here:** this reuses this section's own net-debt figure ($30.045B), which
+(per the EV-bridge section above) does not select among the three §4.4
+non-operating-investments candidates. A real run's own `netDebtBridge` is
+`assemble.ts`'s own M1 inversion, which does subtract whichever §4.4
+candidate is eventually selected — a judgment this draft explicitly does
+not make (HARD BOUNDS) — so a live run's actual figure could differ
+further from the ≈ values above once that selection is made. These ≈
+figures are the best currently-answerable illustration of what recording
+would produce; they are not a second set of proposed values for Calvin to
+choose between, and not an Analyzer output today.
+
 ## Evidence gaps — named, not defaulted
 
 - **This capture carries no segment-level revenue breakdown** (e.g. Azure /
@@ -390,8 +450,14 @@ WOULD change, per issue #435's own OUTCOME: the recorded-bundle path
 recorded row over the committed fixture, so recording the inputs below
 (after Calvin rules on them) would be what makes MSFT's own real run stop
 reading the fixture's synthetic scenario values and start reading real,
-sourced, Calvin-approved ones — the next phase, explicitly downstream of
-this ruling, not performed by this outcome.
+sourced, analyst-authored drivers — **not** the hand-calculated per-share
+figures in "Scenario values" above. Because all three scenarios' drivers
+are proposed as fully authored, recording would make the real run
+recompute scenario values itself (`computeScenarioEnterpriseValue`,
+terminal ROIC fixed at 13%), producing figures close to the
+"Runtime-equivalent values" table above, not the $187.66 / $238.01 /
+$356.38 figures — the next phase, explicitly downstream of this ruling,
+not performed by this outcome.
 
 ## What this draft does not do
 
@@ -412,12 +478,25 @@ choices above as written? Yes / changes needed.**
 
 This covers, as one consolidated decision: the `profile` and classification
 inputs; all three scenarios' `revenueGrowthOrPath` / `operatingMargin` /
-`reinvestmentCapitalIntensity` / `shareCount` / `writtenAnchor`; all three
-scenarios' proposed `terminalRoic` / `terminalRoicAnchor`; the two proposed
-§7.1 constants (`nopatTaxRate`, `stressMarginLevel`); and, as the
-isolated plausibility calculation these approvals would make meaningful,
-the three resulting scenario dollar values (Bear $187.66, Base $238.01,
-Bull $356.38) under the current approved scenario-DCF methodology. A
+`reinvestmentCapitalIntensity` / `shareCount` / `writtenAnchor`; and the two
+proposed §7.1 constants (`nopatTaxRate`, `stressMarginLevel`). A
 **"changes needed"** answer may name specific fields to correct rather than
 rejecting the whole draft; nothing here is recorded, resolvable, or binding
 until Calvin rules.
+
+**Named open item, not folded into the question above
+(REVIEW-38696980049-1).** The three proposed per-scenario `terminalRoic`
+values (10% / 10% / 20%) are methodology §3.5's required scenario-DCF
+input, but the runtime function that would actually recompute a recorded,
+fully-driven bundle's scenario values (`computeScenarioEnterpriseValue`)
+ignores any per-scenario terminal ROIC and fixes it at `r + 3pp` = 13% for
+every scenario instead — see "Terminal ROIC" and "Runtime-equivalent
+values" above. This draft does not choose between the two: the $187.66 /
+$238.01 / $356.38 figures follow methodology §3.5 as written (per-scenario
+terminal ROIC); the ≈$198.50 / ≈$255.14 / ≈$326.47 figures are what the
+live `computeScenarioEnterpriseValue` path would actually produce if this
+bundle were recorded as drafted. Calvin's approval of the drivers above
+does not by itself resolve which treatment governs a recorded MSFT bundle
+— that is a separate, still-open question this draft surfaces but does not
+answer, left for the next phase (recording) or a follow-up ruling, not a
+silent default to either figure.
