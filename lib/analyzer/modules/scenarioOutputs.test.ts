@@ -72,6 +72,64 @@ describe("computeScenarioEnterpriseValue", () => {
 
     expect(scenarioEv.toDecimalPlaces(6).toString()).toBe(reverseDcfEv.toDecimalPlaces(6).toString());
   });
+
+  describe("terminalRoic (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01) — optional, scenario-specific override", () => {
+    const flatPath = Array(10).fill(new Decimal(0));
+    const margin = new Decimal("0.3");
+    const capitalIntensity = new Decimal("0.1");
+    const rate = new Decimal("0.1");
+    const taxRate = new Decimal(0);
+
+    it("legacy default — omitting terminalRoic (and terminalGrowth) reproduces the prior hardcoded r+3pp behaviour exactly", () => {
+      const withoutParam = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, taxRate);
+      const explicitDefault = computeScenarioEnterpriseValue(
+        new Decimal(100),
+        flatPath,
+        margin,
+        capitalIntensity,
+        rate,
+        taxRate,
+        undefined,
+        rate.plus("0.03")
+      );
+      expect(withoutParam.toString()).toBe(explicitDefault.toString());
+    });
+
+    it("passing null for terminalRoic is identical to omitting it", () => {
+      const omitted = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, taxRate);
+      const explicitNull = computeScenarioEnterpriseValue(
+        new Decimal(100),
+        flatPath,
+        margin,
+        capitalIntensity,
+        rate,
+        taxRate,
+        undefined,
+        null
+      );
+      expect(omitted.toString()).toBe(explicitNull.toString());
+    });
+
+    it("an explicit terminalRoic changes the terminal value and is NOT silently overridden by the r+3pp default", () => {
+      const defaultRoicEv = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, taxRate);
+      // A lower, fully-faded terminal ROIC (= cost of capital, no durable
+      // excess return) must produce a LOWER terminal value than the
+      // diagnostic r+3pp premium (13%), since a lower ROIC on the same
+      // terminal growth rate implies a higher terminal reinvestment rate
+      // (g/ROIC) and hence a lower terminal FCF.
+      const fadedToRate = computeScenarioEnterpriseValue(
+        new Decimal(100),
+        flatPath,
+        margin,
+        capitalIntensity,
+        rate,
+        taxRate,
+        undefined,
+        rate // terminal ROIC = cost of capital, zero excess return
+      );
+      expect(fadedToRate.lessThan(defaultRoicEv)).toBe(true);
+    });
+  });
 });
 
 describe("solveRateForTargetValue", () => {

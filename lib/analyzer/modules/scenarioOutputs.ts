@@ -31,7 +31,15 @@ export function computeScenarioEnterpriseValue(
   // solely so M14's sensitivity module can vary terminal growth through
   // this same existing model (its rate x terminal-growth table) without
   // duplicating this function's formula; the formula itself is unchanged.
-  terminalGrowth: Decimal = POLICY.terminalGrowth
+  terminalGrowth: Decimal = POLICY.terminalGrowth,
+  // Optional, scenario-specific terminal ROIC override
+  // (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01, §3.5: the scenario DCF's
+  // terminal ROIC is an analyst input that must fade toward the cost of
+  // capital unless a durable moat is argued explicitly — a different rule
+  // from the diagnostic reverse DCF's own fixed r+3pp convention below).
+  // Absent/null and every existing caller gets EXACTLY the prior hardcoded
+  // r+3pp behaviour.
+  terminalRoic?: Decimal | null
 ): Decimal {
   if (growthPath.length !== 10) {
     throw new Error("growthPath must have exactly ten entries (years 1-10)");
@@ -60,8 +68,8 @@ export function computeScenarioEnterpriseValue(
   const year10Revenue = revenues[10];
   const nopat10 = year10Revenue.mul(marginAt(10)).mul(afterTax);
   const terminalNopat = nopat10.mul(new Decimal(1).plus(terminalGrowth));
-  const terminalRoic = rate.plus(POLICY.terminalRoicPremium);
-  const terminalFcf = terminalNopat.mul(new Decimal(1).minus(terminalGrowth.dividedBy(terminalRoic)));
+  const resolvedTerminalRoic = terminalRoic ?? rate.plus(POLICY.terminalRoicPremium);
+  const terminalFcf = terminalNopat.mul(new Decimal(1).minus(terminalGrowth.dividedBy(resolvedTerminalRoic)));
   const terminalValueAtYear10 = terminalFcf.dividedBy(rate.minus(terminalGrowth));
   const terminalValuePV = terminalValueAtYear10.dividedBy(discountFactorBase.pow(10));
 

@@ -134,4 +134,53 @@ describe("recordedBundles.ts", () => {
     expect(await hasRecordedAnalystBundle(TICKER)).toBe(true);
     expect(await hasRecordedAnalystBundle("ZzzTest")).toBe(true);
   });
+
+  describe("terminalRoic (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01) — optional, independent of the three nullable drivers", () => {
+    it("round-trips an authored terminalRoic alongside the three drivers", async () => {
+      const input = validInput();
+      input.scenarios.bull.terminalRoic = "0.125";
+      await recordAnalystBundle(TICKER, input);
+
+      const bundle = await recordedAnalystInputBundle(TICKER);
+      expect(bundle?.inputs.scenarios.bull.terminalRoic?.toString()).toBe("0.125");
+      // Untouched scenarios never acquire one — absent, not 0.
+      expect(bundle?.inputs.scenarios.bear.terminalRoic).toBeNull();
+      expect(bundle?.inputs.scenarios.base.terminalRoic).toBeNull();
+    });
+
+    it("a bundle recorded before this field existed — no terminalRoic key on any scenario at all — still round-trips exactly as before", async () => {
+      // Simulates NVDA's own migration-008 seed row shape: no `terminalRoic`
+      // property on the stored scenario object, not even `null`.
+      const input = validInput();
+      await recordAnalystBundle(TICKER, input);
+
+      const bundle = await recordedAnalystInputBundle(TICKER);
+      expect(bundle?.inputs.scenarios.bear.terminalRoic).toBeNull();
+      expect(bundle?.inputs.scenarios.base.terminalRoic).toBeNull();
+      expect(bundle?.inputs.scenarios.bull.terminalRoic).toBeNull();
+      // recordedScenarioValuesComputeFromDrivers is gated on the three
+      // original drivers only — terminalRoic's absence must never block it.
+      expect(bundle?.inputs.recordedScenarioValuesComputeFromDrivers).toBe(true);
+    });
+
+    it("refuses a non-numeric terminalRoic rather than storing unparsed text", async () => {
+      const input = validInput();
+      input.scenarios.bear.terminalRoic = "not-a-number";
+      await expect(recordAnalystBundle(TICKER, input)).rejects.toThrow();
+      expect(await hasRecordedAnalystBundle(TICKER)).toBe(false);
+    });
+
+    it("leaving terminalRoic blank on one scenario does not block recordedScenarioValuesComputeFromDrivers for the others", async () => {
+      const input = validInput();
+      input.scenarios.base.terminalRoic = "0.11";
+      input.scenarios.bull.terminalRoic = "0.125";
+      // bear.terminalRoic left absent entirely.
+      await recordAnalystBundle(TICKER, input);
+
+      const bundle = await recordedAnalystInputBundle(TICKER);
+      expect(bundle?.inputs.recordedScenarioValuesComputeFromDrivers).toBe(true);
+      expect(bundle?.inputs.scenarios.bear.terminalRoic).toBeNull();
+      expect(bundle?.inputs.scenarios.base.terminalRoic?.toString()).toBe("0.11");
+    });
+  });
 });

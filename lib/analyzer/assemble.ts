@@ -659,7 +659,9 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       driver.operatingMargin,
       driver.reinvestmentCapitalIntensity,
       POLICY.rateGrid[1],
-      nopatTaxRateForRun
+      nopatTaxRateForRun,
+      undefined,
+      driver.terminalRoic
     );
     // The bridge's own net debt/cash/non-operating-investments term, held
     // constant across bear/base/bull exactly as the debt and cash on a
