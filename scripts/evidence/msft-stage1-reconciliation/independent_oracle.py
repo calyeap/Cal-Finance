@@ -281,6 +281,59 @@ def main():
     res = run_scenario("bull (net-of-D&A, 20% terminal ROIC)", "0.20", "0.4678", "0.26", "0.20")
     print(f"per_share=${float(res['per_share']):.2f} terminal_share={float(res['terminal_share'])*100:.1f}%")
 
+    # ---- §2.4 / §5.5: scenario and terminal coherence, independent second pass ----
+    # Lagged RONIC_t = (NOPAT_t - NOPAT_{t-1}) / Reinvestment_{t-1}: return in
+    # year t on capital reinvested in year t-1. Not a port of run_scenario();
+    # recomputes NOPAT/reinvestment paths directly from the same formula shape.
+    def coherence(name, growth, margin, intensity, terminal_roic):
+        growth_path = path_shape(Decimal(str(growth)))
+        revs = [base_rev]
+        rev = base_rev
+        for t in range(10):
+            rev = rev * (1 + growth_path[t])
+            revs.append(rev)
+        nopats = [base_rev * Decimal(str(margin)) * (1 - tax)]
+        reinvests = [base_rev * Decimal(str(intensity))]
+        for t in range(1, 11):
+            nopats.append(revs[t] * Decimal(str(margin)) * (1 - tax))
+            reinvests.append(revs[t] * Decimal(str(intensity)))
+        ronic_explicit = (nopats[1] - nopats[0]) / reinvests[0]
+        ronic_year10 = (nopats[10] - nopats[9]) / reinvests[9]
+        term_roic = Decimal(str(terminal_roic))
+        terminal_fcf = nopats[10] * (1 + g) * (1 - g / term_roic)
+        year10_fcf = nopats[10] - reinvests[10]
+        return dict(name=name, ronic_explicit=ronic_explicit, ronic_year10=ronic_year10,
+                    terminal_over_year10=terminal_fcf / year10_fcf)
+
+    print()
+    print("== §2.4(i): cross-scenario explicit-period RONIC, lagged (independent second pass) ==")
+    for basis, rows in [
+        ("cash-capex (current, 12/22/30%)", [
+            ("bear", "0.08", "0.4168", "0.12"), ("base", "0.14", "0.45", "0.22"), ("bull", "0.20", "0.4678", "0.30")]),
+        ("net-of-D&A (proposed, 7/20/26%)", [
+            ("bear", "0.08", "0.4168", "0.07"), ("base", "0.14", "0.45", "0.20"), ("bull", "0.20", "0.4678", "0.26")]),
+    ]:
+        print(f"-- {basis} --")
+        for name, growth, margin, intensity in rows:
+            res = coherence(name, growth, margin, intensity, "0.13")
+            print(f"  {name}: explicit-period RONIC={float(res['ronic_explicit'])*100:.2f}% "
+                  f"year-10 RONIC={float(res['ronic_year10'])*100:.2f}%")
+
+    print()
+    print("== §2.4(ii): terminal-boundary FCF jump, methodology-as-written terminal ROIC (10/10/20%) ==")
+    for basis, rows in [
+        ("cash-capex", [
+            ("bear", "0.08", "0.4168", "0.12", "0.10"), ("base", "0.14", "0.45", "0.22", "0.10"),
+            ("bull", "0.20", "0.4678", "0.30", "0.20")]),
+        ("net-of-D&A", [
+            ("bear", "0.08", "0.4168", "0.07", "0.10"), ("base", "0.14", "0.45", "0.20", "0.10"),
+            ("bull", "0.20", "0.4678", "0.26", "0.20")]),
+    ]:
+        print(f"-- {basis} --")
+        for name, growth, margin, intensity, troic in rows:
+            res = coherence(name, growth, margin, intensity, troic)
+            print(f"  {name}: terminal FCF / year-10 FCF = x{float(res['terminal_over_year10']):.2f}")
+
 
 if __name__ == "__main__":
     main()

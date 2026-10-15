@@ -186,8 +186,12 @@ whose *free* cash is shrinking, in both relative and (for two years running)
 absolute terms, exactly because the capacity investment behind that same
 growth has outpaced it.
 
-**Classification consequence.** The governing methodology's own
-`fcfCharacter` options (§2, classification inputs) are a plain three-way
+**Classification consequence.** `docs/frozen/calboard-valuation-methodology.md`'s
+`fcfCharacter` options (§2, classification inputs) — implementation
+evidence subordinate to the current Notion *Cal Finance — Methodology*
+page per `docs/CURRENT-AUTHORITY.md`'s Precedence section ("frozen specs
+… implement authority; they do not create it"), and not independently
+re-fetched from that page in this reconciliation — are a plain three-way
 choice — *negative / positive but volatile / positive and stable (3+
 years)* — with no quantified boundary given anywhere in the current
 authority between "volatile" and "stable." That absence of a quantified
@@ -207,15 +211,24 @@ the two declines. This is the second item carried into §6 for Calvin.
 
 ### 2.3 Terminal economics — confirmed implementation gap, not a pure policy question
 
-**The methodology's own text is explicit and not ambiguous on this point**
-(`docs/frozen/calboard-valuation-methodology.md` §3.5, line 374, and the
-Appendix B worked grid at line 448): in the **scenario DCF**, terminal ROIC
-*"is an analyst input with a written anchor and must fade toward the cost
-of capital unless a durable moat is argued explicitly."* In the
-**diagnostic reverse DCF only**, it is *"fixed by rule at r + 3 percentage
-points (PROVISIONAL)... not an analyst input."* These are two different
-rules for two different outputs, stated as such in the one document that
-governs both.
+**The frozen implementation spec's text is explicit and not ambiguous on
+this point** (`docs/frozen/calboard-valuation-methodology.md` §3.5, line
+374, and the Appendix B worked grid at line 448). This is implementation
+evidence, subordinate to the current Notion *Cal Finance — Methodology*
+page per `docs/CURRENT-AUTHORITY.md`'s Precedence section ("frozen specs
+… implement authority; they do not create it"); this reconciliation has
+no access to fetch that Notion page and has not independently checked
+whether it states the same rule, so what follows is confirmed against the
+frozen text only, not against current authority: in the **scenario DCF**,
+terminal ROIC *"is an analyst input with a written anchor and must fade
+toward the cost of capital unless a durable moat is argued explicitly."*
+In the **diagnostic reverse DCF only**, it is *"fixed by rule at r + 3
+percentage points (PROVISIONAL)... not an analyst input."* These are two
+different rules for two different outputs, stated as such in this one
+frozen implementation document covering both. If the current Notion
+methodology states something different on this point, that is an open
+conflict per Precedence, not something this reconciliation can resolve or
+confirm away.
 
 **What the runtime actually does** (`scenarioOutputs.ts:63`,
 independently re-read line-by-line in §5): `computeScenarioEnterpriseValue`
@@ -273,6 +286,67 @@ recorded bundle's own per-scenario `terminalRoic` field (already present on
 the bundle schema per #436's draft) flow through instead of being silently
 discarded. This is named as the minimal delta, not implemented, per the HARD
 BOUNDS against runtime changes in this outcome.
+
+### 2.4 Scenario and terminal coherence — confirmed inconsistency, not resolved
+
+Per issue #437's requirement to "demonstrate bear/base/bull coherence" and
+for REVIEW to validate "terminal coherence," §2.1 and §2.3 above are each
+checked against the *other* scenarios and against the explicit/terminal
+boundary, independently (§5.5), rather than read only in isolation. Two
+coherence problems are confirmed; neither is resolved here.
+
+**(i) Cross-scenario return on incremental capital.** Implied
+explicit-period RONIC (ΔNOPAT_t ÷ Reinvestment_{t−1}, constant for years
+1–5 under each scenario's own constant growth; §5.5):
+
+| Basis | Bear | Base | Bull |
+|---|---|---|---|
+| Cash-capex (current driver, 12/22/30%) | 22.51% | 23.20% | 25.26% |
+| Net-of-D&A (§2.1 proposed driver, 7/20/26%) | **38.58%** | 25.52% | 29.15% |
+
+On the current cash-capex basis the ranking is monotonic with optimism
+(bear < base < bull) — the shape the "same reasoning, restated" framing in
+§2.1 implicitly assumes still holds. The §2.1 net-of-D&A restatement breaks
+it: bear's implied return on incremental capital (38.6%) is higher than
+base's (25.5%) and bull's (29.1%) — the most pessimistic growth/margin
+scenario shows the best return on the marginal reinvested dollar. §2.1
+reasoned each driver against its own basis's historical range,
+scenario-by-scenario; it did not check the resulting ranking across
+scenarios, and that ranking reverses. Current authority states no rule for
+what cross-scenario ranking is required, so this is reported as found, not
+corrected or defaulted.
+
+**(ii) Year-10 return and the terminal boundary.** Both bases put base's
+and bull's year-10 (lagged) RONIC below the 10% cost of capital — base
+4.97% (cash-capex) / 5.47% (net-of-D&A), bull 3.79% / 4.37% — far below
+their own years 1–5 RONIC above. Growth fades linearly to 3% over years
+6–10 (the policy path shape), but reinvestment intensity is held constant
+through year 10 on both the current and proposed basis; only the terminal
+step applies the terminal reinvestment rate g ÷ terminal ROIC (15% at 20%
+terminal ROIC, 23% at 13%, 30% at 10%). The result is a discontinuous jump
+in free cash flow at the explicit/terminal boundary, not a fade:
+
+| Basis, terminal ROIC (methodology-as-written) | Bear | Base | Bull |
+|---|---|---|---|
+| Cash-capex (10% / 10% / 20%) | ×1.12 | ×1.82 | **×4.20** |
+| Net-of-D&A (10% / 10% / 20%) | ×0.91 | ×1.60 | **×2.79** |
+
+(Terminal-year FCF ÷ year-10 FCF.) Year-10 reinvestment is 35.5%/60.4%/79.2%
+of NOPAT (bear/base/bull, cash-capex) and 20.7%/54.9%/68.6% (net-of-D&A);
+the terminal rate it drops to is 15–30% depending on terminal ROIC. The
+§2.1 reinvestment-basis materiality (≈4–10%/share) and the §2.3
+terminal-ROIC materiality (≈6–8%/scenario) are each measured holding this
+discontinuity fixed — neither figure is wrong about its own isolated
+effect, but both rest on a ten-year path that is not itself
+growth-consistent at the horizon.
+
+**Not resolved here.** Fixing (i) or (ii) would mean proposing
+growth-consistent, ten-entry reinvestment-intensity paths per scenario
+(`computeScenarioEnterpriseValue` already accepts a ten-entry path,
+`scenarioOutputs.ts:18-20`) — itself a new analyst-judgment proposal, not a
+restatement of one already made in #436 or here, and out of this outcome's
+HARD BOUNDS against inventing a new finance rule. Both are carried into
+§6(d) as a named, quantified decision item instead.
 
 ## 3. Remaining unknowns and consequences — named, not defaulted
 
@@ -393,6 +467,17 @@ TS = terminal share of value. All four rows independently reproduce or
 extend #436's own figures (row 1 and row 2 match §5.1's matrix exactly; rows
 3–4 are this reconciliation's own extension, computed the same way).
 
+### 5.5 Scenario and terminal coherence (independent) — see §2.4 for the full tables and reading
+
+Per-year NOPAT and reinvestment are recomputed from the same §5.4 formula
+shape for each scenario, on both reinvestment bases; lagged RONIC is
+ΔNOPAT_t ÷ Reinvestment_{t−1} (return in year *t* on the capital reinvested
+in year *t−1*), and the terminal-boundary step is terminal FCF (§5.4's
+formula) ÷ year-10 FCF. Both the cross-scenario RONIC ranking reversal
+under the net-of-D&A basis and the 1.6×–4.2× terminal-boundary FCF jump
+reproduce exactly against a second, independently-coded pass over the same
+formula shape (not a port of §5.4's code).
+
 ## 6. The one consolidated decision question
 
 Per issue #437's own framing ("one consolidated decision question only if
@@ -422,7 +507,20 @@ durable-moat-argued terminal ROIC sufficiently evidenced to carry forward,
 given its visible sensitivity to the still-open reinvestment-basis question
 in (a)? Materiality: ≈6–8% per scenario (§2.3).
 
-None of (a)–(c) is this outcome's to decide; each is named here precisely,
+**(d) Scenario and terminal coherence.** §2.4 confirms the net-of-D&A
+reinvestment-basis proposal in (a) reverses the bear/base/bull
+return-on-incremental-capital ranking (bear highest at 38.6% vs. base
+25.5%/bull 29.1%), and that both reinvestment bases hold intensity
+constant through year 10 while growth fades, producing a 1.6×–4.2× jump in
+free cash flow at the terminal boundary rather than a fade. Is a
+growth-consistent, per-scenario reinvestment-intensity path (fading
+alongside growth, not held constant) required before (a) and (c)'s
+figures are relied on, or is the current constant-intensity shape an
+accepted simplification? Not resolved by this document; no cross-scenario
+ranking rule or intensity-fade rule exists in current authority to settle
+it mechanically.
+
+None of (a)–(d) is this outcome's to decide; each is named here precisely,
 with its own quantified consequence, so a ruling on it is a closed
 yes/no/which-of per item, not a re-opening of the whole draft.
 
