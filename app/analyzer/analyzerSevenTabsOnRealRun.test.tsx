@@ -91,6 +91,12 @@ describe("CF-ANALYZER-USER-READY-01 DO item 6 — all seven tabs render on a rea
   // the same runId, standing in for navigating back to a previously-opened
   // tab without recomputation).
   it("PASS MATRIX — every tab passes both cold and warm (repeated) render, with identical content both times", async () => {
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) — MSFT now computes a
+    // real fair-value range (M14 sensitivity tornado/two-way tables, the
+    // fading-reinvestment path) on every render instead of an early
+    // suppressed return, so fourteen renders (cold + warm x 7 tabs) no
+    // longer reliably finish inside the 5s default; bumped to the next
+    // round figure with headroom, not tuned to a measured millisecond.
     const matrix: { tab: AnalyzerTabSlug; cold: "PASS" | "FAIL"; warm: "PASS" | "FAIL"; stable: boolean }[] = [];
 
     for (const tab of SEVEN_TAB_SLUGS) {
@@ -118,7 +124,7 @@ describe("CF-ANALYZER-USER-READY-01 DO item 6 — all seven tabs render on a rea
       expect(row.stable).toBe(true);
     }
     expect(matrix).toHaveLength(7);
-  });
+  }, 15000);
 
   it("warm navigation does not create a second run or re-trigger the human-step gate — the run stays automatic across repeated tab loads", async () => {
     for (const tab of SEVEN_TAB_SLUGS) {

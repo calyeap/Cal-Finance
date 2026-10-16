@@ -12,7 +12,11 @@ import { computeAnalysisForRun, loadGateState } from "./gate";
 // growthLicence.ts (§10.6.2 Step 2), on the exact three captures
 // docs/verdict-methodology-reconciliation.md §12 already observes:
 //
-//   MSFT — RONIC CLEAN at ~17.4977%, above every grid rate → YES.
+//   MSFT — RONIC CLEAN at ~17.7164% (CF-MSFT-STAGE2-DURABLE-SEED-01, issue
+//          #442: the recorded bundle's own 19% nopatTaxRate vs. the retired
+//          validation fixture's 20%, the ~17.4977% docs/verdict-methodology-
+//          reconciliation.md §12 originally observed), above every grid
+//          rate → YES.
 //   NVDA — RONIC CLEAN at ~75.2385%, above every grid rate → YES, even
 //          though the rest of the run is UNUSABLE for unrelated missing-EV
 //          reasons (the growth licence is independent of Step 1's gates).
@@ -46,7 +50,7 @@ describe("growthLicence on a real acquired MSFT run (no DB)", () => {
     const result = assembleAnalysisResult(run.fixture);
 
     expect(result.growthLicence.status).toBe("YES");
-    expect(result.growthLicence.reason).toContain("17.4977");
+    expect(result.growthLicence.reason).toContain("17.7164");
     expect(result.growthLicence.reason).toContain("8%/10%/12%");
 
     // The licence reads directly off the already-approved ladder — confirm
@@ -79,11 +83,16 @@ describe("growthLicence on a real acquired MSFT run (no DB)", () => {
     expect(result.growthLicence.status).toBe("YES");
   });
 
-  it("verdictBlockers: names MSFT's post-Phase-A Step 1 block as its own separate blocker, not folded into Step 3's OPEN POLICY item", async () => {
-    // This run's scenario dollar values are fixture-carried (A4,
-    // CF-ANALYZER-INTEGRITY-PHASE-A-01), which suppresses the fair-value
-    // range and makes trust UNUSABLE — a real, material Step 1 block that
-    // is NOT the Step 3/4/5 open-policy gap every company shares.
+  it("verdictBlockers: with the durable Stage-2 bundle recorded (issue #442), MSFT carries no Step 1 scenario-dollar-values block — only the open-policy gap every company shares", async () => {
+    // Before CF-MSFT-STAGE2-DURABLE-SEED-01 (migration 010), this run's
+    // scenario dollar values were fixture-carried (A4,
+    // CF-ANALYZER-INTEGRITY-PHASE-A-01), which suppressed the fair-value
+    // range, dropped trust to UNUSABLE and added a Step 1 DATA block. The
+    // recorded bundle is a real, driver-authored analyst bundle — never
+    // fixture-carried — so that Step 1 block is gone; what remains is the
+    // Step 3/4-5 open-policy gap every company shares, plus MSFT's own
+    // still-unconfigured pre-revenue/project-debt constants (neither of
+    // which this ticker needs — reported honestly, not defaulted away).
     const run = await buildAcquiredRun({
       ticker: "MSFT",
       price: { value: MSFT_CAPTURE_CLOSE, timestamp: "2026-09-04", source: "recorded capture" },
@@ -94,16 +103,11 @@ describe("growthLicence on a real acquired MSFT run (no DB)", () => {
 
     const result = assembleAnalysisResult(run.fixture);
 
-    expect(result.trust.status).toBe("UNUSABLE");
-    expect(result.fairValueRange.kind).toBe("suppressed");
+    expect(result.trust.status).toBe("PARTIAL");
+    expect(result.fairValueRange.kind).toBe("range");
 
-    const step1 = result.verdictBlockers.find((b) => b.step === "Step 1");
-    expect(step1).toBeDefined();
-    expect(step1?.kind).toBe("DATA");
-    expect(step1?.cause).toContain("scenario dollar values");
+    expect(result.verdictBlockers.some((b) => b.step === "Step 1")).toBe(false);
 
-    // The Step 3 OPEN POLICY entry is its own, separate blocker — it does
-    // not absorb or restate MSFT's own Step 1 cause.
     const step3 = result.verdictBlockers.find((b) => b.step === "Step 3");
     expect(step3).toBeDefined();
     expect(step3?.kind).toBe("OPEN POLICY");
@@ -115,9 +119,11 @@ describe("growthLicence on a real acquired MSFT run (no DB)", () => {
     expect(step45?.cause).toContain("waiting for policy");
     expect(step45?.cause).not.toContain("HOLD");
 
-    // Step 1 is reported first, ahead of the open-policy entries every
-    // company shares.
-    expect(result.verdictBlockers[0].step).toBe("Step 1");
+    const policyConstants = result.verdictBlockers.find((b) => b.step === "policy constants");
+    expect(policyConstants).toBeDefined();
+    expect(policyConstants?.kind).toBe("DATA");
+    expect(policyConstants?.cause).toContain("preRevenueUnleveredRate");
+    expect(policyConstants?.cause).toContain("projectDebtCost");
   });
 });
 

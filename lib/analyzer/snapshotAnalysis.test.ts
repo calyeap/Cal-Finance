@@ -50,22 +50,27 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     await getPool().end();
   });
 
-  it("produces one complete DEEP analysis, and an honest INCOMPLETE verdict — A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) now suppresses the range itself rather than letting the M8 comparator gap be the only cause quoted", async () => {
+  it("produces one complete DEEP analysis, and an honest INCOMPLETE verdict — for the pre-existing M8 comparator gap, never a manufactured BUY/HOLD/SELL", async () => {
     const runId = await completeMsftRun();
 
     const snapshot = await createDeepSnapshot(runId, null);
 
     expect(snapshot.version).toBe(1);
-    // A4 — MSFT's fair-value range is honestly suppressed (its scenario
-    // dollar values are the validation fixture's, never a real computation
-    // for this real run), so §9.6 rule 1 reads UNUSABLE here; this was
-    // "not UNUSABLE" before A4 existed.
-    expect(snapshot.result.trust.status).toBe("UNUSABLE");
-    expect(snapshot.result.fairValueRange.kind).toBe("suppressed");
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
+    // recorded Calvin's approved MSFT Stage-2 bundle — a real,
+    // driver-authored analyst bundle, never fixture-carried — so A4
+    // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses MSFT's range
+    // for that reason. Trust reads PARTIAL (a genuinely unrelated gap: no
+    // revaluation-at-other-discount-rates was ever supplied) and the range
+    // is a real computed one.
+    expect(snapshot.result.trust.status).toBe("PARTIAL");
+    expect(snapshot.result.fairValueRange.kind).toBe("range");
     // The verdict boundary still does not manufacture BUY/HOLD/SELL from
-    // a single diagnostic (verdict.test.ts) — now reading A4's own cause.
+    // a single diagnostic (verdict.test.ts) — the pre-existing, unrelated
+    // M8 required-vs-achieved-growth-comparator gap, untouched by this
+    // outcome.
     expect(snapshot.verdict.status).toBe("INCOMPLETE");
-    expect(snapshot.verdict.reason).toContain("scenario dollar values");
+    expect(snapshot.verdict.reason).toContain("required-versus-achieved growth comparator");
   });
 
   it("reopens the exact stored snapshot without recomputing — it survives the run's own decisions being deleted", async () => {
@@ -89,17 +94,22 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     const saved = await createDeepSnapshot(runId, null);
 
     const reopened = await reopenDeepSnapshot(runId, saved.version);
-    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) honestly suppresses this real
-    // MSFT run's fair-value range (its scenario dollar values are the
-    // validation fixture's, never a real computation for this run), so it
-    // no longer carries a bear/bull Decimal to round-trip — `result.price.
-    // value` (this run's own real recorded-capture close) is this test's
-    // same claim on a Decimal field the suppressed shape still carries.
-    expect(reopened!.result.fairValueRange.kind).toBe("suppressed");
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) — MSFT's range is now a
+    // real, computed one (see the first test in this file), so this proof
+    // uses its own bear/bull Decimals directly, not only `result.price.
+    // value` as a stand-in.
+    expect(reopened!.result.fairValueRange.kind).toBe("range");
+    if (reopened!.result.fairValueRange.kind === "range" && saved.result.fairValueRange.kind === "range") {
+      const bear = reopened!.result.fairValueRange.bear;
+      expect(bear).toBeInstanceOf(Decimal);
+      expect(bear.toString()).toBe(saved.result.fairValueRange.bear.toString());
+      // A Decimal survives arithmetic, not just a string that looks like one.
+      expect(bear.plus(1).minus(1).toString()).toBe(bear.toString());
+    }
+
     const price = reopened!.result.price.value;
     expect(price).toBeInstanceOf(Decimal);
     expect(price.toString()).toBe(saved.result.price.value.toString());
-    // A Decimal survives arithmetic, not just a string that looks like one.
     expect(price.plus(1).minus(1).toString()).toBe(price.toString());
   });
 
@@ -131,19 +141,20 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     // but migration 007's durable MSFT override now resolves the leverage
     // precondition the same way an explicit recordJudgment would
     // (automaticAnalysisOnRealRun.test.ts's "MSFT's recorded §4.4 state").
-    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) now suppresses the range itself
-    // regardless (its scenario dollar values are the validation fixture's,
-    // never a real computation for this real run) — trust reads UNUSABLE,
-    // not PARTIAL, by §9.6 rule 1. The verdict itself is still honestly
-    // INCOMPLETE either way; that boundary is untouched by this outcome.
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
+    // recorded Calvin's approved MSFT Stage-2 bundle, so A4
+    // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses the range for
+    // MSFT — trust reads PARTIAL and a real range computes. The verdict
+    // itself is still honestly INCOMPLETE either way; that boundary is
+    // untouched by this outcome.
     const runId = await createRun("MSFT", "Microsoft Corporation");
     await completeSpotCheck(runId);
     await recordProfileDecision(runId, "CONFIRMED", "MATURE_PROFITABLE", null);
 
     const snapshot = await createDeepSnapshot(runId, null);
 
-    expect(snapshot.result.trust.status).toBe("UNUSABLE");
-    expect(snapshot.result.fairValueRange.kind).toBe("suppressed");
+    expect(snapshot.result.trust.status).toBe("PARTIAL");
+    expect(snapshot.result.fairValueRange.kind).toBe("range");
     expect(snapshot.verdict.status).toBe("INCOMPLETE");
     expect(snapshot.verdict.reason).not.toBe("");
   });

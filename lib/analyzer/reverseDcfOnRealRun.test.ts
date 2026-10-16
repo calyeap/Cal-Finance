@@ -63,9 +63,12 @@ describe("reverse-DCF target enterprise value on an acquired MSFT run", () => {
     // CF-RONIC-DELTAS-RECON-01 (issue #298) — MSFT's capture now carries a
     // real, non-degenerate RONIC ladder (previously "no meaningful RONIC
     // ladder", the condition this test used to assert). `ronic` on every
-    // cell is CLEAN at ~17.498% — well above 8/10/12% and the 200% cap
-    // alike — evidence this is the same "RONIC ladder now computed" state
-    // docs/ronic-deltas-composition-reconciliation.md §7 reports for NVDA.
+    // cell is CLEAN at ~17.72% (CF-MSFT-STAGE2-DURABLE-SEED-01, issue #442:
+    // the durably recorded bundle's own 19% nopatTaxRate vs. the retired
+    // validation fixture's 20%, previously ~17.498%) — well above 8/10/12%
+    // and the 200% cap alike — evidence this is the same "RONIC ladder now
+    // computed" state docs/ronic-deltas-composition-reconciliation.md §7
+    // reports for NVDA.
     // The "RONIC not meaningful" cause this test used to require is gone
     // entirely — this is the evidence that assemble actually filled
     // targetEnterpriseValue from M1: computeReverseDcfGrid only reaches the
@@ -77,7 +80,7 @@ describe("reverse-DCF target enterprise value on an acquired MSFT run", () => {
     expect(cells.every((c) => !c.ronic.suppressed)).toBe(true);
     for (const cell of cells) {
       if (!cell.ronic.suppressed) {
-        expect(cell.ronic.value.toDecimalPlaces(4).toString()).toBe("0.175");
+        expect(cell.ronic.value.toDecimalPlaces(4).toString()).toBe("0.1772");
       }
     }
     // Growth itself now solves on 5 of 9 cells; the other 4 (every 12% rate,

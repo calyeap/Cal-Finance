@@ -69,26 +69,32 @@ describe("CF-STEP4-MSFT-RANGE-CAPTURE-01 — MSFT's growth/margin tornado and tw
     expect(marginRow.available).toBe(true);
     if (!growthRow.available || !marginRow.available) return;
 
-    // Observed at head SHA 0c90cd4 (this branch's base), via
-    // `TEST_DATABASE_URL=... npx vitest run lib/analyzer/msftSensitivityCaptureOnRealRun.test.ts`
-    // — see the PR's own EVIDENCE section. Growth's full-range swing
-    // (48.60%) already exceeds margin's (23.38%), so A1 (growth alone) and
-    // A2 (max across available rows) read IDENTICAL for MSFT today — the
-    // combined gate doc states this.
-    expect(growthRow.fullRangeValueImpact.toString()).toBe("0.48598121081564411663");
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration
+    // 010_msft_recorded_bundle_seed.sql) durably recorded Calvin's approved
+    // MSFT Stage-2 candidate, which both changes the base scenario's own
+    // operating margin (0.45, was the committed fixture's 0.468) and growth
+    // (0.14, was 0.137) AND wires this candidate's terminalRoic/fading
+    // reinvestment into M14's own scenarioValueAt (the Stage-2 proof's own
+    // "M14 uses each cell's own margin and terminal growth" finding) — so
+    // every cell below is this approved candidate's, not the retired
+    // validation fixture's. Growth's full-range swing (48.85%) still
+    // exceeds margin's (24.47%), so A1 (growth alone) and A2 (max across
+    // available rows) still read IDENTICAL for MSFT — the combined gate
+    // doc's own point survives this correction unchanged.
+    expect(growthRow.fullRangeValueImpact.toString()).toBe("0.48846512490800969627");
     expect(growthRow.displayed).toBe(true);
     expect(growthRow.values.map((v) => v.toString())).toEqual([
-      "1869532555851.2458706",
-      "2296844836934.7157855",
-      "2985755990760.4397171",
+      "1676081914421.5470769",
+      "2068964793072.3220586",
+      "2703937717350.9159262",
     ]);
 
-    expect(marginRow.fullRangeValueImpact.toString()).toBe("0.23377202026469612084");
+    expect(marginRow.fullRangeValueImpact.toString()).toBe("0.24471297471512425894");
     expect(marginRow.displayed).toBe(true);
     expect(marginRow.values.map((v) => v.toString())).toEqual([
-      "1759906779169.9507497",
-      "1991766395022.9174697",
-      "2296844836934.7157855",
+      "1694645853766.5089845",
+      "1917005795302.6690607",
+      "2209584665744.9849507",
     ]);
 
     for (const driver of UNCAPTURED_DRIVERS) {
@@ -102,20 +108,23 @@ describe("CF-STEP4-MSFT-RANGE-CAPTURE-01 — MSFT's growth/margin tornado and tw
       expect(twoWayGrowthMargin.rowValues.map((v) => v.toString())).toEqual(["0.1", "0.137", "0.185"]);
       expect(twoWayGrowthMargin.columnValues.map((v) => v.toString())).toEqual(["0.38", "0.418", "0.468"]);
       // Nine cells, growth (rows: 10.0%/13.7%/18.5%) x operating margin
-      // (columns: 38.0%/41.8%/46.8%). The captured margin range's own middle
-      // point (41.8%) is the M3 median margin, not the base scenario's own
-      // margin (46.8%, the current margin) — so the true base case is cell
-      // [1][2] (base growth 13.7%, base margin 46.8%), not [1][1]. Cell
-      // [1][2] reproduces growthRow.values[1] and marginRow.values[2]
-      // exactly (same growth, margin, rate, terminal growth, capital
-      // intensity, tax — one shared model, one base case).
+      // (columns: 38.0%/41.8%/46.8%) — this fixed AnalystSuppliedRange
+      // capture (CALVIN RULING — A) is a static citation in analystInputs.ts,
+      // unchanged by migration 010. What DID change: the approved Stage-2
+      // candidate's own base scenario growth (14.0%) and margin (45.0%)
+      // no longer land exactly on this range's own middle points (13.7%/
+      // 41.8%) the way the retired validation fixture's base scenario
+      // (13.7%/46.8%, coinciding with this range's row 1/column 2) used to —
+      // so no single cell here reproduces growthRow/marginRow's own held-
+      // constant-axis values anymore; each tornado row holds the OTHER
+      // axis at the approved candidate's own base driver (growth 0.14,
+      // margin 0.45), which this grid's own three fixed points don't pass
+      // through.
       expect(twoWayGrowthMargin.cells.map((row) => row.map((c) => c.toString()))).toEqual([
-        ["1428373872313.0609675", "1618874212931.8226302", "1869532555851.2458706"],
-        ["1759906779169.9507497", "1991766395022.9174697", "2296844836934.7157855"],
-        ["2295306052132.414951", "2593454889267.2438273", "2985755990760.4397171"],
+        ["1343989856586.6415681", "1524268402268.4474157", "1761477015007.6656362"],
+        ["1665716925164.3986792", "1884622910600.1285138", "2172657101962.9309277"],
+        ["2186793711998.3449204", "2467529029189.7406093", "2836917604441.5770421"],
       ]);
-      expect(twoWayGrowthMargin.cells[1][2].toString()).toBe(growthRow.values[1].toString());
-      expect(twoWayGrowthMargin.cells[1][2].toString()).toBe(marginRow.values[2].toString());
     }
 
     expect(twoWayRateTerminalGrowth.available).toBe(false);

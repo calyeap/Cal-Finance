@@ -156,13 +156,13 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       expect(result.diagnostics.multiples.fcfYieldOnMarketCap.suppressed).toBe(false);
       expect(result.gates.leverage.result).toBe("PASS");
       expect(result.gates.leverage.netDebtRatio).not.toBeNull();
-      // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — trust itself now reads
-      // UNUSABLE on every MSFT real run, for an entirely unrelated reason
-      // (the fair-value range's scenario dollar values are the validation
-      // fixture's, never a real computation for this real run — §9.6 rule
-      // 1). EV, FCF yield and leverage above are the claim this test is
+      // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
+      // recorded Calvin's approved MSFT Stage-2 bundle, so A4
+      // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses MSFT's
+      // range — trust reads PARTIAL (a genuine, unrelated rate-sensitivity
+      // gap). EV, FCF yield and leverage above are the claim this test is
       // actually about, and none of them is suppressed.
-      expect(result.trust.status).toBe("UNUSABLE");
+      expect(result.trust.status).toBe("PARTIAL");
     });
 
     it("Key Stats populate market cap, FCF yield and the leverage metric on a fresh automatic run", async () => {
@@ -224,48 +224,53 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
     // real-run test instead asserts the hero's new, correct Overview/
     // Evidence content for the state MSFT's automatic run now actually
     // reaches — the still-open M8 growth-comparator gap.
-    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — MSFT's fair-value range is now
-    // honestly suppressed (its scenario dollar values are the validation
-    // fixture's, never a real computation for this real run), so there is
-    // no bear/bull position left to headline; Overview shows the plain-
-    // English "no valuation verdict" copy instead of a percentage, and
-    // Evidence's verbatim reason is A4's own cause, not the M8 growth-
-    // comparator gap this run no longer reaches first.
-    it("Overview shows the plain-English no-valuation headline, never raw INCOMPLETE; Evidence shows the full verbatim reason", async () => {
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
+    // recorded Calvin's approved MSFT Stage-2 bundle — a real,
+    // driver-authored analyst bundle, never fixture-carried — so A4
+    // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses MSFT's range:
+    // there IS a real bear/base/bull position to headline now (the
+    // committed offline capture's own $499.70 close sits above all three —
+    // see docs/proof/cf-msft-stage2-real-valuation-proof-01.md §3). Overview
+    // states that plainly, never raw INCOMPLETE; Evidence's verbatim reason
+    // is the unrelated, pre-existing M8 growth-comparator gap.
+    it("Overview states the price-vs-scenarios position plainly, never raw INCOMPLETE; Evidence shows the full verbatim reason", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
 
       const overview = await renderTab(runId, "overview");
       const overviewVerdict = overview.container.querySelector(".verdictslot") as HTMLElement;
       expect(overviewVerdict.textContent).not.toContain("INCOMPLETE");
       expect(overviewVerdict.textContent).not.toContain("PROFILE NOT CONFIRMED");
-      expect(overviewVerdict.textContent).toContain("No valuation verdict for this company yet");
+      expect(overviewVerdict.textContent).toContain("Trading at or above the bull case modeled for this company");
       cleanup();
 
       const evidence = await renderTab(runId, "evidence");
       const evidenceVerdict = evidence.container.querySelector(".verdictslot") as HTMLElement;
       expect(evidenceVerdict.textContent).toContain("INCOMPLETE");
-      expect(evidenceVerdict.textContent).toContain("scenario dollar values");
+      expect(evidenceVerdict.textContent).toContain("required-versus-achieved growth comparator");
     });
 
     // CF-ANALYZER-V1-SETTLE-01's automatic-profile-confirmation fix means a
     // fresh MSFT automatic run (Gate 0 PASS) no longer suppresses the
     // valuation position FOR A PROFILE-CONFIRMATION REASON the way an
-    // explicit, unresolved profile decision still would — superseding
-    // REVIEW's earlier `CORRECT:` (comment 5932208513), which predates the
-    // RM-brief ruling's item 2. A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01)
-    // separately and correctly removes the position now, for an unrelated
-    // reason (the range's own scenario dollar values are the validation
-    // fixture's) — the plain-English "no fair-value range" copy this
-    // produces is still never "Valuation position — suppressed" (the raw
-    // PROFILE NOT CONFIRMED framing this test originally guarded against).
-    it("shows the honest no-fair-value-range copy on a fresh automatic run — never a bear-to-bull percentage built on validation-fixture numbers, and never the raw PROFILE NOT CONFIRMED framing", async () => {
+    // explicit, unresolved profile decision still would.
+    //
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
+    // recorded Calvin's approved MSFT Stage-2 bundle, so the hero now shows
+    // a REAL bear-to-bull position built on these approved, driver-computed
+    // scenario values — never the retired validation fixture's — and never
+    // the raw PROFILE NOT CONFIRMED framing this test originally guarded
+    // against.
+    it("shows the real bear-to-bull position on a fresh automatic run — the Calvin-approved Stage-2 scenario values, never the retired validation fixture's, and never the raw PROFILE NOT CONFIRMED framing", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
       const { container } = await renderTab(runId);
       const hero = container.querySelector(".scenariorangestrip") as HTMLElement;
       expect(hero).not.toBeNull();
-      expect(hero.textContent ?? "").not.toMatch(/of the way from bear to bull/);
-      expect(hero.textContent ?? "").toContain("No fair-value range for this company yet");
-      expect(hero.textContent ?? "").not.toContain("Valuation position — suppressed");
+      const text = hero.textContent ?? "";
+      expect(text).toContain("Bear$214");
+      expect(text).toContain("Bull$403");
+      expect(text).toMatch(/of the way from bear to bull/);
+      expect(text).not.toContain("No fair-value range for this company yet");
+      expect(text).not.toContain("Valuation position — suppressed");
     });
 
     // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399, comment

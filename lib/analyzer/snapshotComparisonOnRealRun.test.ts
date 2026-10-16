@@ -65,7 +65,7 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     await getPool().end();
   });
 
-  it("real MSFT — version 1 survives version 2 unchanged; A4 now makes profile confirmation's own effect unobservable at this level, which the comparison must report honestly as no change", async () => {
+  it("real MSFT — version 1 reopens byte-for-byte after version 2 exists; profile confirmation's own effect is observable again now that A4 no longer suppresses the range", async () => {
     const runId = await createRun("MSFT", "Microsoft Corporation");
     await completeSpotCheck(runId);
 
@@ -74,25 +74,25 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     // (migration 007, carrying forward Calvin's CALVIN DECISION, issue
     // #188) already resolves leverage/EV identically to an explicit
     // recordJudgment call (automaticAnalysisOnRealRun.test.ts's "MSFT's
-    // recorded §4.4 state"). Before A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01),
-    // PROFILE NOT CONFIRMED was this version's own honest INCOMPLETE cause
-    // — that comparison is what this test originally demonstrated. A4 now
-    // suppresses the fair-value range unconditionally for MSFT (the
-    // range's scenario dollar values are the validation fixture's, never a
-    // real computation for this real company), and trust's §9.6 rule 1 —
-    // "FIRST MATCH WINS" — and verdict.ts's own UNUSABLE-first check both
-    // read that suppression before either would ever reach the profile-
-    // confirmation branch. So profile confirmation's effect, while still
-    // real on `run.profileHumanConfirmed`/`run.profileDecision`, no longer
-    // surfaces on any field `snapshotComparison.ts` tracks — correctly: an
-    // analysis that cannot tell you what the company is worth must not
-    // read differently depending on an unrelated confirmation.
+    // recorded §4.4 state"). PROFILE NOT CONFIRMED is this version's own
+    // honest INCOMPLETE cause.
+    //
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
+    // recorded Calvin's approved MSFT Stage-2 bundle — a real,
+    // driver-authored analyst bundle, never fixture-carried — so A4
+    // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses MSFT's range
+    // unconditionally. Profile confirmation's effect, previously masked
+    // behind that suppression (trust's §9.6 "FIRST MATCH WINS" and
+    // verdict.ts's own UNUSABLE-first check both read the suppression
+    // before reaching the profile-confirmation branch), is observable
+    // again: this is the before/after pair the file header above describes
+    // this test as "originally" demonstrating.
     const v1 = await createDeepSnapshot(runId, null);
     expect(v1.version).toBe(1);
     expect(v1.result.gates.leverage.result).toBe("PASS");
-    expect(v1.result.trust.status).toBe("UNUSABLE");
-    expect(v1.result.fairValueRange.kind).toBe("suppressed");
-    expect(v1.verdict.reason).toContain("scenario dollar values");
+    expect(v1.result.trust.status).toBe("PARTIAL");
+    expect(v1.result.fairValueRange.kind).toBe("range");
+    expect(v1.verdict.reason).toContain("PROFILE NOT CONFIRMED");
 
     // Confirm the profile, then refresh: version 2. Nothing about the §4.4
     // judgment changes here — the durable override is untouched by a
@@ -102,11 +102,14 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     const v2 = await createDeepSnapshot(runId, null);
     expect(v2.version).toBe(2);
     expect(v2.result.gates.leverage.result).toBe("PASS");
-    expect(v2.result.trust.status).toBe("UNUSABLE");
-    expect(v2.result.fairValueRange.kind).toBe("suppressed");
-    // Identical cause both sides — A4's suppression, not the profile
-    // decision this version actually changed.
-    expect(v2.verdict.reason).toBe(v1.verdict.reason);
+    expect(v2.result.trust.status).toBe("PARTIAL");
+    expect(v2.result.fairValueRange.kind).toBe("range");
+    // Confirming the profile removed the PROFILE NOT CONFIRMED cause —
+    // the verdict now reads INCOMPLETE for the unrelated, pre-existing M8
+    // comparator gap instead.
+    expect(v2.verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
+    expect(v2.verdict.reason).toContain("required-versus-achieved growth comparator");
+    expect(v2.verdict.reason).not.toBe(v1.verdict.reason);
 
     // Version 1 is byte-for-byte reopenable exactly as it was, after version
     // 2 exists and after the run's own decisions changed underneath it —
@@ -114,8 +117,8 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     const reopenedV1 = await reopenDeepSnapshot(runId, 1);
     expect(reopenedV1).not.toBeNull();
     expect(reopenedV1!.result.gates.leverage.result).toBe("PASS");
-    expect(reopenedV1!.result.trust.status).toBe("UNUSABLE");
-    expect(reopenedV1!.result.fairValueRange.kind).toBe("suppressed");
+    expect(reopenedV1!.result.trust.status).toBe("PARTIAL");
+    expect(reopenedV1!.result.fairValueRange.kind).toBe("range");
     expect(reopenedV1!.verdict).toEqual(v1.verdict);
     // Every field this outcome's comparison reads is unchanged on reopen —
     // the immutability property CF-V2-PROOF-01 already proved, restated
@@ -131,14 +134,16 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     expect(comparison!.from).toBe(1);
     expect(comparison!.to).toBe(2);
 
-    // Nothing tracked moved — correctly, per the comment above: A4's
-    // suppression of this real run's fair-value range dominates every
-    // compared field on both versions identically.
-    expect(comparison!.changed).toEqual([]);
+    // Profile confirmation's real effect surfaces on exactly the fields it
+    // actually touches — verdict.reason (the PROFILE NOT CONFIRMED cause
+    // clearing) and trust.determinedBy (the matching qualifying flag
+    // clearing) — and nowhere else: the range itself, its scenario
+    // outputs, leverage and trust.status are unaffected by a profile
+    // confirmation that changes no fact, gate or driver.
     expect(v1.verdict.status).toBe("INCOMPLETE");
     expect(v2.verdict.status).toBe("INCOMPLETE");
+    expect(comparison!.changed.map((c) => c.field).sort()).toEqual(["trust.determinedBy", "verdict.reason"]);
     expect(comparison!.unchanged).toContain("verdict.status");
-    expect(comparison!.unchanged).toContain("verdict.reason");
     expect(comparison!.unchanged).toContain("price.value");
     expect(comparison!.unchanged).toContain("gates.leverage");
     expect(comparison!.unchanged).toContain("trust.status");

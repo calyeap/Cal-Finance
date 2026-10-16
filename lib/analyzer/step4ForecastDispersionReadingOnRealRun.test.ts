@@ -133,7 +133,7 @@ describe("CF-STEP4-READING-IMPL-01 / CF-STEP4-TIER-BOUNDARY-DEFAULT-01 — the r
     await getPool().end();
   });
 
-  it("MSFT produces the A2 (max-across-available) reading, which coincides with A1 (growth alone) at 48.60% because growth's swing already exceeds margin's — asserted explicitly, not assumed — and resolves to HIGH under the AI DEFAULT boundaries", async () => {
+  it("MSFT produces the A2 (max-across-available) reading, which coincides with A1 (growth alone) at 48.85% because growth's swing already exceeds margin's — asserted explicitly, not assumed — and resolves to HIGH under the AI DEFAULT boundaries", async () => {
     const result = await openMsftRunWithRuling();
     const reading = result.diagnostics.sensitivity.forecastDispersion as Step4ForecastDispersionReading;
     const tornado = result.diagnostics.sensitivity.tornado as { driver: string; available: boolean; fullRangeValueImpact?: unknown }[];
@@ -144,22 +144,30 @@ describe("CF-STEP4-READING-IMPL-01 / CF-STEP4-TIER-BOUNDARY-DEFAULT-01 — the r
     expect(marginRow.available).toBe(true);
 
     // A1: the growth row's own fullRangeValueImpact, read directly.
+    //
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration
+    // 010_msft_recorded_bundle_seed.sql) durably recorded Calvin's approved
+    // MSFT Stage-2 candidate — a different base scenario growth/margin and
+    // a terminalRoic-aware M14 computation than the retired validation
+    // fixture (see msftSensitivityCaptureOnRealRun.test.ts) — so this
+    // figure moved from ~48.60% to ~48.85%. The coincidence this test names
+    // (A1 == A2, growth's swing exceeds margin's) survives unchanged.
     const a1 = growthRow.fullRangeValueImpact.toString();
-    expect(a1).toBe("0.48598121081564411663");
+    expect(a1).toBe("0.48846512490800969627");
 
     // A2: this outcome's own selector — the max across available: true rows.
     expect(reading.available).toBe(true);
     if (!reading.available) return;
-    expect(reading.fullRangeValueImpact.toString()).toBe("0.48598121081564411663");
+    expect(reading.fullRangeValueImpact.toString()).toBe("0.48846512490800969627");
     expect(reading.selectedDriver).toBe("growth");
 
     // The coincidence, asserted rather than assumed: A1 and A2 agree exactly
-    // because growth's swing (48.60%) already exceeds margin's (23.38%) —
+    // because growth's swing (48.85%) already exceeds margin's (24.47%) —
     // the only other available row today.
     expect(reading.fullRangeValueImpact.toString()).toBe(a1);
     expect(marginRow.fullRangeValueImpact.lessThan(growthRow.fullRangeValueImpact)).toBe(true);
 
-    // B2 tier — 0.48598... is at or above the 0.25 MEDIUM/HIGH AI DEFAULT
+    // B2 tier — 0.4884... is at or above the 0.25 MEDIUM/HIGH AI DEFAULT
     // boundary, so this reads HIGH (it would read MEDIUM under a 0.50
     // boundary — see policy.ts's provenance entry for that alternative).
     expect(reading.tier).toBe("HIGH");
