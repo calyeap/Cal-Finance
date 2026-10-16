@@ -40,6 +40,8 @@ Use the smallest correct change.
 
 ```text
 INSPECT
+→ PLAN (NORMAL/HEAVY)
+→ RED (defect fixes)
 → CHANGE
 → CHEAP TARGETED CHECK
 → PASS? continue
@@ -49,6 +51,8 @@ INSPECT
 ```
 
 - Superpowers or another execution accelerator is optional when actually available/relevant. It is never authority or evaluator.
+- **Plan (NORMAL/HEAVY).** Decide `PLAN: FILES · ORDER · RISKS · PROOF` before the first edit and put it in the PR body; update it in the same push if the build diverges. LIGHT skips this.
+- **Defect fixes are test-first: RED → GREEN.** Add or identify a test that fails on the base for the reported reason and record that failure (RED); fix the code and record the same test passing (GREEN). Put both results in the PR body. Separate commits are not required. Never weaken, loosen or delete that regression test to make the fix pass; a genuinely wrong test is an evaluator change (below). Untestable → say why in the PR and give the reproduction evidence.
 - The protected evaluator is independent evidence: tests, typecheck, CI, browser/evidence runner, golden/eval cases or another task-defined check.
 - **Never weaken, delete, rewrite or bypass an evaluator merely to make the attempt pass.** If an evaluator change is genuinely part of scope, treat it as a separate consequential change and preserve an independent check of the intended behaviour.
 - Correct mechanical failures inside scope before escalating. After **two same-class failed correction cycles**, stop with the exact unresolved failure rather than loop.

@@ -35,7 +35,11 @@ One fresh independent pass over:
 - correctness against `DONE WHEN`;
 - protected verification evidence;
 - safety/hard bounds;
-- exact-head merge safety.
+- exact-head merge safety;
+- plan-to-diff match: unplanned files or steps are explained;
+- defect fixes: RED → GREEN evidence for the reported reason is present, and the regression test was not weakened to make the fix pass;
+- evaluator changes (`ci.yml`, removed or loosened tests, `FROZEN_HASHES`) are called out as a separate consequential change, never folded into the fix;
+- consequential changes (migrations, data writes, irreversible effects) state a credible recovery path.
 
 ### HEAVY
 NORMAL checks plus the task's representative/golden/real-run evidence, silent-error/failure behaviour and any explicitly reserved acceptance boundary.
@@ -56,7 +60,8 @@ For a bounded mechanical defect inside existing authority:
 - post one smallest correction request;
 - BUILD corrects the **same PR**;
 - fresh review follows the correction;
-- after two same-class failed correction cycles, stop rather than loop.
+- after two same-class failed correction cycles, stop rather than loop;
+- nits alone never justify `CORRECT`; note them in `ACCEPT`.
 
 The runtime router additionally enforces an absolute, deterministic backstop independent of REVIEW's own same-class judgement above: after 3 `CORRECT` cycles without `ACCEPT` on one PR, the 4th attempted cycle is refused at admission as `BLOCKED: ACTIONABLE`, with the same reapply-the-wake-label resume path used elsewhere. This never depends on REVIEW recognising the failures as the same class — it counts every `CORRECT` terminal on the thread.
 

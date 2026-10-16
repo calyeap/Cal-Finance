@@ -99,3 +99,20 @@ npm test
 
 `npm run build` runs a Next.js production build. `npm run evidence` runs the
 frozen-artefact SHA-256 check and is not part of the default CI gate.
+
+## Release / recovery
+
+Merge to `master` is the release. Cloud workers never touch Calvin's local
+database; Calvin's local `npm run migrate` is the production gate.
+
+Reverting code and recovering data are different. Reverting the merge PR undoes
+code only; it does not undo an applied migration or data already written.
+Migrations stay forward-only, additive and idempotent, and should be safe to
+leave applied if their code is reverted. A consequential change (migration,
+data write, irreversible effect) states its recovery path in the PR body — e.g.
+code revert, forward-fix migration, or data restore — or why none is needed.
+Anything destructive or irreversible needs a HEAVY contract.
+
+Every implementation session, routine or interactive, follows the plan,
+RED → GREEN and protected-evaluator rules in
+[`.github/ai-routines/BUILD.md`](.github/ai-routines/BUILD.md).
