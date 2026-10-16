@@ -880,6 +880,15 @@ export interface PolicyConstants {
   step4DispersionTierLowMediumBoundary: Decimal;
   step4DispersionTierMediumHighBoundary: Decimal;
   fcfYieldGrowthPreconditionBand: [Decimal, Decimal];
+  // "Verdict synthesis policy v1" — APPROVED 22 Sep 2026, live Cal Finance
+  // Methodology (Notion), reconfirmed current and NOT superseded by
+  // `CALVIN RULING — NO` on PR #430 (2026-10-14): "Do not retire the 22 Sep
+  // V1 bands yet. They are explicitly marked APPROVED in Methodology." Fixed
+  // by policy, not PROVISIONAL — carries no POLICY_THRESHOLD_PROVENANCE
+  // entry. Low/Medium/High name the policy's own uncertainty-bucket labels,
+  // not a magnitude ordering of the numbers themselves.
+  verdictSynthesisV1Buy: { low: Decimal; medium: Decimal; high: Decimal };
+  verdictSynthesisV1Sell: { low: Decimal; medium: Decimal; high: Decimal };
 }
 
 // The four constants the register records as LATER/undefined (§7.1).

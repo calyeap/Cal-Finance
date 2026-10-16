@@ -233,20 +233,32 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
     // see docs/proof/cf-msft-stage2-real-valuation-proof-01.md §3). Overview
     // states that plainly, never raw INCOMPLETE; Evidence's verbatim reason
     // is the unrelated, pre-existing M8 growth-comparator gap.
-    it("Overview states the price-vs-scenarios position plainly, never raw INCOMPLETE; Evidence shows the full verbatim reason", async () => {
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: with every upstream gate clear,
+    // deriveVerdict now reaches a completed SELL under the live
+    // Methodology's Verdict synthesis policy v1 (real price $499.70 against
+    // the real recomputed Base $283.31, 1.7638×) instead of the old
+    // permanent M8-comparator INCOMPLETE — DominantVerdictSlot's completed-
+    // verdict path renders the verdict word plus a plain-English rationale
+    // (trustCopy.ts's `completedVerdictExplanation`, built only from the
+    // same price/Base figures) on Overview, and the verdict word plus the
+    // full verbatim reason on Evidence.
+    it("Overview states the completed verdict plainly, never raw INCOMPLETE; Evidence shows the full verbatim reason", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
 
       const overview = await renderTab(runId, "overview");
       const overviewVerdict = overview.container.querySelector(".verdictslot") as HTMLElement;
       expect(overviewVerdict.textContent).not.toContain("INCOMPLETE");
       expect(overviewVerdict.textContent).not.toContain("PROFILE NOT CONFIRMED");
-      expect(overviewVerdict.textContent).toContain("Trading at or above the bull case modeled for this company");
+      expect(overviewVerdict.textContent).toContain("SELL");
+      expect(overviewVerdict.textContent).toContain(
+        "above the SELL level under every uncertainty bucket in the approved verdict policy"
+      );
       cleanup();
 
       const evidence = await renderTab(runId, "evidence");
       const evidenceVerdict = evidence.container.querySelector(".verdictslot") as HTMLElement;
-      expect(evidenceVerdict.textContent).toContain("INCOMPLETE");
-      expect(evidenceVerdict.textContent).toContain("required-versus-achieved growth comparator");
+      expect(evidenceVerdict.textContent).toContain("SELL");
+      expect(evidenceVerdict.textContent).toContain("Verdict synthesis policy v1");
     });
 
     // CF-ANALYZER-V1-SETTLE-01's automatic-profile-confirmation fix means a

@@ -71,6 +71,17 @@ export const POLICY: PolicyConstants = {
   // M11 precondition: (capex + lease additions) ÷ D&A must fall in this
   // band, or the output is PRECONDITION FAILED (§7.2).
   fcfYieldGrowthPreconditionBand: [new Decimal("0.8"), new Decimal("1.5")],
+  // "Verdict synthesis policy v1" — APPROVED 22 Sep 2026, live Cal Finance
+  // Methodology (Notion page "Cal Finance — Methodology", §"Stock-level
+  // verdict semantics"), re-confirmed current by `CALVIN RULING — NO` on
+  // PR #430 (2026-10-14, comment 6167808992): "Do not retire the 22 Sep V1
+  // bands yet. They are explicitly marked APPROVED in Methodology." These
+  // are the exact approved numbers, transcribed verbatim — not PROVISIONAL,
+  // no POLICY_THRESHOLD_PROVENANCE entry. Each bucket name (low/medium/high)
+  // is the policy's own uncertainty-bucket label; BUY fires at or below its
+  // threshold, SELL at or above its threshold.
+  verdictSynthesisV1Buy: { low: new Decimal("0.90"), medium: new Decimal("0.80"), high: new Decimal("0.70") },
+  verdictSynthesisV1Sell: { low: new Decimal("1.20"), medium: new Decimal("1.30"), high: new Decimal("1.45") },
 };
 
 // The four constants the register records as LATER (§7.1). Left null rather

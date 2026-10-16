@@ -54,6 +54,7 @@ export function DominantVerdictSlot({
   isEvidenceTab = false,
   incompleteExplanation,
   priceVsRangeHeadline,
+  completedExplanation,
 }: {
   verdict: VerdictResult;
   trustStatus: TrustStatus;
@@ -77,6 +78,15 @@ export function DominantVerdictSlot({
   // within (the existing `incompleteExplanation` fallback still applies
   // there) — never a fabricated position on a priceless or suppressed run.
   priceVsRangeHeadline?: string | null;
+  // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — REVIEW `CORRECT:` (comment
+  // 6217530392): the plain-English stand-in for a completed verdict
+  // (BUY/HOLD/SELL) outside Evidence (trustCopy.ts's
+  // `completedVerdictExplanation`), built by the caller from the same
+  // price/Base figures the verdict itself compared. Optional, defaulting to
+  // the bare marker below, so a call site that omits it fails toward naming
+  // only that the full rationale is on Evidence, never toward leaking the
+  // raw `verdict.reason`.
+  completedExplanation?: string;
 }) {
   if (verdict.status === "INCOMPLETE") {
     if (!isEvidenceTab && priceVsRangeHeadline != null) {
@@ -106,7 +116,9 @@ export function DominantVerdictSlot({
     );
   }
 
-  const reason = isEvidenceTab ? verdict.reason : REASON_UNAVAILABLE_MARKER;
+  const reason = isEvidenceTab
+    ? verdict.reason
+    : completedExplanation ?? REASON_UNAVAILABLE_MARKER;
   return (
     <div className="verdictslot completed">
       <span className="verdictword">{verdict.status}</span>

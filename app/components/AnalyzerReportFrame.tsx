@@ -12,6 +12,7 @@ import {
   uncertaintyLevel,
   incompleteVerdictExplanation,
   priceVsRangeHeadline,
+  completedVerdictExplanation,
 } from "@/lib/analyzer/trustCopy";
 import { createDeepSnapshotAction, beginUpdateRunAction } from "@/app/actions/analyzer";
 import { boundState, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
@@ -121,6 +122,15 @@ export function AnalyzerReportFrame({
                 trustStatus: trust.status,
                 profileNotConfirmed,
               })}
+              completedExplanation={
+                verdict.status === "INCOMPLETE"
+                  ? undefined
+                  : completedVerdictExplanation({
+                      status: verdict.status,
+                      price: result.price.value,
+                      base: result.scenarioOutputs.values.base,
+                    })
+              }
             />
             <UncertaintyBadge status={trust.status} />
           </div>

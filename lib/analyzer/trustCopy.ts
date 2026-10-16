@@ -1,6 +1,7 @@
 import type Decimal from "decimal.js";
 import type { FairValueRange, LeverageResult, TrustStatus } from "./types";
 import { verdictUnavailableLine } from "./overviewCopy";
+import type { VerdictStatus } from "./verdict";
 
 // ---------------------------------------------------------------------------
 // The page-one trust sentences, DERIVED from the computed status.
@@ -209,4 +210,47 @@ export function priceVsRangeHeadline({
     return "Trading at or above the bull case modeled for this company — the current price is already at or beyond the most optimistic scenario in the range below.";
   }
   return `Trading ${pct.toFixed(0)}% of the way from the bear case to the bull case modeled for this company.`;
+}
+
+// ---------------------------------------------------------------------------
+// CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — REVIEW `CORRECT:` (comment
+// 6217530392): a completed verdict (BUY/HOLD/SELL) outside Evidence must not
+// fall back to DominantVerdictSlot.tsx's bare REASON_UNAVAILABLE_MARKER,
+// "Unavailable — see Evidence" — that marker is a stand-in for a missing
+// explanation, and a completed verdict has one. This states it in plain
+// English, built only from the same price and Base fair value
+// `deriveVerdict`/`synthesizeVerdictV1` already compared (AnalysisResult's
+// own `price.value` and `scenarioOutputs.values.base`) — no raw trust/gate/
+// state code, no new number and no new policy; it names the same BUY/SELL
+// boundary the approved verdict policy already applies, not a restated
+// threshold figure. `verdict.reason` itself is untouched and still renders
+// verbatim, in full, on Evidence.
+// ---------------------------------------------------------------------------
+
+/** Plain-English rationale for a completed (BUY/HOLD/SELL) verdict outside Evidence. */
+export function completedVerdictExplanation({
+  status,
+  price,
+  base,
+}: {
+  status: VerdictStatus;
+  price: Decimal;
+  base: Decimal;
+}): string {
+  const ratio = price.dividedBy(base);
+  const priceText = `$${price.toDecimalPlaces(2).toString()}`;
+  const baseText = `$${base.toDecimalPlaces(2).toString()}`;
+  const ratioText = `${ratio.toDecimalPlaces(2).toString()}×`;
+  const lead = `Price ${priceText} is ${ratioText} the Base fair value of ${baseText}, `;
+
+  switch (status) {
+    case "SELL":
+      return `${lead}above the SELL level under every uncertainty bucket in the approved verdict policy.`;
+    case "BUY":
+      return `${lead}below the BUY level under every uncertainty bucket in the approved verdict policy.`;
+    case "HOLD":
+      return `${lead}between the BUY and SELL levels under every uncertainty bucket in the approved verdict policy.`;
+    case "INCOMPLETE":
+      return `${lead}in a range the approved verdict policy does not yet resolve to BUY, HOLD or SELL.`;
+  }
 }

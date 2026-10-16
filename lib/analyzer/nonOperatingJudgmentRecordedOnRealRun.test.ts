@@ -118,14 +118,18 @@ describe("CF-S44-RECORD-01 — MSFT's §4.4 ruling recorded on a real run", () =
     expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("283.31");
   });
 
-  it("the verdict stays INCOMPLETE — now for the unrelated, pre-existing M8 required-vs-achieved-growth-comparator gap, never A4's retired scenario-values cause or the old LEVERAGE UNSUPPORTED IN v1 cause", async () => {
+  it("the verdict is now a real SELL under the live Methodology's Verdict synthesis policy v1 — never A4's retired scenario-values cause or the old LEVERAGE UNSUPPORTED IN v1 cause", async () => {
     const result = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
 
-    expect(verdict.status).toBe("INCOMPLETE");
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — real price $499.70 against the
+    // real recomputed Base $283.31 (1.7638×) clears the strictest
+    // uncertainty-bucket SELL threshold invariantly; see verdict.test.ts and
+    // msftStage3VerdictOnRealRun.test.ts.
+    expect(verdict.status).toBe("SELL");
     expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
     expect(verdict.reason).not.toContain("scenario dollar values");
-    expect(verdict.reason).toContain("required-versus-achieved growth comparator");
+    expect(verdict.reason).toContain("Verdict synthesis policy v1");
   });
 
   it("a selection combining the ruled tag with a narrower one double-counts — the ruled run never carries the all-candidates sum", async () => {
