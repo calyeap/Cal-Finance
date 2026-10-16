@@ -41,6 +41,8 @@ One fresh independent pass over:
 - evaluator changes (`ci.yml`, removed or loosened tests, `FROZEN_HASHES`) are called out as a separate consequential change, never folded into the fix;
 - consequential changes (migrations, data writes, irreversible effects) state a credible recovery path.
 
+Transitional: a PR opened before PR #446 merged is not sent to `CORRECT` solely for a missing PLAN or RED → GREEN record; every other check above still applies.
+
 ### HEAVY
 NORMAL checks plus the task's representative/golden/real-run evidence, silent-error/failure behaviour and any explicitly reserved acceptance boundary.
 
