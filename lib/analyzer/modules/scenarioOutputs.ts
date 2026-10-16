@@ -1,6 +1,7 @@
 import Decimal from "decimal.js";
 import { POLICY } from "../policy";
 import { buildSensitivityResult } from "./sensitivity";
+import { growthAt } from "../growthPath";
 import type { ScenarioOutputs } from "../types";
 
 // M15 — scenario valuation and outputs (§7.2, §10 F/G).
@@ -31,7 +32,15 @@ export function computeScenarioEnterpriseValue(
   // solely so M14's sensitivity module can vary terminal growth through
   // this same existing model (its rate x terminal-growth table) without
   // duplicating this function's formula; the formula itself is unchanged.
-  terminalGrowth: Decimal = POLICY.terminalGrowth
+  terminalGrowth: Decimal = POLICY.terminalGrowth,
+  // Optional, scenario-specific terminal ROIC override
+  // (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01, §3.5: the scenario DCF's
+  // terminal ROIC is an analyst input that must fade toward the cost of
+  // capital unless a durable moat is argued explicitly — a different rule
+  // from the diagnostic reverse DCF's own fixed r+3pp convention below).
+  // Absent/null and every existing caller gets EXACTLY the prior hardcoded
+  // r+3pp behaviour.
+  terminalRoic?: Decimal | null
 ): Decimal {
   if (growthPath.length !== 10) {
     throw new Error("growthPath must have exactly ten entries (years 1-10)");
@@ -60,12 +69,47 @@ export function computeScenarioEnterpriseValue(
   const year10Revenue = revenues[10];
   const nopat10 = year10Revenue.mul(marginAt(10)).mul(afterTax);
   const terminalNopat = nopat10.mul(new Decimal(1).plus(terminalGrowth));
-  const terminalRoic = rate.plus(POLICY.terminalRoicPremium);
-  const terminalFcf = terminalNopat.mul(new Decimal(1).minus(terminalGrowth.dividedBy(terminalRoic)));
+  const resolvedTerminalRoic = terminalRoic ?? rate.plus(POLICY.terminalRoicPremium);
+  const terminalFcf = terminalNopat.mul(new Decimal(1).minus(terminalGrowth.dividedBy(resolvedTerminalRoic)));
   const terminalValueAtYear10 = terminalFcf.dividedBy(rate.minus(terminalGrowth));
   const terminalValuePV = terminalValueAtYear10.dividedBy(discountFactorBase.pow(10));
 
   return pvSum.plus(terminalValuePV);
+}
+
+// CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 (2026-10-15):
+// forecast growth, reinvestment, incremental returns and the year-10 ->
+// terminal boundary must be mutually consistent, not a flat explicit-period
+// reinvestment rate jumping straight into the terminal formula's own
+// implied rate. The terminal formula above already embeds one: terminal
+// reinvestment (in dollars) is terminalNopat × (terminalGrowth ÷
+// terminalRoic) — the standard sustainable-growth identity g = ROIC ×
+// (reinvestment ÷ NOPAT). Restated as a fraction of terminal revenue (so it
+// can share capitalIntensity's existing explicit-path shape instead of a
+// separate unit), that is margin × (1 − nopatTaxRate) × (terminalGrowth ÷
+// terminalRoic) — exactly the model already computes, not a number chosen
+// to erase the jump.
+//
+// This fades the analyst's own explicit-period capitalIntensity toward that
+// terminal-implied level over years 6-10, reusing growthAt's existing
+// fixed-shape fade (§7.1: constant years 1-5, linear fade 6-10) — the same
+// ten-entry capitalIntensity path computeScenarioEnterpriseValue already
+// accepts. A caller that never uses this (every scenario without its own
+// terminalRoic) keeps passing a flat Decimal, unaffected.
+export function buildFadingReinvestmentIntensityPath(
+  explicitIntensity: Decimal,
+  margin: Decimal,
+  nopatTaxRate: Decimal,
+  terminalGrowth: Decimal,
+  terminalRoic: Decimal
+): Decimal[] {
+  const afterTax = new Decimal(1).minus(nopatTaxRate);
+  const terminalIntensity = margin.mul(afterTax).mul(terminalGrowth.dividedBy(terminalRoic));
+  const path: Decimal[] = [];
+  for (let t = 1; t <= 10; t++) {
+    path.push(growthAt(t, explicitIntensity, terminalIntensity));
+  }
+  return path;
 }
 
 const RATE_SEARCH_LO = new Decimal("0.01");

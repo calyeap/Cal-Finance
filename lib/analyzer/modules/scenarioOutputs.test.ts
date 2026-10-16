@@ -4,6 +4,7 @@ import {
   computeScenarioEnterpriseValue,
   computeScenarioOutputs,
   solveRateForTargetValue,
+  buildFadingReinvestmentIntensityPath,
 } from "./scenarioOutputs";
 import { buildFixedShapeGrowthPath } from "../growthPath";
 import { projectReverseDcfValue } from "./reverseDcf";
@@ -71,6 +72,117 @@ describe("computeScenarioEnterpriseValue", () => {
     const reverseDcfEv = projectReverseDcfValue(growth, margin, ronic, rate, baseRevenue, taxRate).ev;
 
     expect(scenarioEv.toDecimalPlaces(6).toString()).toBe(reverseDcfEv.toDecimalPlaces(6).toString());
+  });
+
+  describe("terminalRoic (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01) — optional, scenario-specific override", () => {
+    const flatPath = Array(10).fill(new Decimal(0));
+    const margin = new Decimal("0.3");
+    const capitalIntensity = new Decimal("0.1");
+    const rate = new Decimal("0.1");
+    const taxRate = new Decimal(0);
+
+    it("legacy default — omitting terminalRoic (and terminalGrowth) reproduces the prior hardcoded r+3pp behaviour exactly", () => {
+      const withoutParam = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, taxRate);
+      const explicitDefault = computeScenarioEnterpriseValue(
+        new Decimal(100),
+        flatPath,
+        margin,
+        capitalIntensity,
+        rate,
+        taxRate,
+        undefined,
+        rate.plus("0.03")
+      );
+      expect(withoutParam.toString()).toBe(explicitDefault.toString());
+    });
+
+    it("passing null for terminalRoic is identical to omitting it", () => {
+      const omitted = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, taxRate);
+      const explicitNull = computeScenarioEnterpriseValue(
+        new Decimal(100),
+        flatPath,
+        margin,
+        capitalIntensity,
+        rate,
+        taxRate,
+        undefined,
+        null
+      );
+      expect(omitted.toString()).toBe(explicitNull.toString());
+    });
+
+    it("an explicit terminalRoic changes the terminal value and is NOT silently overridden by the r+3pp default", () => {
+      const defaultRoicEv = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, taxRate);
+      // A lower, fully-faded terminal ROIC (= cost of capital, no durable
+      // excess return) must produce a LOWER terminal value than the
+      // diagnostic r+3pp premium (13%), since a lower ROIC on the same
+      // terminal growth rate implies a higher terminal reinvestment rate
+      // (g/ROIC) and hence a lower terminal FCF.
+      const fadedToRate = computeScenarioEnterpriseValue(
+        new Decimal(100),
+        flatPath,
+        margin,
+        capitalIntensity,
+        rate,
+        taxRate,
+        undefined,
+        rate // terminal ROIC = cost of capital, zero excess return
+      );
+      expect(fadedToRate.lessThan(defaultRoicEv)).toBe(true);
+    });
+  });
+});
+
+describe("buildFadingReinvestmentIntensityPath", () => {
+  it("holds the explicit intensity for years 1-5, by hand", () => {
+    const path = buildFadingReinvestmentIntensityPath(
+      new Decimal("0.20"),
+      new Decimal("0.45"),
+      new Decimal("0.19"),
+      new Decimal("0.03"),
+      new Decimal("0.11")
+    );
+    expect(path).toHaveLength(10);
+    for (let t = 0; t < 5; t++) {
+      expect(path[t].toString()).toBe("0.2");
+    }
+  });
+
+  it("fades linearly over years 6-10 toward the terminal formula's own implied intensity, by hand", () => {
+    // Hand-derived: terminal reinvestment (in dollars) is terminalNopat x
+    // (terminalGrowth / terminalRoic) — the same identity the terminal
+    // value formula above already applies. As a fraction of terminal
+    // revenue that is margin x (1 - taxRate) x (terminalGrowth /
+    // terminalRoic), since terminalNopat / terminalRevenue = margin x
+    // (1 - taxRate) exactly (the (1+g) factor cancels).
+    const margin = new Decimal("0.45");
+    const taxRate = new Decimal("0.19");
+    const terminalGrowth = new Decimal("0.03");
+    const terminalRoic = new Decimal("0.11");
+    const terminalIntensity = margin.mul(new Decimal(1).minus(taxRate)).mul(terminalGrowth.dividedBy(terminalRoic));
+
+    const path = buildFadingReinvestmentIntensityPath(new Decimal("0.20"), margin, taxRate, terminalGrowth, terminalRoic);
+
+    expect(path[9].toDecimalPlaces(10).toString()).toBe(terminalIntensity.toDecimalPlaces(10).toString());
+    // Year 6 (t=6): linear fade, frac = (6-5)/5 = 0.2 of the way from the
+    // explicit 20% to the terminal-implied level.
+    const expectedYear6 = new Decimal("0.20").minus(new Decimal("0.20").minus(terminalIntensity).mul(0.2));
+    expect(path[5].toDecimalPlaces(10).toString()).toBe(expectedYear6.toDecimalPlaces(10).toString());
+  });
+
+  it("passed through computeScenarioEnterpriseValue, changes the result from the flat-intensity figure whenever the terminal-implied level differs from the explicit one", () => {
+    const baseRevenue = new Decimal(331839000000);
+    const growthPath = [new Decimal("0.14"), new Decimal("0.14"), new Decimal("0.14"), new Decimal("0.14"), new Decimal("0.14"), new Decimal("0.122"), new Decimal("0.104"), new Decimal("0.086"), new Decimal("0.068"), new Decimal("0.05")];
+    const margin = new Decimal("0.45");
+    const taxRate = new Decimal("0.19");
+    const rate = new Decimal("0.1");
+    const terminalRoic = new Decimal("0.11");
+
+    const flatEv = computeScenarioEnterpriseValue(baseRevenue, growthPath, margin, new Decimal("0.20"), rate, taxRate, undefined, terminalRoic);
+    const fadedPath = buildFadingReinvestmentIntensityPath(new Decimal("0.20"), margin, taxRate, new Decimal("0.03"), terminalRoic);
+    const fadedEv = computeScenarioEnterpriseValue(baseRevenue, growthPath, margin, fadedPath, rate, taxRate, undefined, terminalRoic);
+
+    expect(fadedEv.toString()).not.toBe(flatEv.toString());
   });
 });
 

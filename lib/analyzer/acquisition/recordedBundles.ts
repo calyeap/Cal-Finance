@@ -62,6 +62,11 @@ export interface RecordedScenarioDriverInput {
   reinvestmentCapitalIntensity: string | null;
   shareCount: string;
   writtenAnchor: string;
+  /** Optional, scenario-specific terminal ROIC override (§3.5) — Decimal, as
+   * text. Independent of the three drivers above: leaving it blank/absent
+   * never blocks the dynamic-recomputation path and keeps the existing
+   * diagnostic r+3pp default (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01). */
+  terminalRoic?: string | null;
 }
 
 export interface RecordedScenarios {
@@ -162,6 +167,15 @@ export async function recordAnalystBundle(
     for (const driverKey of NULLABLE_DRIVER_KEYS) {
       optionalDecimal(scenario[driverKey], `${key} ${driverKey}`);
     }
+    const terminalRoic = optionalDecimal(scenario.terminalRoic ?? null, `${key} terminalRoic`);
+    // REVIEW-38751207194-1, CORRECT — division-safety guard only, no new
+    // economic floor or finance policy. computeScenarioEnterpriseValue
+    // divides by terminalRoic (G.dividedBy(terminalRoic)); a zero or
+    // negative value yields Infinity/a sign-flipped terminal value rather
+    // than a refused write, a silent non-finite valuation downstream.
+    if (terminalRoic !== null && !terminalRoic.greaterThan(0)) {
+      throw new Error(`${key} terminalRoic must be positive`);
+    }
     requireDecimal(input.scenarioValues[key], `${key} scenario value`);
   }
 
@@ -256,6 +270,10 @@ function driverFromStorage(d: RecordedScenarioDriverInput): ScenarioDriverInputs
     ),
     shareCount: requireDecimal(d.shareCount, "shareCount"),
     writtenAnchor: d.writtenAnchor,
+    // Absent on every row recorded before this field existed (e.g. NVDA's
+    // migration 008 seed) — optionalDecimal(null, ...) returns null, so
+    // those rows resolve identically to before this field was added.
+    terminalRoic: optionalDecimal(d.terminalRoic ?? null, "terminalRoic"),
   };
 }
 

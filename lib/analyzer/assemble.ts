@@ -28,7 +28,12 @@ import {
   computeRateTerminalGrowthTable,
   selectStep4ForecastDispersionReading,
 } from "./modules/sensitivity";
-import { computeScenarioEnterpriseValue, computeScenarioOutputs, rateSearchBracket } from "./modules/scenarioOutputs";
+import {
+  computeScenarioEnterpriseValue,
+  computeScenarioOutputs,
+  rateSearchBracket,
+  buildFadingReinvestmentIntensityPath,
+} from "./modules/scenarioOutputs";
 import { buildFixedShapeGrowthPath } from "./growthPath";
 import { sensitivityRangesFor } from "./acquisition/analystInputs";
 import { notComputed, NOT_COMPUTED_BINDING } from "./notComputed";
@@ -561,15 +566,33 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     sensitivityBaseCapitalIntensity === null
       ? buildSensitivityResult()
       : (() => {
-          const scenarioValueAt = (growth: Decimal, margin: Decimal, terminalGrowth?: Decimal, rate: Decimal = POLICY.rateGrid[1]): Decimal =>
+          // CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01
+          // (2026-10-15): when the base scenario carries its own
+          // terminalRoic, fade reinvestment intensity through years 6-10
+          // toward the SAME terminal-implied level the terminal formula
+          // below already assumes (buildFadingReinvestmentIntensityPath),
+          // using THIS call's own margin and terminalGrowth — the same
+          // "SAME M15 model, self-consistent" invariant REVIEW-38749099399-1
+          // already named for this closure. A base scenario with no
+          // terminalRoic keeps passing the flat capitalIntensity, unchanged.
+          const scenarioValueAt = (growth: Decimal, margin: Decimal, terminalGrowth: Decimal = POLICY.terminalGrowth, rate: Decimal = POLICY.rateGrid[1]): Decimal =>
             computeScenarioEnterpriseValue(
               baseRevenueSourced.value,
               buildFixedShapeGrowthPath(growth),
               margin,
-              sensitivityBaseCapitalIntensity,
+              sensitivityBaseScenario.terminalRoic != null
+                ? buildFadingReinvestmentIntensityPath(
+                    sensitivityBaseCapitalIntensity,
+                    margin,
+                    nopatTaxRateForRun,
+                    terminalGrowth,
+                    sensitivityBaseScenario.terminalRoic
+                  )
+                : sensitivityBaseCapitalIntensity,
               rate,
               nopatTaxRateForRun,
-              terminalGrowth
+              terminalGrowth,
+              sensitivityBaseScenario.terminalRoic
             );
           const baseCaseValue = scenarioValueAt(sensitivityBaseGrowth, sensitivityBaseMargin);
 
@@ -653,13 +676,31 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       scenarioValuesMissing = `${key} scenario drivers are not authored for this run, or use an explicit year-by-year path this computation does not take`;
       return new Decimal(NaN);
     }
+    // CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 (2026-10-15):
+    // the SAME fade scenarioValueAt (M14) above applies — years 6-10 of
+    // this scenario's own reinvestment intensity move toward the
+    // terminal-implied level the formula below already assumes, rather than
+    // jumping straight from a flat explicit-period rate into it. A driver
+    // with no terminalRoic keeps the flat capitalIntensity, unchanged.
+    const scenarioCapitalIntensity =
+      driver.terminalRoic != null
+        ? buildFadingReinvestmentIntensityPath(
+            driver.reinvestmentCapitalIntensity,
+            driver.operatingMargin,
+            nopatTaxRateForRun,
+            POLICY.terminalGrowth,
+            driver.terminalRoic
+          )
+        : driver.reinvestmentCapitalIntensity;
     const scenarioEnterpriseValue = computeScenarioEnterpriseValue(
       baseRevenueSourced.value,
       buildFixedShapeGrowthPath(driver.revenueGrowthOrPath),
       driver.operatingMargin,
-      driver.reinvestmentCapitalIntensity,
+      scenarioCapitalIntensity,
       POLICY.rateGrid[1],
-      nopatTaxRateForRun
+      nopatTaxRateForRun,
+      undefined,
+      driver.terminalRoic
     );
     // The bridge's own net debt/cash/non-operating-investments term, held
     // constant across bear/base/bull exactly as the debt and cash on a

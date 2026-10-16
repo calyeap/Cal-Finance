@@ -345,6 +345,14 @@ export interface ScenarioDriverSet {
   shareCount: Decimal;
   // Required, free text, cannot be empty (design §5.4).
   writtenAnchor: string;
+  // Optional, scenario-specific terminal ROIC (§3.5: "In the scenario DCF,
+  // terminal ROIC is an analyst input with a written anchor and must fade
+  // toward the cost of capital unless a durable moat is argued explicitly"
+  // — a distinct rule from the diagnostic reverse DCF's own fixed r+3pp
+  // convention, §6.2/Appendix B, PROVISIONAL). Absent/null means
+  // computeScenarioEnterpriseValue keeps applying that diagnostic r+3pp
+  // default — EXACTLY prior behaviour (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01).
+  terminalRoic?: Decimal | null;
 }
 
 export interface ScenarioSet {
