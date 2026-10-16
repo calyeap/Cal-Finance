@@ -243,13 +243,19 @@ describe("CF-ANALYST-INPUT-ENTRY-01 — the recorded entry path, end to end on a
     expect(container.textContent).not.toContain("last corrected");
   });
 
-  it("MSFT and OKLO come out unchanged — still the committed bundle, still its own disclosure, never routed through the recorded store", async () => {
-    expect(await hasRecordedAnalystBundle("MSFT")).toBe(false);
+  it("OKLO comes out unchanged — still the committed bundle, still its own disclosure, never routed through the recorded store; MSFT now resolves through the SAME recorded store NVDA's migration 008 already proved, not the committed fixture", async () => {
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) durably recorded Calvin's
+    // approved MSFT Stage-2 bundle (migration 010) — the same "recorded
+    // wins over committed" precedence NVDA's migration 008 already
+    // exercises (this file's own header comment), now also true for MSFT.
+    // OKLO carries no recordable profile (RECORDABLE_PROFILES excludes
+    // PRE_REVENUE_UNPROFITABLE) and is genuinely unaffected.
+    expect(await hasRecordedAnalystBundle("MSFT")).toBe(true);
     expect(await hasRecordedAnalystBundle("OKLO")).toBe(false);
 
     const msft = await analystInputsFor("MSFT");
-    expect(msft?.note).toContain("carried from the validation set");
-    expect(msft?.note).not.toContain("entered by an analyst on this system");
+    expect(msft?.note).toContain("entered by an analyst on this system");
+    expect(msft?.note).not.toContain("carried from the validation set");
 
     const oklo = await analystInputsFor("OKLO");
     expect(oklo?.note).toContain("carried from the validation set");

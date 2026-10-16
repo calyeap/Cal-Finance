@@ -138,18 +138,21 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
           // override (Calvin ruling 2) now resolves MSFT's enterprise
           // value/leverage on this automatically-driven run, exactly as
           // automaticAnalysisOnRealRun.test.ts's "still reads INCOMPLETE"
-          // case independently proves. A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01)
-          // now suppresses MSFT's fair-value range unconditionally (its
-          // scenario dollar values are the validation fixture's, never a
-          // real computation for this real run), and verdict.ts/trust.ts
-          // both read that before they would ever reach PROFILE NOT
-          // CONFIRMED or the growth-comparator fallback — so this run's own
-          // INCOMPLETE reason is now A4's.
+          // case independently proves.
+          //
+          // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010)
+          // durably recorded Calvin's approved MSFT Stage-2 bundle — a
+          // real, driver-authored analyst bundle, never fixture-carried —
+          // so A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses
+          // MSFT's fair-value range unconditionally. The automatic path
+          // also confirms the profile, so this run's own INCOMPLETE reason
+          // is the unrelated, pre-existing M8 required-vs-achieved-growth
+          // comparator gap, not PROFILE NOT CONFIRMED.
           expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
-          expect(verdict.reason).toContain("scenario dollar values");
-          expect(result.trust.status).toBe("UNUSABLE");
+          expect(verdict.reason).toContain("required-versus-achieved growth comparator");
+          expect(result.trust.status).toBe("PARTIAL");
           expect(result.gates.leverage.result).toBe("PASS");
-          expect(result.fairValueRange.kind).toBe("suppressed");
+          expect(result.fairValueRange.kind).toBe("range");
           expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
         } else {
           // OKLO has zero tagged non-operating-investment candidates

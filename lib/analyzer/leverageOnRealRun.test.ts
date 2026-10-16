@@ -79,11 +79,16 @@ describe("§6.5 leverage on an acquired MSFT run", () => {
     // suppressed on leverage everywhere would pass every suppression test in
     // this milestone and be just as wrong.
     //
-    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) separately and correctly
-    // suppresses MSFT's real-run range for an unrelated reason — its
-    // scenario dollar values are carried from the validation fixture, not
-    // computed for this real acquired report — so the range IS suppressed
-    // here now, but never attributes that to leverage.
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration
+    // 010_msft_recorded_bundle_seed.sql) durably recorded Calvin's approved
+    // MSFT Stage-2 candidate — a real, driver-authored analyst bundle, not
+    // the validation-fixture carry-over A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01)
+    // used to suppress here. A real range now computes (this run's own §4.4
+    // judgment — "none of the candidates are non-operating" — differs from
+    // the approved candidate's own judgment, so the figures below are this
+    // run's own, not the $214.26/$283.31/$402.73 snapshot migration 010
+    // records). The point under test is still the same: leverage PASSing is
+    // not why a range exists or doesn't.
     const run = await buildAcquiredRun({
       ticker: "MSFT",
       price: { value: MSFT_CAPTURE_CLOSE, timestamp: "2026-09-04", source: "recorded capture" },
@@ -96,10 +101,10 @@ describe("§6.5 leverage on an acquired MSFT run", () => {
 
     expect(result.gates.gate0.result).toBe("PASS");
     expect(result.gates.leverage.result).toBe("PASS");
-    expect(result.fairValueRange.kind).toBe("suppressed");
-    if (result.fairValueRange.kind === "suppressed") {
-      expect(result.fairValueRange.state).not.toBe("LEVERAGE UNSUPPORTED IN v1");
-      expect(result.fairValueRange.cause).toContain("scenario dollar values");
+    expect(result.fairValueRange.kind).toBe("range");
+    if (result.fairValueRange.kind === "range") {
+      expect(result.fairValueRange.bear.greaterThan(0)).toBe(true);
+      expect(result.fairValueRange.bull.greaterThan(result.fairValueRange.bear)).toBe(true);
     }
   });
 

@@ -84,28 +84,48 @@ describe("CF-S44-RECORD-01 — MSFT's §4.4 ruling recorded on a real run", () =
     expect(result.gates.leverage.netDebtRatio!.lessThan(POLICY.leverageThreshold)).toBe(true);
   });
 
-  it("trust is UNUSABLE — A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) honestly suppresses the range's validation-fixture-carried scenario values, never RONIC/reinvestment/FCF/P/E's own independent INCOMPLETE states", async () => {
+  it("trust is PARTIAL — CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) retires A4's fixture-carried suppression for MSFT; a real range now computes, and the remaining gap is the genuinely unsupplied rate-sensitivity capture, never the old fixture-carried cause", async () => {
+    // Before migration 010, MSFT's scenario dollar values were carried from
+    // the validation fixture and A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01)
+    // honestly suppressed the range for that reason, dropping trust to
+    // UNUSABLE. The durably recorded Stage-2 bundle is a real,
+    // driver-authored analyst bundle — never fixture-carried — so that
+    // suppression no longer applies to MSFT. Trust still reads PARTIAL, but
+    // now for a genuine, unrelated gap: no revaluation-at-other-discount-
+    // rates was ever supplied for this run (revalueBaseCaseAtRate stays
+    // null — migration 010 does not record one, matching every other
+    // recorded/fixture bundle in this codebase), so the ±1% rate
+    // sensitivity and the price-implied discount rate both stay INCOMPLETE.
     const result = await openMsftRunWithRuling();
 
-    expect(result.trust.status).toBe("UNUSABLE");
-    if (result.fairValueRange.kind === "suppressed") {
-      expect(result.fairValueRange.cause).toContain("scenario dollar values");
+    expect(result.trust.status).toBe("PARTIAL");
+    expect(result.fairValueRange.kind).toBe("range");
+    expect(
+      result.trust.determinedBy.some(
+        (d) => d.kind === "incomplete input" && d.detail.includes("±1% rate sensitivity")
+      )
+    ).toBe(true);
+  });
+
+  it("the fair-value range is now a real, computed range — the Calvin-approved $214.26/$283.31/$402.73 Stage-2 candidate (issue #442), never the retired validation fixture's $265/$510/$650", async () => {
+    const result = await openMsftRunWithRuling();
+
+    expect(result.fairValueRange.kind).toBe("range");
+    if (result.fairValueRange.kind === "range") {
+      expect(result.fairValueRange.bear.toFixed(2)).toBe("214.26");
+      expect(result.fairValueRange.bull.toFixed(2)).toBe("402.73");
     }
+    expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("283.31");
   });
 
-  it("the fair-value range stays honestly suppressed (A4) — never the validation fixture's $265/$510/$650 presented as this real run's computed range", async () => {
-    const result = await openMsftRunWithRuling();
-
-    expect(result.fairValueRange.kind).toBe("suppressed");
-  });
-
-  it("the verdict stays INCOMPLETE, now for A4's scenario-values cause — never the old LEVERAGE UNSUPPORTED IN v1 cause", async () => {
+  it("the verdict stays INCOMPLETE — now for the unrelated, pre-existing M8 required-vs-achieved-growth-comparator gap, never A4's retired scenario-values cause or the old LEVERAGE UNSUPPORTED IN v1 cause", async () => {
     const result = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
 
     expect(verdict.status).toBe("INCOMPLETE");
     expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
-    expect(verdict.reason).toContain("scenario dollar values");
+    expect(verdict.reason).not.toContain("scenario dollar values");
+    expect(verdict.reason).toContain("required-versus-achieved growth comparator");
   });
 
   it("a selection combining the ruled tag with a narrower one double-counts — the ruled run never carries the all-candidates sum", async () => {

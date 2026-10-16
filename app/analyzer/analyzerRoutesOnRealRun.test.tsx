@@ -130,19 +130,19 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
       // item 2: "classify [unambiguous operating companies]
       // deterministically/automatically") means MSFT's Gate 0 PASS plus its
       // automatic profile resolution stands in for a human confirmation, so
-      // PROFILE NOT CONFIRMED no longer fires here. A4 (CF-ANALYZER-
-      // INTEGRITY-PHASE-A-01) separately and correctly suppresses MSFT's
-      // range anyway (its scenario dollar values are the validation
-      // fixture's, never a real computation for this real run), so MSFT now
-      // joins OKLO (suppressed range, pre-revenue) and NVDA (suppressed
-      // range, known treasuryMethodDilution/financeLeaseLiabilities gaps) in
-      // having no defensible range — all three share the same plain-English
-      // hero now, for independently real reasons.
+      // PROFILE NOT CONFIRMED no longer fires here.
+      //
+      // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
+      // recorded Calvin's approved MSFT Stage-2 bundle, so MSFT now has a
+      // real, defensible range — unlike OKLO (suppressed, pre-revenue) and
+      // NVDA (suppressed, known treasuryMethodDilution/
+      // financeLeaseLiabilities gaps), which still share the plain-English
+      // "no valuation verdict" hero for their own, independently real
+      // reasons.
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
       if (ticker === "MSFT") {
         expect(hero.textContent).not.toContain("INCOMPLETE");
-        expect(hero.textContent).not.toMatch(/see Evidence/i);
-        expect(hero.textContent).toMatch(/^No valuation verdict for this company yet — /);
+        expect(hero.textContent).toContain("Trading at or above the bull case modeled for this company");
       } else {
         // CF-ANALYZER-V1-SETTLE-01 (Calvin's 7 Oct 2026 decision on #399,
         // Option 1): no defensible range, so the hero states why in plain

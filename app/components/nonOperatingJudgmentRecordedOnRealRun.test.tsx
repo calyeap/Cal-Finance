@@ -8,7 +8,7 @@ import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
 import { AnalyzerOverview } from "./AnalyzerOverview";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
-import { priceVsRangeHeadline, incompleteVerdictExplanation } from "@/lib/analyzer/trustCopy";
+import { priceVsRangeHeadline } from "@/lib/analyzer/trustCopy";
 
 // ---------------------------------------------------------------------------
 // CF-S44-RECORD-01 — the rendering half of MSFT's recorded §4.4 ruling: the
@@ -76,18 +76,19 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     expect(ids).toEqual(OVERVIEW_TAB_SLOT_ORDER);
   });
 
-  // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — MSFT's fair-value range is now
-  // honestly suppressed (its scenario dollar values are the validation
-  // fixture's, never a real computation for this real run), so
-  // `priceVsRangeHeadline` correctly returns null (`fairValueRange.kind !==
-  // "range"`) and the hero falls back to `incompleteVerdictExplanation`'s
-  // own suppressed-range branch instead — still never the literal word
+  // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
+  // recorded Calvin's approved MSFT Stage-2 bundle — a real,
+  // driver-authored analyst bundle, never fixture-carried — so A4
+  // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses MSFT's range
+  // here. `priceVsRangeHeadline` now returns a real headline
+  // (`fairValueRange.kind === "range"`, trust not UNUSABLE, profile
+  // confirmed) and the hero shows THAT — still never the literal word
   // INCOMPLETE or verdict.reason leaked outside Evidence.
-  it("the shared hero states the suppressed-range explanation, never the literal word INCOMPLETE or verdict.reason, outside Evidence", async () => {
+  it("the shared hero states the real price-vs-scenarios headline, never the literal word INCOMPLETE or verdict.reason, outside Evidence", async () => {
     const { result } = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
     expect(verdict.status).toBe("INCOMPLETE");
-    expect(result.fairValueRange.kind).toBe("suppressed");
+    expect(result.fairValueRange.kind).toBe("range");
 
     const { container } = render(
       <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="overview">
@@ -105,21 +106,18 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     // Evidence the hero never leaks verdict.reason verbatim — see
     // DominantVerdictSlot.tsx and the design contract's §4 V1 narrowing.
     expect(hero.textContent).not.toContain(verdict.reason);
-    expect(
-      priceVsRangeHeadline({
-        fairValueRange: result.fairValueRange,
-        priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
-        trustStatus: result.trust.status,
-        profileNotConfirmed: false,
-      })
-    ).toBeNull();
-    const explanation = incompleteVerdictExplanation({
-      trustStatus: result.trust.status,
+    const headline = priceVsRangeHeadline({
       fairValueRange: result.fairValueRange,
-      leverage: result.gates.leverage,
+      priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
+      trustStatus: result.trust.status,
       profileNotConfirmed: false,
     });
-    expect(explanation).toContain("No valuation verdict for this company yet");
-    expect(hero.textContent).toContain(explanation);
+    // The committed offline capture's own $499.70 close sits above all
+    // three approved scenario values (docs/proof/
+    // cf-msft-stage2-real-valuation-proof-01.md §3).
+    expect(headline).toBe(
+      "Trading at or above the bull case modeled for this company — the current price is already at or beyond the most optimistic scenario in the range below."
+    );
+    expect(hero.textContent).toContain(headline);
   });
 });
