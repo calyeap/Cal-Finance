@@ -148,15 +148,21 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       expect(ids).toEqual(OVERVIEW_TAB_SLOT_ORDER);
     });
 
-    it("the shared hero never leaks verdict.reason outside Evidence, and states a plain-English position — price-vs-range where a range exists, the honest structural cause otherwise", async () => {
+    it("the shared hero never leaks verdict.reason outside Evidence, and states the right thing — the completed verdict word where a defensible range exists, the honest structural cause otherwise", async () => {
       const { result } = await openRealRun(ticker, companyName);
       const verdict = deriveVerdict(result);
-      // verdict.ts is unchanged (m9RealCompanyValidationGuards.test.ts pins
-      // its hash) and returns INCOMPLETE on every path today — the observed
-      // result of a nonconforming implementation path awaiting its own
-      // outcome, not a defect this outcome may fix. Both real runs are
-      // asserted to land here explicitly rather than assumed.
-      expect(verdict.status).toBe("INCOMPLETE");
+      // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: MSFT's real, defensible range
+      // now reaches a completed SELL under the live Methodology's Verdict
+      // synthesis policy v1 (verdict.ts's own hash pin in
+      // m9RealCompanyValidationGuards.test.ts was updated by this outcome,
+      // with the exact authorisation named there). OKLO's pre-revenue range
+      // still has no Step-1-equivalent path to synthesis, so it stays
+      // INCOMPLETE exactly as before.
+      if (ticker === "MSFT") {
+        expect(verdict.status).toBe("SELL");
+      } else {
+        expect(verdict.status).toBe("INCOMPLETE");
+      }
 
       const { container } = render(
         <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="overview">
@@ -171,6 +177,18 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       // ACCEPTANCE GATE forbids that outside Evidence).
       expect(hero.textContent).not.toContain(verdict.reason);
 
+      if (ticker === "MSFT") {
+        // A completed verdict takes DominantVerdictSlot's completed path —
+        // the verdict word and the sanctioned "Unavailable — see Evidence"
+        // rationale stand-in, never the price-vs-range headline (that
+        // fallback only applies to an INCOMPLETE verdict).
+        expect(hero.textContent).not.toContain("INCOMPLETE");
+        expect(hero.textContent).toContain("SELL");
+        expect(hero.textContent).toContain("Unavailable — see Evidence");
+        expect(hero.querySelector(".confidence")).not.toBeNull();
+        return;
+      }
+
       const headline = priceVsRangeHeadline({
         fairValueRange: result.fairValueRange,
         priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
@@ -180,10 +198,10 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       if (headline !== null) {
         // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
         // COMPLETE RM-BRIEF PROOF (PR #399, comment 5952716764),
-        // REMOVE/BYPASS item 1: MSFT has a defensible "range"-kind fair
-        // value, so the literal word "INCOMPLETE" must not dominate the
-        // hero — the price-vs-range headline takes over, with the
-        // qualitative evidence-status label beside it.
+        // REMOVE/BYPASS item 1: a defensible "range"-kind fair value means
+        // the literal word "INCOMPLETE" must not dominate the hero — the
+        // price-vs-range headline takes over, with the qualitative
+        // evidence-status label beside it.
         expect(hero.textContent).not.toContain("INCOMPLETE");
         expect(hero.textContent).toContain(headline);
         expect(hero.querySelector(".confidence")).not.toBeNull();
@@ -211,7 +229,6 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
     it("the shared hero renders verdict.reason verbatim on the Evidence tab only", async () => {
       const { result } = await openRealRun(ticker, companyName);
       const verdict = deriveVerdict(result);
-      expect(verdict.status).toBe("INCOMPLETE");
 
       const { container } = render(
         <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="evidence">
@@ -219,8 +236,18 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
         </AnalyzerReportFrame>
       );
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
-      expect(hero.textContent).toContain("INCOMPLETE");
-      expect(hero.textContent).toContain(verdict.reason);
+      if (ticker === "MSFT") {
+        // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: a completed verdict renders
+        // its own status word plus the full verbatim reason on Evidence,
+        // never the raw "INCOMPLETE" state name (there is none to show).
+        expect(verdict.status).toBe("SELL");
+        expect(hero.textContent).toContain("SELL");
+        expect(hero.textContent).toContain(verdict.reason);
+      } else {
+        expect(verdict.status).toBe("INCOMPLETE");
+        expect(hero.textContent).toContain("INCOMPLETE");
+        expect(hero.textContent).toContain(verdict.reason);
+      }
     });
 
     it("no slot renders a numeral the Analysis Result does not carry — the price-implied restatement (slot 8) shows its suppression state, not a figure, wherever the result itself is suppressed", async () => {

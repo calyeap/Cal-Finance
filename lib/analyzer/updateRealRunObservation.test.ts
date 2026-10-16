@@ -131,25 +131,27 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
 
         expect(result.price.value.toString()).toBe(expectedPriceValue);
         expect(result.price.timestamp).toBe(expectedPriceTimestamp);
-        expect(verdict.status).toBe("INCOMPLETE");
 
         if (ticker === "MSFT") {
           // CF-ANALYZER-V1-SETTLE-01 — migration 007's durable §4.4
           // override (Calvin ruling 2) now resolves MSFT's enterprise
-          // value/leverage on this automatically-driven run, exactly as
-          // automaticAnalysisOnRealRun.test.ts's "still reads INCOMPLETE"
-          // case independently proves.
+          // value/leverage on this automatically-driven run.
           //
           // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010)
           // durably recorded Calvin's approved MSFT Stage-2 bundle — a
           // real, driver-authored analyst bundle, never fixture-carried —
           // so A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses
           // MSFT's fair-value range unconditionally. The automatic path
-          // also confirms the profile, so this run's own INCOMPLETE reason
-          // is the unrelated, pre-existing M8 required-vs-achieved-growth
-          // comparator gap, not PROFILE NOT CONFIRMED.
+          // also confirms the profile, so PROFILE NOT CONFIRMED never
+          // fires either.
+          //
+          // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — with every upstream
+          // gate clear, this run now reaches a real SELL under the live
+          // Methodology's Verdict synthesis policy v1, not the old
+          // permanent M8-comparator INCOMPLETE.
+          expect(verdict.status).toBe("SELL");
           expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
-          expect(verdict.reason).toContain("required-versus-achieved growth comparator");
+          expect(verdict.reason).toContain("Verdict synthesis policy v1");
           expect(result.trust.status).toBe("PARTIAL");
           expect(result.gates.leverage.result).toBe("PASS");
           expect(result.fairValueRange.kind).toBe("range");
@@ -158,6 +160,7 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
           // OKLO has zero tagged non-operating-investment candidates
           // (docs/m9-real-company-validation-findings.md), so no override —
           // durable or per-run — was ever possible for it; unchanged.
+          expect(verdict.status).toBe("INCOMPLETE");
           expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
           expect(result.trust.status).toBe("UNUSABLE");
           expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");

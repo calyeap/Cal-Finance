@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision } from "./runStore";
@@ -5,6 +7,20 @@ import { loadGateState } from "./gate";
 import { createDeepSnapshot, reopenDeepSnapshot, type DeepSnapshotReport } from "./snapshotAnalysis";
 import { compareSnapshots, diffStoredSnapshots } from "./snapshotComparison";
 import type { StoredSnapshot } from "./snapshotStore";
+
+// Self-seeding against execution-order fragility (CF-ANALYZER-STAGE3-
+// VERDICT-FINISH-01): lib/analyzer/acquisition/msftStage2ValuationProof.test.ts
+// and msftRealValuationUnblock.test.ts both delete MSFT's durably recorded
+// bundle around their own tests and restore nothing
+// (msftStage2DurableBundleSeed.test.ts's own header documents exactly this),
+// so this file — whose MSFT case depends on that durable row — re-applies
+// migration 010's own SQL directly rather than assuming some other file's
+// cleanup already ran first in whatever order this serial suite discovers
+// files.
+const MIGRATION_010_SQL = readFileSync(
+  join(process.cwd(), "migrations", "010_msft_recorded_bundle_seed.sql"),
+  "utf-8"
+);
 
 // ---------------------------------------------------------------------------
 // CF-LOOP-UPDATE-01 — the real MSFT and OKLO proof, driven through the same
@@ -59,9 +75,13 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     await getPool().query(
       "TRUNCATE analyzer_run_snapshots, analyzer_run_ai_outputs, analyzer_run_fact_decisions, analyzer_run_judgments, analyzer_runs CASCADE"
     );
+    await getPool().query(MIGRATION_010_SQL);
   });
 
   afterAll(async () => {
+    // Leave the table as migration 010 itself wants it to end up, for any
+    // later file in this same run that exercises a real MSFT run.
+    await getPool().query(MIGRATION_010_SQL);
     await getPool().end();
   });
 
@@ -105,10 +125,11 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     expect(v2.result.trust.status).toBe("PARTIAL");
     expect(v2.result.fairValueRange.kind).toBe("range");
     // Confirming the profile removed the PROFILE NOT CONFIRMED cause —
-    // the verdict now reads INCOMPLETE for the unrelated, pre-existing M8
-    // comparator gap instead.
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: the verdict now reaches a real
+    // SELL under the live Methodology's Verdict synthesis policy v1 instead.
     expect(v2.verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
-    expect(v2.verdict.reason).toContain("required-versus-achieved growth comparator");
+    expect(v2.verdict.reason).toContain("Verdict synthesis policy v1");
+    expect(v2.verdict.status).toBe("SELL");
     expect(v2.verdict.reason).not.toBe(v1.verdict.reason);
 
     // Version 1 is byte-for-byte reopenable exactly as it was, after version
@@ -135,15 +156,22 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     expect(comparison!.to).toBe(2);
 
     // Profile confirmation's real effect surfaces on exactly the fields it
-    // actually touches — verdict.reason (the PROFILE NOT CONFIRMED cause
-    // clearing) and trust.determinedBy (the matching qualifying flag
-    // clearing) — and nowhere else: the range itself, its scenario
-    // outputs, leverage and trust.status are unaffected by a profile
+    // actually touches — trust.determinedBy (the PROFILE NOT CONFIRMED
+    // qualifying flag clearing) and, downstream of that, verdict itself:
+    // v1's PROFILE NOT CONFIRMED gate kept deriveVerdict from ever reaching
+    // synthesis (INCOMPLETE), while v2's cleared gate lets it fall through
+    // to the live Methodology's Verdict synthesis policy v1 (SELL) —
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01. So verdict.status now changes
+    // too, alongside verdict.reason; the range itself, its scenario
+    // outputs, leverage and trust.status remain unaffected by a profile
     // confirmation that changes no fact, gate or driver.
     expect(v1.verdict.status).toBe("INCOMPLETE");
-    expect(v2.verdict.status).toBe("INCOMPLETE");
-    expect(comparison!.changed.map((c) => c.field).sort()).toEqual(["trust.determinedBy", "verdict.reason"]);
-    expect(comparison!.unchanged).toContain("verdict.status");
+    expect(v2.verdict.status).toBe("SELL");
+    expect(comparison!.changed.map((c) => c.field).sort()).toEqual([
+      "trust.determinedBy",
+      "verdict.reason",
+      "verdict.status",
+    ]);
     expect(comparison!.unchanged).toContain("price.value");
     expect(comparison!.unchanged).toContain("gates.leverage");
     expect(comparison!.unchanged).toContain("trust.status");

@@ -284,11 +284,19 @@ describe("Analyzer V2 acceptance-target drift guard (CF-V2-DRIFT-GUARD-01)", () 
         // Price / verdict / uncertainty summary.
         const hero = container.querySelector(".az-hero") as HTMLElement;
         expect(hero.getAttribute("data-tab")).toBe(slug);
-        // The Evidence tab alone renders the literal verdict state/reason
-        // (DominantVerdictSlot's `isEvidenceTab` branch); every other tab
-        // states the price-vs-range headline instead (REMOVE/BYPASS item 1).
+        // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: the MSFT fixture's plain
+        // price ($510.12) against its own Base ($510) now reaches a
+        // completed HOLD under the live Methodology's Verdict synthesis
+        // policy v1 — DominantVerdictSlot's completed-verdict path renders
+        // the verdict word on every tab, Evidence included, never the
+        // price-vs-range headline (that fallback applies only to an
+        // INCOMPLETE verdict, per REMOVE/BYPASS item 1).
         expect(hero.querySelector(".az-hero-verdict")?.textContent).toContain(
-          slug === "evidence" ? verdict.status : (heroHeadline ?? verdict.status)
+          verdict.status !== "INCOMPLETE"
+            ? verdict.status
+            : slug === "evidence"
+              ? verdict.status
+              : (heroHeadline ?? verdict.status)
         );
         expect(hero.querySelector(".az-hero-price")).not.toBeNull();
         expect(hero.querySelector(".az-uncertainty")).not.toBeNull();

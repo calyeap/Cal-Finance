@@ -26,6 +26,21 @@ import path from "node:path";
 // SCOPE 3 and DONE WHEN ("comment-only prose SCOPE 3 authorises in
 // verdict.ts"). No executable line changed; the hash below moves only
 // because the comment text it covers did.
+//
+// PIN UPDATED again by CF-ANALYZER-STAGE3-VERDICT-FINISH-01, 16 Oct 2026 —
+// unlike every prior update above, this one is not comment-only: issue #444
+// explicitly authorises completing verdict synthesis, and the permanent
+// COMPARATOR_NOT_YET_AVAILABLE fallback every run previously reached is
+// replaced by a call into the live Cal Finance Methodology's own "Verdict
+// synthesis policy v1" (APPROVED 22 Sep 2026, reconfirmed current by
+// `CALVIN RULING — NO` on PR #430) — see lib/analyzer/verdictSynthesisV1.ts's
+// own header for the full reconciliation against `CALVIN RULING — C`'s
+// separate, still-incomplete seven-step structure. Still no new cut-point,
+// band or threshold invented here: the bands are the Methodology's own
+// already-approved numbers (lib/analyzer/policy.ts's `verdictSynthesisV1Buy`/
+// `verdictSynthesisV1Sell`), transcribed verbatim. This guard's own purpose —
+// pinning *which* outcome is authorised to change verdict.ts, and exactly
+// what changed — is preserved by updating it here rather than deleting it.
 // ---------------------------------------------------------------------------
 
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -34,10 +49,10 @@ function readRepoFile(relPath: string): string {
   return readFileSync(path.join(ROOT, relPath), "utf8");
 }
 
-describe("verdict.ts is untouched by this validation pass", () => {
-  it("hashes to the content this outcome started from — no cut-point, band, threshold or comparator added", () => {
+describe("verdict.ts is untouched since CF-ANALYZER-STAGE3-VERDICT-FINISH-01's own authorised change", () => {
+  it("hashes to the content this outcome left it at — no cut-point, band or threshold beyond the Methodology's own already-approved V1 numbers", () => {
     const hash = createHash("sha256").update(readRepoFile("lib/analyzer/verdict.ts")).digest("hex");
-    expect(hash).toBe("4c0fe5f6f53da77d7d5c23727cf80ba1a883bb73a70990dc452ea3bb51a1b73a");
+    expect(hash).toBe("3221c6ace31ec7d92ac07d20761cd01317403047dd3141b18c344641c0ec605f");
   });
 });
 

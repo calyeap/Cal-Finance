@@ -173,18 +173,21 @@ describe("diffStoredSnapshots", () => {
     expect(comparison.unchanged).toContain("scenarioOutputs.priceLocationWithinRange");
   });
 
-  it("covers the verdict's label and reason independently — a reason can move while the status stays INCOMPLETE", () => {
+  it("covers the verdict's label and reason independently — a reason can move while the status stays the same", () => {
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — the fixture's own price
+    // ($510.12) sits 1.0002× its own Base ($510), inside the invariant HOLD
+    // zone under the live Methodology's Verdict synthesis policy v1. A
+    // different price still inside that same zone changes the reason's own
+    // numbers without changing the HOLD status — the independent-fields
+    // property this test exists to check.
     const a = baseResult();
-    const suppressed: AnalysisResult = {
-      ...a,
-      trust: { status: "UNUSABLE", determinedBy: [{ kind: "suppressing state", detail: "LEVERAGE UNSUPPORTED IN v1" }] },
-      fairValueRange: { kind: "suppressed", state: "LEVERAGE UNSUPPORTED IN v1", cause: "inputs missing" },
-    };
+    const stillHold: AnalysisResult = { ...a, price: { ...a.price, value: new Decimal(520) } };
 
-    expect(deriveVerdict(a).status).toBe("INCOMPLETE");
-    expect(deriveVerdict(suppressed).status).toBe("INCOMPLETE");
+    expect(deriveVerdict(a).status).toBe("HOLD");
+    expect(deriveVerdict(stillHold).status).toBe("HOLD");
+    expect(deriveVerdict(a).reason).not.toBe(deriveVerdict(stillHold).reason);
 
-    const comparison = diffStoredSnapshots(snapshotOf(a, 1), snapshotOf(suppressed, 2));
+    const comparison = diffStoredSnapshots(snapshotOf(a, 1), snapshotOf(stillHold, 2));
 
     expect(comparison.unchanged).toContain("verdict.status");
     expect(changedField(comparison, "verdict.reason")).toBeDefined();
@@ -207,7 +210,18 @@ describe("diffStoredSnapshots", () => {
     // property order — object key enumeration would differ if this module
     // relied on it, but nothing here reads Object.keys(AnalysisResult) at
     // the top level, so the output's field order must be identical anyway.
-    const bInOrder: AnalysisResult = { ...a, price: { ...a.price, value: a.price.value.plus(2) } };
+    //
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — states.qualifying, not
+    // price.value, is the one field perturbed here: verdict.reason now
+    // embeds the real price/Base figures (Verdict synthesis policy v1), so
+    // changing price.value would also change verdict.reason, no longer
+    // isolating a single changed field. states.qualifying is read by
+    // neither deriveVerdict nor verdictSynthesisV1, so it stays the clean
+    // single-field perturbation this test needs.
+    const bInOrder: AnalysisResult = {
+      ...a,
+      states: { ...a.states, qualifying: [...a.states.qualifying, { flag: "CAPITAL-LIGHT", appliesTo: "test" }] },
+    };
     // Same key/value pairs as bInOrder, reversed insertion order — object
     // key enumeration follows insertion order for string keys, so this
     // actually changes Object.keys(bReordered)'s order without changing a
@@ -219,9 +233,9 @@ describe("diffStoredSnapshots", () => {
 
     expect(first.changed.map((c) => c.field)).toEqual(second.changed.map((c) => c.field));
     expect(first.unchanged).toEqual(second.unchanged);
-    // The one field that differs (price.value) sorts ahead of every
+    // The one field that differs (states.qualifying) sorts after every
     // unchanged field in FIELD_SPECS' own declared order.
-    expect(first.changed.map((c) => c.field)).toEqual(["price.value"]);
+    expect(first.changed.map((c) => c.field)).toEqual(["states.qualifying"]);
     expect(first.unchanged[0]).toBe("verdict.status");
     expect(first.unchanged[1]).toBe("verdict.reason");
   });

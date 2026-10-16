@@ -3,6 +3,7 @@ import type { AnalysisResult, Figure, InterpretationStatement } from "../types";
 import type { ReportAnalysis } from "../reportAnalysis";
 import type { Step4ForecastDispersionReading } from "../modules/sensitivity";
 import { priceVsRangeHeadline, incompleteVerdictExplanation } from "../trustCopy";
+import { deriveVerdict } from "../verdict";
 import { profileNotConfirmedFor } from "../trust";
 import {
   notComputedLine,
@@ -180,26 +181,41 @@ export function checkBriefAcceptance({ ticker, policy, report, overviewText }: B
         ? { status: "MISSING", detail: `"What matters most" is missing — ${aiCause}` }
         : { status: "CONTENT", detail: `What matters most: ${excerpt(mainFinding)}` },
     ];
-    const headline = priceVsRangeHeadline({
-      fairValueRange,
-      priceLocationWithinRange: scenarioOutputs.priceLocationWithinRange,
-      trustStatus: result.trust.status,
-      profileNotConfirmed,
-    });
-    if (headline !== null) {
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: a completed verdict (BUY/HOLD/
+    // SELL) takes DominantVerdictSlot's completed-verdict path, not the
+    // INCOMPLETE priceVsRangeHeadline fallback this check previously
+    // assumed was the only option — deriveVerdict returned INCOMPLETE on
+    // every real run until this outcome, so the completed branch below was
+    // never exercised against real fixture data before.
+    const verdict = deriveVerdict(result);
+    if (verdict.status !== "INCOMPLETE") {
       items.push(
-        overviewText.includes(headline)
-          ? { status: "CONTENT", detail: `Bottom line: ${headline}` }
-          : { status: "MISSING", detail: "the price-vs-range bottom line was computed but not rendered in the hero" }
+        overviewText.includes(verdict.status)
+          ? { status: "CONTENT", detail: `Bottom line: ${verdict.status} verdict rendered` }
+          : { status: "MISSING", detail: "the completed verdict was computed but not rendered in the hero" }
       );
     } else {
-      const explanation = incompleteVerdictExplanation({
-        trustStatus: result.trust.status,
+      const headline = priceVsRangeHeadline({
         fairValueRange,
-        leverage,
+        priceLocationWithinRange: scenarioOutputs.priceLocationWithinRange,
+        trustStatus: result.trust.status,
         profileNotConfirmed,
       });
-      items.push(explainedItem("Bottom line", explanation, overviewText, "no price-vs-range position for this run"));
+      if (headline !== null) {
+        items.push(
+          overviewText.includes(headline)
+            ? { status: "CONTENT", detail: `Bottom line: ${headline}` }
+            : { status: "MISSING", detail: "the price-vs-range bottom line was computed but not rendered in the hero" }
+        );
+      } else {
+        const explanation = incompleteVerdictExplanation({
+          trustStatus: result.trust.status,
+          fairValueRange,
+          leverage,
+          profileNotConfirmed,
+        });
+        items.push(explainedItem("Bottom line", explanation, overviewText, "no price-vs-range position for this run"));
+      }
     }
     sections.push({
       id: 2,

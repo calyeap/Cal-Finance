@@ -84,10 +84,18 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
   // (`fairValueRange.kind === "range"`, trust not UNUSABLE, profile
   // confirmed) and the hero shows THAT — still never the literal word
   // INCOMPLETE or verdict.reason leaked outside Evidence.
+  //
+  // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: this run's verdict is now a real
+  // SELL (price $499.70 is 1.7638× the real recomputed Base $283.31,
+  // invariant across every uncertainty bucket — see verdict.test.ts and
+  // msftStage3VerdictOnRealRun.test.ts), not INCOMPLETE. The property this
+  // test actually guards — the hero never renders the literal word
+  // "INCOMPLETE", and never leaks verdict.reason verbatim — is unaffected
+  // either way, so it is re-asserted against the real SELL verdict.
   it("the shared hero states the real price-vs-scenarios headline, never the literal word INCOMPLETE or verdict.reason, outside Evidence", async () => {
     const { result } = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
-    expect(verdict.status).toBe("INCOMPLETE");
+    expect(verdict.status).toBe("SELL");
     expect(result.fairValueRange.kind).toBe("range");
 
     const { container } = render(
@@ -106,6 +114,18 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     // Evidence the hero never leaks verdict.reason verbatim — see
     // DominantVerdictSlot.tsx and the design contract's §4 V1 narrowing.
     expect(hero.textContent).not.toContain(verdict.reason);
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: a completed verdict (SELL) takes
+    // DominantVerdictSlot's completed-verdict path, not the INCOMPLETE
+    // priceVsRangeHeadline fallback path — the hero states the verdict word
+    // itself and the Evidence-tab marker, never the raw reason.
+    expect(hero.textContent).toContain("SELL");
+    expect(hero.textContent).toContain("Unavailable — see Evidence");
+
+    // priceVsRangeHeadline itself is unaffected by the verdict change — it
+    // is computed purely from the range/price/trust facts deriveVerdict
+    // never touches — re-asserted here as a regression guard on that
+    // independent fact, even though the completed-verdict hero does not
+    // render it.
     const headline = priceVsRangeHeadline({
       fairValueRange: result.fairValueRange,
       priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
@@ -118,6 +138,5 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     expect(headline).toBe(
       "Trading at or above the bull case modeled for this company — the current price is already at or beyond the most optimistic scenario in the range below."
     );
-    expect(hero.textContent).toContain(headline);
   });
 });

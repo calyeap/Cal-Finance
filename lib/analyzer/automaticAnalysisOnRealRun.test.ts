@@ -253,13 +253,9 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       }
     });
 
-    it("still reads INCOMPLETE, for the upstream reason it now reads INCOMPLETE for", async () => {
+    it("MSFT now reaches a real SELL under the live Methodology's Verdict synthesis policy v1; OKLO still reads INCOMPLETE, for the upstream reason it reads INCOMPLETE for", async () => {
       const { result } = await analyzeAutomatically(ticker, companyName);
       const verdict = deriveVerdict(result);
-
-      // 22 Sep 02:24:07Z (B) — deriveVerdict stays honestly INCOMPLETE, and
-      // this outcome neither fixes that nor is entitled to.
-      expect(verdict.status).toBe("INCOMPLETE");
 
       if (ticker === "MSFT") {
         // CF-ANALYZER-V1-SETTLE-01 — migration 007's durable §4.4 override
@@ -268,9 +264,7 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
         // ruling "MSFT's recorded §4.4 state" below records explicitly. And
         // the RM-brief ruling's automatic-profile-confirmation fix (item 2)
         // means this run's Gate 0 PASS now stands in for a human
-        // confirmation, so PROFILE NOT CONFIRMED no longer fires either —
-        // INCOMPLETE now reads for the one real gap that remains: M8's
-        // required-versus-achieved growth comparator has not been acquired.
+        // confirmation, so PROFILE NOT CONFIRMED no longer fires either.
         //
         // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010)
         // durably recorded Calvin's approved MSFT Stage-2 bundle — a real,
@@ -278,13 +272,24 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
         // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses MSFT's
         // range; trust reads PARTIAL for the genuine, unrelated
         // rate-sensitivity gap instead.
+        //
+        // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: with every upstream gate
+        // clear, deriveVerdict now falls through to the live Methodology's
+        // "Verdict synthesis policy v1" (APPROVED 22 Sep 2026) instead of
+        // the old permanent M8-comparator INCOMPLETE — real price $499.70
+        // against the real recomputed Base $283.31 (1.7638×) clears the
+        // strictest uncertainty-bucket SELL threshold invariantly.
         expect(result.gates.leverage.result).toBe("PASS");
         expect(result.trust.status).toBe("PARTIAL");
         expect(result.fairValueRange.kind).toBe("range");
+        expect(verdict.status).toBe("SELL");
         expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
         expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
-        expect(verdict.reason).toContain("required-versus-achieved growth comparator");
+        expect(verdict.reason).toContain("Verdict synthesis policy v1");
       } else {
+        // 22 Sep 02:24:07Z (B) — OKLO's verdict stays honestly INCOMPLETE,
+        // blocked upstream of any synthesis by the leverage precondition.
+        expect(verdict.status).toBe("INCOMPLETE");
         // OKLO has zero tagged non-operating-investment candidates
         // (docs/m9-real-company-validation-findings.md), so no override —
         // durable or per-run — was ever possible for it; unchanged.
@@ -357,7 +362,11 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
     }
 
     const verdict = deriveVerdict(result);
-    expect(verdict.status).toBe("INCOMPLETE");
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — same real SELL as the shared
+    // block above; this test exercises the detail-route judgment path
+    // rather than the automatic pass, but reaches the identical financial
+    // state, so the same verdict follows.
+    expect(verdict.status).toBe("SELL");
     expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
   });
 

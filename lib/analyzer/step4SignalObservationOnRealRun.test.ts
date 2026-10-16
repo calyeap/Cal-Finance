@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "./runStore";
@@ -139,10 +141,25 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
       "TRUNCATE analyzer_run_fact_decisions, analyzer_run_judgments, analyzer_runs CASCADE"
     );
     await seedApprovedNvdaBundle();
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — this file's own header scopes
+    // it to issue #318's "bounded, no-new-capture observation": MSFT with
+    // only the §4.4 judgment recorded, no scenario-driver bundle, exactly
+    // the committed-fixture-carry-over state this file's assertions encode.
+    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) landed a
+    // durable MSFT scenario-driver bundle afterward, which this file
+    // predates and never adopted, so this suite's own MSFT row is deleted
+    // here rather than left to whatever another file's cleanup order
+    // happens to leave behind — deterministic either way, not an
+    // accident of execution order.
+    await getPool().query("DELETE FROM analyzer_recorded_analyst_bundles WHERE ticker = $1", ["MSFT"]);
   });
 
   afterAll(async () => {
     await seedApprovedNvdaBundle();
+    // Leave MSFT as migration 010 itself wants it to end up, for any later
+    // file in this same run that exercises a real MSFT run.
+    const migrationSql = readFileSync(join(process.cwd(), "migrations", "010_msft_recorded_bundle_seed.sql"), "utf-8");
+    await getPool().query(migrationSql);
     await getPool().end();
   });
 

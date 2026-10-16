@@ -50,7 +50,7 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     await getPool().end();
   });
 
-  it("produces one complete DEEP analysis, and an honest INCOMPLETE verdict — for the pre-existing M8 comparator gap, never a manufactured BUY/HOLD/SELL", async () => {
+  it("produces one complete DEEP analysis, and a real, reasoned SELL verdict under the live Methodology's already-approved Verdict synthesis policy v1", async () => {
     const runId = await completeMsftRun();
 
     const snapshot = await createDeepSnapshot(runId, null);
@@ -65,12 +65,13 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     // is a real computed one.
     expect(snapshot.result.trust.status).toBe("PARTIAL");
     expect(snapshot.result.fairValueRange.kind).toBe("range");
-    // The verdict boundary still does not manufacture BUY/HOLD/SELL from
-    // a single diagnostic (verdict.test.ts) — the pre-existing, unrelated
-    // M8 required-vs-achieved-growth-comparator gap, untouched by this
-    // outcome.
-    expect(snapshot.verdict.status).toBe("INCOMPLETE");
-    expect(snapshot.verdict.reason).toContain("required-versus-achieved growth comparator");
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — the verdict boundary still
+    // does not manufacture BUY/HOLD/SELL from a single diagnostic
+    // (verdict.test.ts): this SELL is the live Methodology's "Verdict
+    // synthesis policy v1" (two independent, already-approved facts — the
+    // real price and the real recomputed Base value — not the range alone).
+    expect(snapshot.verdict.status).toBe("SELL");
+    expect(snapshot.verdict.reason).toContain("Verdict synthesis policy v1");
   });
 
   it("reopens the exact stored snapshot without recomputing — it survives the run's own decisions being deleted", async () => {
@@ -136,7 +137,7 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     expect(reopenedFirst!.version).toBe(1);
   });
 
-  it("returns an explicit INCOMPLETE verdict, never a manufactured one", async () => {
+  it("returns an explicit, reasoned verdict, never a silently manufactured one", async () => {
     // CF-ANALYZER-V1-SETTLE-01 — no §4.4 judgment recorded for this run,
     // but migration 007's durable MSFT override now resolves the leverage
     // precondition the same way an explicit recordJudgment would
@@ -144,9 +145,13 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
     // recorded Calvin's approved MSFT Stage-2 bundle, so A4
     // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses the range for
-    // MSFT — trust reads PARTIAL and a real range computes. The verdict
-    // itself is still honestly INCOMPLETE either way; that boundary is
-    // untouched by this outcome.
+    // MSFT — trust reads PARTIAL and a real range computes.
+    //
+    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — with every upstream gate
+    // clear, this now reaches a real SELL under the live Methodology's
+    // "Verdict synthesis policy v1", never a silently manufactured one: the
+    // reason cites the exact approved policy and the two real facts (price,
+    // Base) it compared.
     const runId = await createRun("MSFT", "Microsoft Corporation");
     await completeSpotCheck(runId);
     await recordProfileDecision(runId, "CONFIRMED", "MATURE_PROFITABLE", null);
@@ -155,7 +160,8 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
 
     expect(snapshot.result.trust.status).toBe("PARTIAL");
     expect(snapshot.result.fairValueRange.kind).toBe("range");
-    expect(snapshot.verdict.status).toBe("INCOMPLETE");
+    expect(snapshot.verdict.status).toBe("SELL");
+    expect(snapshot.verdict.reason).toContain("Verdict synthesis policy v1");
     expect(snapshot.verdict.reason).not.toBe("");
   });
 

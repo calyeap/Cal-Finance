@@ -1,5 +1,6 @@
 import type { AnalysisResult } from "./types";
 import { PROFILE_NOT_CONFIRMED_DETAIL } from "./trust";
+import { synthesizeVerdictV1 } from "./verdictSynthesisV1";
 
 // ---------------------------------------------------------------------------
 // CF-V2-PROOF-01's verdict boundary — bounded correction on PR #140 per
@@ -35,14 +36,27 @@ import { PROFILE_NOT_CONFIRMED_DETAIL } from "./trust";
 // (manufacturing new finance policy; no M9 implementation before this
 // proof passes).
 //
-// So today, for every run, the evidence needed to synthesize a verdict
-// beyond a single diagnostic is incomplete — not because any one run's
-// inputs are bad, but because the second required input has not been
-// acquired yet. This function says so honestly, with a stated cause and
-// recovery path, rather than manufacturing BUY / HOLD / SELL from the range
-// alone or manufacturing HOLD as a safe default. Once M8 lands the
-// comparator fact on AnalysisResult, this function's synthesis branch can
-// be completed without reopening this ruling.
+// So from 24 Sep 2026 (the correction above) until this outcome, the §10.6.2
+// seven-step comparator remained the only path this function tried, and it
+// never finished acquiring its own second input — not because any run's
+// facts were bad, but because that input had not been acquired. This
+// function said so honestly rather than manufacturing BUY / HOLD / SELL from
+// the range alone or manufacturing HOLD as a safe default.
+//
+// CF-ANALYZER-STAGE3-VERDICT-FINISH-01, 16 Oct 2026: that §10.6.2 path
+// (`CALVIN RULING — C`) is not the only approved mechanism. The live Cal
+// Finance Methodology's own "Verdict synthesis policy v1" (APPROVED 22 Sep
+// 2026) is a second, independent, already-complete synthesis — price versus
+// the Base scenario value, banded by an uncertainty bucket — that Calvin's
+// `CALVIN RULING — NO` on PR #430 (2026-10-14) confirmed is still approved
+// and not superseded ("do not retire the 22 Sep V1 bands yet"). It shares no
+// field with ruling C's growth-licensing structure (verdictSynthesisV1.ts's
+// own header has the full reconciliation) and is implemented below as this
+// function's fallback, in place of the permanent COMPARATOR_NOT_YET_AVAILABLE
+// result every prior run received. It still fails closed — INCOMPLETE, never
+// a manufactured BUY/HOLD/SELL — wherever its own open items (the
+// uncertainty-bucket formula; the unbuilt business-quality/thesis-
+// invalidation judgement) would actually change the answer.
 // ---------------------------------------------------------------------------
 
 export type VerdictStatus = "BUY" | "HOLD" | "SELL" | "INCOMPLETE";
@@ -51,12 +65,6 @@ export interface VerdictResult {
   status: VerdictStatus;
   reason: string;
 }
-
-const COMPARATOR_NOT_YET_AVAILABLE =
-  "Decision-critical analysis is incomplete — a fair-value range alone cannot determine BUY / HOLD / SELL. " +
-  "Synthesizing a verdict also requires the required-versus-achieved growth comparator (spec §10.6.2), and " +
-  "that fact has not been acquired yet (spec §10.6.5, milestone M8). Recovery: this verdict becomes available " +
-  "once M8 delivers the comparator fact.";
 
 export function deriveVerdict(result: AnalysisResult): VerdictResult {
   if (result.trust.status === "UNUSABLE") {
@@ -102,8 +110,18 @@ export function deriveVerdict(result: AnalysisResult): VerdictResult {
     };
   }
 
-  return {
-    status: "INCOMPLETE",
-    reason: COMPARATOR_NOT_YET_AVAILABLE,
-  };
+  // §3.4 — no "approximate" price state; the empty-timestamp sentinel is
+  // this run's own honest "no price was available" signal (buildAcquiredRun),
+  // never a zero price to divide by.
+  if (result.price.timestamp === "") {
+    return {
+      status: "INCOMPLETE",
+      reason:
+        "Decision-critical analysis is incomplete — no price was available for this run, so the Verdict " +
+        "synthesis policy v1 (Methodology, approved 22 Sep 2026) valuation anchor (price / Base) cannot be formed.",
+    };
+  }
+
+  const synthesis = synthesizeVerdictV1(result.price.value, result.scenarioOutputs.values.base);
+  return { status: synthesis.status, reason: synthesis.reason };
 }
