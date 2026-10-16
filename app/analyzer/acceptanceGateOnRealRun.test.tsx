@@ -238,9 +238,10 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
     // Methodology's Verdict synthesis policy v1 (real price $499.70 against
     // the real recomputed Base $283.31, 1.7638×) instead of the old
     // permanent M8-comparator INCOMPLETE — DominantVerdictSlot's completed-
-    // verdict path renders the verdict word plus the sanctioned
-    // "Unavailable — see Evidence" marker on Overview, and the verdict word
-    // plus the full verbatim reason on Evidence.
+    // verdict path renders the verdict word plus a plain-English rationale
+    // (trustCopy.ts's `completedVerdictExplanation`, built only from the
+    // same price/Base figures) on Overview, and the verdict word plus the
+    // full verbatim reason on Evidence.
     it("Overview states the completed verdict plainly, never raw INCOMPLETE; Evidence shows the full verbatim reason", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
 
@@ -249,7 +250,9 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       expect(overviewVerdict.textContent).not.toContain("INCOMPLETE");
       expect(overviewVerdict.textContent).not.toContain("PROFILE NOT CONFIRMED");
       expect(overviewVerdict.textContent).toContain("SELL");
-      expect(overviewVerdict.textContent).toContain("Unavailable — see Evidence");
+      expect(overviewVerdict.textContent).toContain(
+        "above the SELL level under every uncertainty bucket in the approved verdict policy"
+      );
       cleanup();
 
       const evidence = await renderTab(runId, "evidence");

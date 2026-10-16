@@ -209,16 +209,7 @@ export const OVERVIEW_FORBIDDEN_TEXT: readonly { label: string; pattern: RegExp 
   { label: "UNSUPPORTED", pattern: /UNSUPPORTED/ },
   { label: "Gate 0 / Gate 1", pattern: /\bGate [01]\b/i },
   { label: "M1–M16 module id", pattern: /\bM(?:1[0-6]|[1-9])\b/ },
-  // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: carved out the one sanctioned
-  // exception — DominantVerdictSlot.tsx's own REASON_UNAVAILABLE_MARKER,
-  // "Unavailable — see Evidence", the SAME PR #399's later CALVIN RULING — A
-  // (comment 5933170464) deliberately put outside Evidence as a completed
-  // verdict's (BUY/HOLD/SELL) rationale stand-in. Never exercised against
-  // real data until this outcome made deriveVerdict return a completed
-  // verdict for the first time — not a new exemption invented here, only
-  // the first time this list and that marker were ever tested together.
-  // Everything else still trips this pattern unchanged.
-  { label: "\"see Evidence\" placeholder", pattern: /(?<!Unavailable — )see Evidence/i },
+  { label: "\"see Evidence\" placeholder", pattern: /see Evidence/i },
   { label: "PROFILE NOT CONFIRMED", pattern: /PROFILE NOT CONFIRMED/ },
   { label: "TRUST STATUS", pattern: /TRUST STATUS/ },
   {

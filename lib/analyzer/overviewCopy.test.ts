@@ -126,7 +126,7 @@ describe("overviewTextViolations — the ruling's forbidden list", () => {
     ["SEASONAL — RUN-RATE SUPPRESSED", "SUPPRESSED"],
     ["Gate 0 passed", "Gate 0 / Gate 1"],
     ["the M14 tornado", "M1–M16 module id"],
-    ["Suppressed — see Evidence for the full state", '"see Evidence" placeholder'],
+    ["Unavailable — see Evidence", '"see Evidence" placeholder'],
     ["PROFILE NOT CONFIRMED", "PROFILE NOT CONFIRMED"],
     ["TRUST STATUS UNUSABLE", "TRUST STATUS"],
     ["DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE", "technical state code"],
@@ -142,16 +142,5 @@ describe("overviewTextViolations — the ruling's forbidden list", () => {
       "Market cap $3.72T · revenue $245.1B · capex $102M. The margin is flagged MARGIN AT HISTORICAL HIGH; " +
       "the shares are not suppressed or incomplete in any plain sense, and the fair-value range is shown.";
     expect(overviewTextViolations(ordinary)).toEqual([]);
-  });
-
-  // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — DominantVerdictSlot.tsx's own
-  // REASON_UNAVAILABLE_MARKER, "Unavailable — see Evidence", is the SAME
-  // PR #399's later CALVIN RULING — A (comment 5933170464) sanctioned
-  // rationale stand-in for a completed verdict (BUY/HOLD/SELL) outside
-  // Evidence — never exercised against this list until deriveVerdict
-  // returned a completed verdict for the first time. The exemption is
-  // narrow: only this exact, literal marker string is spared.
-  it("does not flag the sanctioned completed-verdict marker, 'Unavailable — see Evidence', as a placeholder leak", () => {
-    expect(overviewTextViolations("SELL Unavailable — see Evidence Medium uncertainty")).toEqual([]);
   });
 });

@@ -145,12 +145,15 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
         // range, deriveVerdict now reaches a completed SELL under the live
         // Methodology's Verdict synthesis policy v1 — DominantVerdictSlot's
         // completed-verdict path takes over the hero (the verdict word
-        // plus the sanctioned "Unavailable — see Evidence" rationale
-        // stand-in), not the price-vs-range headline that only applies to
-        // an INCOMPLETE verdict.
+        // plus a plain-English rationale built from the same price/Base
+        // figures, trustCopy.ts's `completedVerdictExplanation`), not the
+        // price-vs-range headline that only applies to an INCOMPLETE
+        // verdict.
         expect(hero.textContent).not.toContain("INCOMPLETE");
         expect(hero.textContent).toContain("SELL");
-        expect(hero.textContent).toContain("Unavailable — see Evidence");
+        expect(hero.textContent).toContain(
+          "above the SELL level under every uncertainty bucket in the approved verdict policy"
+        );
       } else {
         // CF-ANALYZER-V1-SETTLE-01 (Calvin's 7 Oct 2026 decision on #399,
         // Option 1): no defensible range, so the hero states why in plain

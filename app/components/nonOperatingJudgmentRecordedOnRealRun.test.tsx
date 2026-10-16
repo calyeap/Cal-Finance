@@ -117,9 +117,13 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: a completed verdict (SELL) takes
     // DominantVerdictSlot's completed-verdict path, not the INCOMPLETE
     // priceVsRangeHeadline fallback path — the hero states the verdict word
-    // itself and the Evidence-tab marker, never the raw reason.
+    // itself and a plain-English rationale built from the same price/Base
+    // figures (trustCopy.ts's `completedVerdictExplanation`), never the raw
+    // reason.
     expect(hero.textContent).toContain("SELL");
-    expect(hero.textContent).toContain("Unavailable — see Evidence");
+    expect(hero.textContent).toContain(
+      "above the SELL level under every uncertainty bucket in the approved verdict policy"
+    );
 
     // priceVsRangeHeadline itself is unaffected by the verdict change — it
     // is computed purely from the range/price/trust facts deriveVerdict
