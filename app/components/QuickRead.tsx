@@ -98,13 +98,17 @@ function SecLink({ id, children }: { id: string; children: ReactNode }) {
 // `QuickRead`'s own call (Evidence tab) always passes `plain={false}` and
 // so renders byte-for-byte as before this outcome.
 
-/** The Evidence-only "— see Section X" pointer; dropped entirely when `plain`. */
-function sectionPointer(plain: boolean, id: string, label: ReactNode = `Section ${id}`): ReactNode {
+/**
+ * The Evidence-only section pointer; dropped entirely when `plain`. The
+ * connector is each call site's own base wording (" — see ", " — " or " "),
+ * so the Evidence tab renders exactly as before this outcome.
+ */
+function sectionPointer(plain: boolean, id: string, connector: " — see " | " — " | " " = " — see "): ReactNode {
   if (plain) return null;
   return (
     <>
-      {" "}
-      — see <SecLink id={id}>{label}</SecLink>
+      {connector}
+      <SecLink id={id}>Section {id}</SecLink>
     </>
   );
 }
@@ -324,8 +328,15 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
         body: (
           <p className="qlead">
             The leverage precondition fails for {result.companyName}, so every rate-dependent output here is
-            suppressed — {stateClause(plain, "LEVERAGE UNSUPPORTED IN v1", "", gates.leverage)}
-            {!plain && <> (<SecLink id="C">Section C</SecLink>)</>}.
+            suppressed
+            {plain ? (
+              <> — {plainReason("LEVERAGE UNSUPPORTED IN v1", "", gates.leverage)}.</>
+            ) : (
+              <>
+                {" "}
+                (<b>LEVERAGE UNSUPPORTED IN v1</b> — <SecLink id="C">Section C</SecLink>).
+              </>
+            )}
           </p>
         ),
       },
@@ -464,11 +475,22 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
             {anyWorthLessThanFailure ? (
               <>
                 On one or more of the modelled ways {result.companyName} could succeed, shareholders would end up
-                with less than if it simply held its cash — {stateClause(plain, "THIS SUCCESS IS WORTH LESS THAN FAILURE")}
-                {!plain && <> — see <SecLink id="D">Section D</SecLink> for which</>}.
+                with less than if it simply held its cash
+                {plain ? (
+                  <> — {plainReason("THIS SUCCESS IS WORTH LESS THAN FAILURE", "")}.</>
+                ) : (
+                  <>
+                    {" "}
+                    (<b>THIS SUCCESS IS WORTH LESS THAN FAILURE</b>) — see <SecLink id="D">Section D</SecLink> for
+                    which.
+                  </>
+                )}
               </>
             ) : (
-              <>Every modelled way {result.companyName} could succeed is worth more than simply holding its cash.</>
+              <>
+                Every modelled way {result.companyName} could succeed is worth more than simply holding its cash
+                {plain ? "." : " — none returns THIS SUCCESS IS WORTH LESS THAN FAILURE."}
+              </>
             )}
           </p>
         ),
@@ -498,10 +520,10 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
           <ul>
             <li>
               A cash floor of {formatDollar(fairValueRange.cashFloor)} per share that does not depend on{" "}
-              {result.companyName}&apos;s operations succeeding{sectionPointer(plain, "H")}
+              {result.companyName}&apos;s operations succeeding{sectionPointer(plain, "H", " — ")}
             </li>
             {anyClearsFloor && (
-              <li>At least one modelled success clears the cash floor by a wide margin{sectionPointer(plain, "D")}</li>
+              <li>At least one modelled success clears the cash floor by a wide margin{sectionPointer(plain, "D", " — ")}</li>
             )}
           </ul>
         ),
@@ -512,15 +534,16 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
           <ul>
             {anyWorthLessThanFailure && (
               <li>
-                One or more success definitions show {stateClause(plain, "THIS SUCCESS IS WORTH LESS THAN FAILURE")} —
-                a finding, not an error.{!plain && <> <SecLink id="D">Section D</SecLink></>}
+                One or more success definitions {plain ? "show" : "return"}{" "}
+                {stateClause(plain, "THIS SUCCESS IS WORTH LESS THAN FAILURE")} — a finding, not an error.
+                {!plain && <> <SecLink id="D">Section D</SecLink></>}
               </li>
             )}
             {anyRateCapped && (
               <li>
                 The levered cost-of-equity cap binds on one or more success definitions (
                 <b>RATE CAPPED — VALUE IS AN UPPER BOUND</b>), so those values are upper bounds
-                {sectionPointer(plain, "D")}
+                {sectionPointer(plain, "D", " — ")}
               </li>
             )}
             {!anyWorthLessThanFailure && !anyRateCapped && <li>No value-level concern is active for this analysis.</li>}
@@ -532,7 +555,7 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
         body: (
           <p className="t">
             The capacity ramp shape used in the funding stack — back-loaded versus steady moves the same success
-            case&apos;s value.{sectionPointer(plain, "D")}
+            case&apos;s value.{sectionPointer(plain, "D", " ")}
           </p>
         ),
       },
@@ -568,9 +591,18 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
           {growthLine}{" "}
           {anyDegenerateCell && (
             <>
-              One or more reverse-DCF scenarios return no number at all rather than a misleading one —{" "}
-              {stateClause(plain, "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE")}
-              {!plain && <> — see <SecLink id="E">Section E</SecLink> for which</>}.
+              {plain ? (
+                <>
+                  One or more reverse-DCF scenarios return no number at all rather than a misleading one —{" "}
+                  {plainReason("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE", "")}.
+                </>
+              ) : (
+                <>
+                  One or more reverse-DCF scenarios return no number at all (
+                  <b>DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE</b>) rather than a misleading one — see{" "}
+                  <SecLink id="E">Section E</SecLink> for which.
+                </>
+              )}
             </>
           )}
         </p>
@@ -618,12 +650,12 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
       body: (
         <ul>
           {ronicAboveEveryRate && (
-            <li>Return on new capital of {formatPct(ronic.value)}, above every discount rate tested{sectionPointer(plain, "D")}</li>
+            <li>Return on new capital of {formatPct(ronic.value)}, above every discount rate tested{sectionPointer(plain, "D", " — ")}</li>
           )}
           {cleanCell && (
             <li>
               At least one reverse-DCF cell resolves to a usable growth figure rather than returning a state
-              {sectionPointer(plain, "E")}
+              {sectionPointer(plain, "E", " — ")}
             </li>
           )}
           {!ronicAboveEveryRate && !cleanCell && <li>No supporting figure resolves cleanly for this analysis.</li>}
@@ -637,13 +669,19 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
           {marginAtHigh && (
             <li>
               Operating margin sits at or near its own ten-year high (<b>MARGIN AT HISTORICAL HIGH</b>), and the
-              reverse-DCF grid is run from that level{sectionPointer(plain, "D")}
+              reverse-DCF grid is run from that level{sectionPointer(plain, "D", " — ")}
             </li>
           )}
           {anyDegenerateCell && (
             <li>
-              One or more reverse-DCF cells return no number — {stateClause(plain, "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE")}
-              {sectionPointer(plain, "E")}
+              {plain ? (
+                <>One or more reverse-DCF cells return no number — {plainReason("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE", "")}</>
+              ) : (
+                <>
+                  One or more reverse-DCF cells return <b>DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE</b> rather than a
+                  number — <SecLink id="E">Section E</SecLink>
+                </>
+              )}
             </li>
           )}
           {!marginAtHigh && !anyDegenerateCell && <li>No value-level concern is active for this analysis.</li>}
@@ -655,11 +693,11 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
       body: marginAtHigh ? (
         <p className="t">
           Which margin level is the right base for the reverse-DCF grid — the current level or the ten-year median.
-          The gap drives the whole grid.{sectionPointer(plain, "D")}
+          The gap drives the whole grid.{sectionPointer(plain, "D", " ")}
         </p>
       ) : (
         <p className="t">
-          The cells that do resolve, and how much of their value sits in the terminal period.{sectionPointer(plain, "E")}
+          The cells that do resolve, and how much of their value sits in the terminal period.{sectionPointer(plain, "E", " ")}
         </p>
       ),
     },
