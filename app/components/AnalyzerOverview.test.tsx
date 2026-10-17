@@ -56,13 +56,13 @@ const FILLED_PAGE_ONE: PageOneProse = {
 // per-slot content rules below are otherwise unchanged from M9-DESKTOP-
 // SHELL-01/M9-OVERVIEW-CONTENT-01.
 
-describe("AnalyzerOverview — fixed slot order (slots 5-12)", () => {
+describe("AnalyzerOverview — fixed slot order (Quick Read, slots 5-12)", () => {
   const result = assembleAnalysisResult(MSFT_FIXTURE);
 
-  it("renders slots 5-12, in order, as direct children of .ovtab", () => {
+  it("renders Quick Read first, then slots 5-12 in order, as direct children of .ovtab (CF-AR1-QUICK-READ-OVERVIEW-01)", () => {
     const { container } = render(<AnalyzerOverview result={result} />);
     const ids = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
-    expect(ids).toEqual(["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11", "slot-12"]);
+    expect(ids).toEqual(["slot-quickread", "slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11", "slot-12"]);
   });
 
   // CF-ANALYZER-V1-SETTLE-01 correction (CALVIN RULING — A, comment
@@ -238,7 +238,7 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
   it("the slot-5-through-12 fixed order holds unchanged with pageOne filled", () => {
     const { container } = render(<AnalyzerOverview result={result} />);
     const ids = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
-    expect(ids).toEqual(["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11", "slot-12"]);
+    expect(ids).toEqual(["slot-quickread", "slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11", "slot-12"]);
   });
 
   it("slot 7 surfaces the selected challenger point via the same selectChallengerPoint selection Section I/I2 share", () => {

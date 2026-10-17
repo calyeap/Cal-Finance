@@ -1,6 +1,6 @@
 import type { VerdictResult } from "@/lib/analyzer/verdict";
 import type { TrustStatus } from "@/lib/analyzer/types";
-import { evidenceStatusLabel } from "@/lib/analyzer/trustCopy";
+import { evidenceStatusLabel, rateConventionCaveat } from "@/lib/analyzer/trustCopy";
 
 // M9-DESKTOP-SHELL-01 — Overview slot 2, per docs/design/m9-analyzer-design-
 // contract.md §3, §4.
@@ -94,6 +94,7 @@ export function DominantVerdictSlot({
         <div className="verdictslot completed">
           <ConfidenceIndicator status={trustStatus} />
           <RationaleLine text={priceVsRangeHeadline} />
+          <RateConventionCaveat />
         </div>
       );
     }
@@ -124,8 +125,18 @@ export function DominantVerdictSlot({
       <span className="verdictword">{verdict.status}</span>
       <ConfidenceIndicator status={trustStatus} />
       <RationaleLine text={reason} />
+      {!isEvidenceTab && <RateConventionCaveat />}
     </div>
   );
+}
+
+// CF-AR1-QUICK-READ-OVERVIEW-01 — DO item 2: outside Evidence, the verdict
+// slot carries this caveat beside any rate-derived reading (a completed
+// BUY/HOLD/SELL, or the INCOMPLETE price-vs-range headline above) until AR4
+// lands (trustCopy.ts's `rateConventionCaveat`). Evidence keeps the verbatim
+// `verdict.reason` only, unchanged.
+function RateConventionCaveat() {
+  return <p className="note caveat">{rateConventionCaveat()}</p>;
 }
 
 // contract §3, §8 item 1 — RESOLVED, 21 Sep 2026 (Calvin's ruling on #196,
