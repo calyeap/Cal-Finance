@@ -8,8 +8,8 @@ This file is the repo-owned authority for **which implementation contracts are c
 
 - **Artefact:** [`docs/frozen/calboard-stock-analyzer-v1-spec.md`](frozen/calboard-stock-analyzer-v1-spec.md)
 - **Status:** current approved implementation contract
-- **Effective revision:** CF-VERDICT-1064-APPLY-01 amendment (§10.6.4, CALVIN RULING — A), 24 Sep 2026
-- **SHA-256:** `e40f990803c14cd8bbe0e18ce6c4afa31c6803c80d68978172e09a05a143e8e4`
+- **Effective revision:** amendment AR0 (§14.9, `CF-AR0-SPEC-AMEND-01`) — consequences of Calvin's approved Analyzer Reset decisions D1–D6, 17 Oct 2026
+- **SHA-256:** `cc803bffb05b3d323fbb2b859f3ba269502e630b9f19ab098bdb5f6be00de5c6`
 - **Integrity source:** `scripts/evidence/config.ts` (`FROZEN_HASHES`) and the bidirectional frozen-artefact gate
 
 This contract remains subordinate on semantic conflicts to the current Product Decisions and Cal Finance Methodology. A later explicit Calvin ruling or current semantic authority wins; this file selects the implementation contract, it does not create product or finance semantics.
@@ -21,7 +21,7 @@ This contract remains subordinate on semantic conflicts to the current Product D
 - **SHA-256:** `0e07ec7454b1c12883603a3bfa816ac3c6102c210509ea558147470cb4388c07`
 - **Semantic owner:** current Cal Finance Methodology in Notion
 
-The repo snapshot exists for reproducible implementation evidence. It is **not** the semantic finance authority and must not be used to overrule the current Methodology.
+The repo snapshot exists for reproducible implementation evidence. It is **not** the semantic finance authority and must not be used to overrule the current Methodology. It predates the v2.1 amendments of 17 Oct 2026 (Analyzer Reset D1–D4), which live only in the Notion Methodology.
 
 ## Explicit boundaries
 
