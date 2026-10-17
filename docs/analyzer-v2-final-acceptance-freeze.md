@@ -1,5 +1,12 @@
 # Analyzer V2 — final acceptance / freeze record
 
+> **Superseded — noted 17 Oct 2026 (Analyzer Reset AR0,
+> [#447](https://github.com/calyeap/Cal-Finance/issues/447)).** This freeze
+> predates the V1 BUY/HOLD/SELL verdict now on `master` (#399, #445).
+> `docs/product-decisions.md` item 25 marks it superseded; Analyzer acceptance
+> is re-established by Analyzer Reset AR8 (item 31). Kept as the historical
+> record of Calvin's 26 Sep 2026 ruling.
+
 **Outcome:** `CF-ANALYZER-V2-FINAL-ACCEPTANCE-FREEZE-01` (issue #333).
 
 **Frozen state:** `origin/master` = `2e870772587d9449c1e1267ed20f40ae726b8d04`

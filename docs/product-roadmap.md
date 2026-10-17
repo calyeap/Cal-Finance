@@ -233,6 +233,35 @@ build.
   SCREEN implementation outcome:
   [`docs/screen-workflow-mode-reconciliation.md`](screen-workflow-mode-reconciliation.md).
 
+## 10. Analyzer Reset — AR0–AR8 (17 Oct 2026)
+
+Approved by Calvin on 17 Oct 2026 with the Analyzer Reset master plan
+(`docs/product-decisions.md` item 31, D6); recorded under
+`CF-AR0-RECORD-DECISIONS-01`
+([#447](https://github.com/calyeap/Cal-Finance/issues/447)). Strategic
+sequencing only — which milestone is active stays native-GitHub state (the
+AR issues), never this file.
+
+- **Why:** the Analyzer's verdicts rested on an undecided discount rate, an
+  incoherent reinvestment path and no human judgement. The reset proves the
+  economics before building around them.
+- **Shape:** repair the engine, finish the unfinished workflow, delete what
+  each step replaces — no rewrite (CAL Build Doctrine §19). One outcome per
+  milestone.
+- **Order:** AR0 record decisions → AR1 Quick Read on the Overview (may run
+  alongside AR2) → AR2 outside-truth golden harness → AR3 reproducible runs
+  → AR4 rate, reinvestment, terminal and bridge → AR5 verdict consolidation
+  → AR6 any ticker with cited, price-blind drafts → AR7 report content
+  (prototype first) → AR8 real-app acceptance on eight golden companies.
+  AR3–AR6 are sequential because they share `lib/analyzer/assemble.ts`.
+- **Parked until AR8:** Portfolio Review, Screen and Holdings work. The
+  reset runs ahead of the UPDATE → PORTFOLIO REVIEW → SCREEN lanes of §1's
+  delivery order; it does not redefine them (§7–§9).
+- **Out of scope for the reset:** new services, stores or orchestration;
+  alerts, screeners, sizing, scores, Monte Carlo, beta-WACC calculators,
+  peer sets, three-statement models and paid feeds (unless
+  `docs/product-decisions.md` item 10 is met).
+
 ## Source-of-truth rule
 
 This file is the current authority for strategic sequencing / runway
