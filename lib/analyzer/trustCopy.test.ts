@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { trustStatusLine, trustConsequenceLine, evidenceStatusLabel } from "./trustCopy";
+import { trustStatusLine, trustConsequenceLine, evidenceStatusLabel, rateInUseLine } from "./trustCopy";
+import { selectDiscountRate } from "./discountRate";
+import type { ValuationBasis } from "./types";
 
 // ---------------------------------------------------------------------------
 // The page-one trust line, derived rather than written.
@@ -87,5 +89,34 @@ describe("evidenceStatusLabel — the slot-2 label, bounded by Calvin's ruling o
     const label = evidenceStatusLabel("UNUSABLE");
     expect(label).not.toMatch(/\b(bad|avoid|overvalued|risky|poor)\b/i);
     expect(label).toMatch(/this run/i);
+  });
+});
+
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — product-decisions item 26: the
+// product shows the dated rate in use, read from the run's own basis.
+describe("rateInUseLine", () => {
+  const basisFor = (sic: string | null, triggerBFired = false, leveragePass = true): ValuationBasis => ({
+    discountRate: selectDiscountRate({ sic, triggerBFired, profile: "MATURE_PROFITABLE_STABLE_FCF", leveragePass, priceDate: "2026-10-16" }),
+    d2: { status: "PENDING ADOPTION", missing: ["moat class"], moatClass: null, terminalReturnOnNewCapital: null, statement: "Pending adoption" },
+  });
+
+  it("names the stable rate and its date", () => {
+    expect(rateInUseLine(basisFor("7372"))).toBe(
+      "Valued at 9.0% — the market's expected return, for a stable business (rate dated 2026-10-17)."
+    );
+  });
+
+  it("names the cyclical band's +2pp", () => {
+    expect(rateInUseLine(basisFor("3674"))).toBe(
+      "Valued at 11.0% — the market's expected return plus 2pp, for a cyclical business (rate dated 2026-10-17)."
+    );
+  });
+
+  it("says when the rate is outside its validated domain (net-debt gate)", () => {
+    expect(rateInUseLine(basisFor("7372", false, false))).toMatch(/Outside its validated domain/);
+  });
+
+  it("returns nothing for a snapshot stored before AR4 (no basis)", () => {
+    expect(rateInUseLine(undefined)).toBeNull();
   });
 });

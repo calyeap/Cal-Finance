@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { classifyCyclicality, CYCLICAL_SIC_CLASSES, type CyclicalityClass } from "./cyclicalSic";
+import { classifyCyclicality, CYCLICAL_SIC_CLASSES, type CyclicalityClass } from "../cyclicalSic";
 import sicValidationSet from "./sicValidationSet.json";
 
 import msft from "./msft.json";

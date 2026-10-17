@@ -7,7 +7,8 @@ import { OVERVIEW_CHALLENGER_NOTE } from "@/lib/analyzer/overviewCopy";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import type { AnalysisResult, InterpretationStatement, PageOneProse } from "@/lib/analyzer/types";
-import type { Step4ForecastDispersionReading } from "@/lib/analyzer/modules/sensitivity";
+import { largestSwingDriver, type TornadoRowResult } from "@/lib/analyzer/modules/sensitivity";
+import { withStatedD2Inputs } from "@/lib/analyzer/fixtures/statedD2Inputs";
 import { formatCompactUsd } from "@/lib/formatUsd";
 
 afterEach(cleanup);
@@ -31,14 +32,15 @@ function withPageOne(result: AnalysisResult, pageOne: PageOneProse): AnalysisRes
 }
 
 // CF-ANALYZER-V1-SETTLE-01 correction (CALVIN RULING — A, slot 11) — builds
-// a result with a chosen `forecastDispersion` reading onto the assembled
-// MSFT fixture, the same pattern `withPageOne` above already uses, so the
-// "no computed source" fallback path (NVDA today) is reachable without a
-// second DB-backed fixture.
-function withForecastDispersion(result: AnalysisResult, forecastDispersion: Step4ForecastDispersionReading): AnalysisResult {
+// a result with a chosen tornado onto the assembled MSFT fixture, the same
+// pattern `withPageOne` above already uses, so the "no computed source"
+// fallback path is reachable without a second DB-backed fixture.
+// (CF-AR4-RATE-REINVESTMENT-TERMINAL-01: slot 11 reads M14's own rows; the
+// Step 4 dispersion reading it used to read is retired.)
+function withTornado(result: AnalysisResult, tornado: TornadoRowResult[]): AnalysisResult {
   return {
     ...result,
-    diagnostics: { ...result.diagnostics, sensitivity: { ...result.diagnostics.sensitivity, forecastDispersion } },
+    diagnostics: { ...result.diagnostics, sensitivity: { ...result.diagnostics.sensitivity, tornado } },
   };
 }
 
@@ -72,24 +74,23 @@ describe("AnalyzerOverview — fixed slot order (Quick Read, slots 5-12)", () =>
   // already exceeds margin's — msftSensitivityCaptureOnRealRun.test.ts), it
   // states that driver directly, a short statement naming the variable, not
   // a prediction or advice on when to act (design contract row 11).
+  // With STATED D2 test inputs (AR4) the MSFT sheet is adopted, so M14's
+  // tornado runs on the D2 engine.
   it("slot 11 states M14's own largest-swing driver for MSFT, a short statement naming the variable", () => {
-    const { container } = render(<AnalyzerOverview result={result} />);
+    const adopted = assembleAnalysisResult(withStatedD2Inputs(MSFT_FIXTURE));
+    const { container } = render(<AnalyzerOverview result={adopted} />);
     const slot = container.querySelector("#slot-11");
     expect(slot).not.toBeNull();
-    const reading = result.diagnostics.sensitivity.forecastDispersion as Step4ForecastDispersionReading;
+    const reading = largestSwingDriver(adopted.diagnostics.sensitivity.tornado as TornadoRowResult[]);
     expect(reading.available).toBe(true);
     if (!reading.available) return;
-    expect(reading.selectedDriver).toBe("growth");
-    expect(slot!.textContent).toContain("growth");
+    expect(slot!.textContent).toContain("The single largest driver of this valuation is");
     expect(slot!.textContent).toContain(`${reading.fullRangeValueImpact.mul(100).toFixed(1)}%`);
     expect(slot!.textContent).not.toMatch(/Not yet available/);
   });
 
-  it("slot 11 falls back to an honest 'no computed change trigger' marker when no sensitivity range exists for this ticker (NVDA today)", () => {
-    const unavailable = withForecastDispersion(result, {
-      available: false,
-      cause: "no tornado row is available: true — every analyst-supplied range for this run is missing",
-    });
+  it("slot 11 falls back to an honest 'no computed change trigger' marker when no tornado row is available (a sheet pending adoption, NVDA today)", () => {
+    const unavailable = withTornado(result, []);
     const { container } = render(<AnalyzerOverview result={unavailable} />);
     const slot = container.querySelector("#slot-11");
     expect(slot).not.toBeNull();
@@ -174,16 +175,19 @@ describe("AnalyzerOverview — fixed slot order (Quick Read, slots 5-12)", () =>
     const { container } = render(<AnalyzerOverview result={result} />);
     // Slot 5 (no business narrative in this fixture) plus the one shared
     // interpretation note — never one marker per affected editorial slot.
-    // Slot 11 carries no `.note` marker here: MSFT has a computed
-    // forecastDispersion reading, so it renders real content, not a marker.
+    // Slot 11 may carry its one `.note` marker here: MSFT_FIXTURE's sheet is
+    // pending adoption (AR4), so its tornado does not run.
     const markers = container.querySelectorAll("#slot-5 .note, #slot-11 .note, #interpretation-unavailable .note");
     expect(markers.length).toBeLessThanOrEqual(3);
   });
 
   it("slot 8 restates Section E's steady-state EV, PVGO share and implied growth — the same figures, no second computation", () => {
-    const { container } = render(<AnalyzerOverview result={result} />);
+    // STATED D2 test inputs (AR4), so M7's one solve resolves.
+    const adopted = assembleAnalysisResult(withStatedD2Inputs(MSFT_FIXTURE));
+    const { container } = render(<AnalyzerOverview result={adopted} />);
     const slot8 = container.querySelector("#slot-8") as HTMLElement;
-    const baseRateCell = result.priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08)!;
+    const result = adopted;
+    const baseRateCell = result.priceImplied.reverseDcf;
     expect(result.priceImplied.steadyStateEv.suppressed).toBe(false);
     expect(result.priceImplied.pvgoShareOfEv.suppressed).toBe(false);
     expect(baseRateCell.fiveYearGrowth.suppressed).toBe(false);
@@ -225,8 +229,10 @@ describe("AnalyzerOverview — filled editorial slots (pageOne present)", () => 
   });
 
   it("slot 11 still states the largest-swing driver when pageOne is filled — unaffected by interpretation content", () => {
-    const { container } = render(<AnalyzerOverview result={result} />);
-    expect(container.querySelector("#slot-11")!.textContent).toContain("growth");
+    // STATED D2 test inputs (AR4), so the tornado runs.
+    const adopted = withPageOne(assembleAnalysisResult(withStatedD2Inputs(MSFT_FIXTURE)), FILLED_PAGE_ONE);
+    const { container } = render(<AnalyzerOverview result={adopted} />);
+    expect(container.querySelector("#slot-11")!.textContent).toContain("The single largest driver of this valuation is");
     expect(container.querySelector("#slot-11")!.textContent).not.toMatch(/Not yet available/);
   });
 

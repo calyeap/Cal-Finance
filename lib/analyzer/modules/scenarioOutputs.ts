@@ -1,160 +1,127 @@
 import Decimal from "decimal.js";
 import { POLICY } from "../policy";
 import { buildSensitivityResult } from "./sensitivity";
-import { growthAt } from "../growthPath";
+import { buildRonicPath } from "../growthPath";
 import { explicitYearDiscountTime, terminalDiscountTime } from "../valuationTiming";
 import type { ScenarioOutputs } from "../types";
 
-// M15 — scenario valuation and outputs (§7.2, §10 F/G).
+// M15 — scenario valuation and outputs (§7.2, §10 F/G) — the main valuation
+// engine. CF-AR4-RATE-REINVESTMENT-TERMINAL-01 put it on Methodology v2.1
+// D2 (frozen spec §14.9 AR0-3), and M7's reverse DCF now solves on this
+// same function (reverseDcf.ts), so the two engines are one:
 //
-// Unlike M7's reverse DCF (which infers reinvestment from RONIC because
-// RONIC is a historical, company-level constant), a scenario's
-// reinvestment is DRIVEN DIRECTLY by the analyst's own capital-intensity
-// assumption (§5.4's scenario matrix: "reinvestment / capital intensity"
-// is itself one of the required driver rows) — there is no g/RONIC
-// inference here. Terminal value construction is the same fixed formula
-// as M7 (terminal FCF = terminal NOPAT × (1 − g ÷ terminal ROIC), terminal
-// ROIC = rate + 3pp) since that is a policy-wide constant, not specific to
-// how the explicit period was reinvested. Discounting follows Methodology
-// v2.1 D2's timing (valuationTiming.ts).
+// - Reinvestment_t = NOPAT_t × g_(t+1) ÷ RONIC_t — this year's investment
+//   funds next year's growth; g_11 is terminal growth.
+// - RONIC_t is the scenario's return on new investment, fading to the
+//   terminal return on new capital by year 10 (growthPath.ts
+//   buildRonicPath), so year 10 already reinvests at terminal economics.
+// - Terminal FCF = terminal NOPAT × (1 − g ÷ terminal return on new
+//   capital) (§7.2 M8, unchanged), where the terminal return is the rate
+//   plus the D2 moat credit — chosen by the caller from the sheet's moat
+//   class (assemble.ts), never defaulted here.
+// - Timing is D2's (valuationTiming.ts): mid-year flows, the terminal value
+//   from 9.5 years, valued at the price date.
 //
-// margin and capitalIntensity may be a single constant (broadcast across
-// all ten years) or an explicit ten-entry path — the scenario matrix
-// allows either (§5.4).
+// With a constant margin the terminal FCF is exactly (1 + g) × year-10 FCF,
+// and RONIC equal to the rate makes value independent of growth — the two
+// coherence invariants the golden harness checks.
+//
+// margin may be a single constant (broadcast across all ten years) or an
+// explicit ten-entry path (§5.4).
 
+export interface ScenarioValuation {
+  enterpriseValue: Decimal;
+  explicitPeriodPv: Decimal;
+  terminalValuePv: Decimal;
+  // Undiscounted, at the end of year 10 — M9's numerator.
+  terminalValue: Decimal;
+  year10Revenue: Decimal;
+  year10OperatingIncome: Decimal;
+  year10Fcf: Decimal;
+  terminalFcf: Decimal;
+}
+
+export function computeScenarioValuation(
+  baseRevenue: Decimal,
+  growthPath: Decimal[],
+  margin: Decimal | Decimal[],
+  returnOnNewInvestment: Decimal,
+  terminalReturnOnNewCapital: Decimal,
+  rate: Decimal,
+  nopatTaxRate: Decimal,
+  terminalGrowth: Decimal = POLICY.terminalGrowth,
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — years from the TTM base period end to the
+  // price date (valuationTiming.ts). Zero values the flows at the base
+  // period end.
+  stubYears: Decimal = new Decimal(0)
+): ScenarioValuation {
+  if (growthPath.length !== 10) {
+    throw new Error("growthPath must have exactly ten entries (years 1-10)");
+  }
+  if (!returnOnNewInvestment.greaterThan(0) || !terminalReturnOnNewCapital.greaterThan(0)) {
+    throw new Error("return on new investment and the terminal return on new capital must be positive");
+  }
+
+  const afterTax = new Decimal(1).minus(nopatTaxRate);
+  const marginAt = (t: number): Decimal => (Array.isArray(margin) ? margin[t - 1] : margin);
+  const growthAfter = (t: number): Decimal => (t < 10 ? growthPath[t] : terminalGrowth);
+  const ronicPath = buildRonicPath(returnOnNewInvestment, terminalReturnOnNewCapital);
+  const discountFactorBase = new Decimal(1).plus(rate);
+
+  let revenue = baseRevenue;
+  let pvSum = new Decimal(0);
+  let year10Fcf = new Decimal(0);
+  for (let t = 1; t <= 10; t++) {
+    revenue = revenue.mul(new Decimal(1).plus(growthPath[t - 1]));
+    const nopat = revenue.mul(marginAt(t)).mul(afterTax);
+    const reinvestment = nopat.mul(growthAfter(t)).dividedBy(ronicPath[t - 1]);
+    const fcff = nopat.minus(reinvestment);
+    if (t === 10) year10Fcf = fcff;
+    pvSum = pvSum.plus(fcff.dividedBy(discountFactorBase.pow(explicitYearDiscountTime(t, stubYears))));
+  }
+
+  const year10Revenue = revenue;
+  const year10OperatingIncome = year10Revenue.mul(marginAt(10));
+  const terminalNopat = year10OperatingIncome.mul(afterTax).mul(new Decimal(1).plus(terminalGrowth));
+  const terminalFcf = terminalNopat.mul(new Decimal(1).minus(terminalGrowth.dividedBy(terminalReturnOnNewCapital)));
+  const terminalValue = terminalFcf.dividedBy(rate.minus(terminalGrowth));
+  const terminalValuePv = terminalValue.dividedBy(discountFactorBase.pow(terminalDiscountTime(stubYears)));
+
+  return {
+    enterpriseValue: pvSum.plus(terminalValuePv),
+    explicitPeriodPv: pvSum,
+    terminalValuePv,
+    terminalValue,
+    year10Revenue,
+    year10OperatingIncome,
+    year10Fcf,
+    terminalFcf,
+  };
+}
+
+/** computeScenarioValuation's enterprise value alone. */
 export function computeScenarioEnterpriseValue(
   baseRevenue: Decimal,
   growthPath: Decimal[],
   margin: Decimal | Decimal[],
-  capitalIntensity: Decimal | Decimal[],
+  returnOnNewInvestment: Decimal,
+  terminalReturnOnNewCapital: Decimal,
   rate: Decimal,
   nopatTaxRate: Decimal,
-  // Optional, defaulting to the policy constant — every existing caller
-  // omits this and gets EXACTLY the prior hardcoded behaviour. Added
-  // solely so M14's sensitivity module can vary terminal growth through
-  // this same existing model (its rate x terminal-growth table) without
-  // duplicating this function's formula; the formula itself is unchanged.
   terminalGrowth: Decimal = POLICY.terminalGrowth,
-  // Optional, scenario-specific terminal ROIC override
-  // (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01, §3.5: the scenario DCF's
-  // terminal ROIC is an analyst input that must fade toward the cost of
-  // capital unless a durable moat is argued explicitly — a different rule
-  // from the diagnostic reverse DCF's own fixed r+3pp convention below).
-  // Absent/null and every existing caller gets EXACTLY the prior hardcoded
-  // r+3pp behaviour.
-  terminalRoic?: Decimal | null,
-  // CF-AR3-REPRODUCIBLE-RUNS-01 — years from the TTM base period end to the
-  // price date (valuationTiming.ts). Zero values the flows at the base
-  // period end.
   stubYears: Decimal = new Decimal(0)
 ): Decimal {
   return computeScenarioValuation(
     baseRevenue,
     growthPath,
     margin,
-    capitalIntensity,
+    returnOnNewInvestment,
+    terminalReturnOnNewCapital,
     rate,
     nopatTaxRate,
     terminalGrowth,
-    terminalRoic,
     stubYears
   ).enterpriseValue;
-}
-
-export interface ScenarioValuation {
-  enterpriseValue: Decimal;
-  explicitPeriodPv: Decimal;
-  terminalValuePv: Decimal;
-}
-
-/**
- * The same M15 valuation as computeScenarioEnterpriseValue, with its two
- * parts kept apart so M8 can report the terminal share of THIS valuation
- * (CF-AR3-REPRODUCIBLE-RUNS-01) rather than a figure supplied from outside.
- *
- * Timing is Methodology v2.1 D2's (valuationTiming.ts): year t's cash flow
- * discounted from t − 0.5 years, the terminal value from 9.5 years, both
- * less the stub to the price date.
- */
-export function computeScenarioValuation(
-  baseRevenue: Decimal,
-  growthPath: Decimal[],
-  margin: Decimal | Decimal[],
-  capitalIntensity: Decimal | Decimal[],
-  rate: Decimal,
-  nopatTaxRate: Decimal,
-  terminalGrowth: Decimal = POLICY.terminalGrowth,
-  terminalRoic?: Decimal | null,
-  stubYears: Decimal = new Decimal(0)
-): ScenarioValuation {
-  if (growthPath.length !== 10) {
-    throw new Error("growthPath must have exactly ten entries (years 1-10)");
-  }
-
-  const afterTax = new Decimal(1).minus(nopatTaxRate);
-  const marginAt = (t: number): Decimal => (Array.isArray(margin) ? margin[t - 1] : margin);
-  const intensityAt = (t: number): Decimal => (Array.isArray(capitalIntensity) ? capitalIntensity[t - 1] : capitalIntensity);
-  const discountFactorBase = new Decimal(1).plus(rate);
-
-  const revenues: Decimal[] = [baseRevenue];
-  let revenue = baseRevenue;
-  for (let t = 1; t <= 10; t++) {
-    revenue = revenue.mul(new Decimal(1).plus(growthPath[t - 1]));
-    revenues.push(revenue);
-  }
-
-  let pvSum = new Decimal(0);
-  for (let t = 1; t <= 10; t++) {
-    const nopat = revenues[t].mul(marginAt(t)).mul(afterTax);
-    const reinvestment = revenues[t].mul(intensityAt(t));
-    const fcff = nopat.minus(reinvestment);
-    pvSum = pvSum.plus(fcff.dividedBy(discountFactorBase.pow(explicitYearDiscountTime(t, stubYears))));
-  }
-
-  const year10Revenue = revenues[10];
-  const nopat10 = year10Revenue.mul(marginAt(10)).mul(afterTax);
-  const terminalNopat = nopat10.mul(new Decimal(1).plus(terminalGrowth));
-  const resolvedTerminalRoic = terminalRoic ?? rate.plus(POLICY.terminalRoicPremium);
-  const terminalFcf = terminalNopat.mul(new Decimal(1).minus(terminalGrowth.dividedBy(resolvedTerminalRoic)));
-  const terminalValue = terminalFcf.dividedBy(rate.minus(terminalGrowth));
-  const terminalValuePv = terminalValue.dividedBy(discountFactorBase.pow(terminalDiscountTime(stubYears)));
-
-  return { enterpriseValue: pvSum.plus(terminalValuePv), explicitPeriodPv: pvSum, terminalValuePv };
-}
-
-// CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 (2026-10-15):
-// forecast growth, reinvestment, incremental returns and the year-10 ->
-// terminal boundary must be mutually consistent, not a flat explicit-period
-// reinvestment rate jumping straight into the terminal formula's own
-// implied rate. The terminal formula above already embeds one: terminal
-// reinvestment (in dollars) is terminalNopat × (terminalGrowth ÷
-// terminalRoic) — the standard sustainable-growth identity g = ROIC ×
-// (reinvestment ÷ NOPAT). Restated as a fraction of terminal revenue (so it
-// can share capitalIntensity's existing explicit-path shape instead of a
-// separate unit), that is margin × (1 − nopatTaxRate) × (terminalGrowth ÷
-// terminalRoic) — exactly the model already computes, not a number chosen
-// to erase the jump.
-//
-// This fades the analyst's own explicit-period capitalIntensity toward that
-// terminal-implied level over years 6-10, reusing growthAt's existing
-// fixed-shape fade (§7.1: constant years 1-5, linear fade 6-10) — the same
-// ten-entry capitalIntensity path computeScenarioEnterpriseValue already
-// accepts. A caller that never uses this (every scenario without its own
-// terminalRoic) keeps passing a flat Decimal, unaffected.
-export function buildFadingReinvestmentIntensityPath(
-  explicitIntensity: Decimal,
-  margin: Decimal,
-  nopatTaxRate: Decimal,
-  terminalGrowth: Decimal,
-  terminalRoic: Decimal
-): Decimal[] {
-  const afterTax = new Decimal(1).minus(nopatTaxRate);
-  const terminalIntensity = margin.mul(afterTax).mul(terminalGrowth.dividedBy(terminalRoic));
-  const path: Decimal[] = [];
-  for (let t = 1; t <= 10; t++) {
-    path.push(growthAt(t, explicitIntensity, terminalIntensity));
-  }
-  return path;
 }
 
 const RATE_SEARCH_LO = new Decimal("0.01");
@@ -169,8 +136,14 @@ const RATE_BISECTION_ITERATIONS = 60;
 // context, not a gated output). The report still needs to say WHY there is
 // no rate, and null alone cannot — it is also what a run with no revaluation
 // function gets — so assembly binds the reason (notComputed.ts).
-export function solveRateForTargetValue(revalueAtRate: (rate: Decimal) => Decimal, targetValue: Decimal): Decimal | null {
-  const valueAtLo = revalueAtRate(RATE_SEARCH_LO);
+export function solveRateForTargetValue(
+  revalueAtRate: (rate: Decimal) => Decimal,
+  targetValue: Decimal,
+  // The bracket's lower end. A Gordon terminal value is defined only above
+  // terminal growth, so a caller valuing one passes a floor above it.
+  searchLo: Decimal = RATE_SEARCH_LO
+): Decimal | null {
+  const valueAtLo = revalueAtRate(searchLo);
   const valueAtHi = revalueAtRate(RATE_SEARCH_HI);
 
   // Decreasing in rate: valueAtLo should be >= target >= valueAtHi for a
@@ -179,7 +152,7 @@ export function solveRateForTargetValue(revalueAtRate: (rate: Decimal) => Decima
     return null;
   }
 
-  let lo = RATE_SEARCH_LO;
+  let lo = searchLo;
   let hi = RATE_SEARCH_HI;
   for (let i = 0; i < RATE_BISECTION_ITERATIONS; i++) {
     const mid = lo.plus(hi.minus(lo).dividedBy(2));
@@ -199,16 +172,19 @@ export function solveRateForTargetValue(revalueAtRate: (rate: Decimal) => Decima
  * at each end"). Evaluated here, beside the search, so the cause states the
  * same bracket the solver actually used.
  */
-export function rateSearchBracket(revalueAtRate: (rate: Decimal) => Decimal): {
+export function rateSearchBracket(
+  revalueAtRate: (rate: Decimal) => Decimal,
+  searchLo: Decimal = RATE_SEARCH_LO
+): {
   lo: Decimal;
   hi: Decimal;
   valueAtLo: Decimal;
   valueAtHi: Decimal;
 } {
   return {
-    lo: RATE_SEARCH_LO,
+    lo: searchLo,
     hi: RATE_SEARCH_HI,
-    valueAtLo: revalueAtRate(RATE_SEARCH_LO),
+    valueAtLo: revalueAtRate(searchLo),
     valueAtHi: revalueAtRate(RATE_SEARCH_HI),
   };
 }
@@ -234,6 +210,9 @@ export interface ScenarioOutputsInput {
   // and building one is out of scope here). null means "not computed",
   // never a placeholder standing in for a real function.
   revalueBaseCaseAtRate: ((rate: Decimal) => Decimal) | null;
+  // The lower end of the rate search (solveRateForTargetValue). Absent keeps
+  // the default bracket.
+  rateSearchLo?: Decimal;
 }
 
 export function computeScenarioOutputs(input: ScenarioOutputsInput): ScenarioOutputs {
@@ -268,7 +247,7 @@ export function computeScenarioOutputs(input: ScenarioOutputsInput): ScenarioOut
   const rateAtWhichBaseEqualsPrice =
     input.revalueBaseCaseAtRate === null || currentPrice === null
       ? null
-      : solveRateForTargetValue(input.revalueBaseCaseAtRate, currentPrice);
+      : solveRateForTargetValue(input.revalueBaseCaseAtRate, currentPrice, input.rateSearchLo);
 
   return {
     values: { bear: bearValue, base: baseValue, bull: bullValue },

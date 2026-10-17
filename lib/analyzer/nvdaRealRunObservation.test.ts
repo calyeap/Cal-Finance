@@ -151,11 +151,15 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     expect(result.ticker).toBe("NVDA");
   });
 
-  it("(a) the reverse-DCF grid: all nine cells and the underlying RONIC ladder, with the code's own cause", async () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the grid is one solve (AR0-2) and
+  // the ladder one cell, at NVDA's D1 rate: SIC 3674 (semiconductors) is a
+  // confirmed cyclical industry, so 11.0%.
+  it("(a) the reverse DCF and the underlying RONIC ladder, with the code's own cause", async () => {
     const { result } = await openNvdaObservationRun();
 
-    const cells = result.priceImplied.reverseDcfGrid;
-    expect(cells).toHaveLength(9);
+    const solve = result.priceImplied.reverseDcf;
+    expect(result.valuationBasis?.discountRate.rate.toString()).toBe("0.11");
+    expect(result.valuationBasis?.discountRate.band).toBe("cyclical");
 
     const ronic = result.diagnostics.reinvestmentRonic.ronic;
     // The RONIC ladder itself: BOTH REQUIRED inputs are now acquired.
@@ -165,13 +169,14 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     // trailing-five-year endpoints on NVDA's own re-captured document
     // (docs/ronic-deltas-composition-reconciliation.md §7). NVDA's ladder is
     // no longer INCOMPLETE: ΔNOPAT $99,425,450,000 ÷ ΔInvestedCapital
-    // $132,147,000,000 = 75.2385%, CLEAN at every rate in the grid — well
-    // above 8/10/12% and the 200% cap alike. This is §12's first evidence
+    // $132,147,000,000 = 75.2385%, CLEAN at the D1 rate — well above 11% and
+    // below the 200% cap. This is §12's first evidence
     // gap closing: NVDA is a real company whose RONIC ladder is NOT
     // uniformly NOT MEANINGFUL.
     expect(ronic.suppressed).toBe(false);
     if (!ronic.suppressed) {
-      expect(ronic.value.cells).toHaveLength(3);
+      expect(ronic.value.cells).toHaveLength(1);
+      expect(ronic.value.cells[0].rate.toString()).toBe("0.11");
       for (const cell of ronic.value.cells) {
         expect(cell.state).toBe("CLEAN");
         expect(cell.value?.toDecimalPlaces(4).toString()).toBe("0.7524");
@@ -179,21 +184,16 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     }
 
     // On THIS observation run, §4.4 is deliberately left unmade (SCOPE item
-    // 3), so enterprise value is itself INCOMPLETE and computeReverseDcfGrid's
-    // own missing-base check (baseYearRevenue, targetEnterpriseValue,
-    // currentMargin, nopatTaxRate) fires before any per-cell RONIC check is
-    // ever reached — every cell reports the more upstream cause, not the
-    // RONIC ladder's own (now CLEAN) state confirmed directly above. §4.4
-    // remains out of this outcome's SCOPE (reverseDcfOnRealRun.test.ts
-    // answers it for MSFT separately, not here).
-    for (const cell of cells) {
-      expect(cell.fiveYearGrowth.suppressed).toBe(true);
-      if (cell.fiveYearGrowth.suppressed) {
-        expect(cell.fiveYearGrowth.cause).toBe("missing REQUIRED input(s): targetEnterpriseValue");
-      }
-      expect(cell.tenYearCagr.suppressed).toBe(true);
-      expect(cell.ronic.suppressed).toBe(true);
+    // 3), so enterprise value is itself INCOMPLETE and solveReverseDcf's own
+    // missing-input check (baseYearRevenue, targetEnterpriseValue,
+    // nopatTaxRate) fires before the sheet's adoption is even asked — the
+    // solve reports the more upstream cause. §4.4 remains out of this
+    // outcome's SCOPE (reverseDcfOnRealRun.test.ts answers it for MSFT).
+    expect(solve.fiveYearGrowth.suppressed).toBe(true);
+    if (solve.fiveYearGrowth.suppressed) {
+      expect(solve.fiveYearGrowth.cause).toBe("missing REQUIRED input(s): targetEnterpriseValue");
     }
+    expect(solve.tenYearCagr.suppressed).toBe(true);
   });
 
   it("(b) the achieved-comparator: ten-year from the run's own output, five-year from the same acquired document and recency evidence", async () => {

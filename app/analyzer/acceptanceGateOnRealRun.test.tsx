@@ -6,7 +6,6 @@ import { createRun } from "@/lib/analyzer/runStore";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import { computeAnalysisForRun } from "@/lib/analyzer/gate";
 import { currentRunOutput } from "@/lib/analyzer/reportAnalysis";
-import { endOfYearScenarioPerShare } from "@/lib/analyzer/golden/endOfYearEquivalent";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-V1-SETTLE-01 (issue #392) — the fresh-run MSFT + NVDA proof
@@ -158,13 +157,13 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       expect(result.diagnostics.multiples.fcfYieldOnMarketCap.suppressed).toBe(false);
       expect(result.gates.leverage.result).toBe("PASS");
       expect(result.gates.leverage.netDebtRatio).not.toBeNull();
-      // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
-      // recorded Calvin's approved MSFT Stage-2 bundle, so A4
-      // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses MSFT's
-      // range — trust reads PARTIAL (a genuine, unrelated rate-sensitivity
-      // gap). EV, FCF yield and leverage above are the claim this test is
-      // actually about, and none of them is suppressed.
-      expect(result.trust.status).toBe("PARTIAL");
+      // EV, FCF yield and leverage above are the claim this test is about,
+      // and none of them is suppressed. CF-AR4-RATE-REINVESTMENT-TERMINAL-01:
+      // MSFT's recorded sheet is pending adoption (D2), so its range is
+      // suppressed for that reason and trust follows it to UNUSABLE — a
+      // statement about this run's valuation, not about the §4.4 override.
+      expect(result.trust.status).toBe("UNUSABLE");
+      expect(result.valuationBasis?.d2.status).toBe("PENDING ADOPTION");
     });
 
     it("Key Stats populate market cap, FCF yield and the leverage metric on a fresh automatic run", async () => {
@@ -244,23 +243,27 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
     // (trustCopy.ts's `completedVerdictExplanation`, built only from the
     // same price/Base figures) on Overview, and the verdict word plus the
     // full verbatim reason on Evidence.
-    it("Overview states the completed verdict plainly, never raw INCOMPLETE; Evidence shows the full verbatim reason", async () => {
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change. The
+    // completed SELL above was off the 16 Oct 2026 Stage-2 Base, superseded
+    // by product-decisions item 27 (D2). MSFT's recorded sheet carries no D2
+    // input, so it is pending adoption: Overview says so in plain words —
+    // never raw INCOMPLETE, never the superseded SELL — and Evidence carries
+    // the verbatim reason.
+    it("Overview states plainly that the sheet is pending adoption, never raw INCOMPLETE or the superseded SELL; Evidence shows the full verbatim reason", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
 
       const overview = await renderTab(runId, "overview");
       const overviewVerdict = overview.container.querySelector(".verdictslot") as HTMLElement;
       expect(overviewVerdict.textContent).not.toContain("INCOMPLETE");
       expect(overviewVerdict.textContent).not.toContain("PROFILE NOT CONFIRMED");
-      expect(overviewVerdict.textContent).toContain("SELL");
-      expect(overviewVerdict.textContent).toContain(
-        "above the SELL level under every uncertainty bucket in the approved verdict policy"
-      );
+      expect(overviewVerdict.textContent).not.toContain("SELL");
+      expect(overviewVerdict.textContent).toContain("pending adoption");
       cleanup();
 
       const evidence = await renderTab(runId, "evidence");
       const evidenceVerdict = evidence.container.querySelector(".verdictslot") as HTMLElement;
-      expect(evidenceVerdict.textContent).toContain("SELL");
-      expect(evidenceVerdict.textContent).toContain("Verdict synthesis policy v1");
+      expect(evidenceVerdict.textContent).toContain("INCOMPLETE");
+      expect(evidenceVerdict.textContent).toContain("Pending adoption");
     });
 
     // CF-ANALYZER-V1-SETTLE-01's automatic-profile-confirmation fix means a
@@ -274,25 +277,21 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
     // scenario values — never the retired validation fixture's — and never
     // the raw PROFILE NOT CONFIRMED framing this test originally guarded
     // against.
-    it("shows the real bear-to-bull position on a fresh automatic run — the Calvin-approved Stage-2 scenario values, never the retired validation fixture's, and never the raw PROFILE NOT CONFIRMED framing", async () => {
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the hero no longer shows the
+    // superseded Stage-2 bear/bull ($214/$403 end-of-year); with the sheet
+    // pending adoption there is no range to place the price in, and the hero
+    // says why in plain words, with the dated rate the run uses.
+    it("shows no bear-to-bull position while the sheet is pending adoption — never the superseded Stage-2 values, never the raw PROFILE NOT CONFIRMED framing", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
       const { container } = await renderTab(runId);
       const hero = container.querySelector(".scenariorangestrip") as HTMLElement;
       expect(hero).not.toBeNull();
       const text = hero.textContent ?? "";
-      // CF-AR3-REPRODUCIBLE-RUNS-01 — the hero shows the report's stored
-      // output. Methodology v2.1 D2's timing moved the approved $214/$403 by
-      // one common factor; with it removed (golden/endOfYearEquivalent.ts)
-      // they are reproduced to the cent, and the hero shows this run's own.
       const stored = (await currentRunOutput(runId))!.result;
-      if (stored.fairValueRange.kind !== "range") throw new Error("expected a computed range");
-      expect(endOfYearScenarioPerShare(stored, "bear").toFixed(2)).toBe("214.26");
-      expect(endOfYearScenarioPerShare(stored, "bull").toFixed(2)).toBe("402.73");
-      expect(text).toContain(`Bear$${stored.fairValueRange.bear.toFixed(0)}`);
-      expect(text).toContain(`Bull$${stored.fairValueRange.bull.toFixed(0)}`);
-      expect(text).toMatch(/of the way from bear to bull/);
-      expect(text).not.toContain("No fair-value range for this company yet");
-      expect(text).not.toContain("Valuation position — suppressed");
+      expect(stored.fairValueRange.kind).toBe("suppressed");
+      expect(stored.valuationBasis?.d2.status).toBe("PENDING ADOPTION");
+      expect(text).not.toMatch(/of the way from bear to bull/);
+      expect(text).not.toContain("PROFILE NOT CONFIRMED");
     });
 
     // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399, comment
@@ -301,14 +300,15 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
     // recordProfileDecision call in this file) — the tornado reads only the
     // fixture's own scenario/analyst-supplied-range inputs, independent of
     // profile confirmation.
-    it("slot 11 states the largest-swing driver (growth) rather than the structural 'not yet available' frame", async () => {
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the tornado varies the adopted
+    // sheet's own D2 valuation (AR0-2); with MSFT's sheet pending adoption
+    // there is nothing to vary, so slot 11 keeps its honest fixed frame.
+    it("slot 11 keeps the structural 'not yet available' frame while the sheet is pending adoption", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
       const { container } = await renderTab(runId, "overview");
       const slot = container.querySelector("#slot-11") as HTMLElement;
       expect(slot).not.toBeNull();
-      expect(slot.textContent).toContain("growth");
-      expect(slot.textContent).toMatch(/\d+\.\d%/);
-      expect(slot.textContent).not.toContain("No computed change trigger available yet.");
+      expect(slot.textContent).toContain("No computed change trigger available yet.");
     });
   });
 

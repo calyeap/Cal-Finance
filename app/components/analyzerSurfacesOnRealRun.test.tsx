@@ -168,11 +168,11 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       // with the exact authorisation named there). OKLO's pre-revenue range
       // still has no Step-1-equivalent path to synthesis, so it stays
       // INCOMPLETE exactly as before.
-      if (ticker === "MSFT") {
-        expect(verdict.status).toBe("SELL");
-      } else {
-        expect(verdict.status).toBe("INCOMPLETE");
-      }
+      // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change: the
+      // completed SELL was off MSFT's superseded Stage-2 Base (product-
+      // decisions item 27, D2); with no D2 input on its sheet MSFT is now
+      // INCOMPLETE like OKLO, and takes the same honest-cause path below.
+      expect(verdict.status).toBe("INCOMPLETE");
 
       const { container } = render(
         <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="overview">
@@ -186,21 +186,6 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       // deriveVerdict's branches embed a raw trust/gate state code (#392's
       // ACCEPTANCE GATE forbids that outside Evidence).
       expect(hero.textContent).not.toContain(verdict.reason);
-
-      if (ticker === "MSFT") {
-        // A completed verdict takes DominantVerdictSlot's completed path —
-        // the verdict word and a plain-English rationale built from the
-        // same price/Base figures (trustCopy.ts's
-        // `completedVerdictExplanation`), never the price-vs-range headline
-        // (that fallback only applies to an INCOMPLETE verdict).
-        expect(hero.textContent).not.toContain("INCOMPLETE");
-        expect(hero.textContent).toContain("SELL");
-        expect(hero.textContent).toContain(
-          "above the SELL level under every uncertainty bucket in the approved verdict policy"
-        );
-        expect(hero.querySelector(".confidence")).not.toBeNull();
-        return;
-      }
 
       const headline = priceVsRangeHeadline({
         fairValueRange: result.fairValueRange,
@@ -249,18 +234,11 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
         </AnalyzerReportFrame>
       );
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
-      if (ticker === "MSFT") {
-        // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: a completed verdict renders
-        // its own status word plus the full verbatim reason on Evidence,
-        // never the raw "INCOMPLETE" state name (there is none to show).
-        expect(verdict.status).toBe("SELL");
-        expect(hero.textContent).toContain("SELL");
-        expect(hero.textContent).toContain(verdict.reason);
-      } else {
-        expect(verdict.status).toBe("INCOMPLETE");
-        expect(hero.textContent).toContain("INCOMPLETE");
-        expect(hero.textContent).toContain(verdict.reason);
-      }
+      // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — MSFT is INCOMPLETE while its
+      // sheet is pending adoption (D2), the same path as OKLO.
+      expect(verdict.status).toBe("INCOMPLETE");
+      expect(hero.textContent).toContain("INCOMPLETE");
+      expect(hero.textContent).toContain(verdict.reason);
     });
 
     it("no slot renders a numeral the Analysis Result does not carry — the price-implied restatement (slot 8) shows its suppression state, not a figure, wherever the result itself is suppressed", async () => {

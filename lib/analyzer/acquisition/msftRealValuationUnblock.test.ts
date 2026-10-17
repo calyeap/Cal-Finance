@@ -8,6 +8,7 @@ import { recordAnalystBundle, hasRecordedAnalystBundle, type RecordedAnalystBund
 import { computeScenarioEnterpriseValue } from "../modules/scenarioOutputs";
 import { buildFixedShapeGrowthPath } from "../growthPath";
 import { POLICY } from "../policy";
+import { terminalReturnOnNewCapital } from "../discountRate";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 (issue #433).
@@ -50,6 +51,10 @@ const TEST_INPUT: RecordedAnalystBundleInput = {
       reinvestmentCapitalIntensity: "0.1",
       shareCount: "7430",
       writtenAnchor: "Test input — bear case, not an authored Microsoft forecast.",
+      // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — a D2 return on new
+      // investment, a TEST INPUT like every driver here, recorded only to
+      // this test's throwaway database.
+      returnOnNewInvestment: "0.12",
     },
     base: {
       revenueGrowthOrPath: "0.137",
@@ -57,6 +62,10 @@ const TEST_INPUT: RecordedAnalystBundleInput = {
       reinvestmentCapitalIntensity: "0.1",
       shareCount: "7430",
       writtenAnchor: "Test input — base case, not an authored Microsoft forecast.",
+      // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — a D2 return on new
+      // investment, a TEST INPUT like every driver here, recorded only to
+      // this test's throwaway database.
+      returnOnNewInvestment: "0.16",
     },
     bull: {
       revenueGrowthOrPath: "0.185",
@@ -64,6 +73,10 @@ const TEST_INPUT: RecordedAnalystBundleInput = {
       reinvestmentCapitalIntensity: "0.1",
       shareCount: "7430",
       writtenAnchor: "Test input — bull case, not an authored Microsoft forecast.",
+      // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — a D2 return on new
+      // investment, a TEST INPUT like every driver here, recorded only to
+      // this test's throwaway database.
+      returnOnNewInvestment: "0.2",
     },
   },
   // These dollar figures are REQUIRED by recordAnalystBundle (unlike a
@@ -71,6 +84,8 @@ const TEST_INPUT: RecordedAnalystBundleInput = {
   // for a real human-authored dollar value. The point this file proves is
   // the plumbing (recorded overrides committed; the real M1-M15 pipeline
   // runs on real SEC facts once a bundle exists), not these specific digits.
+  // Test input: D2's moat class, so the sheet is adopted (not pending).
+  moatClass: "narrow",
   scenarioValues: { bear: "111.11", base: "222.22", bull: "333.33" },
   configuredConstants: {
     nopatTaxRate: "0.18",
@@ -220,26 +235,30 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
     const bridge = result.diagnostics.enterpriseValue.value;
     const netDebtBridge = bridge.enterpriseValue.minus(bridge.marketCap);
 
-    const expectedPerShare = (growth: string, margin: string, reinvestment: string): string =>
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the D2 engine at the D1 rate,
+    // the terminal return the rate plus the narrow-moat credit (bear +0,
+    // bull + 1.5pp).
+    const rate = result.valuationBasis!.discountRate.rate;
+    const expectedPerShare = (key: "bear" | "base" | "bull", growth: string, margin: string, ronic: string): string =>
       computeScenarioEnterpriseValue(
         baseRevenue.value,
         buildFixedShapeGrowthPath(new Decimal(growth)),
         new Decimal(margin),
-        new Decimal(reinvestment),
-        POLICY.rateGrid[1],
+        new Decimal(ronic),
+        terminalReturnOnNewCapital(rate, "narrow", key),
+        rate,
         nopatTaxRate,
-        undefined,
-        undefined,
-      // CF-AR3-REPRODUCIBLE-RUNS-01 — valued at this run's own price date (D2).
+        POLICY.terminalGrowth,
+        // CF-AR3-REPRODUCIBLE-RUNS-01 — valued at this run's own price date (D2).
         result.runIdentity!.valuationTiming.stubYears
       )
         .minus(netDebtBridge)
         .dividedBy(new Decimal(dilutedShares))
         .toString();
 
-    expect(result.fairValueRange.bear.toString()).toBe(expectedPerShare("0.10", "0.38", "0.1"));
-    expect(result.scenarioOutputs.values.base.toString()).toBe(expectedPerShare("0.137", "0.418", "0.1"));
-    expect(result.fairValueRange.bull.toString()).toBe(expectedPerShare("0.185", "0.468", "0.1"));
+    expect(result.fairValueRange.bear.toString()).toBe(expectedPerShare("bear", "0.10", "0.38", "0.12"));
+    expect(result.scenarioOutputs.values.base.toString()).toBe(expectedPerShare("base", "0.137", "0.418", "0.16"));
+    expect(result.fairValueRange.bull.toString()).toBe(expectedPerShare("bull", "0.185", "0.468", "0.2"));
 
     // On this run's own per-share scale (tens to low hundreds of dollars for
     // a mega-cap at ~7.4B diluted shares) — never the ~$220M-$445M/share

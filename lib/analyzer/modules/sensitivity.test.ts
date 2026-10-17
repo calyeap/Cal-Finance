@@ -7,7 +7,7 @@ import {
   computeTornado,
   computeGrowthMarginTable,
   computeRateTerminalGrowthTable,
-  selectStep4ForecastDispersionReading,
+  largestSwingDriver,
   TORNADO_DRIVERS,
   type AnalystSuppliedRange,
   type TornadoDriver,
@@ -38,11 +38,6 @@ describe("buildSensitivityResult", () => {
   it("always records that debt share was removed from the table (I10)", () => {
     expect(buildSensitivityResult().debtShareRemoved).toBe(true);
   });
-
-  it("carries an honestly UNAVAILABLE Step 4 forecast-dispersion reading when the module is not run at all (no tornado rows)", () => {
-    const reading = buildSensitivityResult().forecastDispersion as ReturnType<typeof selectStep4ForecastDispersionReading>;
-    expect(reading.available).toBe(false);
-  });
 });
 
 // ---------------------------------------------------------------------------
@@ -51,31 +46,31 @@ describe("buildSensitivityResult", () => {
 // instruction) — none of these numbers are real analyst assumptions.
 // ---------------------------------------------------------------------------
 
-// A clean, round base case for computeScenarioEnterpriseValue: base
-// revenue 1000, flat 20% growth for all ten years, flat 30% margin, flat
-// 10% capital intensity, 10% discount rate, 0% tax, 3% terminal growth
-// (the policy default, passed explicitly here for clarity).
+// A clean, round base case for the main engine (Methodology v2.1 D2 since
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01): base revenue 1000, 20% growth
+// (fixed path shape), flat 30% margin, 25% return on new investment, an
+// 11% terminal return (the rate + a narrow moat's 1pp), 10% discount rate,
+// 0% tax, 3% terminal growth (the policy default, passed explicitly).
 const BASE_REVENUE = new Decimal(1000);
 const BASE_GROWTH = new Decimal("0.2");
 const BASE_MARGIN = new Decimal("0.3");
-const BASE_CAPITAL_INTENSITY = new Decimal("0.1");
 const BASE_RATE = new Decimal("0.1");
 const BASE_TAX = new Decimal(0);
 const BASE_TERMINAL_GROWTH = new Decimal("0.03");
 const BASE_RONIC = new Decimal("0.25");
+const BASE_TERMINAL_RETURN = new Decimal("0.11");
 
 function scenarioValueAt(growth: Decimal, margin: Decimal, rate: Decimal, terminalGrowth: Decimal): Decimal {
-  const path = buildFixedShapeGrowthPath(growth);
-  return computeScenarioEnterpriseValue(BASE_REVENUE, path, margin, BASE_CAPITAL_INTENSITY, rate, BASE_TAX, terminalGrowth);
+  const path = buildFixedShapeGrowthPath(growth, terminalGrowth);
+  return computeScenarioEnterpriseValue(BASE_REVENUE, path, margin, BASE_RONIC, BASE_TERMINAL_RETURN, rate, BASE_TAX, terminalGrowth);
 }
 
 const BASE_CASE_VALUE = scenarioValueAt(BASE_GROWTH, BASE_MARGIN, BASE_RATE, BASE_TERMINAL_GROWTH);
 
-// The tornado's own base-case evaluator — see "the two forward models
-// diverge" below for why this must be a SINGLE model, distinct from
-// scenarioValueAt above, used for every one of the five tornado rows.
+// The tornado's base-case evaluator through M7's given-growth projection —
+// the same engine as scenarioValueAt above (see "one model" below).
 function reverseDcfValueAt(growth: Decimal, margin: Decimal, ronic: Decimal, rate: Decimal, terminalGrowth: Decimal): Decimal {
-  return projectReverseDcfValue(growth, margin, ronic, rate, BASE_REVENUE, BASE_TAX, terminalGrowth).ev;
+  return projectReverseDcfValue(growth, margin, ronic, BASE_TERMINAL_RETURN, rate, BASE_REVENUE, BASE_TAX, terminalGrowth).ev;
 }
 
 const TORNADO_BASE_CASE_VALUE = reverseDcfValueAt(BASE_GROWTH, BASE_MARGIN, BASE_RONIC, BASE_RATE, BASE_TERMINAL_GROWTH);
@@ -84,18 +79,16 @@ function range(values: readonly [number, number, number], rationale: string): An
   return { values: values.map((v) => new Decimal(v)) as unknown as readonly [Decimal, Decimal, Decimal], rationale };
 }
 
-describe("the two forward models diverge — why the tornado cannot mix them", () => {
-  it("computeScenarioEnterpriseValue and projectReverseDcfValue do NOT reproduce the same value for an arbitrary capitalIntensity/RONIC pairing, even with identical growth, margin, rate and terminal growth", () => {
+describe("one model — M7 and M15 are the same engine (AR0-2)", () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change. This
+  // used to prove the two forward models DIVERGED (capital intensity × revenue
+  // vs NOPAT × next-year growth ÷ RONIC), which is why the tornado could not
+  // mix them. D2 made them one engine; the claim is now the opposite, and
+  // exact.
+  it("computeScenarioEnterpriseValue and projectReverseDcfValue reproduce the identical value for identical inputs", () => {
     const viaScenario = scenarioValueAt(BASE_GROWTH, BASE_MARGIN, BASE_RATE, BASE_TERMINAL_GROWTH);
     const viaReverseDcf = reverseDcfValueAt(BASE_GROWTH, BASE_MARGIN, BASE_RONIC, BASE_RATE, BASE_TERMINAL_GROWTH);
-    // capitalIntensity (10%) and RONIC (25%) are unrelated free parameters
-    // representing different reinvestment mechanics (revenue x intensity
-    // vs. NOPAT x next-year-growth / RONIC) — nothing forces these two
-    // formulas to coincide, and they do not here. This is the empirical
-    // basis for routing all five tornado rows through ONE of the two
-    // models (projectReverseDcfValue, the only one that accepts RONIC),
-    // never mixing them within a single tornado.
-    expect(viaScenario.toString()).not.toBe(viaReverseDcf.toString());
+    expect(viaScenario.toString()).toBe(viaReverseDcf.toString());
   });
 });
 
@@ -195,11 +188,18 @@ function reverseDcfTornadoDrivers(baseCase: {
       range: range([0.15, 0.25, 0.35], "SYNTHETIC fixture"),
       valuationFunction: (r) => reverseDcfValueAt(baseCase.growth, baseCase.margin, r, baseCase.rate, baseCase.terminalGrowth),
     },
+    moat: {
+      // D2's three credits over the rate; the base case's 11% terminal
+      // return is the narrow credit at the 10% base rate.
+      range: range([0, 0.01, 0.03], "SYNTHETIC fixture — the D2 moat credits"),
+      valuationFunction: (credit) =>
+        projectReverseDcfValue(baseCase.growth, baseCase.margin, baseCase.ronic, baseCase.rate.plus(credit), baseCase.rate, BASE_REVENUE, BASE_TAX, baseCase.terminalGrowth).ev,
+    },
   };
 }
 
 describe("computeTornado", () => {
-  it("evaluates all five drivers in the fixed TORNADO_DRIVERS order, one row failing independently of the others", () => {
+  it("evaluates all six drivers in the fixed TORNADO_DRIVERS order, one row failing independently of the others", () => {
     const drivers = reverseDcfTornadoDrivers({
       growth: BASE_GROWTH,
       margin: BASE_MARGIN,
@@ -210,7 +210,7 @@ describe("computeTornado", () => {
     drivers.operatingMargin = { ...drivers.operatingMargin, range: null }; // deliberately missing
 
     const rows = computeTornado(TORNADO_BASE_CASE_VALUE, drivers);
-    expect(rows.map((r) => r.driver)).toEqual(["growth", "operatingMargin", "discountRate", "terminalGrowth", "ronic"]);
+    expect(rows.map((r) => r.driver)).toEqual(["growth", "operatingMargin", "discountRate", "terminalGrowth", "ronic", "moat"]);
     expect(rows[1].available).toBe(false); // operatingMargin, missing range
     expect(rows[0].available).toBe(true); // growth, unaffected by margin's gap
     expect(rows[4].available).toBe(true); // ronic, unaffected by margin's gap
@@ -230,13 +230,14 @@ describe("computeTornado", () => {
     const rateAtBase = drivers.discountRate.valuationFunction(BASE_RATE);
     const terminalGrowthAtBase = drivers.terminalGrowth.valuationFunction(BASE_TERMINAL_GROWTH);
     const ronicAtBase = drivers.ronic.valuationFunction(BASE_RONIC);
+    const moatAtBase = drivers.moat.valuationFunction(new Decimal("0.01"));
 
-    for (const value of [growthAtBase, marginAtBase, rateAtBase, terminalGrowthAtBase, ronicAtBase]) {
+    for (const value of [growthAtBase, marginAtBase, rateAtBase, terminalGrowthAtBase, ronicAtBase, moatAtBase]) {
       expect(value.toString()).toBe(TORNADO_BASE_CASE_VALUE.toString());
     }
   });
 
-  it("REGRESSION — a NON-DEFAULT terminal-growth base case (5%, not policy's 3%) still reproduces one shared base value across all five rows, proving terminalGrowth is threaded into every row including RONIC", () => {
+  it("REGRESSION — a NON-DEFAULT terminal-growth base case (5%, not policy's 3%) still reproduces one shared base value across every row, proving terminalGrowth is threaded into every row including RONIC", () => {
     const nonDefaultTerminalGrowth = new Decimal("0.05");
     expect(nonDefaultTerminalGrowth.toString()).not.toBe(BASE_TERMINAL_GROWTH.toString()); // confirms this really is non-default
 
@@ -357,8 +358,11 @@ describe("computeRateTerminalGrowthTable", () => {
 });
 
 // ---------------------------------------------------------------------------
-// CF-STEP4-READING-IMPL-01 — the ruled Step 4 reading (A2-in-principle /
-// A1-fallback, B2 tier shape). SYNTHETIC TEST FIXTURES throughout.
+// Overview slot 11's largest-swing driver (CALVIN RULING — A, PR #399). The
+// Step 4 forecast-dispersion reading and its LOW/MEDIUM/HIGH tier are
+// retired (product-decisions items 23–24) and their tests deleted with them;
+// what stays is the plain max over M14's own available rows. SYNTHETIC TEST
+// FIXTURES throughout.
 // ---------------------------------------------------------------------------
 
 function availableRow(driver: TornadoDriver, fullRangeValueImpact: string): TornadoRowResult {
@@ -375,107 +379,29 @@ function unavailableRow(driver: TornadoDriver): TornadoRowResult {
   return { driver, available: false, cause: `missing REQUIRED analyst-supplied range: ${driver}` };
 }
 
-describe("selectStep4ForecastDispersionReading", () => {
-  it("is honestly UNAVAILABLE, with a cause, when no tornado row is available: true", () => {
-    const reading = selectStep4ForecastDispersionReading([
-      unavailableRow("growth"),
-      unavailableRow("operatingMargin"),
-      unavailableRow("discountRate"),
-      unavailableRow("terminalGrowth"),
-      unavailableRow("ronic"),
-    ]);
-    expect(reading.available).toBe(false);
-    if (reading.available) return;
-    expect(reading.cause.length).toBeGreaterThan(0);
+describe("largestSwingDriver", () => {
+  it("is honestly unavailable, with a cause, when no tornado row is available — or the tornado is empty", () => {
+    const none = largestSwingDriver(TORNADO_DRIVERS.map(unavailableRow));
+    expect(none.available).toBe(false);
+    if (!none.available) expect(none.cause.length).toBeGreaterThan(0);
+    expect(largestSwingDriver([]).available).toBe(false);
   });
 
-  it("is honestly UNAVAILABLE on an empty tornado (the module never ran)", () => {
-    const reading = selectStep4ForecastDispersionReading([]);
-    expect(reading.available).toBe(false);
-  });
-
-  it("A1/A2 coincide when growth is the only available row (MSFT's own shape before margin was captured)", () => {
-    const reading = selectStep4ForecastDispersionReading([
-      availableRow("growth", "0.4859812108156441166"),
-      unavailableRow("operatingMargin"),
-      unavailableRow("discountRate"),
-      unavailableRow("terminalGrowth"),
-      unavailableRow("ronic"),
-    ]);
-    expect(reading.available).toBe(true);
-    if (!reading.available) return;
-    expect(reading.selectedDriver).toBe("growth");
-    expect(reading.fullRangeValueImpact.toString()).toBe("0.4859812108156441166");
-    expect(reading.tier).toBe("HIGH");
-  });
-
-  it("A1/A2 coincide when growth's swing is the largest of several available rows (MSFT's actual real-run shape)", () => {
-    const reading = selectStep4ForecastDispersionReading([
-      availableRow("growth", "0.48598121081564411663"),
-      availableRow("operatingMargin", "0.23377202026469612084"),
-      unavailableRow("discountRate"),
-      unavailableRow("terminalGrowth"),
-      unavailableRow("ronic"),
-    ]);
-    expect(reading.available).toBe(true);
-    if (!reading.available) return;
-    expect(reading.selectedDriver).toBe("growth");
-    expect(reading.fullRangeValueImpact.toString()).toBe("0.48598121081564411663");
-  });
-
-  it("DIVERGES from growth-alone (A1) when a non-growth row's swing is the largest available — proving genuine max-selection (A2), not a hard-coded growth pick", () => {
-    const reading = selectStep4ForecastDispersionReading([
+  it("takes the genuine maximum across available rows — not a hard-coded growth pick", () => {
+    const reading = largestSwingDriver([
       availableRow("growth", "0.2"),
       availableRow("operatingMargin", "0.15"),
       availableRow("discountRate", "0.55"),
       unavailableRow("terminalGrowth"),
       unavailableRow("ronic"),
+      availableRow("moat", "0.08"),
     ]);
-    expect(reading.available).toBe(true);
-    if (!reading.available) return;
-    // Growth-alone (A1) would have answered "0.2" here — the selector must
-    // not silently agree with that wrong answer.
-    expect(reading.fullRangeValueImpact.toString()).not.toBe("0.2");
-    expect(reading.selectedDriver).toBe("discountRate");
-    expect(reading.fullRangeValueImpact.toString()).toBe("0.55");
+    expect(reading).toMatchObject({ available: true, driver: "discountRate" });
+    if (reading.available) expect(reading.fullRangeValueImpact.toString()).toBe("0.55");
   });
 
-  it("carries the B2 categorical tier shape, resolved against the CF-STEP4-TIER-BOUNDARY-DEFAULT-01 AI DEFAULT boundaries", () => {
-    const reading = selectStep4ForecastDispersionReading([availableRow("growth", "0.5")]);
-    expect(reading.available).toBe(true);
-    if (!reading.available) return;
-    expect(reading.tier).toBe("HIGH");
-  });
-});
-
-// ---------------------------------------------------------------------------
-// CF-STEP4-TIER-BOUNDARY-DEFAULT-01 — the B2 tier boundaries themselves.
-// Edge-inclusive at both boundaries: the boundary value itself belongs to
-// the HIGHER tier (the same convention `shouldDisplaySensitivityInput`
-// already uses). SYNTHETIC TEST FIXTURES throughout.
-// ---------------------------------------------------------------------------
-
-describe("selectStep4ForecastDispersionReading — B2 tier boundary edges", () => {
-  it("LOW/MEDIUM boundary (0.10): below is LOW, exactly on is MEDIUM, above is MEDIUM", () => {
-    const below = selectStep4ForecastDispersionReading([availableRow("growth", "0.0999")]);
-    const on = selectStep4ForecastDispersionReading([availableRow("growth", "0.1")]);
-    const above = selectStep4ForecastDispersionReading([availableRow("growth", "0.1001")]);
-    expect(below.available && below.tier).toBe("LOW");
-    expect(on.available && on.tier).toBe("MEDIUM");
-    expect(above.available && above.tier).toBe("MEDIUM");
-  });
-
-  it("MEDIUM/HIGH boundary (0.25): below is MEDIUM, exactly on is HIGH, above is HIGH", () => {
-    const below = selectStep4ForecastDispersionReading([availableRow("growth", "0.2499")]);
-    const on = selectStep4ForecastDispersionReading([availableRow("growth", "0.25")]);
-    const above = selectStep4ForecastDispersionReading([availableRow("growth", "0.2501")]);
-    expect(below.available && below.tier).toBe("MEDIUM");
-    expect(on.available && on.tier).toBe("HIGH");
-    expect(above.available && above.tier).toBe("HIGH");
-  });
-
-  it("takes the magnitude of the selected row's impact, matching the display rule's own abs() convention", () => {
-    const reading = selectStep4ForecastDispersionReading([availableRow("growth", "-0.3")]);
-    expect(reading.available && reading.tier).toBe("HIGH");
+  it("carries no tier and no uncertainty reading — only the driver and its swing", () => {
+    const reading = largestSwingDriver([availableRow("growth", "0.4")]);
+    expect(Object.keys(reading).sort()).toEqual(["available", "driver", "fullRangeValueImpact"]);
   });
 });

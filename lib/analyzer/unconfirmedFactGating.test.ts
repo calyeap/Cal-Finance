@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { assembleAnalysisResult, type CompanyFixture } from "./assemble";
 import { MSFT_FIXTURE } from "./fixtures/msft";
+import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 import { NOT_CONFIRMED_INPUT_CAUSE } from "./figures";
 import { boundState, NOT_COMPUTED_BINDING } from "./notComputed";
 import type { SourcedValue } from "./types";
@@ -17,8 +18,11 @@ function unconfirmed(v: SourcedValue<Decimal> | null): SourcedValue<Decimal> | n
   return v === null ? null : { ...v, provenance: { ...v.provenance, verificationState: "NOT CONFIRMED" } };
 }
 
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — with STATED D2 test inputs, so the
+// clean run's reverse DCF and base DCF actually compute and a block below is
+// the unconfirmed fact's doing, not a sheet pending adoption.
 const ACQUIRED_SHAPE: CompanyFixture = {
-  ...MSFT_FIXTURE,
+  ...withStatedD2Inputs(MSFT_FIXTURE),
   multiplesInput: { ...MSFT_FIXTURE.multiplesInput, enterpriseValue: null },
   reverseDcf: { ...MSFT_FIXTURE.reverseDcf, targetEnterpriseValue: null },
   leverage: { ...MSFT_FIXTURE.leverage, enterpriseValue: null },
@@ -43,13 +47,14 @@ describe("a NOT CONFIRMED total-debt fact", () => {
     expect(ev.cause).toBe(NOT_CONFIRMED_INPUT_CAUSE);
   });
 
-  it("blocks every EV-based output: EV multiples, steady-state EV and PVGO, every reverse-DCF cell", () => {
+  it("blocks every EV-based output: EV multiples, steady-state EV and PVGO, the reverse DCF", () => {
     expect(gated.diagnostics.multiples.evToEbit.suppressed).toBe(true);
     expect(gated.diagnostics.multiples.evToEbitda.suppressed).toBe(true);
     expect(gated.diagnostics.multiples.evToRevenue.value.suppressed).toBe(true);
     expect(gated.priceImplied.steadyStateEv.suppressed).toBe(true);
     expect(gated.priceImplied.pvgo.suppressed).toBe(true);
-    expect(gated.priceImplied.reverseDcfGrid.every((c) => c.fiveYearGrowth.suppressed)).toBe(true);
+    expect(clean.priceImplied.reverseDcf.fiveYearGrowth.suppressed).toBe(false);
+    expect(gated.priceImplied.reverseDcf.fiveYearGrowth.suppressed).toBe(true);
   });
 
   it("does not block outputs that never read it: P/E, cash FCF, margin history", () => {
@@ -65,8 +70,8 @@ describe("a NOT CONFIRMED base revenue", () => {
     reverseDcf: { ...ACQUIRED_SHAPE.reverseDcf, baseYearRevenue: unconfirmed(ACQUIRED_SHAPE.reverseDcf.baseYearRevenue) },
   });
 
-  it("blocks every reverse-DCF cell", () => {
-    expect(gated.priceImplied.reverseDcfGrid.every((c) => c.fiveYearGrowth.suppressed)).toBe(true);
+  it("blocks the reverse DCF", () => {
+    expect(gated.priceImplied.reverseDcf.fiveYearGrowth.suppressed).toBe(true);
   });
 
   it("blocks the steady-state EV it would size NOPAT from", () => {

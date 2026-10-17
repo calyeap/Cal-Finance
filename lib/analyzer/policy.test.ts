@@ -2,8 +2,19 @@ import { describe, it, expect } from "vitest";
 import { POLICY, UNDEFINED_POLICY_CONSTANTS, POLICY_THRESHOLD_PROVENANCE, buildProvisionalLabels } from "./policy";
 
 describe("POLICY", () => {
-  it("fixes the rate grid at 8% / 10% / 12% for every company", () => {
-    expect(POLICY.rateGrid.map((r) => r.toString())).toEqual(["0.08", "0.1", "0.12"]);
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the 8/10/12% grid is retired
+  // (frozen spec §14.9 AR0-1, AR0-2); these are Methodology v2.1 D1's and
+  // D2's approved values, restated.
+  it("carries D1's approved dated rates — 9.0% stable, 11.0% cyclical / pre-revenue, dated 17 Oct 2026 — checked at ±0.5pp", () => {
+    const [row] = POLICY.discountRate.table;
+    expect(POLICY.discountRate.table).toHaveLength(1);
+    expect([row.effectiveFrom, row.stable.toString(), row.cyclicalOrPreRevenue.toString()]).toEqual(["2026-10-17", "0.09", "0.11"]);
+    expect(POLICY.discountRate.verdictCheckOffset.toString()).toBe("0.005");
+  });
+
+  it("carries D2's approved moat credits — +0 / +1 / +3pp, bull = base + 1.5pp", () => {
+    expect([POLICY.moatCredit.none, POLICY.moatCredit.narrow, POLICY.moatCredit.wide].map((v) => v.toString())).toEqual(["0", "0.01", "0.03"]);
+    expect(POLICY.bullMoatCreditUplift.toString()).toBe("0.015");
   });
 
   it("fixes the leverage threshold at 10%", () => {
@@ -43,17 +54,16 @@ describe("UNDEFINED_POLICY_CONSTANTS", () => {
 });
 
 describe("POLICY_THRESHOLD_PROVENANCE / buildProvisionalLabels", () => {
-  it("records exactly the nine constants the frozen spec labels PROVISIONAL or 'no observations behind it', plus the two CF-STEP4-TIER-BOUNDARY-DEFAULT-01 AI DEFAULT tier boundaries, and no others", () => {
-    // A hardcoded expected key set — the first nine verified against every
-    // PROVISIONAL / "no observations" occurrence in the spec (§6.1, §6.2,
-    // §7.1, §7.2 M12); the two step4DispersionTier* boundaries are this
-    // outcome's own AI DEFAULT under the OWNER gate-compression rule, using
-    // the same PROVISIONAL/labelled vehicle rather than a new one. A
-    // constant added here without spec or AI-DEFAULT-provenance support, or
-    // a genuinely provisional constant left out, both fail this test.
+  it("records exactly the eight constants the frozen spec labels PROVISIONAL or 'no observations behind it', and no others", () => {
+    // A hardcoded expected key set, verified against every PROVISIONAL / "no
+    // observations" occurrence in the spec (§6.1, §6.2, §7.1, §7.2 M12). A
+    // constant added here without spec support, or a genuinely provisional
+    // constant left out, both fail this test. CF-AR4-RATE-REINVESTMENT-
+    // TERMINAL-01 removed three with the constants they labelled: the r + 3pp
+    // terminal ROIC premium (retired by AR0-2/AR0-3) and the two Step 4
+    // dispersion-tier boundaries (product-decisions items 23–24, retired).
     expect(Object.keys(POLICY_THRESHOLD_PROVENANCE).sort()).toEqual(
       [
-        "terminalRoicPremium",
         "preRevenueConstructionLeadYears",
         "leveredCostOfEquityCap",
         "gate0InterestIncomeOverRevenueThreshold",
@@ -62,8 +72,6 @@ describe("POLICY_THRESHOLD_PROVENANCE / buildProvisionalLabels", () => {
         "historyInsufficientStressMarginRelativeReductions",
         "runRateSequentialGrowthTrigger",
         "seasonalityPriorYearThreshold",
-        "step4DispersionTierLowMediumBoundary",
-        "step4DispersionTierMediumHighBoundary",
       ].sort()
     );
   });
@@ -89,9 +97,9 @@ describe("POLICY_THRESHOLD_PROVENANCE / buildProvisionalLabels", () => {
     );
   });
 
-  it("does not label a fixed (non-provisional) constant, e.g. the leverage or rate-grid thresholds", () => {
+  it("does not label a fixed (non-provisional) constant, e.g. the leverage threshold or the D1 rate table", () => {
     expect(POLICY_THRESHOLD_PROVENANCE.leverageThreshold).toBeUndefined();
-    expect(POLICY_THRESHOLD_PROVENANCE.rateGrid).toBeUndefined();
+    expect(POLICY_THRESHOLD_PROVENANCE.discountRate).toBeUndefined();
     expect(POLICY_THRESHOLD_PROVENANCE.terminalGrowth).toBeUndefined();
   });
 });

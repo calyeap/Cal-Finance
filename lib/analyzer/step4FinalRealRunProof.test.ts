@@ -6,7 +6,7 @@ import { computeAnalysisForRun, loadGateState } from "./gate";
 import { recordAnalystBundle, type RecordedAnalystBundleInput } from "./acquisition/recordedBundles";
 import { deriveVerdict } from "./verdict";
 import type { AnalysisResult } from "./types";
-import type { Step4ForecastDispersionReading, TornadoRowResult } from "./modules/sensitivity";
+import type { TornadoRowResult } from "./modules/sensitivity";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 (issue #331) — the consolidated
@@ -15,10 +15,9 @@ import type { Step4ForecastDispersionReading, TornadoRowResult } from "./modules
 // `docs/analyzer-v2-final-realrun-proof.md` quotes: trust status and its
 // determinants, enterprise-value/bridge completeness with each named gate,
 // leverage state, scenario-range `kind`, the price value or its honest `$0`
-// sentinel, the full tornado row set (`available`/`displayed`), the
-// now-live Step 4 forecast-dispersion reading (`available`, `selectedDriver`,
-// `fullRangeValueImpact`, `tier`, or the honest `cause`), and the verdict and
-// its cause.
+// sentinel, the tornado row set, and the verdict and its cause. (The Step 4
+// forecast-dispersion reading it also pinned is retired —
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01, product-decisions items 23–24.)
 //
 // Documentation and tests only. This file rules nothing, adopts no number,
 // band, cut-point or policy constant, marks no acceptance-matrix row
@@ -26,7 +25,7 @@ import type { Step4ForecastDispersionReading, TornadoRowResult } from "./modules
 // `lib/analyzer/policy.ts` (both are only imported/read here).
 //
 // Run-opening logic for all three companies is copied verbatim from
-// `step4SignalObservationOnRealRun.test.ts` / `step4ForecastDispersionReadingOnRealRun.test.ts`'s
+// `step4SignalObservationOnRealRun.test.ts` / the since-deleted `step4ForecastDispersionReadingOnRealRun.test.ts`'s
 // `openMsftRunWithRuling` / `openOkloRunUnchanged` / `openNvdaObservationRun`
 // (or `openNvdaRunUnchanged`) — not invented — per this outcome's own SCOPE
 // 1 instruction to reuse the existing gated offline path rather than build a
@@ -129,13 +128,12 @@ async function openNvdaObservationRun(): Promise<AnalysisResult> {
   return computeAnalysisForRun(runId);
 }
 
+const NO_MSFT_VALUATION = /scenario dollar values|Pending adoption/;
+
 function tornadoOf(result: AnalysisResult): TornadoRowResult[] {
   return result.diagnostics.sensitivity.tornado as unknown as TornadoRowResult[];
 }
 
-function forecastDispersionOf(result: AnalysisResult): Step4ForecastDispersionReading {
-  return result.diagnostics.sensitivity.forecastDispersion as unknown as Step4ForecastDispersionReading;
-}
 
 describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-run proof (MSFT, OKLO, NVDA)", () => {
   beforeEach(async () => {
@@ -148,7 +146,7 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     await getPool().end();
   });
 
-  it("MSFT — trust, EV bridge, leverage, range, price, full tornado, Step 4 reading, verdict", async () => {
+  it("MSFT — trust, EV bridge, leverage, range, price, tornado (pending adoption), verdict", async () => {
     const result = await openMsftRunWithRuling();
 
     // Trust. A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — the fair-value range is
@@ -159,7 +157,12 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     // qualifying entry (asserted below), independent of trust's own
     // determinedBy list.
     expect(result.trust.status).toBe("UNUSABLE");
-    expect(result.trust.determinedBy.some((d) => d.kind === "suppressing state" && d.detail.includes("scenario dollar values"))).toBe(true);
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — which no-valuation cause this is
+    // depends on which MSFT sheet the run resolves: the committed fixture
+    // carry-over (A4's "scenario dollar values") or migration 010's recorded
+    // sheet, now pending adoption (D2). Other files in the suite delete and
+    // re-seed that row, so either may be in force here; both are honest.
+    expect(result.trust.determinedBy.some((d) => d.kind === "suppressing state" && NO_MSFT_VALUATION.test(d.detail))).toBe(true);
     expect(result.states.qualifying.some((q) => q.flag === "MARGIN AT HISTORICAL HIGH")).toBe(true);
 
     // Gate 0 — sector/industry classification, named gate ahead of the EV bridge.
@@ -179,44 +182,20 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     // fixture's $265/$650 presented as this real run's computed range.
     expect(result.fairValueRange.kind).toBe("suppressed");
     if (result.fairValueRange.kind === "suppressed") {
-      expect(result.fairValueRange.cause).toContain("scenario dollar values");
+      expect(result.fairValueRange.cause).toMatch(NO_MSFT_VALUATION);
     }
 
     // Price — a real recorded capture close, not the $0 sentinel.
     expect(result.price.value.equals(new Decimal("499.70"))).toBe(true);
 
-    // Full five-row tornado.
-    const tornado = tornadoOf(result);
-    expect(tornado.map((r) => r.driver)).toEqual(["growth", "operatingMargin", "discountRate", "terminalGrowth", "ronic"]);
-    const growthRow = tornado.find((r) => r.driver === "growth")!;
-    const marginRow = tornado.find((r) => r.driver === "operatingMargin")!;
-    expect(growthRow.available).toBe(true);
-    expect(marginRow.available).toBe(true);
-    if (growthRow.available) {
-      // CF-AR3-REPRODUCIBLE-RUNS-01 — a ratio of two values from the same M15
-      // model: Methodology v2.1 D2's timing scales both by one common factor, so
-      // it is unchanged; the 1e-15 allowance is decimal.js rounding of the
-      // fractional (1 + r)^0.5 power, at the 20th significant digit.
-      expect(growthRow.fullRangeValueImpact.minus("0.48598121081564411663").abs().lessThan("1e-15")).toBe(true);
-      expect(growthRow.displayed).toBe(true);
-    }
-    if (marginRow.available) {
-      expect(marginRow.fullRangeValueImpact.minus("0.23377202026469612084").abs().lessThan("1e-15")).toBe(true);
-      expect(marginRow.displayed).toBe(true);
-    }
-    for (const driver of ["discountRate", "terminalGrowth", "ronic"] as const) {
-      const row = tornado.find((r) => r.driver === driver)!;
-      expect(row.available).toBe(false);
-    }
-
-    // The Step 4 reading itself — the now-live figure this outcome proves.
-    const reading = forecastDispersionOf(result);
-    expect(reading.available).toBe(true);
-    if (reading.available) {
-      expect(reading.selectedDriver).toBe("growth");
-      expect(reading.fullRangeValueImpact.minus("0.48598121081564411663").abs().lessThan("1e-15")).toBe(true);
-      expect(reading.tier).toBe("HIGH");
-    }
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change. The
+    // tornado now varies the base scenario's own D2 valuation (AR0-2), and
+    // MSFT's sheet carries no D2 inputs, so it is pending adoption: there is
+    // no base value to vary and the module does not run — `[]`, as for OKLO
+    // and NVDA below. The Step 4 forecast-dispersion reading and its tier
+    // are retired (product-decisions items 23–24) and no longer asserted.
+    expect(tornadoOf(result)).toEqual([]);
+    expect(result.valuationBasis?.d2.status).toBe("PENDING ADOPTION");
 
     // Verdict — still INCOMPLETE, now for A4's scenario-dollar-values cause
     // (trust.status === "UNUSABLE" is deriveVerdict's own first-checked
@@ -225,10 +204,10 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     // `verdict.reason`, not on which company — confirmed by direct read).
     const verdict = deriveVerdict(result);
     expect(verdict.status).toBe("INCOMPLETE");
-    expect(verdict.reason).toContain("scenario dollar values");
+    expect(verdict.reason).toMatch(NO_MSFT_VALUATION);
   });
 
-  it("OKLO — trust, EV bridge, leverage, suppressed range, price, tornado unavailable, Step 4 unavailable, verdict", async () => {
+  it("OKLO — trust, EV bridge, leverage, suppressed range, price, tornado unavailable, verdict", async () => {
     const result = await openOkloRunUnchanged();
 
     expect(result.trust.status).toBe("UNUSABLE");
@@ -253,29 +232,19 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
 
     expect(result.price.value.equals(new Decimal("41.27"))).toBe(true);
 
-    // The M14 tornado module is genuinely EMPTY for OKLO — not five rows
-    // each `available: false`. `assemble.ts`'s `sensitivityRangesFor` wires
-    // a captured `AnalystSuppliedRange` only for MSFT (CF-STEP4-MSFT-RANGE-
-    // CAPTURE-01); for every other ticker it returns `null` and the run
-    // falls back to `buildSensitivityResult()`'s own empty-array default —
-    // the module never runs, rather than running and finding every row
-    // unavailable.
+    // The M14 tornado module is genuinely EMPTY for OKLO — not six rows
+    // each `available: false`: with no adopted D2 base value there is
+    // nothing to vary, and the run falls back to `buildSensitivityResult()`'s
+    // own empty-array default.
     const tornado = tornadoOf(result);
     expect(tornado).toEqual([]);
-
-    const reading = forecastDispersionOf(result);
-    expect(reading.available).toBe(false);
-    if (!reading.available) {
-      expect(reading.cause).toBe("no tornado row is available: true — every analyst-supplied range for this run is missing");
-      expect("tier" in reading).toBe(false);
-    }
 
     const verdict = deriveVerdict(result);
     expect(verdict.status).toBe("INCOMPLETE");
     expect(verdict.reason).toContain("LEVERAGE UNSUPPORTED IN v1");
   });
 
-  it("NVDA — trust, EV bridge (four named missing inputs), leverage, suppressed range, honest $0 price sentinel, tornado unavailable, Step 4 unavailable, verdict", async () => {
+  it("NVDA — trust, EV bridge (four named missing inputs), leverage, suppressed range, honest $0 price sentinel, tornado unavailable, verdict", async () => {
     const result = await openNvdaObservationRun();
 
     expect(result.trust.status).toBe("UNUSABLE");
@@ -310,18 +279,10 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     expect(result.price.value.equals(new Decimal(0))).toBe(true);
     expect(result.price.timestamp).toBe("");
 
-    // Same reason as OKLO: the M14 tornado module never runs for NVDA
-    // (no `AnalystSuppliedRange` capture exists for it) — genuinely `[]`,
-    // not five unavailable rows.
+    // Same as OKLO: the M14 tornado module never runs for NVDA (its sheet is
+    // pending adoption — AR4 — and its range is suppressed) — genuinely `[]`.
     const tornado = tornadoOf(result);
     expect(tornado).toEqual([]);
-
-    const reading = forecastDispersionOf(result);
-    expect(reading.available).toBe(false);
-    if (!reading.available) {
-      expect(reading.cause).toBe("no tornado row is available: true — every analyst-supplied range for this run is missing");
-      expect("tier" in reading).toBe(false);
-    }
 
     const verdict = deriveVerdict(result);
     expect(verdict.status).toBe("INCOMPLETE");

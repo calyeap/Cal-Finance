@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 import type { AnalysisResult, Figure, InterpretationStatement } from "../types";
 import type { ReportAnalysis } from "../reportAnalysis";
-import type { Step4ForecastDispersionReading } from "../modules/sensitivity";
+import { largestSwingDriver, type TornadoRowResult } from "../modules/sensitivity";
 import { priceVsRangeHeadline, incompleteVerdictExplanation } from "../trustCopy";
 import { deriveVerdict } from "../verdict";
 import { profileNotConfirmedFor } from "../trust";
@@ -384,12 +384,8 @@ export function checkBriefAcceptance({ ticker, policy, report, overviewText }: B
       figureItem("Steady-state EV", priceImplied.steadyStateEv, overviewText, leverage),
       figureItem("PVGO share of EV", priceImplied.pvgoShareOfEv, overviewText, leverage),
     ];
-    const cell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
-    items.push(
-      cell === undefined
-        ? { status: "MISSING", detail: "the implied-growth cell (current margin, r = 8%) is absent from the reverse-DCF grid" }
-        : figureItem("Implied growth, yrs 1-5 at r = 8%", cell.fiveYearGrowth, overviewText, leverage)
-    );
+    const solve = priceImplied.reverseDcf;
+    items.push(figureItem(`Implied growth, yrs 1-5 at r = ${solve.rate.mul(100).toFixed(1)}%`, solve.fiveYearGrowth, overviewText, leverage));
     sections.push({
       id: 8,
       title: "What today's price assumes",
@@ -416,16 +412,15 @@ export function checkBriefAcceptance({ ticker, policy, report, overviewText }: B
 
   // 10 — what would change the view.
   {
-    const reading = diagnostics.sensitivity.forecastDispersion as Step4ForecastDispersionReading;
+    const reading = largestSwingDriver(diagnostics.sensitivity.tornado as TornadoRowResult[]);
     let item: ItemResult;
     if (reading.available) {
-      item =
-        finite(reading.fullRangeValueImpact) && reading.selectedDriver.trim() !== "" && ["LOW", "MEDIUM", "HIGH"].includes(reading.tier)
-          ? {
-              status: "CONTENT",
-              detail: `largest driver ${reading.selectedDriver}, full-range impact ${reading.fullRangeValueImpact.mul(100).toFixed(1)}% (${reading.tier})`,
-            }
-          : { status: "MISSING", detail: "the change-trigger reading is available but malformed" };
+      item = finite(reading.fullRangeValueImpact)
+        ? {
+            status: "CONTENT",
+            detail: `largest driver ${reading.driver}, full-range impact ${reading.fullRangeValueImpact.mul(100).toFixed(1)}%`,
+          }
+        : { status: "MISSING", detail: "the change-trigger reading is available but malformed" };
     } else {
       item = explainedItem("Change trigger", CHANGE_TRIGGER_UNAVAILABLE_LINE, overviewText, reading.cause);
     }

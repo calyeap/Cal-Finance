@@ -2,7 +2,7 @@ import Decimal from "decimal.js";
 import { annualSeries, latestAnnualFiscalYear, type AnnualSeries } from "../acquisition/history";
 import { TAG_MAP } from "../acquisition/tagMap";
 import type { CompanyFactsDocument } from "../acquisition/secClient";
-import type { AchievedGrowth, ComparatorWindow, RawInput, ReverseDcfCell } from "../types";
+import type { AchievedGrowth, ComparatorWindow, RawInput, ReverseDcfSolve } from "../types";
 
 // ---------------------------------------------------------------------------
 // M8-c — the two deterministic inputs behind the valuation position, computed
@@ -259,48 +259,29 @@ export function comparatorRecency(doc: CompanyFactsDocument, series: AnnualSerie
   return { currentFiscalYear, reachedBy: null };
 }
 
-/** One solved reverse-DCF cell's required growth, kept raw. */
+/** The reverse DCF's required growth, kept raw. */
 export interface RequiredGrowthCell {
-  marginLevel: string;
-  rate: number;
+  rate: Decimal;
   fiveYearGrowth: Decimal;
   tenYearCagr: Decimal;
 }
 
 /**
- * The required side, read off M7's grid.
- *
- * ALL NINE CELLS ARE RETURNED, unreduced. Which cell the position's "required"
- * figure comes from - which margin level, which discount rate - is NOT settled
- * by §10.6.2, which names "M7's implied growth" without choosing among the
- * nine. Picking one here would be making that ruling silently, so the harness
- * reports the whole grid and leaves the choice visible.
+ * The required side, read off M7's one solve (frozen spec §14.9 AR0-2,
+ * CF-AR4-RATE-REINVESTMENT-TERMINAL-01): at the D1 rate, on the base
+ * scenario's own margin and return on new investment. The retired grid left
+ * open which of its nine cells §10.6.2's "M7's implied growth" meant; one
+ * solve settles that. Kept as a one-element list so the observation shape
+ * is unchanged.
  */
-export function requiredGrowthCells(grid: readonly ReverseDcfCell[]): RawInput<RequiredGrowthCell[]> {
-  const solved: RequiredGrowthCell[] = [];
-  const causes = new Set<string>();
-
-  for (const cell of grid) {
-    if (cell.fiveYearGrowth.suppressed) {
-      causes.add(`${cell.fiveYearGrowth.state} - ${cell.fiveYearGrowth.cause}`);
-      continue;
-    }
-    if (cell.tenYearCagr.suppressed) {
-      causes.add(`${cell.tenYearCagr.state} - ${cell.tenYearCagr.cause}`);
-      continue;
-    }
-    solved.push({
-      marginLevel: cell.marginLevel,
-      rate: cell.rate,
-      fiveYearGrowth: cell.fiveYearGrowth.value,
-      tenYearCagr: cell.tenYearCagr.value,
-    });
+export function requiredGrowthCells(solve: ReverseDcfSolve): RawInput<RequiredGrowthCell[]> {
+  if (solve.fiveYearGrowth.suppressed) {
+    return blocked(`reverse-DCF solve suppressed: ${solve.fiveYearGrowth.state} - ${solve.fiveYearGrowth.cause}`);
   }
-
-  if (solved.length === 0) {
-    return blocked(...[...causes].map((c) => `all ${grid.length} reverse-DCF cells suppressed: ${c}`));
+  if (solve.tenYearCagr.suppressed) {
+    return blocked(`reverse-DCF solve suppressed: ${solve.tenYearCagr.state} - ${solve.tenYearCagr.cause}`);
   }
-  return present(solved);
+  return present([{ rate: solve.rate, fiveYearGrowth: solve.fiveYearGrowth.value, tenYearCagr: solve.tenYearCagr.value }]);
 }
 
 /**

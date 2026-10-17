@@ -36,7 +36,6 @@ export function buildSensitivityResult(): SensitivityResult {
     twoWayGrowthMargin: [],
     twoWayRateTerminalGrowth: [],
     debtShareRemoved: true,
-    forecastDispersion: selectStep4ForecastDispersionReading([]),
   };
 }
 
@@ -46,14 +45,14 @@ export function buildSensitivityResult(): SensitivityResult {
 //
 // APPROVED CLARIFICATION (Command Center ruling, 2026-09-05).
 //
-// FIVE TORNADO DRIVERS (source-established: growth and margin already
+// SIX TORNADO DRIVERS (source-established: growth and margin already
 // name the two-way table's own axes; discount rate and terminal growth
-// name the other table's axes; RONIC is added as the tornado's fifth,
-// one-at-a-time-only row — it has no two-way table of its own).
+// name the other table's axes; RONIC is added as a one-at-a-time-only
+// row — it has no two-way table of its own; moat joins it under AR0-2).
 //
 // EVERY RANGE IS AN EXPLICIT ANALYST ASSUMPTION, never auto-derived. A
 // range's rationale MAY cite an existing policy value or historical
-// observation (e.g. "policy's 8/10/12% rate grid", "the ten-year margin
+// observation (e.g. "D1's ±0.5pp verdict check points", "the ten-year margin
 // range from M3") — citing one is fine — but this module never reaches
 // into POLICY or a historical-range calculation itself to MANUFACTURE a
 // range. In particular: `buildFixedShapeGrowthPath`'s constant-growth/
@@ -83,32 +82,19 @@ export function buildSensitivityResult(): SensitivityResult {
 // guard) surfaces whatever that unmodified formula produces, uncaught and
 // unclamped.
 //
-// ALL FIVE TORNADO ROWS MUST SHARE ONE MODEL, evaluated at ONE base case
-// — this is why. `computeScenarioEnterpriseValue` (§7.2 M15,
-// capital-intensity-driven reinvestment) and `projectReverseDcfValue`
-// (§7.2 M7, RONIC-driven reinvestment, in its ordinary given-growth mode
-// — the same mode M7's own bisection search already uses internally,
-// never re-solving anything here) are VERIFIED to differ economically:
-// their reinvestment formulas (capitalIntensity × revenue vs. NOPAT ×
-// next-year-growth ÷ RONIC) do not coincide for an arbitrary
-// capitalIntensity/RONIC pairing, confirmed by `sensitivity.test.ts`'s own
-// "the two forward models diverge" check. An earlier version of this
-// module mixed the two — four rows through `computeScenarioEnterpriseValue`,
-// the RONIC row through `projectReverseDcfValue` — which silently gave
-// each row a DIFFERENT base-case value, violating "vary only the named
-// input, hold everything else — including which base case — fixed."
-// Corrected: this file's own tests route ALL FIVE tornado rows through
-// `projectReverseDcfValue` alone (the only one of the two existing models
-// that accepts RONIC as a parameter at all), using coherent growth paths
-// via that function's own internal `growthAt` fixed-shape mechanics for
-// every growth value — never a flat/spliced substitute — and the same
-// function's now-optional `terminalGrowth` parameter (threaded through
-// for exactly this reason) so the terminal-growth row, and every OTHER
-// row, honour the base case's own selected terminal growth rather than
-// silently reverting to the policy default. The two-way tables are
-// unaffected — neither table names RONIC as an axis, so
-// `computeScenarioEnterpriseValue` alone is self-consistent for both.
-export type TornadoDriver = "growth" | "operatingMargin" | "discountRate" | "terminalGrowth" | "ronic";
+// ALL TORNADO ROWS SHARE ONE MODEL, evaluated at ONE base case: since
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 M7 and M15 are one engine
+// (`computeScenarioEnterpriseValue`, Methodology v2.1 D2 — reinvestment is
+// NOPAT × next-year growth ÷ return on new investment), so every row —
+// RONIC and moat included — varies one input of that engine and holds the
+// base case's others fixed. The caller closes over it.
+//
+// AR0-2 (frozen spec §14.9) moves the rate-band ends, growth, margin, return
+// on new investment and moat to this table. The rate row's three values are
+// D1's own check points (rate ± 0.5pp) and the moat row's are D2's three
+// credits — approved policy values the caller cites as the range's
+// rationale, never ranges this module invents.
+export type TornadoDriver = "growth" | "operatingMargin" | "discountRate" | "terminalGrowth" | "ronic" | "moat";
 
 export const TORNADO_DRIVERS: readonly TornadoDriver[] = [
   "growth",
@@ -116,6 +102,7 @@ export const TORNADO_DRIVERS: readonly TornadoDriver[] = [
   "discountRate",
   "terminalGrowth",
   "ronic",
+  "moat",
 ] as const;
 
 export type TwoWayTableAxis = "growth" | "operatingMargin" | "discountRate" | "terminalGrowth";
@@ -266,87 +253,22 @@ export function computeRateTerminalGrowthTable(
 }
 
 // ---------------------------------------------------------------------------
-// CF-STEP4-READING-IMPL-01 — the ruled Step 4 forecast-dispersion reading.
-//
-// `CALVIN RULING — OPTION 1 APPROVED` (PR #325 comment 5830997078) adopts,
-// verbatim: "A2-in-principle / A1-fallback + B2 for Step 4 … this ruling
-// does not adopt any numeric tier boundary, band or cut-point." A2 (the
-// tornado's own stated purpose) is the maximum `fullRangeValueImpact`
-// across whichever rows are `available: true` — a formula defined for any
-// subset of the five drivers, not only the full set. A1 (the growth row
-// alone) is not a separate branch: it is what this same formula reduces to
-// exactly when growth is the only, or the largest, available row — MSFT's
-// own case today, where growth (48.60%) already exceeds margin (23.38%).
-// `selectStep4ForecastDispersionReading` is therefore ONE selector, proven
-// by its own tests to genuinely take the max (a wider non-growth row wins
-// when one exists) rather than a hard-coded "growth always wins" shortcut
-// that would coincidentally match MSFT's numbers today without being A2 at
-// all.
-//
-// B2's categorical LOW/MEDIUM/HIGH shape is resolved on every `available:
-// true` reading (CF-STEP4-TIER-BOUNDARY-DEFAULT-01) against
-// `POLICY.step4DispersionTierLowMediumBoundary` /
-// `step4DispersionTierMediumHighBoundary` — two `PROVISIONAL`, labelled,
-// non-governing constants (policy.ts), instantiated under the OWNER
-// gate-compression `AI DEFAULT` rule (`.github/ai-routines/OWNER.md`,
-// deriving from `CALVIN RULING — OPTION 1 APPROVED`), never a fresh Calvin
-// ruling. `tier` remains read by no valuation, position, gate or verdict
-// computation — see `Step4ForecastDispersionReading` below.
-//
-// A pure function of the tornado rows it is handed — reads no other run
-// state at all, so it structurally cannot reach either of ruling C's two
-// independence instances (restated by ruling A): the Step 1/Gate 1 fields,
-// or the Step 5 scenario fields.
-export type Step4DispersionTier = "LOW" | "MEDIUM" | "HIGH";
+// Overview slot 11's "single largest driver" (CALVIN RULING — A, PR #399
+// comment 5946448076): the available tornado row whose tested range moves
+// value most. A presentation of M14's own rows. It is not the retired Step 4
+// forecast-dispersion reading (product-decisions items 23–24, retired by
+// item 28): no tier, no boundary, and nothing reads it as uncertainty.
+// ---------------------------------------------------------------------------
 
-export type Step4ForecastDispersionReading =
+export type LargestSwingDriver =
   | { available: false; cause: string }
-  | {
-      available: true;
-      fullRangeValueImpact: Decimal;
-      selectedDriver: TornadoDriver;
-      // B2 shape, boundaries resolved — see header above and
-      // `resolveStep4DispersionTier` below.
-      tier: Step4DispersionTier;
-    };
+  | { available: true; driver: TornadoDriver; fullRangeValueImpact: Decimal };
 
-// Boundary semantics (edge-inclusive, tested at each boundary in
-// sensitivity.test.ts): below `step4DispersionTierLowMediumBoundary` is
-// LOW; at or above it, and below `step4DispersionTierMediumHighBoundary`,
-// is MEDIUM; at or above the second boundary is HIGH. Each boundary value
-// itself belongs to the HIGHER tier — the same convention
-// `shouldDisplaySensitivityInput` already uses (`greaterThanOrEqualTo`).
-function resolveStep4DispersionTier(fullRangeValueImpact: Decimal): Step4DispersionTier {
-  const magnitude = fullRangeValueImpact.abs();
-  if (magnitude.lessThan(POLICY.step4DispersionTierLowMediumBoundary)) {
-    return "LOW";
+export function largestSwingDriver(tornado: readonly TornadoRowResult[]): LargestSwingDriver {
+  const rows = tornado.filter((row): row is Extract<TornadoRowResult, { available: true }> => row.available);
+  if (rows.length === 0) {
+    return { available: false, cause: "no tornado row is available for this run" };
   }
-  if (magnitude.lessThan(POLICY.step4DispersionTierMediumHighBoundary)) {
-    return "MEDIUM";
-  }
-  return "HIGH";
-}
-
-export function selectStep4ForecastDispersionReading(
-  tornado: readonly TornadoRowResult[]
-): Step4ForecastDispersionReading {
-  const availableRows = tornado.filter(
-    (row): row is Extract<TornadoRowResult, { available: true }> => row.available
-  );
-
-  if (availableRows.length === 0) {
-    return {
-      available: false,
-      cause: "no tornado row is available: true — every analyst-supplied range for this run is missing",
-    };
-  }
-
-  const selectedRow = availableRows.reduce((max, row) => (row.fullRangeValueImpact.greaterThan(max.fullRangeValueImpact) ? row : max));
-
-  return {
-    available: true,
-    fullRangeValueImpact: selectedRow.fullRangeValueImpact,
-    selectedDriver: selectedRow.driver,
-    tier: resolveStep4DispersionTier(selectedRow.fullRangeValueImpact),
-  };
+  const largest = rows.reduce((max, row) => (row.fullRangeValueImpact.greaterThan(max.fullRangeValueImpact) ? row : max));
+  return { available: true, driver: largest.driver, fullRangeValueImpact: largest.fullRangeValueImpact };
 }

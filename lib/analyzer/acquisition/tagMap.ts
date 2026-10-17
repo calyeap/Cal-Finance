@@ -52,8 +52,18 @@
  * which candidate any EXISTING entry resolves to, so this bump moves zero
  * previously-acquired facts across the §3.8.1 exempt/queued boundary — it
  * only ever adds a new one, present or absent per filer like any other entry.
+ *
+ * -10-1 (17 October 2026) — CF-AR4-RATE-REINVESTMENT-TERMINAL-01 (R5, the
+ * bridge flags). Six factIds added, no existing entry or selection rule
+ * touched: minority interests, preferred stock and convertible debt (the
+ * Methodology's common-equity completeness claims), the disclosed fair value
+ * of equity-method stakes, and two contingent items (unrecognised tax
+ * benefits, guarantee exposure). As with -09-3, a new factId cannot change
+ * which candidate any existing entry resolves to, so no previously-acquired
+ * fact moves across the §3.8.1 exempt/queued boundary. Plus one cited
+ * issuer-disclosure record, FINANCE_LEASES_INSIDE_TOTAL_DEBT, below the map.
  */
-export const TAG_MAPPING_VERSION = "calboard-secmap-2026-09-3";
+export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-1";
 
 export interface TagRef {
   ns: "us-gaap" | "dei";
@@ -365,6 +375,63 @@ export const TAG_MAP: readonly TagMapEntry[] = [
     basis:
       "§3.8 pre-revenue limb. A SINGLE QUARTER of operating cash flow — `duration: quarter` exists so this can never resolve to a year-to-date or annual row, which would understate the burn rate by up to four times.",
   },
+  // --- CF-AR4-RATE-REINVESTMENT-TERMINAL-01 (R5) — bridge flags ----------
+  // Each is OPTIONAL to the bridge: tagged, it is used or shown; absent, the
+  // bridge flags it as unverified (enterpriseValue.ts) — never a zero.
+  {
+    factId: "minority-interest",
+    name: "Minority (noncontrolling) interests",
+    period: "instant",
+    unit: "USD",
+    candidates: [only(usGaap("MinorityInterest"))],
+    basis:
+      "Methodology, common-equity completeness: equity attributable to noncontrolling interests is a claim ahead of the common shareholder, so the bridge adds it to enterprise value like debt. us-gaap:MinorityInterest is the balance-sheet element.",
+  },
+  {
+    factId: "preferred-stock",
+    name: "Preferred stock",
+    period: "instant",
+    unit: "USD",
+    candidates: [only(usGaap("PreferredStockValue"))],
+    basis:
+      "Methodology, common-equity completeness: preferred stock is senior to common equity, so the bridge adds it to enterprise value like debt. us-gaap:PreferredStockValue is the balance-sheet carrying amount.",
+  },
+  {
+    factId: "convertible-debt",
+    name: "Convertible debt (memo — inside total debt)",
+    period: "instant",
+    unit: "USD",
+    candidates: [only(usGaap("ConvertibleDebt")), only(usGaap("ConvertibleNotesPayable"))],
+    basis:
+      "Methodology, common-equity completeness: convertible notes are inside the us-gaap debt totals `total-debt` reads, so this figure is shown, never added again. Dilution on conversion is not modelled.",
+  },
+  {
+    factId: "equity-method-investments-fair-value",
+    name: "Equity-method investments — disclosed quoted fair value (memo)",
+    period: "instant",
+    unit: "USD",
+    candidates: [only(usGaap("EquityMethodInvestmentQuotedMarketValue"))],
+    basis:
+      "R5: strategic stakes stay at book in the bridge (§3.5, §4.4); where the filer discloses their quoted market value it is shown beside the book figure, never substituted for it.",
+  },
+  {
+    factId: "unrecognized-tax-benefits",
+    name: "Unrecognized tax benefits (contingent — memo)",
+    period: "instant",
+    unit: "USD",
+    candidates: [only(usGaap("UnrecognizedTaxBenefits"))],
+    basis:
+      "R5: contingent items are listed with the bridge, never deducted. Unrecognized tax benefits are the structured trace of an open tax dispute (e.g. KO's IRS case); the disputed total, where larger, lives in filing text this mapping does not read.",
+  },
+  {
+    factId: "guarantee-maximum-exposure",
+    name: "Guarantee obligations — maximum exposure (contingent — memo)",
+    period: "instant",
+    unit: "USD",
+    candidates: [only(usGaap("GuaranteeObligationsMaximumExposure"))],
+    basis:
+      "R5: contingent items are listed with the bridge, never deducted. us-gaap:GuaranteeObligationsMaximumExposure is the undiscounted maximum the filer could be required to pay.",
+  },
 ];
 
 const BY_FACT_ID = new Map(TAG_MAP.map((e) => [e.factId, e]));
@@ -424,3 +491,23 @@ export const CANDIDATE_NON_OPERATING_INVESTMENT_TAGS: readonly TagRef[] = [
   usGaap("EquitySecuritiesFvNiCurrentAndNoncurrent"),
   usGaap("LongTermInvestments"),
 ];
+
+// ---------------------------------------------------------------------------
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 (R5; closed issue #311) — filers whose
+// own filings state that their finance leases sit inside the total-debt
+// figure `total-debt` resolves. For them the bridge counts the leases once,
+// inside total debt, and adds no separate lease term (enterpriseValue.ts).
+//
+// A cited issuer disclosure, never an inference from a tag being present or
+// absent (docs/lease-once-measurement.md §6). Keyed by zero-padded CIK.
+// ---------------------------------------------------------------------------
+
+export const FINANCE_LEASES_INSIDE_TOTAL_DEBT: Readonly<Record<string, { ticker: string; source: string }>> = {
+  "0000059478": {
+    ticker: "LLY",
+    source:
+      'Eli Lilly FY2024 Form 10-K, leases note: "Finance leases are included in property and equipment, short-term ' +
+      'borrowings and current maturities of long-term debt, and long-term debt in our consolidated balance sheets" ' +
+      "(docs/filing-text-evidence-routes.md)",
+  },
+};

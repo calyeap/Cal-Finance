@@ -2,188 +2,69 @@ import { describe, it, expect } from "vitest";
 import Decimal from "decimal.js";
 import {
   computeScenarioEnterpriseValue,
+  computeScenarioValuation,
   computeScenarioOutputs,
   solveRateForTargetValue,
-  buildFadingReinvestmentIntensityPath,
 } from "./scenarioOutputs";
 import { buildFixedShapeGrowthPath } from "../growthPath";
-import { projectReverseDcfValue } from "./reverseDcf";
+
+// M15 — the main valuation engine, on Methodology v2.1 D2 since
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01: reinvestment = NOPAT × next-year
+// growth ÷ return on new investment (fading to the terminal return by year
+// 10); terminal FCF = terminal NOPAT × (1 − g ÷ terminal return), the
+// terminal return supplied by the caller (rate + moat credit) — there is no
+// r + 3pp default and no capital-intensity driver any more. The tests that
+// pinned the old optional `terminalRoic` override and the capital-intensity
+// fade path are deleted with them.
+
+const D = (n: string | number) => new Decimal(n);
 
 describe("computeScenarioEnterpriseValue", () => {
   it("throws when the growth path is not exactly ten years", () => {
-    expect(() => computeScenarioEnterpriseValue(new Decimal(100), [new Decimal(0)], new Decimal("0.3"), new Decimal("0.1"), new Decimal("0.1"), new Decimal(0))).toThrow();
+    expect(() => computeScenarioEnterpriseValue(D(100), [D(0)], D("0.3"), D("0.2"), D("0.1"), D("0.1"), D(0))).toThrow();
   });
 
-  it("computes a flat-revenue scenario by hand: zero explicit-period FCF, value entirely from the discounted terminal value", () => {
-    const flatPath = Array(10).fill(new Decimal(0));
-    const margin = new Decimal("0.3");
-    const capitalIntensity = new Decimal("0.3"); // equals margin -> FCF = NOPAT - reinvestment = 0 at 0% tax
-    const rate = new Decimal("0.1");
-
-    const ev = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, new Decimal(0));
-
-    // Hand-computed: terminal NOPAT = 100*0.3*1.03 = 30.9; terminal ROIC =
-    // 0.13; terminal FCF = 30.9*(1-0.03/0.13); TV_10 = that /(0.1-0.03);
-    // discounted by 1.1^9.5 — Methodology v2.1 D2's terminal at 9.5 years
-    // (CF-AR3-REPRODUCIBLE-RUNS-01; was 1.1^10 under end-of-year timing).
-    const terminalNopat = new Decimal(100).mul("0.3").mul(new Decimal(1).plus("0.03"));
-    const terminalRoic = rate.plus("0.03");
-    const terminalFcf = terminalNopat.mul(new Decimal(1).minus(new Decimal("0.03").dividedBy(terminalRoic)));
-    const tv10 = terminalFcf.dividedBy(rate.minus("0.03"));
-    const expected = tv10.dividedBy(new Decimal(1).plus(rate).pow("9.5"));
-
-    expect(ev.toDecimalPlaces(6).toString()).toBe(expected.toDecimalPlaces(6).toString());
+  it("throws on a non-positive return on new investment or terminal return — it is a divisor", () => {
+    const path = buildFixedShapeGrowthPath(D("0.1"));
+    expect(() => computeScenarioEnterpriseValue(D(100), path, D("0.3"), D(0), D("0.1"), D("0.1"), D(0))).toThrow();
+    expect(() => computeScenarioEnterpriseValue(D(100), path, D("0.3"), D("0.2"), D("-0.1"), D("0.1"), D(0))).toThrow();
   });
 
-  it("accepts a broadcast constant or an explicit per-year path for margin and capital intensity equivalently", () => {
-    const path = buildFixedShapeGrowthPath(new Decimal("0.15"));
-    const constantEv = computeScenarioEnterpriseValue(new Decimal(100), path, new Decimal("0.3"), new Decimal("0.1"), new Decimal("0.1"), new Decimal(0));
-    const arrayEv = computeScenarioEnterpriseValue(
-      new Decimal(100),
-      path,
-      Array(10).fill(new Decimal("0.3")),
-      Array(10).fill(new Decimal("0.1")),
-      new Decimal("0.1"),
-      new Decimal(0)
-    );
+  it("computes a flat-revenue scenario by hand: the explicit years reinvest nothing until year 10 funds terminal growth", () => {
+    const flatPath = Array(10).fill(D(0));
+    const margin = D("0.3");
+    const rate = D("0.1");
+    const terminal = D("0.11");
+
+    const v = computeScenarioValuation(D(100), flatPath, margin, D("0.2"), terminal, rate, D(0));
+
+    // Hand-computed: NOPAT 30 every year. Years 1-9 fund zero growth; year
+    // 10 funds terminal growth at the terminal return (the fade reaches it
+    // by year 10): FCF_10 = 30 × (1 − 0.03 ÷ 0.11). Terminal FCF = 30 × 1.03
+    // × (1 − 0.03 ÷ 0.11); TV at 9.5 years, flows at t − 0.5 (D2 timing).
+    let explicit = D(0);
+    for (let t = 1; t <= 9; t++) explicit = explicit.plus(D(30).dividedBy(D("1.1").pow(t - 0.5)));
+    const fcf10 = D(30).mul(D(1).minus(D("0.03").dividedBy(terminal)));
+    explicit = explicit.plus(fcf10.dividedBy(D("1.1").pow("9.5")));
+    const tv = D(30).mul("1.03").mul(D(1).minus(D("0.03").dividedBy(terminal))).dividedBy(rate.minus("0.03"));
+    const expected = explicit.plus(tv.dividedBy(D("1.1").pow("9.5")));
+
+    expect(v.enterpriseValue.toDecimalPlaces(8).toString()).toBe(expected.toDecimalPlaces(8).toString());
+    expect(v.year10Fcf.toDecimalPlaces(10).toString()).toBe(fcf10.toDecimalPlaces(10).toString());
+  });
+
+  it("accepts a broadcast constant or an explicit per-year path for margin equivalently", () => {
+    const path = buildFixedShapeGrowthPath(D("0.15"));
+    const constantEv = computeScenarioEnterpriseValue(D(100), path, D("0.3"), D("0.25"), D("0.1"), D("0.1"), D(0));
+    const arrayEv = computeScenarioEnterpriseValue(D(100), path, Array(10).fill(D("0.3")), D("0.25"), D("0.1"), D("0.1"), D(0));
     expect(constantEv.toString()).toBe(arrayEv.toString());
   });
 
-  it("cross-checks against M7's reverse-DCF formula when capital intensity is set to reproduce the same g/RONIC reinvestment convention", () => {
-    // Reproduce M7's reinvestment convention exactly: reinvestment_t =
-    // NOPAT_t * g_(t+1)/RONIC, i.e. capitalIntensity_t = margin * afterTax
-    // * g_(t+1)/RONIC. With the SAME growth path, margin, rate and tax,
-    // computeScenarioEnterpriseValue should reproduce
-    // projectReverseDcfValue's EV exactly.
-    const growth = new Decimal("0.185");
-    const margin = new Decimal("0.4");
-    const ronic = new Decimal("0.3");
-    const rate = new Decimal("0.1");
-    const taxRate = new Decimal("0.2");
-    const baseRevenue = new Decimal(100);
-
-    const path = buildFixedShapeGrowthPath(growth);
-    const afterTax = new Decimal(1).minus(taxRate);
-    const capitalIntensityPath = path.map((_, i) => {
-      const nextGrowth = i + 1 < 10 ? path[i + 1] : new Decimal("0.03"); // year 11 = terminal growth
-      return margin.mul(afterTax).mul(nextGrowth).dividedBy(ronic);
-    });
-
-    const scenarioEv = computeScenarioEnterpriseValue(baseRevenue, path, margin, capitalIntensityPath, rate, taxRate);
-    const reverseDcfEv = projectReverseDcfValue(growth, margin, ronic, rate, baseRevenue, taxRate).ev;
-
-    expect(scenarioEv.toDecimalPlaces(6).toString()).toBe(reverseDcfEv.toDecimalPlaces(6).toString());
-  });
-
-  describe("terminalRoic (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01) — optional, scenario-specific override", () => {
-    const flatPath = Array(10).fill(new Decimal(0));
-    const margin = new Decimal("0.3");
-    const capitalIntensity = new Decimal("0.1");
-    const rate = new Decimal("0.1");
-    const taxRate = new Decimal(0);
-
-    it("legacy default — omitting terminalRoic (and terminalGrowth) reproduces the prior hardcoded r+3pp behaviour exactly", () => {
-      const withoutParam = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, taxRate);
-      const explicitDefault = computeScenarioEnterpriseValue(
-        new Decimal(100),
-        flatPath,
-        margin,
-        capitalIntensity,
-        rate,
-        taxRate,
-        undefined,
-        rate.plus("0.03")
-      );
-      expect(withoutParam.toString()).toBe(explicitDefault.toString());
-    });
-
-    it("passing null for terminalRoic is identical to omitting it", () => {
-      const omitted = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, taxRate);
-      const explicitNull = computeScenarioEnterpriseValue(
-        new Decimal(100),
-        flatPath,
-        margin,
-        capitalIntensity,
-        rate,
-        taxRate,
-        undefined,
-        null
-      );
-      expect(omitted.toString()).toBe(explicitNull.toString());
-    });
-
-    it("an explicit terminalRoic changes the terminal value and is NOT silently overridden by the r+3pp default", () => {
-      const defaultRoicEv = computeScenarioEnterpriseValue(new Decimal(100), flatPath, margin, capitalIntensity, rate, taxRate);
-      // A lower, fully-faded terminal ROIC (= cost of capital, no durable
-      // excess return) must produce a LOWER terminal value than the
-      // diagnostic r+3pp premium (13%), since a lower ROIC on the same
-      // terminal growth rate implies a higher terminal reinvestment rate
-      // (g/ROIC) and hence a lower terminal FCF.
-      const fadedToRate = computeScenarioEnterpriseValue(
-        new Decimal(100),
-        flatPath,
-        margin,
-        capitalIntensity,
-        rate,
-        taxRate,
-        undefined,
-        rate // terminal ROIC = cost of capital, zero excess return
-      );
-      expect(fadedToRate.lessThan(defaultRoicEv)).toBe(true);
-    });
-  });
-});
-
-describe("buildFadingReinvestmentIntensityPath", () => {
-  it("holds the explicit intensity for years 1-5, by hand", () => {
-    const path = buildFadingReinvestmentIntensityPath(
-      new Decimal("0.20"),
-      new Decimal("0.45"),
-      new Decimal("0.19"),
-      new Decimal("0.03"),
-      new Decimal("0.11")
-    );
-    expect(path).toHaveLength(10);
-    for (let t = 0; t < 5; t++) {
-      expect(path[t].toString()).toBe("0.2");
-    }
-  });
-
-  it("fades linearly over years 6-10 toward the terminal formula's own implied intensity, by hand", () => {
-    // Hand-derived: terminal reinvestment (in dollars) is terminalNopat x
-    // (terminalGrowth / terminalRoic) — the same identity the terminal
-    // value formula above already applies. As a fraction of terminal
-    // revenue that is margin x (1 - taxRate) x (terminalGrowth /
-    // terminalRoic), since terminalNopat / terminalRevenue = margin x
-    // (1 - taxRate) exactly (the (1+g) factor cancels).
-    const margin = new Decimal("0.45");
-    const taxRate = new Decimal("0.19");
-    const terminalGrowth = new Decimal("0.03");
-    const terminalRoic = new Decimal("0.11");
-    const terminalIntensity = margin.mul(new Decimal(1).minus(taxRate)).mul(terminalGrowth.dividedBy(terminalRoic));
-
-    const path = buildFadingReinvestmentIntensityPath(new Decimal("0.20"), margin, taxRate, terminalGrowth, terminalRoic);
-
-    expect(path[9].toDecimalPlaces(10).toString()).toBe(terminalIntensity.toDecimalPlaces(10).toString());
-    // Year 6 (t=6): linear fade, frac = (6-5)/5 = 0.2 of the way from the
-    // explicit 20% to the terminal-implied level.
-    const expectedYear6 = new Decimal("0.20").minus(new Decimal("0.20").minus(terminalIntensity).mul(0.2));
-    expect(path[5].toDecimalPlaces(10).toString()).toBe(expectedYear6.toDecimalPlaces(10).toString());
-  });
-
-  it("passed through computeScenarioEnterpriseValue, changes the result from the flat-intensity figure whenever the terminal-implied level differs from the explicit one", () => {
-    const baseRevenue = new Decimal(331839000000);
-    const growthPath = [new Decimal("0.14"), new Decimal("0.14"), new Decimal("0.14"), new Decimal("0.14"), new Decimal("0.14"), new Decimal("0.122"), new Decimal("0.104"), new Decimal("0.086"), new Decimal("0.068"), new Decimal("0.05")];
-    const margin = new Decimal("0.45");
-    const taxRate = new Decimal("0.19");
-    const rate = new Decimal("0.1");
-    const terminalRoic = new Decimal("0.11");
-
-    const flatEv = computeScenarioEnterpriseValue(baseRevenue, growthPath, margin, new Decimal("0.20"), rate, taxRate, undefined, terminalRoic);
-    const fadedPath = buildFadingReinvestmentIntensityPath(new Decimal("0.20"), margin, taxRate, new Decimal("0.03"), terminalRoic);
-    const fadedEv = computeScenarioEnterpriseValue(baseRevenue, growthPath, margin, fadedPath, rate, taxRate, undefined, terminalRoic);
-
-    expect(fadedEv.toString()).not.toBe(flatEv.toString());
+  it("the terminal return is used exactly as given: higher terminal return, higher value", () => {
+    const path = buildFixedShapeGrowthPath(D("0.1"));
+    const at = (terminal: string) => computeScenarioEnterpriseValue(D(100), path, D("0.3"), D("0.2"), D(terminal), D("0.1"), D(0));
+    expect(at("0.1").lessThan(at("0.11"))).toBe(true);
+    expect(at("0.11").lessThan(at("0.13"))).toBe(true);
   });
 });
 

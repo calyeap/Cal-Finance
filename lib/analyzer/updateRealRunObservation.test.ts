@@ -149,12 +149,17 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
           // gate clear, this run now reaches a real SELL under the live
           // Methodology's Verdict synthesis policy v1, not the old
           // permanent M8-comparator INCOMPLETE.
-          expect(verdict.status).toBe("SELL");
+          //
+          // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change:
+          // that SELL was off the superseded Stage-2 Base (product-decisions
+          // item 27, D2). MSFT's sheet carries no D2 input, so the verdict
+          // is INCOMPLETE and says why; EV and leverage are unchanged.
+          expect(verdict.status).toBe("INCOMPLETE");
           expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
-          expect(verdict.reason).toContain("Verdict synthesis policy v1");
-          expect(result.trust.status).toBe("PARTIAL");
+          expect(verdict.reason).toMatch(/Pending adoption|scenario dollar values/);
+          expect(result.trust.status).toBe("UNUSABLE");
           expect(result.gates.leverage.result).toBe("PASS");
-          expect(result.fairValueRange.kind).toBe("range");
+          expect(result.fairValueRange.kind).toBe("suppressed");
           expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
         } else {
           // OKLO has zero tagged non-operating-investment candidates

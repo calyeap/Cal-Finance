@@ -7,6 +7,7 @@ import Decimal from "decimal.js";
 import { AnalyzerReport } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
+import { withStatedD2Inputs } from "@/lib/analyzer/fixtures/statedD2Inputs";
 import { OKLO_FIXTURE } from "@/lib/analyzer/fixtures/oklo";
 import { CLEAN_PROVENANCE } from "@/lib/analyzer/provenance";
 import type { AnalysisResult, SourcedValue, SuppressedValue } from "@/lib/analyzer/types";
@@ -38,12 +39,16 @@ describe("AnalyzerReport — MSFT", () => {
     expect(screen.queryByText(/MATURE_PROFITABLE_STABLE_FCF/)).toBeNull();
   });
 
-  it("shows DEGENERATE reverse-DCF cells (Section E) and Trigger A's qualifying flag in Section A's manifest", () => {
-    render(<AnalyzerReport result={result} />);
-    // Each of the 4 degenerate cells' state name is echoed in Quick Read's
-    // active-states list, Section A's manifest and Section E's own grid —
-    // duplication across the report is expected, not a defect.
-    expect(screen.getAllByText("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE").length).toBeGreaterThanOrEqual(4);
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the nine-cell grid (and its four
+  // DEGENERATE cells) is one solve now (AR0-2). Section E states the dated
+  // rate in use and the D2 adoption state; MSFT_FIXTURE's sheet is pending.
+  it("shows the dated rate and the D2 adoption state (Section E) and Trigger A's qualifying flag in Section A's manifest", () => {
+    const { container } = render(<AnalyzerReport result={result} />);
+    const sectionE = container.querySelector("section#E") as HTMLElement;
+    expect(within(sectionE).getByText("Discount rate in use")).not.toBeNull();
+    expect(sectionE.textContent).toMatch(/9\.0%/);
+    expect(sectionE.textContent).toMatch(/Dated 2026-10-17/);
+    expect(sectionE.textContent).toMatch(/Pending adoption/);
     expect(screen.getAllByText("MARGIN AT HISTORICAL HIGH").length).toBeGreaterThan(0);
   });
 
@@ -113,7 +118,9 @@ describe("AnalyzerReport — MSFT", () => {
 
   it("Section J shows plain-English labels with units, never a raw PolicyConstants key (defect 4)", () => {
     render(<AnalyzerReport result={result} />);
-    expect(screen.getByText(/Terminal ROIC = r \+ 3 percentage points — PROVISIONAL/)).not.toBeNull();
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01: the r + 3pp terminal ROIC row is
+    // retired with the constant (AR0-2, AR0-3); no PROVISIONAL row for it.
+    expect(screen.queryByText(/Terminal ROIC = r \+ 3/)).toBeNull();
     expect(screen.getByText(/Gate 1 thresholds — <5 \/ 5-9 filed years — PROVISIONAL/)).not.toBeNull();
     expect(screen.queryByText(/terminalRoicPremium|gate1HistoryInsufficientYears/)).toBeNull();
   });
@@ -197,11 +204,10 @@ describe("AnalyzerReport — remaining raw engine-state translations (CF-ANALYZE
     const suppressedGrowth: SuppressedValue = { suppressed: true, state: "NOT COMPUTABLE", cause: "no stable solution in the policy bracket" };
     return {
       ...base,
+      // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — M7's one solve (AR0-2).
       priceImplied: {
         ...base.priceImplied,
-        reverseDcfGrid: base.priceImplied.reverseDcfGrid.map((c) =>
-          c.marginLevel === "current" && c.rate === 0.08 ? { ...c, fiveYearGrowth: suppressedGrowth, tenYearCagr: suppressedGrowth } : c
-        ),
+        reverseDcf: { ...base.priceImplied.reverseDcf, fiveYearGrowth: suppressedGrowth, tenYearCagr: suppressedGrowth },
       },
     };
   }
@@ -531,7 +537,7 @@ describe("AnalyzerReport — Section H two-column frame (defect B2)", () => {
     expect(within(sectionH).getByText("What the price assumes")).not.toBeNull();
     expect(within(sectionH).getByText(/Restated from Section E/)).not.toBeNull();
     expect(within(sectionH).getByText(/PVGO share of EV/)).not.toBeNull();
-    expect(within(sectionH).getByText(/Reverse-DCF cells returning a state/)).not.toBeNull();
+    expect(within(sectionH).getByText(/^Reverse DCF$/)).not.toBeNull();
     // The header tag no longer sits above a range shown alone.
     expect(within(sectionH).getByText("Never shown alone")).not.toBeNull();
   });
@@ -611,7 +617,7 @@ describe("AnalyzerReport — §17.12 disclosure component restored in the report
     const disclosures = container.querySelectorAll("details.disclose");
     expect(disclosures.length).toBeGreaterThanOrEqual(4);
     expect(screen.getByText("What is a discount rate?")).not.toBeNull();
-    expect(screen.getByText("What is a reverse DCF, and why nine cells?")).not.toBeNull();
+    expect(screen.getByText("What is a reverse DCF?")).not.toBeNull();
     expect(screen.getByText("See calculation — PVGO")).not.toBeNull();
     expect(screen.getByText("What is PVGO?")).not.toBeNull();
     for (const d of Array.from(disclosures)) {
@@ -648,7 +654,9 @@ describe("AnalyzerReport — G, the rate at which the base case equals the price
     const { container } = render(<AnalyzerReport result={assembleAnalysisResult(MSFT_FIXTURE)} />);
     const row = rowOf(container.querySelector("section#G") as HTMLElement, "Discount rate at which the base case equals the price");
     expect(within(row).getByText("INCOMPLETE")).not.toBeNull();
-    expect(row.textContent).toMatch(/revaluation of the base case/);
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01: the engine revalues the base case
+    // itself now; MSFT_FIXTURE's sheet is pending adoption, so there is none.
+    expect(row.textContent).toMatch(/pending adoption/i);
     expect(row.textContent).not.toMatch(/no solution in range/i);
     expect(row.textContent).not.toMatch(/\d+\.\d%/);
   });
@@ -913,61 +921,20 @@ describe("AnalyzerReport — table header semantics (M9-ACCESSIBILITY-01)", () =
     }
   });
 
-  it("the reverse-DCF grid is a valid ARIA table: every cell/columnheader/rowheader is owned by a role=\"row\", and a named cell's row/column association resolves structurally", () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the 3 × 3 ARIA grid and its
+  // .gridscroll overflow wrapper are deleted with the grid (AR0-2). The one
+  // solve is an ordinary table whose every row is labelled by its own
+  // row header, like every other Section E table, so it needs neither.
+  it("the reverse DCF is an ordinary labelled table: one row header per figure, and no grid left behind", () => {
     const { container } = render(<AnalyzerReport result={assembleAnalysisResult(MSFT_FIXTURE)} />);
-    const grid = container.querySelector(".grid") as HTMLElement;
-    expect(grid.getAttribute("role")).toBe("table");
-
-    const rows = Array.from(grid.querySelectorAll(':scope > [role="row"]'));
-    expect(rows).toHaveLength(4); // header row + current/median/stress
-
-    // Every columnheader/rowheader/cell must be owned by a role="row" ancestor.
-    for (const el of Array.from(grid.querySelectorAll('[role="columnheader"], [role="rowheader"], [role="cell"]'))) {
-      expect(el.closest('[role="row"]')).not.toBeNull();
-    }
-
-    const headerRow = rows[0];
-    const headerCells = Array.from(headerRow.querySelectorAll('[role="columnheader"]'));
-    expect(headerCells).toHaveLength(4); // empty corner + r = 8% / 10% / 12%
-    const r8Index = headerCells.findIndex((h) => h.textContent === "r = 8%");
-    expect(r8Index).toBeGreaterThan(-1);
-
-    const currentRow = rows.find((r) => r.querySelector('[role="rowheader"]')?.textContent === "current") as HTMLElement;
-    expect(currentRow).not.toBeUndefined();
-    const rowChildren = Array.from(currentRow.children);
-    // The row's own rowheader sits at position 0, matching the header
-    // row's corner cell, so the row is self-describing without indices.
-    expect(rowChildren[0].getAttribute("role")).toBe("rowheader");
-    // The cell in the same column position as "r = 8%" in the header row
-    // is the cell that must be announced against it — proven by DOM
-    // position within each row, not by index attributes alone.
-    const targetCell = rowChildren[r8Index];
-    expect(targetCell.getAttribute("role")).toBe("cell");
+    const table = container.querySelector('table[aria-label="Reverse DCF — one solve at the rate in use"]') as HTMLElement;
+    expect(table).not.toBeNull();
+    const headers = Array.from(table.querySelectorAll('th[scope="row"]')).map((th) => th.textContent);
+    expect(headers[0]).toMatch(/^Implied growth, yrs 1-5 at r = 9\.0%$/);
+    expect(headers).toContain("Equivalent ten-year CAGR");
+    expect(container.querySelector(".grid[role='table']")).toBeNull();
   });
-
-  // CF-ANALYZER-USER-READY-01 — Calvin's authorised mobile layout resume:
-  // at 390px this grid's fixed columns did not fit and the page itself
-  // scrolled sideways (page width 517px against a 390px viewport), cutting
-  // off the R = 10% and R = 12% columns. jsdom computes no real CSS layout
-  // (getBoundingClientRect/scrollWidth are always zero here), so this
-  // cannot re-measure the actual overflow the way the manual Playwright
-  // verification in this fix's PR receipt did — captured at 375/390/430px
-  // and 1440px desktop, screenshots delivered to Calvin directly, the same
-  // path REVIEW used for its own 8930faa evidence pack. What a DOM test CAN
-  // pin is the two structural facts that mechanism depends on: the grid
-  // sits inside its own named scroll wrapper (not loose in the tab body,
-  // where overflow would reach the page), and that wrapper's CSS rule
-  // actually exists. Losing either regresses the page-wide-scroll defect
-  // silently, with no visual diff to catch it.
-  it("the reverse-DCF grid sits inside its own .gridscroll wrapper — the overflow container the mobile fix depends on", () => {
-    const { container } = render(<AnalyzerReport result={assembleAnalysisResult(MSFT_FIXTURE)} />);
-    const grid = container.querySelector(".grid[role='table']") as HTMLElement;
-    const wrapper = grid.closest(".gridscroll");
-    expect(wrapper).not.toBeNull();
-    // The grid must be the wrapper's own content — not merely a distant
-    // ancestor match — so .gridscroll's overflow-x actually bounds it.
-    expect(wrapper?.contains(grid)).toBe(true);
-  });
+;
 
   it("globals.css still gives .gridscroll horizontal overflow and .grid a floor width — the two rules the mobile fix is made of", () => {
     const css = readFileSync(join(process.cwd(), "app", "globals.css"), "utf8");
@@ -1038,8 +1005,9 @@ describe("AnalyzerReport — company-scale dollar figures render compact, never 
     // solves — only the fixture's deliberately small test-arithmetic scale
     // changes, not the relationship the solver depends on.
     const scale = new Decimal("1000000000");
+    // STATED D2 test inputs (AR4) so the one solve resolves.
     const result = assembleAnalysisResult({
-      ...MSFT_FIXTURE,
+      ...withStatedD2Inputs(MSFT_FIXTURE),
       reverseDcf: {
         ...MSFT_FIXTURE.reverseDcf,
         baseYearRevenue: sourcedFor(MSFT_FIXTURE.reverseDcf.baseYearRevenue!.value.mul(scale)),
@@ -1048,8 +1016,8 @@ describe("AnalyzerReport — company-scale dollar figures render compact, never 
     });
     const { container } = render(<AnalyzerReport result={result} />);
     const section = container.querySelector("section#E") as HTMLElement;
-    expect(section.textContent).toMatch(/yr-10 revenue\s*\$[\d.]+T/i);
-    // No eleven-plus-digit run anywhere in the diagnostic grid.
+    expect(section.textContent).toMatch(/year-10 revenue\s*\$[\d.]+T/i);
+    // No eleven-plus-digit run anywhere in the section.
     expect(section.textContent).not.toMatch(/\$\d{10,}/);
   });
 });

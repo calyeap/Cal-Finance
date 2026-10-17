@@ -135,64 +135,54 @@ describe("recordedBundles.ts", () => {
     expect(await hasRecordedAnalystBundle("ZzzTest")).toBe(true);
   });
 
-  describe("terminalRoic (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01) — optional, independent of the three nullable drivers", () => {
-    it("round-trips an authored terminalRoic alongside the three drivers", async () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the two Methodology v2.1 D2
+  // drivers, added to the sheet WITHOUT values (Option A on #447). The
+  // retired per-scenario `terminalRoic` override and its tests are deleted:
+  // D2 sets the terminal return from the moat class.
+  describe("D2 drivers — return on new investment per scenario, and the moat class", () => {
+    it("round-trips an authored return on new investment and moat class", async () => {
       const input = validInput();
-      input.scenarios.bull.terminalRoic = "0.125";
+      input.scenarios.bear.returnOnNewInvestment = "0.15";
+      input.scenarios.base.returnOnNewInvestment = "0.215";
+      input.scenarios.bull.returnOnNewInvestment = "0.25";
+      input.moatClass = "narrow";
       await recordAnalystBundle(TICKER, input);
 
       const bundle = await recordedAnalystInputBundle(TICKER);
-      expect(bundle?.inputs.scenarios.bull.terminalRoic?.toString()).toBe("0.125");
-      // Untouched scenarios never acquire one — absent, not 0.
-      expect(bundle?.inputs.scenarios.bear.terminalRoic).toBeNull();
-      expect(bundle?.inputs.scenarios.base.terminalRoic).toBeNull();
+      expect(bundle?.inputs.scenarios.base.returnOnNewInvestment?.toString()).toBe("0.215");
+      expect(bundle?.inputs.moatClass).toBe("narrow");
+      expect((await getRecordedAnalystBundleInput(TICKER))?.input.moatClass).toBe("narrow");
     });
 
-    it("a bundle recorded before this field existed — no terminalRoic key on any scenario at all — still round-trips exactly as before", async () => {
-      // Simulates NVDA's own migration-008 seed row shape: no `terminalRoic`
-      // property on the stored scenario object, not even `null`.
-      const input = validInput();
-      await recordAnalystBundle(TICKER, input);
+    it("a sheet recorded without them — every sheet recorded before D2 — reads them as absent, never 0 or a default", async () => {
+      await recordAnalystBundle(TICKER, validInput());
 
       const bundle = await recordedAnalystInputBundle(TICKER);
-      expect(bundle?.inputs.scenarios.bear.terminalRoic).toBeNull();
-      expect(bundle?.inputs.scenarios.base.terminalRoic).toBeNull();
-      expect(bundle?.inputs.scenarios.bull.terminalRoic).toBeNull();
-      // recordedScenarioValuesComputeFromDrivers is gated on the three
-      // original drivers only — terminalRoic's absence must never block it.
+      for (const key of ["bear", "base", "bull"] as const) {
+        expect(bundle?.inputs.scenarios[key].returnOnNewInvestment).toBeNull();
+      }
+      expect(bundle?.inputs.moatClass).toBeNull();
+      // Gated on the three original drivers only; adoption is a separate
+      // question the engine answers (pending adoption — no D2 value).
       expect(bundle?.inputs.recordedScenarioValuesComputeFromDrivers).toBe(true);
     });
 
-    it("refuses a non-numeric terminalRoic rather than storing unparsed text", async () => {
-      const input = validInput();
-      input.scenarios.bear.terminalRoic = "not-a-number";
-      await expect(recordAnalystBundle(TICKER, input)).rejects.toThrow();
-      expect(await hasRecordedAnalystBundle(TICKER)).toBe(false);
-    });
+    it("refuses a non-numeric or non-positive return on new investment — it is a divisor", async () => {
+      const text = validInput();
+      text.scenarios.bear.returnOnNewInvestment = "not-a-number";
+      await expect(recordAnalystBundle(TICKER, text)).rejects.toThrow();
 
-    it("refuses a non-positive terminalRoic (REVIEW-38751207194-1 — division-safety guard, G/terminalRoic is otherwise Infinity at 0)", async () => {
       const zero = validInput();
-      zero.scenarios.base.terminalRoic = "0";
-      await expect(recordAnalystBundle(TICKER, zero)).rejects.toThrow(/terminalRoic must be positive/);
-      expect(await hasRecordedAnalystBundle(TICKER)).toBe(false);
-
-      const negative = validInput();
-      negative.scenarios.bull.terminalRoic = "-0.05";
-      await expect(recordAnalystBundle(TICKER, negative)).rejects.toThrow(/terminalRoic must be positive/);
+      zero.scenarios.base.returnOnNewInvestment = "0";
+      await expect(recordAnalystBundle(TICKER, zero)).rejects.toThrow(/returnOnNewInvestment must be positive/);
       expect(await hasRecordedAnalystBundle(TICKER)).toBe(false);
     });
 
-    it("leaving terminalRoic blank on one scenario does not block recordedScenarioValuesComputeFromDrivers for the others", async () => {
-      const input = validInput();
-      input.scenarios.base.terminalRoic = "0.11";
-      input.scenarios.bull.terminalRoic = "0.125";
-      // bear.terminalRoic left absent entirely.
-      await recordAnalystBundle(TICKER, input);
-
-      const bundle = await recordedAnalystInputBundle(TICKER);
-      expect(bundle?.inputs.recordedScenarioValuesComputeFromDrivers).toBe(true);
-      expect(bundle?.inputs.scenarios.bear.terminalRoic).toBeNull();
-      expect(bundle?.inputs.scenarios.base.terminalRoic?.toString()).toBe("0.11");
+    it("refuses a moat class outside none / narrow / wide", async () => {
+      // A form post or hand-edited payload can carry any text.
+      const input = { ...validInput(), moatClass: "very wide" } as unknown as RecordedAnalystBundleInput;
+      await expect(recordAnalystBundle(TICKER, input)).rejects.toThrow(/Unsupported moat class/);
+      expect(await hasRecordedAnalystBundle(TICKER)).toBe(false);
     });
   });
 });

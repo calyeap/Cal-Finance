@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import Decimal from "decimal.js";
 import { assembleAnalysisResult, type CompanyFixture } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
+import { withStatedD2Inputs } from "@/lib/analyzer/fixtures/statedD2Inputs";
 import type { AnalysisResult, InterpretationStatement, PageOneProse } from "@/lib/analyzer/types";
 import type { ReportAnalysis } from "@/lib/analyzer/reportAnalysis";
 import { overviewTabText } from "@/app/components/overviewTabMarkup";
@@ -111,8 +112,10 @@ describe("the evaluator reads the Analysis Result's real shapes (regression: 7 O
 });
 
 describe("MSFT — the full brief", () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — a complete report is one whose
+  // assumption sheet is adopted under D2; STATED D2 test inputs here.
   it("a complete MSFT report passes the full-brief contract, every section with content", () => {
-    const acceptance = check("MSFT", ACCEPTANCE_POLICY.MSFT, reportFor(complete(assembleAnalysisResult(MSFT_FIXTURE))));
+    const acceptance = check("MSFT", ACCEPTANCE_POLICY.MSFT, reportFor(complete(assembleAnalysisResult(withStatedD2Inputs(MSFT_FIXTURE)))));
 
     expect(acceptance.failures).toEqual([]);
     expect(acceptance.pass).toBe(true);
@@ -173,7 +176,8 @@ describe("MSFT — the full brief", () => {
 });
 
 describe("CF-ANALYZER-MSFT-NUMERIC-INTEGRITY-01 — the displayed scenario/range/price-position figures must reconcile", () => {
-  const msftResult = assembleAnalysisResult(MSFT_FIXTURE);
+  // An adopted sheet (STATED D2 test inputs, AR4), so every section has content.
+  const msftResult = assembleAnalysisResult(withStatedD2Inputs(MSFT_FIXTURE));
 
   it("a range whose bear/bull bounds do not match the computed scenario values fails, with both figures named", () => {
     const mutated: AnalysisResult = {

@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import Decimal from "decimal.js";
 import { buildAcquiredRun } from "./acquiredRun";
 import { assembleAnalysisResult } from "./assemble";
+import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 import { __resetAcquisitionCache } from "./acquisition/provider";
 import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision } from "./runStore";
@@ -38,7 +39,9 @@ describe("growthLicence on a real acquired MSFT run (no DB)", () => {
     __resetAcquisitionCache();
   });
 
-  it("YES — RONIC ~17.5% clears every rate in the approved 8/10/12% grid", async () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the ladder is evaluated at the
+  // D1 rate (AR0-2): MSFT is a stable business (SIC 7372), 9.0%.
+  it("YES — RONIC ~17.7% clears the D1 rate in use (9.0%)", async () => {
     const run = await buildAcquiredRun({
       ticker: "MSFT",
       price: { value: MSFT_CAPTURE_CLOSE, timestamp: "2026-09-04", source: "recorded capture" },
@@ -51,7 +54,7 @@ describe("growthLicence on a real acquired MSFT run (no DB)", () => {
 
     expect(result.growthLicence.status).toBe("YES");
     expect(result.growthLicence.reason).toContain("17.7164");
-    expect(result.growthLicence.reason).toContain("8%/10%/12%");
+    expect(result.growthLicence.reason).toContain("9.0%");
 
     // The licence reads directly off the already-approved ladder — confirm
     // it agrees with the ladder's own CLEAN state asserted elsewhere
@@ -83,7 +86,24 @@ describe("growthLicence on a real acquired MSFT run (no DB)", () => {
     expect(result.growthLicence.status).toBe("YES");
   });
 
-  it("verdictBlockers: with the durable Stage-2 bundle recorded (issue #442), MSFT carries no Step 1 scenario-dollar-values block — only the open-policy gap every company shares", async () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change: MSFT's
+  // recorded Stage-2 sheet is superseded by D2 (product-decisions item 27)
+  // and carries no D2 input, so the committed run is pending adoption and
+  // DOES carry a Step 1 block for it. The claim this test makes — that an
+  // adopted, driver-authored sheet carries no Step 1 block, only the
+  // open-policy gap every company shares — runs on STATED D2 test inputs.
+  it("verdictBlockers: an adopted D2 sheet carries no Step 1 scenario-values block — only the open-policy gap every company shares; a pending sheet carries one", async () => {
+    const pendingRun = await buildAcquiredRun({
+      ticker: "MSFT",
+      price: { value: MSFT_CAPTURE_CLOSE, timestamp: "2026-09-04", source: "recorded capture" },
+      source: "CAPTURE",
+      nonOperatingInvestments: { tags: [], value: new Decimal(0), errorDirection: null },
+      profileHumanConfirmed: true,
+    });
+    const pending = assembleAnalysisResult(pendingRun.fixture);
+    expect(pending.trust.status).toBe("UNUSABLE");
+    expect(pending.verdictBlockers.some((b) => b.step === "Step 1")).toBe(true);
+
     // Before CF-MSFT-STAGE2-DURABLE-SEED-01 (migration 010), this run's
     // scenario dollar values were fixture-carried (A4,
     // CF-ANALYZER-INTEGRITY-PHASE-A-01), which suppressed the fair-value
@@ -101,7 +121,11 @@ describe("growthLicence on a real acquired MSFT run (no DB)", () => {
       profileHumanConfirmed: true,
     });
 
-    const result = assembleAnalysisResult(run.fixture);
+    const result = assembleAnalysisResult({
+      ...withStatedD2Inputs(run.fixture),
+      scenarioValues: null,
+      scenarioValuesAreFixtureCarried: false,
+    });
 
     expect(result.trust.status).toBe("PARTIAL");
     expect(result.fairValueRange.kind).toBe("range");

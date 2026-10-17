@@ -2,7 +2,7 @@ import Decimal from "decimal.js";
 import { POLICY } from "../policy";
 import { combineProvenance } from "../provenance";
 import { computedValue, suppressedValue } from "../figures";
-import type { DiscountRate, Figure, ReinvestmentRonicResult, RonicLadderState, SourcedValue } from "../types";
+import type { Figure, ReinvestmentRonicResult, RonicLadderCell, SourcedValue } from "../types";
 
 // M5 — reinvestment and RONIC (§7.2). Two genuinely separate figures
 // sharing one module: reinvestment (a single period figure) and RONIC (a
@@ -38,10 +38,13 @@ export interface RonicInput {
 
 export function computeReinvestmentRonic(
   reinvestmentInput: ReinvestmentInput,
-  ronicInput: RonicInput
+  ronicInput: RonicInput,
+  // The run's D1 rate (discountRate.ts) — the one rate the ladder is
+  // evaluated against since AR0-2 retired the 8/10/12% grid.
+  rate: Decimal
 ): ReinvestmentRonicResult {
   const reinvestment = computeReinvestment(reinvestmentInput);
-  const ronic = computeRonicLadder(ronicInput);
+  const ronic = computeRonicLadder(ronicInput, rate);
 
   const capitalLight =
     !ronic.suppressed && ronic.value.cells.some((cell) => cell.value !== null && cell.value.greaterThan(POLICY.capitalLightRonicFloor));
@@ -91,7 +94,7 @@ function computeReinvestment(input: ReinvestmentInput): ReinvestmentRonicResult[
   );
 }
 
-function computeRonicLadder(input: RonicInput): ReinvestmentRonicResult["ronic"] {
+function computeRonicLadder(input: RonicInput, rate: Decimal): ReinvestmentRonicResult["ronic"] {
   const { fiveYearDeltaNopat, fiveYearDeltaInvestedCapital } = input;
 
   if (fiveYearDeltaNopat === null || fiveYearDeltaInvestedCapital === null) {
@@ -114,29 +117,21 @@ function computeRonicLadder(input: RonicInput): ReinvestmentRonicResult["ronic"]
     deltaNopat.dividedBy(deltaInvestedCapital).lessThanOrEqualTo(0);
 
   if (notMeaningful) {
-    const cells = POLICY.rateGrid.map((rate) => ({
-      rate: rate.toNumber() as DiscountRate,
-      state: "RONIC NOT MEANINGFUL" as RonicLadderState,
-      value: null,
-    }));
+    const cells: RonicLadderCell[] = [{ rate, state: "RONIC NOT MEANINGFUL", value: null }];
     return computedValue({ cells }, provenance);
   }
 
   const ronic = deltaNopat.dividedBy(deltaInvestedCapital);
 
-  const cells = POLICY.rateGrid.map((rate) => classifyRonicCell(ronic, rate));
+  const cells = [classifyRonicCell(ronic, rate)];
 
   return computedValue({ cells }, provenance);
 }
 
-function classifyRonicCell(
-  ronic: Decimal,
-  rate: Decimal
-): { rate: DiscountRate; state: RonicLadderState; value: Decimal | null } {
-  const rateAsLiteral = rate.toNumber() as DiscountRate;
+function classifyRonicCell(ronic: Decimal, rate: Decimal): RonicLadderCell {
 
   // Row 3 before row 4 (§7.2 M5's own order) — in practice mutually
-  // exclusive at these grid rates (0.08–0.12), since a RONIC exceeding the
+  // exclusive at D1's rates (9–11%), since a RONIC exceeding the
   // 200% cap is never also below a rate this low, but the order is kept
   // faithful to the table rather than relying on that never overlapping.
   if (ronic.lessThan(rate)) {
@@ -147,14 +142,14 @@ function classifyRonicCell(
     // ladder only ever returns the base LOW RONIC state; M7 is
     // responsible for upgrading a specific cell's rendering to the
     // INVERTED sub-label after running its own solve.
-    return { rate: rateAsLiteral, state: "LOW RONIC — VALUE-DESTROYING GROWTH", value: ronic };
+    return { rate, state: "LOW RONIC — VALUE-DESTROYING GROWTH", value: ronic };
   }
 
   if (ronic.greaterThan(POLICY.ronicCap)) {
-    return { rate: rateAsLiteral, state: "RONIC CAPPED AT 200%", value: POLICY.ronicCap };
+    return { rate, state: "RONIC CAPPED AT 200%", value: POLICY.ronicCap };
   }
 
-  return { rate: rateAsLiteral, state: "CLEAN", value: ronic };
+  return { rate, state: "CLEAN", value: ronic };
 }
 
 // ---------------------------------------------------------------------------

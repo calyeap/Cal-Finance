@@ -9,7 +9,8 @@ import { analystInputsFor } from "../../lib/analyzer/acquisition/analystInputs";
 import { annualSeries, operatingMarginSeries } from "../../lib/analyzer/acquisition/history";
 import { TAG_MAP } from "../../lib/analyzer/acquisition/tagMap";
 import { computeEnterpriseValue } from "../../lib/analyzer/modules/enterpriseValue";
-import { computeReverseDcfGrid } from "../../lib/analyzer/modules/reverseDcf";
+import { solveReverseDcf } from "../../lib/analyzer/modules/reverseDcf";
+import { datedRateRow } from "../../lib/analyzer/discountRate";
 import { evaluateLeverage } from "../../lib/analyzer/gates";
 import { activeProvider } from "../../lib/marketdata";
 import { UNDEFINED_POLICY_CONSTANTS } from "../../lib/analyzer/policy";
@@ -216,20 +217,20 @@ async function runOne(company: CalibrationCompany, offline: boolean): Promise<Co
   const achievedTenYear = achievedRevenueCagr(series, 10, recency);
   const achievedFiveYear = achievedRevenueCagr(series, 5, recency);
 
-  const grid = computeReverseDcfGrid({
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — M7 is one solve on the main
+  // engine, holding the base scenario's adopted D2 drivers. This harness
+  // carries no adopted assumption sheet, so the solve reports that rather
+  // than solving on drivers nobody adopted.
+  const NO_ADOPTED_SHEET = "the calibration harness carries no adopted assumption sheet (Methodology v2.1 D2 drivers)";
+  const solve = solveReverseDcf({
     baseYearRevenue: get("current-revenue"),
     targetEnterpriseValue: ev.suppressed ? null : { value: ev.value.enterpriseValue, provenance: ev.qualification.provenanceTokens },
-    currentMargin: get("current-operating-margin"),
-    medianMargin: medianMargin(loaded.companyFacts),
-    gate1State: null,
-    // RONIC is not acquired in this mapping version — companyInputs.ts holds
-    // both five-year deltas at null — so the ladder has no cells at all.
-    ronicCells: [],
-    lagBiasDirection: "conservative",
-    configuredStressMarginLevel: UNDEFINED_POLICY_CONSTANTS.stressMarginLevel,
-    configuredNopatTaxRate: UNDEFINED_POLICY_CONSTANTS.nopatTaxRate,
+    rate: datedRateRow(price?.timestamp ?? null).stable,
+    nopatTaxRate: UNDEFINED_POLICY_CONSTANTS.nopatTaxRate,
+    heldDrivers: null,
+    heldDriversMissing: NO_ADOPTED_SHEET,
   });
-  const required = requiredGrowthCells(grid);
+  const required = requiredGrowthCells(solve);
 
   const partial = { ticker: company.ticker, shape: company.shape, priceLocation, achievedTenYear, achievedFiveYear, required };
   const observation: CalibrationObservation = { ...partial, usable: isUsable(partial) };
@@ -249,18 +250,15 @@ async function runOne(company: CalibrationCompany, offline: boolean): Promise<Co
     },
     nonOperatingInvestmentsErrorDirection: "understates",
   });
-  const gridCf = computeReverseDcfGrid({
+  const solveCf = solveReverseDcf({
     baseYearRevenue: get("current-revenue"),
     targetEnterpriseValue: evCf.suppressed ? null : { value: evCf.value.enterpriseValue, provenance: evCf.qualification.provenanceTokens },
-    currentMargin: get("current-operating-margin"),
-    medianMargin: medianMargin(loaded.companyFacts),
-    gate1State: null,
-    ronicCells: [],
-    lagBiasDirection: "conservative",
-    configuredStressMarginLevel: null,
-    configuredNopatTaxRate: COUNTERFACTUAL_NOPAT_TAX_RATE,
+    rate: datedRateRow(price?.timestamp ?? null).stable,
+    nopatTaxRate: COUNTERFACTUAL_NOPAT_TAX_RATE,
+    heldDrivers: null,
+    heldDriversMissing: NO_ADOPTED_SHEET,
   });
-  const cellsSolvedCf = gridCf.filter((c) => !c.fiveYearGrowth.suppressed).length;
+  const cellsSolvedCf = solveCf.fiveYearGrowth.suppressed ? 0 : 1;
 
   return {
     company,
@@ -272,7 +270,7 @@ async function runOne(company: CalibrationCompany, offline: boolean): Promise<Co
       cellsSolved: cellsSolvedCf,
       note: evCf.suppressed
         ? `EV still INCOMPLETE with §4.4 resolved: ${evCf.cause}`
-        : `EV computes with §4.4 resolved; reverse-DCF cells solved: ${cellsSolvedCf}/9`,
+        : `EV computes with §4.4 resolved; reverse-DCF solved: ${cellsSolvedCf === 1 ? "yes" : "no"}`,
     },
     mappingGaps,
   };
@@ -346,10 +344,10 @@ function report(runs: CompanyRun[], failures: { ticker: string; error: string }[
         for (const reason of input.blockedBy) lines.push(`      ${label} BLOCKED: ${reason}`);
       }
     }
-    lines.push("    required (M7 implied growth, all nine cells):");
+    lines.push("    required (M7 implied growth, the one solve):");
     if (o.required.value !== null) {
       for (const cell of o.required.value) {
-        lines.push(`      ${cell.marginLevel}@${cell.rate}: 5yr ${pct(cell.fiveYearGrowth)}, 10yr CAGR ${pct(cell.tenYearCagr)}`);
+        lines.push(`      solve@${cell.rate.mul(100).toFixed(1)}%: 5yr ${pct(cell.fiveYearGrowth)}, 10yr CAGR ${pct(cell.tenYearCagr)}`);
       }
     } else {
       for (const reason of o.required.blockedBy) lines.push(`      BLOCKED: ${reason}`);

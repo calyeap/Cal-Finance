@@ -53,7 +53,7 @@ The rule catches ordinary phrasing too, so write around it. A number word CARRYI
   "at 8%, 10%, 12%"          ->  reference the three policy rate slots
   "M7's grid"                ->  "the reverse-DCF grid"
 
-A VALUE COMPUTED AT A RATE IS A DIFFERENT SLOT FROM THE RATE ITSELF. The policy rate slots (policy.rateGrid.0/1/2) hold only the discount rate. Growth, the ten-year CAGR, year-10 revenue and the return on new invested capital at a given margin and rate are each their own catalogue entry, already fully qualified with that margin and rate in its id — e.g. priceImplied.reverseDcf.current@0.08.ronic. Never build a slot id yourself by combining a policy rate slot with a metric name; copy the exact id the catalogue gives that metric.
+A VALUE COMPUTED AT A RATE IS A DIFFERENT SLOT FROM THE RATE ITSELF. The rate slot (valuationBasis.discountRate) holds only the discount rate in use. The price-implied growth, ten-year CAGR and year-10 revenue are each their own catalogue entry — e.g. priceImplied.reverseDcf.tenYearCagr. Never build a slot id yourself by combining the rate slot with a metric name; copy the exact id the catalogue gives that metric.
 
 Where you want an actual count — how many filed years, how long the history window is — there is a slot for it. Use the slot; do not spell the number out.
 

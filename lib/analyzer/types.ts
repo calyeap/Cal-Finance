@@ -345,14 +345,14 @@ export interface ScenarioDriverSet {
   shareCount: Decimal;
   // Required, free text, cannot be empty (design §5.4).
   writtenAnchor: string;
-  // Optional, scenario-specific terminal ROIC (§3.5: "In the scenario DCF,
-  // terminal ROIC is an analyst input with a written anchor and must fade
-  // toward the cost of capital unless a durable moat is argued explicitly"
-  // — a distinct rule from the diagnostic reverse DCF's own fixed r+3pp
-  // convention, §6.2/Appendix B, PROVISIONAL). Absent/null means
-  // computeScenarioEnterpriseValue keeps applying that diagnostic r+3pp
-  // default — EXACTLY prior behaviour (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01).
-  terminalRoic?: Decimal | null;
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — Methodology v2.1 D2's return on
+  // new investment for this scenario (anchored to the company's
+  // incremental-return history), fading to the terminal return by year 10.
+  // Reinvestment is NOPAT × next-year growth ÷ this — it, not
+  // `reinvestmentCapitalIntensity` above, drives value. Calvin's input (an
+  // agent never authors it, product-decisions item 19); absent or null
+  // means the sheet is pending adoption and no D2 value is computed.
+  returnOnNewInvestment?: Decimal | null;
 }
 
 export interface ScenarioSet {
@@ -376,6 +376,33 @@ export interface EnterpriseValueBreakdown {
   // computed number — null when there is nothing non-operating to carry.
   nonOperatingInvestmentsErrorDirection: "understates" | "overstates" | null;
   enterpriseValue: Decimal;
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 (R5). Absent on a snapshot stored
+  // before this field existed.
+  bridgeFlags?: BridgeFlags;
+}
+
+// R5 — what the bridge did with each claim the Methodology's common-equity
+// completeness rule names, so a reader can see it rather than assume it.
+export interface BridgeClaim {
+  claim: "minority interests" | "preferred stock" | "convertible debt";
+  // IN BRIDGE: tagged, and deducted from enterprise value as a senior claim.
+  // IN TOTAL DEBT: tagged, already inside the total-debt figure.
+  // NOT TAGGED: no structured figure — a missing tag is not zero, so flagged.
+  // NOT CURRENT: tagged, but not at the bridge's balance-sheet date — shown,
+  // flagged, not added.
+  status: "IN BRIDGE" | "IN TOTAL DEBT" | "NOT TAGGED" | "NOT CURRENT";
+  amount: Decimal | null;
+  note: string;
+}
+
+export interface BridgeFlags {
+  claims: BridgeClaim[];
+  // Strategic stakes stay at book in the bridge; a disclosed fair value is
+  // shown beside it, never substituted.
+  strategicStakes: { atBook: Decimal; disclosedFairValue: Decimal | null; note: string };
+  // Listed, never deducted: contingent items are not balance-sheet debt.
+  contingentItems: { item: string; amount: Decimal; note: string }[];
+  financeLeases: { treatment: "ADDED SEPARATELY" | "INCLUDED IN TOTAL DEBT"; note: string };
 }
 
 // A Figure, not a bag of always-present raw fields: M1 is "INCOMPLETE if
@@ -447,7 +474,6 @@ export interface FcfResult {
   fcfYield: { cashFcf: Figure<Decimal>; cashFcfLessSbc: Figure<Decimal> };
 }
 
-export type DiscountRate = 0.08 | 0.1 | 0.12;
 export type MarginLevel = "current" | "median" | "stress";
 
 export type RonicLadderState =
@@ -457,17 +483,21 @@ export type RonicLadderState =
   | "RONIC CAPPED AT 200%"
   | "CLEAN";
 
+export interface RonicLadderCell {
+  rate: Decimal;
+  state: RonicLadderState;
+  value: Decimal | null;
+}
+
 export interface ReinvestmentRonicResult {
   reinvestment: Figure<Decimal>;
   // Suppressed as a whole (INCOMPLETE) only when the five-year NOPAT/
-  // invested-capital deltas themselves are missing. Otherwise always
-  // exactly three cells, evaluated per grid cell rather than once per
-  // company — "the rate in that cell" differs across 8/10/12%, so the same
-  // company can be CLEAN at 8% and LOW RONIC at 10% and 12% (§7.2 M5). The
-  // RONIC NOT MEANINGFUL state is rate-independent (it fires from ΔNOPAT
-  // or Δinvested-capital alone) and so appears identically on all three
-  // cells when it fires.
-  ronic: Figure<{ cells: { rate: DiscountRate; state: RonicLadderState; value: Decimal | null }[] }>;
+  // invested-capital deltas themselves are missing. Otherwise exactly one
+  // cell, the ladder evaluated against this run's D1 rate (frozen spec
+  // §7.2 M5 as amended by AR0-2: with one solve, "the rate in that cell" is
+  // the D1 rate). Kept as a one-cell list so a consumer reads the same shape
+  // it read under the retired 8/10/12% grid.
+  ronic: Figure<{ cells: RonicLadderCell[] }>;
   capitalLight: boolean;
   workingCapitalIntensity: Decimal | null;
   lagBiasDirection: "conservative" | "generous";
@@ -517,12 +547,6 @@ export interface SensitivityResult {
   // Debt share is removed from the table — value-neutral by construction,
   // MM without taxes or distress (I10).
   debtShareRemoved: true;
-  // CF-STEP4-READING-IMPL-01 — the ruled Step 4 forecast-dispersion reading
-  // derived from `tornado` above (`Step4ForecastDispersionReading`,
-  // `sensitivity.ts`). Typed `unknown` here for the same reason `tornado`
-  // itself is: this schema file stays independent of the module that shapes
-  // it; callers cast, as they already do for `tornado`.
-  forecastDispersion: unknown;
 }
 
 export interface DiagnosticsResult {
@@ -548,17 +572,65 @@ export interface DiagnosticsResult {
 }
 
 // ---------------------------------------------------------------------------
-// §7.2 M6 / §10 E — steady-state EV, PVGO and the reverse-DCF grid
+// §7.2 M6 / §10 E — steady-state EV, PVGO and the reverse DCF
 // ---------------------------------------------------------------------------
 
-export interface ReverseDcfCell {
-  marginLevel: MarginLevel;
-  rate: DiscountRate;
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — M7 as amended by AR0-2 (frozen spec
+// §14.9): ONE solve on the main valuation engine (M15), at the D1 rate, on
+// the base scenario's own margin, return on new investment and moat-credit
+// terminal. It replaces the 8/10/12% × three-margin grid; margin levels,
+// rate-band ends, growth, return on new investment and moat move to M14.
+export interface ReverseDcfSolve {
+  rate: Decimal;
+  // The constant years-1–5 growth (fixed path shape, §7.1) at which the
+  // base case's enterprise value equals today's.
   fiveYearGrowth: Figure<Decimal>;
   tenYearCagr: Figure<Decimal>;
   year10Revenue: Figure<Decimal>;
-  ronic: Figure<Decimal>;
-  lagBiasDirection: "conservative" | "generous";
+  // The drivers the solve held at the base scenario's adopted values.
+  heldAt: { operatingMargin: Decimal; returnOnNewInvestment: Decimal; terminalReturnOnNewCapital: Decimal } | null;
+}
+
+// ---------------------------------------------------------------------------
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the rate and D2 inputs a run was
+// valued under (frozen spec §14.9 AR0-1, AR0-3)
+// ---------------------------------------------------------------------------
+
+export type RateBand = "stable" | "cyclical" | "pre-revenue";
+
+/** Methodology v2.1 D1 — the dated rate in use, and why this band. */
+export interface DiscountRateInUse {
+  rate: Decimal;
+  band: RateBand;
+  // Plain language: which D1 route put the company in this band.
+  basis: string;
+  // The dated policy row the rate was read from.
+  effectiveFrom: string;
+  provenance: DatedDiscountRate["provenance"];
+  // D1's ±0.5pp verdict check points — computed here, read by AR5.
+  checkRates: { lower: Decimal; upper: Decimal };
+  // D1 is valid only inside the §6.5 net-debt gate (< 10% of EV).
+  withinValidatedDomain: boolean;
+}
+
+/**
+ * Whether the assumption sheet carries the D2 inputs (return on new
+ * investment per scenario, the moat class). A sheet without them is
+ * PENDING ADOPTION: the engine computes no D2 value for it and `statement`
+ * says so in plain language (Calvin, 17 Oct 2026, Option A on #447).
+ */
+export interface D2Inputs {
+  status: "ADOPTED" | "PENDING ADOPTION";
+  missing: string[];
+  moatClass: MoatClass | null;
+  // Rate + moat credit (bear +0; bull = base + 1.5pp); null while pending.
+  terminalReturnOnNewCapital: { bear: Decimal; base: Decimal; bull: Decimal } | null;
+  statement: string;
+}
+
+export interface ValuationBasis {
+  discountRate: DiscountRateInUse;
+  d2: D2Inputs;
 }
 
 export interface PriceImplied {
@@ -570,8 +642,7 @@ export interface PriceImplied {
   // steady-state EV is computed from median-margin NOPAT silently, with no
   // separate gap display.
   nopatGap: { current: Decimal; medianMargin: Decimal } | null;
-  // Nine cells: three margin levels × three rates.
-  reverseDcfGrid: ReverseDcfCell[];
+  reverseDcf: ReverseDcfSolve;
   impliedExitMultiple: { value: Figure<Decimal>; dividesMetric: string };
 }
 
@@ -849,10 +920,23 @@ export interface InterpretationResult {
 // §7.1 — policy constants, surfaced as configuration, not code literals
 // ---------------------------------------------------------------------------
 
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — one dated row of Methodology v2.1
+// D1's rate table (policy.ts). `provenance` records where the values came
+// from and how the yearly reset is measured; it is not a rule value.
+export interface DatedDiscountRate {
+  effectiveFrom: string;
+  stable: Decimal;
+  cyclicalOrPreRevenue: Decimal;
+  provenance: { approval: string; evidence: string; measurementConvention: string };
+}
+
+export type MoatClass = "none" | "narrow" | "wide";
+
 export interface PolicyConstants {
   terminalGrowth: Decimal;
-  terminalRoicPremium: Decimal;
-  rateGrid: [Decimal, Decimal, Decimal];
+  discountRate: { table: DatedDiscountRate[]; verdictCheckOffset: Decimal };
+  moatCredit: Record<MoatClass, Decimal>;
+  bullMoatCreditUplift: Decimal;
   preRevenueConstructionLeadYears: number;
   leveredCostOfEquityCap: Decimal;
   leverageThreshold: Decimal;
@@ -872,13 +956,6 @@ export interface PolicyConstants {
   ronicCap: Decimal;
   shapeMismatchGapPoints: Decimal;
   sensitivityDisplayThreshold: Decimal;
-  // Step 4 B2 categorical dispersion-tier boundaries (CF-STEP4-TIER-BOUNDARY-
-  // DEFAULT-01). LOW/MEDIUM is the same value as `sensitivityDisplayThreshold`
-  // (a driver the display-suppression rule already hides cannot honestly be
-  // called anything but LOW). MEDIUM/HIGH has no approved anchor — AI DEFAULT,
-  // red-team judgement (§7.1 policy.ts provenance).
-  step4DispersionTierLowMediumBoundary: Decimal;
-  step4DispersionTierMediumHighBoundary: Decimal;
   fcfYieldGrowthPreconditionBand: [Decimal, Decimal];
   // "Verdict synthesis policy v1" — APPROVED 22 Sep 2026, live Cal Finance
   // Methodology (Notion), reconfirmed current and NOT superseded by
@@ -1143,14 +1220,12 @@ export interface AnalysisResult {
   // silent gap and never fabricated.
   achievedRevenueCagr: RawInput<AchievedGrowth>;
   // CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 — §10.6.2 Step 2's growth licence
-  // (`lib/analyzer/growthLicence.ts`), read from the already-approved RONIC
-  // ladder (`diagnostics.reinvestmentRonic.ronic`) against the
-  // already-approved rate grid (`POLICY.rateGrid`). Exposed here for
-  // inspection/testing, independent of `deriveVerdict`'s own user-facing
-  // reason text (unchanged by this field — no UX/wording change). Always
-  // present: YES/NO only where every rate-grid cell agrees unequivocally,
-  // UNKNOWN otherwise, with the precise cause — never a default and never a
-  // fabricated cell choice (§11 items 2 and 4 remain open house policy).
+  // (`lib/analyzer/growthLicence.ts`), read from the RONIC ladder
+  // (`diagnostics.reinvestmentRonic.ronic`), evaluated at the run's D1 rate
+  // since AR0-2. Exposed here for inspection/testing, independent of
+  // `deriveVerdict`'s own user-facing reason text. Always present: YES/NO
+  // only where the ladder reads unequivocally, UNKNOWN otherwise, with the
+  // precise cause — never a default.
   growthLicence: GrowthLicenceResult;
   // CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 (REVIEW correction) — the ordered
   // blocker classification `lib/analyzer/verdictBlockers.ts` reads off this
@@ -1189,6 +1264,10 @@ export interface AnalysisResult {
   // codeVersion are the same computation. Absent on a snapshot stored before
   // this field existed.
   runIdentity?: RunIdentity;
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the dated D1 rate and the D2
+  // inputs this result was valued under. Absent on a snapshot stored before
+  // this field existed.
+  valuationBasis?: ValuationBasis;
 }
 
 export interface RunIdentity {

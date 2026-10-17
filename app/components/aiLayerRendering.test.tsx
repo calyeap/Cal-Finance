@@ -257,8 +257,10 @@ describe("Section I — states above the takeaway, and the four labelled lines",
     const section = container.querySelector("section#I") as HTMLElement;
     const bearing = section.querySelector(".bearing") as HTMLElement;
     // MSFT's own fixture carries these; the same ones Section A shows.
+    // (CF-AR4-RATE-REINVESTMENT-TERMINAL-01: its reverse DCF is one solve,
+    // INCOMPLETE while its sheet is pending adoption — no DEGENERATE cells.)
     expect(within(bearing).getByText("MARGIN AT HISTORICAL HIGH")).not.toBeNull();
-    expect(within(bearing).getAllByText("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE").length).toBeGreaterThan(0);
+    expect(within(bearing).getAllByText("INCOMPLETE").length).toBeGreaterThan(0);
   });
 
   it("shows nothing suppressed or qualified rather than an empty heading when no state is active", () => {

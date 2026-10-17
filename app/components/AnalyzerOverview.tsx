@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import Decimal from "decimal.js";
 import type { AnalysisResult, InterpretationStatement } from "@/lib/analyzer/types";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
-import type { Step4ForecastDispersionReading } from "@/lib/analyzer/modules/sensitivity";
+import { largestSwingDriver, type LargestSwingDriver, type TornadoRowResult } from "@/lib/analyzer/modules/sensitivity";
 import { AiLayerNote, humanizeCause } from "./AnalyzerReport";
 import { OverviewQuickRead } from "./QuickRead";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
@@ -128,13 +128,15 @@ function pct(value: Decimal, dp = 1): string {
 // Slot 8 — the complete standalone treatment of Section E's price-implied
 // content (issue #160 SCOPE item 5): steady-state EV and PVGO share of EV
 // are the same figures ScenarioRangeStrip (AnalyzerReportFrame's hero)
-// already restates condensed; implied growth is the same r = 8%,
-// current-margin cell AnalyzerReport's Section H right column restates.
+// already restates condensed; implied growth is M7's one solve at the D1
+// rate (frozen spec §14.9 AR0-2), the same figure AnalyzerReport restates.
 // "One figure, one computation" — nothing here is computed, only read from
 // the AnalysisResult and formatted.
 function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
   const { priceImplied } = result;
-  const baseRateCell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
+  // Absent on a snapshot stored before AR4 (it carried the retired grid).
+  const solve = priceImplied.reverseDcf as AnalysisResult["priceImplied"]["reverseDcf"] | undefined;
+  const growthLabel = solve === undefined ? "" : `Implied growth, yrs 1-5 at r = ${pct(solve.rate)}`;
 
   return (
     <div className="ovslot" id="slot-8">
@@ -177,22 +179,18 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
           <b>{pct(priceImplied.pvgoShareOfEv.value)}</b>
         </div>
       )}
-      {baseRateCell &&
-        (baseRateCell.fiveYearGrowth.suppressed ? (
+      {solve &&
+        (solve.fiveYearGrowth.suppressed ? (
           <div className="state">
-            <span className="lbl">Implied growth, yrs 1-5 at r = 8%</span>{" "}
+            <span className="lbl">{growthLabel}</span>{" "}
             <span className="cause">
-              {notComputedLine(
-                baseRateCell.fiveYearGrowth.state,
-                baseRateCell.fiveYearGrowth.cause,
-                result.gates.leverage
-              )}
+              {notComputedLine(solve.fiveYearGrowth.state, solve.fiveYearGrowth.cause, result.gates.leverage)}
             </span>
           </div>
         ) : (
           <div className="pi" style={{ borderBottom: 0 }}>
-            <span className="lbl">Implied growth, yrs 1-5 at r = 8%</span>
-            <b>{pct(baseRateCell.fiveYearGrowth.value)}</b>
+            <span className="lbl">{growthLabel}</span>
+            <b>{pct(solve.fiveYearGrowth.value)}</b>
           </div>
         ))}
     </div>
@@ -201,9 +199,9 @@ function PriceAssumptionSlot({ result }: { result: AnalysisResult }) {
 
 // Slot 11 — "What would change the verdict." CF-ANALYZER-V1-SETTLE-01
 // correction, CALVIN RULING — A (slot 11, comment 5946448076): where M14's
-// tornado already names this run's single largest-swing driver — the same
-// `Step4ForecastDispersionReading` Step 4 already computes
-// (`selectStep4ForecastDispersionReading`, sensitivity.ts) — state it
+// tornado already names this run's single largest-swing driver
+// (`largestSwingDriver`, sensitivity.ts — M14's own rows, not the retired
+// Step 4 dispersion reading) — state it
 // directly, the design contract's own "short, specific statement naming
 // the variable" shape for this slot (m9-analyzer-design-contract.md row
 // 11), never a prediction or advice on when to act. No new computation, no
@@ -255,14 +253,14 @@ function RecentDevelopmentsSlot({ result }: { result: AnalysisResult }) {
   );
 }
 
-function ChangeTriggerSlot({ reading }: { reading: Step4ForecastDispersionReading }) {
+function ChangeTriggerSlot({ reading }: { reading: LargestSwingDriver }) {
   return (
     <div className="ovslot structural" id="slot-11">
       <h3>What would change the verdict</h3>
       {reading.available ? (
         <p>
-          The single largest driver of this valuation is {humanizeCause(reading.selectedDriver)}, which can move the
-          result by {pct(reading.fullRangeValueImpact)} across its own analyst-supplied range.
+          The single largest driver of this valuation is {humanizeCause(reading.driver)}, which can move the result by{" "}
+          {pct(reading.fullRangeValueImpact)} across its tested range.
         </p>
       ) : (
         <p className="note">{CHANGE_TRIGGER_UNAVAILABLE_LINE}</p>
@@ -273,7 +271,7 @@ function ChangeTriggerSlot({ reading }: { reading: Step4ForecastDispersionReadin
 
 export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; aiLayer?: AiLayerReport }) {
   const pageOne = result.interpretation.pageOne;
-  const forecastDispersion = result.diagnostics.sensitivity.forecastDispersion as Step4ForecastDispersionReading;
+  const changeTrigger = largestSwingDriver((result.diagnostics.sensitivity.tornado ?? []) as TornadoRowResult[]);
 
   // §17.7.1 — the same deterministic selection Section I's "Challenger
   // point" line and Section I2's headline already share (issue #160 SCOPE
@@ -348,7 +346,7 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
 
       {/* Slot 11 — the strongest existing sensitivity signal, where one
           exists (CF-ANALYZER-V1-SETTLE-01, CALVIN RULING — A). */}
-      <ChangeTriggerSlot reading={forecastDispersion} />
+      <ChangeTriggerSlot reading={changeTrigger} />
 
       {/* Slot 12 — the most recent filing acquired, as the honest answer to
           "latest material developments" (REQUIRED OVERVIEW CONTENT item 9). */}
