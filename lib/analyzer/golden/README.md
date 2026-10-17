@@ -43,3 +43,15 @@ Each `<ticker>.json` file has:
   "notes": string[]                // company-level narrative notes (tag drift, structural refusal, etc.)
 }
 ```
+
+## Running the harness
+
+```
+TEST_DATABASE_URL=postgres://localhost:5432/calfinance_test npx vitest run lib/analyzer/golden
+```
+
+The golden tests are pure and never touch the database, but `vitest.setup.ts`
+refuses to start any test run unless `TEST_DATABASE_URL` names a `*_test`
+database. The URL only has to parse with a `_test` database name; for these
+tests the database does not need to exist. CI sets it already, so `npm test`
+there runs the harness unchanged.

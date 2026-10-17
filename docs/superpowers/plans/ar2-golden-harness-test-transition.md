@@ -1,17 +1,34 @@
 # CF-AR2-GOLDEN-HARNESS-01 — test-transition classification (DO item 4/6)
 
-Full per-file classification of every pre-existing test file under
-`lib/analyzer/**/*.test.ts` and `scripts/evidence/**/*.test.ts` (124 files,
-including the one `.tsx` test, `recordedAnalystInputEntryOnRealRun.test.tsx`;
-the new files this outcome adds under `lib/analyzer/golden/` are this
-outcome's own harness, not classified here), referenced from the PR body
-rather than inlined there for size. "encodes a ruling" = keep as-is,
-untouched by this outcome. "PINS AN OUTPUT" = a candidate to be replaced by
-an invariant in AR3+ — not touched, not loosened, not deleted by this
-outcome either; DO NOT forbids any of that here.
+Full per-file classification of **every** pre-existing test file in the
+repository at base `d263b2e`: all 208 `*.test.ts(x)` files, one row each
+(the new files this outcome adds under `lib/analyzer/golden/` are this
+outcome's own harness, not classified here). Referenced from the PR body
+rather than inlined there for size. The list is in three parts:
 
-Ten files carry a genuine output-pin (a solved valuation number asserted
-literally): `lib/analyzer/assemble.test.ts`,
+1. **Analyzer engine and evidence tests** (`lib/analyzer/**`,
+   `scripts/evidence/**`): 124 files, the first table.
+2. **Analyzer tests outside `lib/analyzer/`** (`app/analyzer/**`,
+   `app/api/analyzer/**`, `app/actions/analyzer`, `app/components/**` that
+   render analyzer output, `app/screen/**`, `lib/screen`, portfolio review,
+   global CSS/route-state contracts, `scripts/analyzer/**`): 45 files, the
+   second table.
+3. **Tests outside the analyzer** (portfolio, ledger, holdings, setup
+   wizard, dashboard chrome, market data): 39 files, the third table. None of
+   them references `lib/analyzer`, a valuation or a verdict. The seven
+   `lib/marketdata/**` files test a module the analyzer reads its price and
+   identity inputs from, but they assert provider rules, not valuation output,
+   so AR3–AR5 engine changes do not affect them.
+
+"encodes a ruling" = keep as-is, untouched by this outcome. "PINS AN OUTPUT"
+= a candidate to be replaced by an invariant in AR3+ — not touched, not
+loosened, not deleted by this outcome either; DO NOT forbids any of that here.
+A value written by hand into a fixture (a price, a scenario value, a mocked
+verdict) and echoed in rendering is a fixture display value, not a pin.
+
+Seventeen files carry a genuine output-pin (a solved valuation number, or a
+verdict derived from one, asserted literally). Ten are in part 1:
+`lib/analyzer/assemble.test.ts`,
 `lib/analyzer/modules/reverseDcf.test.ts` (its GOLDEN block specifically —
 the rest of that file encodes real rules and stays),
 `lib/analyzer/modules/reverseDcf.independentVerification.test.ts`,
@@ -23,13 +40,29 @@ solved $214.26/$283.31/$402.73), `lib/analyzer/msftSensitivityCaptureOnRealRun.t
 `lib/analyzer/step4ForecastDispersionReadingOnRealRun.test.ts` (these three
 pin solved tornado EVs / `fullRangeValueImpact` digits), and
 `lib/analyzer/step4SignalObservationOnRealRun.test.ts` (NVDA's solved
-weighted distribution 142.30). Each of those mixed files also encodes real
-rules that stay; only the pinned figure is the AR3+ candidate.
+weighted distribution 142.30). Seven are in part 2:
+`app/analyzer/acceptanceGateOnRealRun.test.tsx`,
+`app/analyzer/analyzerRoutesOnRealRun.test.tsx`,
+`app/components/analyzerSurfacesOnRealRun.test.tsx` and
+`app/components/nonOperatingJudgmentRecordedOnRealRun.test.tsx` (these four
+pin MSFT's real-run `SELL`, which follows from Base $283.31 / 1.7638× — the
+same pin as `msftStage3VerdictOnRealRun`; the first also pins the hero's
+solved "Bear$214"/"Bull$403"), `app/components/AnalyzerReport.test.tsx`
+(the fixture's weighted `$475`, the same figure `assemble.test.ts` pins, and
+OKLO's solved implied probabilities 40%/25%; its `$510.12` and
+`$31.00 - $48.00` are fixture display values),
+`app/components/AnalyzerOverview.test.tsx` (the M14-selected driver
+`"growth"`) and `app/components/QuickRead.test.tsx` (solved reverse-DCF
+growth 13.7% / 18.5%). Each of those mixed files also encodes real rules that
+stay; only the pinned figure is the AR3+ candidate.
 `lib/analyzer/acquisition/msftStage2ValuationProof.test.ts`, previously
-listed here, compares its range and M14 cells to a recomputation rather than
-literal numbers and is now classified "keep". The other 114 files encode a
-rule, a gate, a suppression state, or a sourced fact's extraction — not a
-solved valuation number — and each row names the specific rule it encodes.
+listed as a pin, compares its range and M14 cells to a recomputation rather
+than literal numbers and is classified "keep". The other 191 files encode a
+rule, a gate, a suppression state, a UI/routing contract, or a sourced fact's
+extraction — not a solved valuation number — and each row names the specific
+rule it encodes.
+
+## Part 1 — analyzer engine and evidence tests (124 files)
 
 | File | Classification | Reason |
 |---|---|---|
@@ -157,3 +190,97 @@ solved valuation number — and each row names the specific rule it encodes.
 | `scripts/evidence/returnObject.test.ts` | encodes a ruling — keep | Exit codes 0 pass/UNKNOWN, 1 preflight FAIL, 2 incomplete evidence or unaccounted check, 3 delivery failed or LOCAL_READY; return object separates execution-complete from delivered and source==served. |
 | `scripts/evidence/run.test.ts` | encodes a ruling — keep | An unexpected runner crash exits with the execution-incomplete code (not preflight-FAIL 1), prints a distinguishable message, and carries the real error. |
 | `scripts/evidence/selfTest.test.ts` | encodes a ruling — keep | Self-test proves each preflight check fires for the right reason in both directions (overflow both limbs, font, console errors, states, rendered, Continue gating) against purpose-built fixtures. |
+
+## Part 2 — analyzer tests outside `lib/analyzer/` (45 files)
+
+| File | Classification | Reason |
+|---|---|---|
+| `app/actions/analyzer.test.ts` | encodes a ruling — keep | CF-UPDATE-FIRST-OUTCOME-01 beginUpdateRunAction routing (all dependencies mocked): missing prior run → notFound() with no identity resolved; the new run's identity comes only from the prior run's server-held ticker (client-posted ticker/name ignored); createRun → advanceRunAutomatically → redirect to /analyzer/{newRunId}; a no-longer-resolving ticker redirects to /analyzer and creates nothing; shares beginAnalysisAction's non-RESOLVED refusal path. |
+| `app/analyzer/[runId]/error.test.tsx` | encodes a ruling — keep | M9-STATE-HANDLING-01 run error boundary: inside .cb-analyzer with .az-topbar, role="alert" "Analysis could not be completed", never error.message or a stack, digest as opaque reference, "Try again" calls reset() and links to /analyzer, no report-only chrome (PREREPORT-01), "use client", no shadowing child error.tsx. |
+| `app/analyzer/[runId]/loading.test.tsx` | encodes a ruling — keep | ANALYZER-V2-PREREPORT-01 Analyzing state: identity fetched from /api/analyzer/runs/{runId}/identity with no-store and rendered from a mocked fetch (fixture display value), four locked stage labels in order, no spinner/overlay/shimmer/skeleton/progressbar, only the run root renders AnalyzingState (report/facts/profile/snapshot get neutral "Loading", PR #268). |
+| `app/analyzer/[runId]/not-found.test.tsx` | encodes a ruling — keep | M9-STATE-HANDLING-01 run not-found: inside AnalyzerShell, "Run not found" plus a cause, exactly one recovery link to /analyzer, no report-only chrome; page.tsx calls notFound(); report/page.tsx redirects into the unified shell with no own not-found.tsx (CF-DESIGN-AUTHORITY-CUTOVER-01). |
+| `app/analyzer/acceptanceGateOnRealRun.test.tsx` | PINS AN OUTPUT — replace with invariant | Real automatic MSFT run pins the SOLVED hero bear/bull "Bear$214"/"Bull$403" (L281–282, from $214.26/$402.73) and the derived verdict "SELL" on Overview (L252, rationale L253–255) and Evidence (L260), from real price $499.70 vs solved Base $283.31 / 1.7638× — same pin as `msftStage3VerdictOnRealRun`; the rules that stay: §4.4 durable override (migration 007) applies with no per-run judgment, EV/FCF yield/leverage not suppressed, leverage PASS, trust PARTIAL, Key Stats P/E and 52-week show the local plain-English marker never INCOMPLETE, ≤3 Overview missing-data markers, no raw gate/trust codes, Evidence cites "Verdict synthesis policy v1", NVDA suppression stays local. Borderline, not counted: NVDA "CLEAN (75.2%)" (L325) is the RONIC-ladder diagnostic from filed data, not a fair value or verdict. |
+| `app/analyzer/analyzerRoutesOnRealRun.test.tsx` | PINS AN OUTPUT — replace with invariant | MSFT real-run Overview pins the derived verdict "SELL" in .az-hero-verdict (L153, rationale L154–156) from solved Base $283.31 / 1.7638× — same pin as `msftStage3VerdictOnRealRun`; the rules that stay: CF-ANALYZER-AUTORUN-01 no route redirects to a human step (MSFT/OKLO/NVDA), hero never shows raw INCOMPLETE, OKLO/NVDA show "No valuation verdict for this company yet — ", 8 Overview slots, Evidence Sections A/B/J, legacy /report → ?tab=business, Screens 2/3 only under Sources/Details, "Recorded by AUTOMATIC", a human override wins and is not re-resolved. |
+| `app/analyzer/analyzerSevenTabsOnRealRun.test.tsx` | encodes a ruling — keep | CF-ANALYZER-USER-READY-01 DO 6 on a real MSFT run: exactly seven tab slugs in order, each renders non-empty .az-shell content cold, cold and warm renders identical (stability, not a value check), repeated loads never create a second run row; asserts no solved figure. |
+| `app/analyzer/error.test.tsx` | encodes a ruling — keep | M9-NONM9-CHROME-01 entry-route error boundary: inside .cb-analyzer with .az-topbar, role="alert" "Stock Analyzer could not be loaded", never error.message or a stack, digest shown, reset() called, link to Dashboard "/" (not /analyzer), no report-only chrome, the [runId] error.tsx still exists unshadowed. |
+| `app/analyzer/loading.test.tsx` | encodes a ruling — keep | M9-NONM9-CHROME-01 entry-route loading: inside .cb-analyzer with .az-topbar, in-place "Loading"/"preparing stock analyzer" text, no svg/spinner/overlay/shimmer/skeleton/progressbar, the [runId] loading.tsx stays the nearer boundary. |
+| `app/analyzer/not-found.test.tsx` | encodes a ruling — keep | M9-NONM9-CHROME-01 entry-route not-found: inside the shell, "Page not found" plus a cause, exactly one recovery link to Dashboard "/", no report-only chrome, [runId] not-found.tsx still declares AnalyzerRunNotFound. |
+| `app/analyzer/profileScreenGateBand.test.tsx` | encodes a ruling — keep | Gate 0 profile screen with hand-written Gate0Input fixtures: bank sector → "UNSUPPORTED PROFILE — ASSET-BASED ROW NOT VALIDATED IN v1" (never "supported profile"), null classifications fail closed to "CLASSIFICATION UNAVAILABLE", passing input → "Gate 0 — supported profile", all four classification rows shown with the fired test attributed, missing input → NOT ACQUIRED, §6.1 explanation only on refusal. |
+| `app/api/analyzer/runs/[runId]/identity/route.test.ts` | encodes a ruling — keep | PREREPORT-01 / R7 identity lookup: GET returns 200 with only the run's own stored {ticker, companyName}; an unknown runId gets 404, never a guessed identity. |
+| `scripts/analyzer/resolveNonOperatingSelection.test.ts` | encodes a ruling — keep | ai-run.ts --nonoperating= rule: a single tag is recorded alone (never the old all-candidates join), an explicit multi-tag selection is " + "-joined, "none" → "None of these are non-operating", an unrecognised tag fails loudly rather than falling back; candidate values are hand-written fixtures. |
+| `app/components/AnalyzerEntry.test.tsx` | encodes a ruling — keep | Analyzer Home: the ticker field is the one dominant entry act (no Step 1 framing, tabs, hero or rail chrome), §17 comprehension content collapsed behind a closed details.az-home-learnmore, and all five identity outcomes stay honest (RESOLVED shows company and Begin with no price; UNKNOWN/UNSUPPORTED/NO_FILING_HISTORY name their cause with no Try again; UNAVAILABLE offers Try again as OPEN, not SUPPRESSION); a missing fixture says no run was created. |
+| `app/components/AnalyzerOverview.test.tsx` | PINS AN OUTPUT — replace with invariant | Pins the M14-selected largest-swing tornado driver `"growth"` on MSFT_FIXTURE (L82, L83, L229); the rules that stay: fixed slot 5–12 order, slot 5 verbatim first-sentences narrative or honest fallback, slots 6/7/9/10 show "—" under one shared #interpretation-unavailable note (≤3 markers), slot 8 restates Section E from `result` (no second computation), slot 11 states `reading.selectedDriver` and its `fullRangeValueImpact` % (L84, already invariant) or "No computed change trigger", slot 7 challenger selection rule. |
+| `app/components/AnalyzerReport.test.tsx` | PINS AN OUTPUT — replace with invariant | Pins engine arithmetic on the synthetic fixtures: scenario-weighted value `$475` (L1077, equal-weight mean of 265/510/650 via computeScenarioOutputs — the same figure `assemble.test.ts` pins), OKLO implied success probabilities `40%`/`25%` (L306–307, solved by computeImpliedProbability); borderline, not counted: implied-RONIC diagnostic `20.9%` (L56). `$510.12` (L34, MSFT fixture price input) and `$31.00 - $48.00` (L289, OKLO hard-coded V_success inputs) are fixture display values, not pins. The rules that stay: section/theme order, no raw enum/state codes outside Disclosure, INCOMPLETE/NOT COMPUTED never $NaN or 0, priceless → INCOMPLETE never $0, G INCOMPLETE vs NO SOLUTION IN RANGE, no fabricated F/E figures, Section J configured constants, table ARIA/scope. |
+| `app/components/AnalyzerReportFrame.test.tsx` | encodes a ruling — keep | Locked shell DOM order identity → hero → tabs → .az-actions → tab body on every tab, the hero's data-tab compact-header gate, identical chrome counts per tab, and the UPDATE entry ("Look at this company again") beside Save this version carrying the run's own runId in one .az-actions row; renders the MSFT_FIXTURE verdict but asserts no figure or verdict word. |
+| `app/components/AnalyzerRightRail.test.tsx` | encodes a ruling — keep | Key Stats leverage row: signed netDebtRatio renders "Net cash X%" when negative, "Net debt X%" when positive (expected % recomputed from `result`, not a literal), "No net debt or net cash (0%)" at exactly zero, and no signed label when leverage is not PASS; fixtures move only the cash input. |
+| `app/components/AnalyzerShell.test.tsx` | encodes a ruling — keep | .cb-analyzer fixed to data-theme="dark" with no ThemeContext dependency, the wordmark links to `/` (not legacy Calboard), Stock Analyzer is current (.on, aria-current=page) with Dashboard and Holdings links in one nav. |
+| `app/components/AnalyzerTopBar.test.tsx` | encodes a ruling — keep | Top bar carries only the "Stock Analyzer" context and the privacy toggle (no brand/nav links, no theme toggle — V2 is dark-only), the toggle shares usePrivacy() state, only variant="steps" adds .steps. |
+| `app/components/analyzerSurfacesOnRealRun.test.tsx` | PINS AN OUTPUT — replace with invariant | MSFT real-run verdict `"SELL"` (L162, L187, L246, L247) and its rationale "above the SELL level under every uncertainty bucket…" (L188–190), from solved Base $283.31 / 1.7638× — same pin as `msftStage3VerdictOnRealRun`; the rules that stay: sourced capture close 499.70/41.27 (never the fixture's 510.12/14.50), SEC entityName/profile/SIC sourced facts, slot and section order, hero never leaks verdict.reason outside Evidence and renders it verbatim on Evidence, slot 8 suppression line (never a figure) when suppressed, Business capture empty state, Cannot-judge rendering, OKLO INCOMPLETE. |
+| `app/components/analyzerV2AcceptanceTargets.test.tsx` | encodes a ruling — keep | CSS-source + DOM drift guard at the five acceptance widths (1920/960/1024/768/390): nav tier widths, right rail hidden below 1280, hero grid-template-areas per tier, Overview-only-expands selector declared once, locked chrome order with identity/active tab/body anchor on every tab; the hero verdict check is dynamic (verdict.status / heroHeadline), no literal (HOLD at L288–293 is a comment only). |
+| `app/components/nonOperatingJudgmentRecordedOnRealRun.test.tsx` | PINS AN OUTPUT — replace with invariant | MSFT real-run verdict `"SELL"` (L98, L123), its rationale (L124–126) and the headline "Trading at or above the bull case…" (L142–144, price $499.70 above solved bull $402.73), from solved Base $283.31 / 1.7638× — same pin as `lib/analyzer/nonOperatingJudgmentRecordedOnRealRun.test.ts`; the rules that stay: the recorded §4.4 ruling yields all Overview slots in order, fairValueRange.kind === "range", the hero never shows INCOMPLETE or leaks verdict.reason outside Evidence. |
+| `app/components/AnalyzingState.test.tsx` | encodes a ruling — keep | ANALYZER-V2-PREREPORT-01 pre-report state: exactly the four locked stages in order, identity shown only once known, only stage 0 marked done and only after identity (nothing guessed), no fake %, provider name, progressbar or controls, no tab/hero/rail chrome; no lib/analyzer import. |
+| `app/components/DominantVerdictSlot.test.tsx` | encodes a ruling — keep | M9 §4 two render paths: completed shows the BUY/HOLD/SELL word plus an evidence-status label with no confidence/probability/% words and UNUSABLE never reads as a judgement on the company; verdict.reason verbatim only on Evidence (CF-ANALYZER-V1-SETTLE-01, isEvidenceTab defaults false); INCOMPLETE uses .state/.name/.cause, no confidence indicator. Every verdict is a hand-written VerdictResult prop, not a solved run. |
+| `app/components/FactCard.test.tsx` | encodes a ruling — keep | Step 2 fact card: own radio group per card, submit gated per card, a decided card preselects its recorded state and an undecided one nothing (§3.8.3), suppression only where the value is null and shown as "—" never 0 (§4.3), tag-exempt vs computed (derivedFrom) cards distinguished; values are fixture facts (24.6, 30045000000 are fixture props), no valuation output. |
+| `app/components/FullAnalysisNav.test.tsx` | encodes a ruling — keep | M9 §2.2/§3 rail: exactly six themed anchors in contract order with labels, one "← Overview" link to the given href, no counts, badges or "N of M". |
+| `app/components/JudgmentSelector.test.tsx` | encodes a ruling — keep | §4.4 judgment selector: three judgments in mock order (JUDGMENT_KEYS matches JUDGMENTS), options only where the mock lists them, NON-OPERATING INVESTMENTS states a gap, "Mixed basis" shown but not selectable, nothing preselected, submit gated, posts the option label, recorded judgment preselected; 13.8%/14.7%/14.6% are static mock strings in `lib/analyzer/judgments.ts`, not engine output. |
+| `app/components/ProfileDecisionForm.test.tsx` | encodes a ruling — keep | Step 6 §6.3 profile decision: one radio group of CONFIRMED/OVERRIDDEN/CANNOT JUDGE, none preselected, submit gated, override requires a reason and a profile, cannot-judge asks no reason and explains the PARTIAL consequence, posts recommendedProfile. |
+| `app/components/QuickRead.test.tsx` | PINS AN OUTPUT — replace with invariant | Pins SOLVED reverse-DCF outputs on MSFT_FIXTURE through assembleAnalysisResult: price-implied ten-year growth "13.7%" (L260) and "18.5% revenue growth for five years" (L284) from computeReverseDcfGrid; borderline, a solved state: DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE count in (0, 4) (L249–254) depends on the terminal share. The rules that stay: §17.16 interim set of exactly 8 items never behind details, §9.6 trust shown (MSFT PARTIAL), E1 strip above the items, OKLO §10.4 Failure/Success form with no Bear/Bull, no price → INCOMPLETE never $0, H3 missing cash basis does not fall through, no BUY/SELL/target words; $265/$510/$650, $3.10, $31–$48 are fixture-authored scenarioValues and 64% is arithmetic on them. |
+| `app/components/ScenarioRangeStrip.test.tsx` | encodes a ruling — keep | Overview slot 4 (§2.1 row 4) never the range alone; §10.6.3 suppression: profile not confirmed hides the position slot and bear→bull % but keeps the range, trust UNUSABLE (fixture totalDebt 1200) gives the plain-English reason with no range, no "Driven by" and no raw state codes; pre-revenue shows the distribution shape, never Bear/Bull; asserts labels only, no figures. |
+| `app/components/aiLayerRendering.test.tsx` | encodes a ruling — keep | §10.2 I/I2 and §10.7: sections say "has not run"/"has not completed" rather than blank, statements under their §8.2 responsibility, I2 reads only `challenger` and says unreconciled, status names NOT CONFIGURED/FAILED/the model, page one uses [C] for the 4 variable items else the [S] template (always 8), §17.7.1 earliest-bound selection labelled "Selected"; interpretation and challenger are hand-written fixtures. Borderline, not counted: the DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE state appears in the bearing block (L261), which depends on the reverse-DCF terminal share. |
+| `app/components/businessMarketContextRendering.test.tsx` | encodes a ruling — keep | M9-ITEM5: Business shows "Not yet available" with reason or the narrative verbatim with 10-K Item 1 provenance (filing date, accession, rule version) and no verdict words (§8.3 limit 1); Market Context shows "Not yet available" or SIC code/description with a "not a peer" disclaimer and no peer/sector/index figures. |
+| `app/components/suppressedRangeRendering.test.tsx` | encodes a ruling — keep | §10.3/§9.5 negative test: a suppressing state (V1 LEVERAGE UNSUPPORTED IN v1 via fixture totalDebt 1200; V7 Financials UNSUPPORTED PROFILE — ASSET-BASED ROW) puts state and cause in section H with no Bear/Bull bound or "Driven by", section H never collapsed, unsuppressed MSFT still renders Bear/Bull, §9.6 trust UNUSABLE. |
+| `app/components/PriceChartPanel.test.tsx` | encodes a ruling — keep | Overview slot 3 restates the acquired price and timestamp verbatim ($510.12 is a hand-passed prop), no target line or buy/sell/hold text, decorative svg aria-hidden, "no price history" as visible text, priceless → INCOMPLETE plus cause, never $0.00 or a chart. |
+| `app/screen/page.test.tsx` | encodes a ruling — keep | SCREEN page: empty states, candidates are not-held universe tickers with an existing report (held tickers never looked up), fixed universe order not a ranking, INCOMPLETE reason word for word, a report's own BUY passes through with no synthetic VERDICT/SCORE/RANKING; runStore and verdictDisplay mocked (BUY/INCOMPLETE are mock returns). |
+| `app/screen/verdictDisplay.test.ts` | encodes a ruling — keep | screenVerdictDisplay returns deriveVerdict's status/reason unchanged (never its own), SpotCheckIncompleteError → gate-incomplete with outstanding fact ids, other errors re-thrown, gateIncompleteReason wording matches the report page word for word; gate and verdict fully mocked. |
+| `lib/screen.test.ts` | encodes a ruling — keep | candidateTickers is a deterministic set difference in universe order; buildScreenCandidates includes only not-held tickers with a run, missing map entry → null, carries only runId and resolvedCompanyName with no verdict, score or INCOMPLETE. |
+| `lib/portfolioReview.test.ts` | encodes a ruling — keep | Portfolio-review policy on ledger arithmetic: 10% mature cap exclusive (10.00% WITHIN_CAP, 10.10% REVIEW, never a trim), unpriced → NOT_CHECKABLE, stale prices checked with date carried, cross-account aggregation, analyzer linkage carries only runId and name (no verdict), descending weight with not-checkable last, denominator disclosed; no lib/analyzer import. |
+| `app/portfolio-review/page.test.tsx` | encodes a ruling — keep | Portfolio Review page: empty-state CTA, allocation-arithmetic weights, priced-denominator and floor disclosure, unpriced not checkable, stale close date disclosed, cross-account 12.00% REVIEW, above-cap is REVIEW not a trim, sector/speculative caps named as not checked, reports linked by company name never with a verdict, privacy-masked denominator; runStore mocked. |
+| `app/m9AcceptanceGaps.test.ts` | encodes a ruling — keep | M9 acceptance from globals.css source: WCAG AA ≥4.5:1 ink/muted on ground/field/tint in both themes, no --gain/--loss/--stale on verdict or state chrome (.verdictword uncoloured), one dark rule of custom properties only with identical token names, 200% zoom lands in a defined width mode with no overflow-x, state/cause/provenance never hidden or truncated. |
+| `app/globalsCss.test.ts` | encodes a ruling — keep | CSS-source design contract: Standard/Wide/Compact width system and main-column ranges, no third column or sticky aside at Wide, 72ch prose cap, .hframe stacking at 720px, breakpoint set {599,720,767,1024,1279}, token-only colours with byte-exact token blocks, :focus-visible, table.t th scoping, V2 hero order (price before verdict ≤1279px), no animation on analyzing marks, .cb-dash/.holdings-chrome regressions. |
+| `app/error.test.tsx` | encodes a ruling — keep | Global error boundary: .cb-dash with DashboardTopBar (not .cb-analyzer chrome), role="alert", never error.message or a stack, digest as opaque reference, working retry plus Dashboard link, "use client". |
+| `app/not-found.test.tsx` | encodes a ruling — keep | Global 404: .cb-dash with DashboardTopBar (not .cb-analyzer chrome), names the state, exactly one recovery link to "/". |
+| `app/page.test.tsx` | encodes a ruling — keep | Dashboard: donut centre equals the value-block total, stale prices included, unpriced excluded with the "true value is higher" disclosure, fully unpriced → no donut, single holding 100%, hierarchy order value → Holdings → Allocation, holdings by weight, one tbody, empty state from holdings existing (Rev-3 §2.3), privacy masking of value/P&L $/quantity/cost/MV; portfolio/ledger arithmetic on mocked positions. |
+
+## Part 3 — tests outside the analyzer (39 files)
+
+| File | Classification | Reason |
+|---|---|---|
+| `app/accounts/new/SetupWizard.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: setup wizard as-of date and holdings-list steps. |
+| `app/actions/holdings.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: updateHoldingsAction. |
+| `app/actions/prices.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: retryPriceFetchAction / refreshAllPricesAction. |
+| `app/actions/setup.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: resolveTickerAction / setupAccountAction. |
+| `app/components/AllocationDonut.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: allocation donut incl. M1.5 view by asset class. |
+| `app/components/DashboardHoldingsTable.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: dashboard holdings table. |
+| `app/components/DashboardShell.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: dashboard shell chrome. |
+| `app/components/DashboardTopBar.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: dashboard top bar. |
+| `app/components/HoldingsShell.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: holdings shell chrome. |
+| `app/components/HoldingsTopBar.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: holdings top bar. |
+| `app/components/MaskableValue.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: privacy-maskable value rendering. |
+| `app/components/PriceCell.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: holding price cell. |
+| `app/components/PriceRefreshControl.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: price refresh control. |
+| `app/components/PrivacyContext.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: usePrivacy context. |
+| `app/components/ThemeContext.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: theme context. |
+| `app/holdings/HoldingsEditor.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: holdings editor incl. M1.5 asset type display. |
+| `app/moneyRouteParity.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: Dashboard and /holdings money parity. |
+| `app/testing-infra.test.tsx` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: component-testing infrastructure smoke test. |
+| `lib/accountReconciliation.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: recordAccountReconciliation. |
+| `lib/allocation.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: computeAllocation / groupByAssetClass. |
+| `lib/assets.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: resolveOrCreateAsset / findAssetBySymbol. |
+| `lib/dateValidation.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: localTodayIso / isFutureDate. |
+| `lib/formatCheckedAt.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: formatCheckedAt / formatCheckedTime. |
+| `lib/holdings.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: getAccountHoldings / getAllHoldings / last snapshot confirmation. |
+| `lib/holdingsUpdate.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: diffHoldings. |
+| `lib/ledger/applyTransaction.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: applyTransaction ledger integration. |
+| `lib/ledger/cashEffect.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: computeCashEffectUsd. |
+| `lib/ledger/openingImport.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: opening cash/position adjustments. |
+| `lib/ledger/positions.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: average-cost position derivation. |
+| `lib/ledger/setupAccount.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: setupAccount. |
+| `lib/marketdata/corporateActions.test.ts` | encodes a ruling — keep | Market-data provider rule; the analyzer consumes this module only as an input (price, identity, splits), the test asserts no valuation output and is not affected by AR3–AR5: recordConfirmedSplit. |
+| `lib/marketdata/cryptoSymbols.test.ts` | encodes a ruling — keep | Market-data provider rule; the analyzer consumes this module only as an input (price, identity, splits), the test asserts no valuation output and is not affected by AR3–AR5: crypto symbol registry. |
+| `lib/marketdata/eodhdProvider.test.ts` | encodes a ruling — keep | Market-data provider rule; the analyzer consumes this module only as an input (price, identity, splits), the test asserts no valuation output and is not affected by AR3–AR5: EODHD symbol mapping and identity resolution independent of price. |
+| `lib/marketdata/historicalLoader.test.ts` | encodes a ruling — keep | Market-data provider rule; the analyzer consumes this module only as an input (price, identity, splits), the test asserts no valuation output and is not affected by AR3–AR5: loadHistoricalPrices. |
+| `lib/marketdata/index.test.ts` | encodes a ruling — keep | Market-data provider rule; the analyzer consumes this module only as an input (price, identity, splits), the test asserts no valuation output and is not affected by AR3–AR5: isPriceCacheFresh. |
+| `lib/marketdata/splitGuard.test.ts` | encodes a ruling — keep | Market-data provider rule; the analyzer consumes this module only as an input (price, identity, splits), the test asserts no valuation output and is not affected by AR3–AR5: split-ratio match / split-corruption check. |
+| `lib/marketdata/yahooProvider.test.ts` | encodes a ruling — keep | Market-data provider rule; the analyzer consumes this module only as an input (price, identity, splits), the test asserts no valuation output and is not affected by AR3–AR5: Yahoo asset-type-aware symbols and identity resolution independent of price. |
+| `lib/portfolio.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: getPortfolioView. |
+| `lib/wizard/draftHoldings.test.ts` | encodes a ruling — keep | Outside the analyzer engine (no lib/analyzer, valuation or verdict reference); encodes a portfolio/ledger/UI ruling, not affected by AR3–AR5: computeAvgCostUsd / duplicate-ticker check. |
