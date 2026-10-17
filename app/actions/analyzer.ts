@@ -25,6 +25,13 @@ import { fixtureForTicker } from "@/lib/analyzer/gate";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import type { ResolveState } from "@/lib/analyzer/resolveState";
 import { createDeepSnapshot } from "@/lib/analyzer/snapshotAnalysis";
+import { recordVerdictJudgement } from "@/lib/analyzer/verdictJudgementStore";
+import {
+  PROCESS_ITEMS,
+  VERDICT_JUDGEMENT_KEYS,
+  type ProcessItems,
+  type VerdictJudgementKey,
+} from "@/lib/analyzer/verdictJudgements";
 
 // ---------------------------------------------------------------------------
 // Server actions for the human steps. Every one of these runs on the server,
@@ -232,4 +239,36 @@ export async function createDeepSnapshotAction(formData: FormData): Promise<void
   const { version } = await createDeepSnapshot(runId);
 
   redirect(`/analyzer/${runId}/snapshot/${version}`);
+}
+
+/**
+ * CF-AR5-VERDICT-CONSOLIDATION-01 — records one of Calvin's verdict
+ * judgements (Methodology v2.1 D3/D4) as a new dated row (migration 013).
+ * The ticker comes from the run, never the form. The answer's own rules
+ * (verdictJudgements.ts `judgementInputProblem`) are checked before the
+ * write; a refused answer writes nothing.
+ */
+export async function recordVerdictJudgementAction(formData: FormData): Promise<void> {
+  const runId = String(formData.get("runId") ?? "");
+  const run = await getRun(runId);
+  if (run === null) notFound();
+
+  const key = String(formData.get("judgementKey") ?? "") as VerdictJudgementKey;
+  if (!(VERDICT_JUDGEMENT_KEYS as readonly string[]).includes(key)) {
+    throw new Error("Unknown verdict judgement");
+  }
+  const text = (name: string): string => String(formData.get(name) ?? "");
+  const items =
+    key === "PROCESS ITEMS"
+      ? (Object.fromEntries(PROCESS_ITEMS.map((p) => [p.key, text(`item:${p.key}`).trim()])) as ProcessItems)
+      : null;
+
+  await recordVerdictJudgement(run.ticker, {
+    key,
+    answer: text("answer"),
+    note: text("note"),
+    items,
+    boundTo: key === "CLOSE CALL" ? text("boundTo") : null,
+  });
+  revalidatePath(`/analyzer/${runId}`);
 }

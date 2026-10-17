@@ -47,6 +47,7 @@ beforeEach(() => {
   screenVerdictDisplayMock.mockResolvedValue({
     kind: "verdict",
     status: "INCOMPLETE",
+    state: "INCOMPLETE",
     reason: "Decision-critical analysis is incomplete — default test reason.",
   });
 });
@@ -169,8 +170,8 @@ describe("Screen page — populated state (VERIFY)", () => {
       "BUY / HOLD / SELL.";
     screenVerdictDisplayMock.mockImplementation(async (runId: string) =>
       runId === "11111111-1111-1111-1111-111111111111"
-        ? { kind: "verdict", status: "INCOMPLETE", reason }
-        : { kind: "verdict", status: "INCOMPLETE", reason: "unused" }
+        ? { kind: "verdict", status: "INCOMPLETE", state: "INCOMPLETE", reason }
+        : { kind: "verdict", status: "INCOMPLETE", state: "INCOMPLETE", reason: "unused" }
     );
 
     render(await ScreenPage());
@@ -192,6 +193,7 @@ describe("Screen page — populated state (VERIFY)", () => {
     screenVerdictDisplayMock.mockResolvedValue({
       kind: "verdict",
       status: "BUY",
+      state: "ISSUED",
       reason: "existing report reason",
     });
 

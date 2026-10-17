@@ -1,5 +1,5 @@
 import { analysisForReport, type AiLayerReport } from "./reportAnalysis";
-import { deriveVerdict, type VerdictResult } from "./verdict";
+import { deriveVerdict, type StoredVerdict } from "./verdict";
 import { createSnapshot, getSnapshot } from "./snapshotStore";
 import type { AnalysisResult } from "./types";
 import type { AnalystCall } from "./ai/analystCall";
@@ -26,7 +26,7 @@ export interface DeepSnapshotReport {
   version: number;
   result: AnalysisResult;
   aiLayer: AiLayerReport;
-  verdict: VerdictResult;
+  verdict: StoredVerdict;
 }
 
 export async function createDeepSnapshot(
@@ -34,7 +34,10 @@ export async function createDeepSnapshot(
   call?: AnalystCall | null
 ): Promise<DeepSnapshotReport> {
   const report = call === undefined ? await analysisForReport(runId) : await analysisForReport(runId, call);
-  const verdict = deriveVerdict(report.result);
+  // What a saved version records of the verdict (snapshotStore.ts): the
+  // status, state and reason — the same shape reopening reads back.
+  const { status, state, reason } = deriveVerdict(report.result);
+  const verdict = { status, state, reason };
   const version = await createSnapshot(runId, report.result, report.aiLayer, verdict, report.snapshot);
 
   return { version, result: report.result, aiLayer: report.aiLayer, verdict };

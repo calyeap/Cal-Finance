@@ -1,4 +1,4 @@
-import type { VerdictResult } from "@/lib/analyzer/verdict";
+import { BUY_CANDIDATE_LABEL, type VerdictResult } from "@/lib/analyzer/verdict";
 import type { TrustStatus } from "@/lib/analyzer/types";
 import { evidenceStatusLabel } from "@/lib/analyzer/trustCopy";
 
@@ -30,20 +30,32 @@ import { evidenceStatusLabel } from "@/lib/analyzer/trustCopy";
 //
 // It is also the only textual field VerdictResult carries at all — for a
 // completed verdict there is no separate "rationale" field in the type, so
-// the same reason string is what RationaleLine renders too. Three of
-// VerdictResult's four INCOMPLETE branches state a cause only, one
-// (COMPARATOR_NOT_YET_AVAILABLE) embeds its own recovery clause inside that
-// same string — rendering the string verbatim, unsplit, on Evidence already
-// satisfies "render a recovery statement only where the derivation supplies
-// one" without this component parsing it.
+// the same reason string is what RationaleLine renders too. Where a reason
+// carries its own recovery clause (e.g. "re-run it"), rendering the string
+// verbatim, unsplit, on Evidence already satisfies "render a recovery
+// statement only where the derivation supplies one" without this component
+// parsing it.
 //
-// deriveVerdict returns INCOMPLETE on every run today (the M8 comparator
-// gap recorded in docs/design/m9-contract-reconciliation.md §5-§6). The
-// completed-verdict path below is nonetheless a first-class, independently
-// exercised render path — not a hypothetical — per the M9 outcome's
-// instruction not to build or test only the INCOMPLETE-always world.
+// CF-AR5-VERDICT-CONSOLIDATION-01 — three render paths: an issued
+// BUY/HOLD/SELL verdict; a pending-judgement state (pending adoption, one
+// question, close call, BUY candidate), which is not a verdict and never
+// shows a verdict word (frozen spec §14.9 AR0-4); and INCOMPLETE. The
+// pending states use the same state markup as INCOMPLETE, with their own
+// plain name, so nothing reads them as a verdict.
 
 const REASON_UNAVAILABLE_MARKER = "Unavailable — see Evidence";
+// Plain names for the pending-judgement states — never a verdict word alone.
+const PENDING_NAME: Record<"PENDING ADOPTION" | "UNCERTAINTY QUESTION" | "CLOSE CALL" | "BUY CANDIDATE", string> = {
+  "PENDING ADOPTION": "Pending adoption",
+  "UNCERTAINTY QUESTION": "One question for you",
+  "CLOSE CALL": "Close call for you",
+  "BUY CANDIDATE": BUY_CANDIDATE_LABEL,
+};
+/** The plain name the slot shows for a pending-judgement state. */
+export function pendingStateName(state: VerdictResult["state"]): string {
+  return state in PENDING_NAME ? PENDING_NAME[state as keyof typeof PENDING_NAME] : state;
+}
+
 // The INCOMPLETE path's fallback when a call site supplies no explanation —
 // plain words, never the raw state or an Evidence redirect.
 const REASON_UNAVAILABLE_PLAIN = "No valuation verdict for this company yet.";
@@ -54,7 +66,7 @@ export function DominantVerdictSlot({
   isEvidenceTab = false,
   incompleteExplanation,
   priceVsRangeHeadline,
-  completedExplanation,
+  explanation = null,
   rateInUse = null,
 }: {
   verdict: VerdictResult;
@@ -79,15 +91,11 @@ export function DominantVerdictSlot({
   // within (the existing `incompleteExplanation` fallback still applies
   // there) — never a fabricated position on a priceless or suppressed run.
   priceVsRangeHeadline?: string | null;
-  // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — REVIEW `CORRECT:` (comment
-  // 6217530392): the plain-English stand-in for a completed verdict
-  // (BUY/HOLD/SELL) outside Evidence (trustCopy.ts's
-  // `completedVerdictExplanation`), built by the caller from the same
-  // price/Base figures the verdict itself compared. Optional, defaulting to
-  // the bare marker below, so a call site that omits it fails toward naming
-  // only that the full rationale is on Evidence, never toward leaking the
-  // raw `verdict.reason`.
-  completedExplanation?: string;
+  // CF-AR5-VERDICT-CONSOLIDATION-01 — the plain-English line for an issued
+  // verdict or a pending-judgement state outside Evidence (trustCopy.ts's
+  // `verdictExplanation`), templated from the numbers the verdict computed.
+  // Null falls back to the bare marker, never the raw `verdict.reason`.
+  explanation?: string | null;
   // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the dated discount rate the
   // reading was valued at (trustCopy.ts's `rateInUseLine`), shown beside any
   // rate-derived reading outside Evidence. Null renders nothing.
@@ -122,9 +130,18 @@ export function DominantVerdictSlot({
     );
   }
 
+  if (verdict.status === "PENDING") {
+    return (
+      <div className="verdictslot state pending" data-state={verdict.state}>
+        <span className="name">{pendingStateName(verdict.state)}</span>
+        <span className="cause">{isEvidenceTab ? verdict.reason : explanation ?? REASON_UNAVAILABLE_MARKER}</span>
+      </div>
+    );
+  }
+
   const reason = isEvidenceTab
     ? verdict.reason
-    : completedExplanation ?? REASON_UNAVAILABLE_MARKER;
+    : explanation ?? REASON_UNAVAILABLE_MARKER;
   return (
     <div className="verdictslot completed">
       <span className="verdictword">{verdict.status}</span>

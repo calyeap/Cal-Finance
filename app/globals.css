@@ -3708,6 +3708,17 @@ h6 {
   color: var(--stale);
 }
 
+/* CF-AR5-VERDICT-CONSOLIDATION-01 — the verdict judgement forms
+   (VerdictJudgementPanel) sit between the report actions and the tab body,
+   reusing the .cb-steps judgment-form styles. */
+.cb-analyzer .az-judgements {
+  margin: 16px 0 24px;
+}
+.cb-analyzer .az-judgements textarea.inset {
+  width: 100%;
+  box-sizing: border-box;
+}
+
 .cb-analyzer .az-trustnote {
   margin-bottom: 20px;
 }

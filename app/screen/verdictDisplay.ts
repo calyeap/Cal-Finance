@@ -1,5 +1,6 @@
 import { computeAnalysisForRun, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
-import { deriveVerdict, type VerdictStatus } from "@/lib/analyzer/verdict";
+import { deriveVerdict, type VerdictState, type VerdictStatus } from "@/lib/analyzer/verdict";
+import { getVerdictJudgements } from "@/lib/analyzer/verdictJudgementStore";
 
 // SCREEN's read of each candidate's existing Analyzer verdict state
 // (CF-SCREEN-FIRST-OUTCOME-01, issue #379 DO 3/DO 4; REVIEW-36553409661-1
@@ -16,14 +17,16 @@ import { deriveVerdict, type VerdictStatus } from "@/lib/analyzer/verdict";
 // `app/analyzer/[runId]/page.tsx`'s `IncompleteRun` wording for that case
 // word for word (no new text), without modifying that route.
 export type ScreenVerdictDisplay =
-  | { kind: "verdict"; status: VerdictStatus; reason: string }
+  | { kind: "verdict"; status: VerdictStatus; state: VerdictState; reason: string }
   | { kind: "gate-incomplete"; outstandingFactIds: string[] };
 
 export async function screenVerdictDisplay(runId: string): Promise<ScreenVerdictDisplay> {
   try {
     const result = await computeAnalysisForRun(runId);
-    const verdict = deriveVerdict(result);
-    return { kind: "verdict", status: verdict.status, reason: verdict.reason };
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — the same recorded judgements the
+    // report's verdict reads (read-only), so SCREEN shows the same state.
+    const verdict = deriveVerdict({ ...result, verdictJudgements: await getVerdictJudgements(result.ticker) });
+    return { kind: "verdict", status: verdict.status, state: verdict.state, reason: verdict.reason };
   } catch (err) {
     if (err instanceof SpotCheckIncompleteError) {
       return { kind: "gate-incomplete", outstandingFactIds: err.outstandingFactIds };

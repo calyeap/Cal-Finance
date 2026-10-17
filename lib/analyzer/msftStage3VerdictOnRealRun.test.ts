@@ -7,6 +7,7 @@ import { computeAnalysisForRun, loadGateState } from "./gate";
 import { deriveVerdict } from "./verdict";
 import { assembleAnalysisResult } from "./assemble";
 import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
+import { NO_VERDICT_JUDGEMENTS } from "./verdictJudgements";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — the real production-path proof this
@@ -79,16 +80,12 @@ describe("CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — MSFT's real run reaches a def
     await getPool().end();
   });
 
-  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change. This
-  // pinned SELL off the 16 Oct 2026 Stage-2 Base ($283.31 end-of-year, 10%
-  // rate, capital-intensity reinvestment), which product-decisions item 27
-  // (D2) supersedes. Migration 010's sheet carries no D2 input, so it is
-  // pending adoption: the verdict is INCOMPLETE and says why — never a
-  // manufactured HOLD (Methodology, verdict semantics), never the superseded
-  // SELL. The verdict rule itself is unchanged (AR5 owns it): once the sheet
-  // carries the D2 inputs — STATED TEST INPUTS here, never recorded — the
-  // same rule reads price against the D2 Base at the D1 rate.
-  it("is INCOMPLETE while MSFT's recorded sheet is pending adoption — no value, so no verdict, and the reason says so", async () => {
+  // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change (MSFT
+  // first). Migration 010's sheet carries no D2 input, so it is pending
+  // adoption: a pending-judgement state, not a verdict and not INCOMPLETE
+  // (Calvin, Option A on #447). Real-app MSFT verdicts move to AR6 (#454),
+  // after Calvin adopts the sheet.
+  it("is PENDING ADOPTION while MSFT's recorded sheet carries no D2 input — no value, so no verdict, and the reason says so", async () => {
     const result = await openMsftRunWithRuling();
 
     expect(result.valuationBasis?.d2.status).toBe("PENDING ADOPTION");
@@ -96,11 +93,16 @@ describe("CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — MSFT's real run reaches a def
     expect(result.price.value.toFixed(2)).toBe("499.70");
 
     const verdict = deriveVerdict(result);
-    expect(verdict.status).toBe("INCOMPLETE");
+    expect(verdict.status).toBe("PENDING");
+    expect(verdict.state).toBe("PENDING ADOPTION");
     expect(verdict.reason).toMatch(/Pending adoption/);
   });
 
-  it("with the D2 inputs on the sheet, the unchanged V1 rule reads price against the D2 Base at the D1 rate", async () => {
+  // With the D2 inputs on the sheet — STATED TEST INPUTS here, never
+  // recorded and nobody's judgement — the real MSFT run goes through the
+  // whole D3 path: the Base revalued at 8.5% / 9.0% / 9.5% by the same engine,
+  // the nine-point check, and Calvin's answer as a versioned input.
+  it("with the D2 inputs on the sheet, the real run's nine-point check is internally consistent and only Calvin's bound answer resolves it", async () => {
     const runId = await createRun("MSFT", "Microsoft Corporation");
     await recordJudgment(
       runId,
@@ -117,14 +119,42 @@ describe("CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — MSFT's real run reaches a def
     expect(result.valuationBasis?.discountRate.rate.toString()).toBe("0.09");
     expect(result.fairValueRange.kind).toBe("range");
 
-    // At these stated inputs price sits just under the High-bucket SELL
-    // line, so which band applies depends on the uncertainty bucket — the
-    // rule says so rather than picking one (Methodology v2.1 D3's "one
-    // question" case, which AR5 builds). The rule is read, not changed.
+    // The check's Base at the rate in use IS the Base the report shows, and
+    // a lower rate values the same cash flows higher.
+    const baseAt = result.verdictInputs!.baseAtCheckRates!;
+    expect(baseAt.rate.equals(result.scenarioOutputs.values.base)).toBe(true);
+    expect(baseAt.lower.greaterThan(baseAt.rate)).toBe(true);
+    expect(baseAt.rate.greaterThan(baseAt.upper)).toBe(true);
+
     const verdict = deriveVerdict(result);
-    expect(verdict.reason).toContain("Verdict synthesis policy v1");
-    expect(verdict.reason).not.toMatch(/Pending adoption/);
-    // The ratio the reason states is price ÷ this run's own D2 Base, to 4 dp.
-    expect(verdict.reason).toContain(result.price.value.dividedBy(result.scenarioOutputs.values.base).toFixed(4));
+    expect(verdict.check).not.toBeNull();
+    for (const r of ["lower", "rate", "upper"] as const) {
+      expect(verdict.check!.ratios[r].equals(result.price.value.dividedBy(baseAt[r]))).toBe(true);
+    }
+    // At these stated inputs $499.70 is ≈1.34× / 1.45× / 1.56× Base: the
+    // High-uncertainty SELL line (1.45×) falls inside the rate band, so the
+    // rate matters — a close call between HOLD and SELL, never an issued
+    // verdict without Calvin.
+    expect(verdict.status).toBe("PENDING");
+    expect(verdict.state).toBe("CLOSE CALL");
+    expect(verdict.check!.routing).toEqual({ kind: "CLOSE CALL", zones: ["HOLD", "SELL"] });
+    expect(verdict.closeCallBinding).toBe(result.runIdentity!.inputsFingerprint);
+
+    const recorded = (answer: "SELL" | "not sure", boundTo: string) => ({
+      ...result,
+      verdictJudgements: {
+        ...NO_VERDICT_JUDGEMENTS,
+        closeCalls: [{ answer, note: null, recordedAt: "2026-10-17T00:00:00.000Z", version: 1, boundTo }],
+      },
+    });
+    const answered = deriveVerdict(recorded("SELL", verdict.closeCallBinding!));
+    expect(answered.status).toBe("SELL");
+    expect(answered.basis).toBe("YOUR CLOSE CALL");
+    expect(deriveVerdict(recorded("not sure", verdict.closeCallBinding!)).state).toBe("CLOSE CALL");
+    expect(deriveVerdict(recorded("SELL", "inputs-sha256:some-other-run")).state).toBe("CLOSE CALL");
+
+    // D4's computed floor on the real filings: MSFT's 5-yr average ROIC
+    // including goodwill is well above the 9.0% rate.
+    expect(result.verdictInputs!.roicFloor.status).toBe("PASS");
   });
 });

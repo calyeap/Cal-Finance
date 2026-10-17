@@ -8,7 +8,7 @@ import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
 import { AnalyzerOverview } from "./AnalyzerOverview";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
-import { incompleteVerdictExplanation } from "@/lib/analyzer/trustCopy";
+import { incompleteVerdictExplanation, verdictExplanation } from "@/lib/analyzer/trustCopy";
 
 // ---------------------------------------------------------------------------
 // CF-S44-RECORD-01 — the rendering half of MSFT's recorded §4.4 ruling: the
@@ -110,7 +110,11 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
   it("the shared hero states the plain-English reason there is no verdict yet, never the literal word INCOMPLETE or verdict.reason, outside Evidence", async () => {
     const { result } = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
-    expect(verdict.status).toBe("INCOMPLETE");
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: the
+    // un-adopted sheet is the pending-adoption state, said in plain words
+    // (or, where another file has removed the recorded sheet, an unbounded
+    // Base, said through the existing INCOMPLETE line).
+    expect(["PENDING ADOPTION", "CANNOT BOUND VALUE"]).toContain(verdict.state);
     expect(result.fairValueRange.kind).toBe("suppressed");
     expect(result.gates.leverage.result).toBe("PASS");
 
@@ -123,12 +127,14 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     expect(hero.textContent).not.toContain("INCOMPLETE");
     expect(hero.textContent).not.toContain(verdict.reason);
     expect(hero.textContent).toContain(
-      incompleteVerdictExplanation({
-        trustStatus: result.trust.status,
-        fairValueRange: result.fairValueRange,
-        leverage: result.gates.leverage,
-        profileNotConfirmed: false,
-      })
+      verdict.state === "PENDING ADOPTION"
+        ? verdictExplanation(verdict)!
+        : incompleteVerdictExplanation({
+            trustStatus: result.trust.status,
+            fairValueRange: result.fairValueRange,
+            leverage: result.gates.leverage,
+            profileNotConfirmed: false,
+          })
     );
   });
 ;

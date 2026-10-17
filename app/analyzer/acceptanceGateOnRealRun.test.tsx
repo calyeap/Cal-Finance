@@ -257,13 +257,20 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       expect(overviewVerdict.textContent).not.toContain("INCOMPLETE");
       expect(overviewVerdict.textContent).not.toContain("PROFILE NOT CONFIRMED");
       expect(overviewVerdict.textContent).not.toContain("SELL");
-      expect(overviewVerdict.textContent).toContain("pending adoption");
+      // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: pending
+      // adoption is now its own state in the verdict slot (frozen spec §14.9
+      // AR0-4: a pending-judgement state, not a verdict and not INCOMPLETE),
+      // named "Pending adoption" with a plain line beside it.
+      expect(overviewVerdict.getAttribute("data-state")).toBe("PENDING ADOPTION");
+      expect(overviewVerdict.textContent).toContain("Pending adoption");
+      expect(overviewVerdict.textContent).toContain("No verdict until you adopt");
       cleanup();
 
       const evidence = await renderTab(runId, "evidence");
       const evidenceVerdict = evidence.container.querySelector(".verdictslot") as HTMLElement;
-      expect(evidenceVerdict.textContent).toContain("INCOMPLETE");
-      expect(evidenceVerdict.textContent).toContain("Pending adoption");
+      expect(evidenceVerdict.getAttribute("data-state")).toBe("PENDING ADOPTION");
+      expect(evidenceVerdict.textContent).toContain("Pending adoption —");
+      expect(evidenceVerdict.textContent).not.toContain("SELL");
     });
 
     // CF-ANALYZER-V1-SETTLE-01's automatic-profile-confirmation fix means a

@@ -13,7 +13,10 @@ import { plainReason } from "@/lib/analyzer/overviewCopy";
 // blocked on M8-c, whose band thresholds remain PROVISIONAL and unruled,
 // and the position renderer is deliberately disabled. Eight is authorised
 // until M8-c lands (RULED by Calvin, 14 Sep 2026 — settles CB-AUDIT-01 §7
-// conflict B). Always visible, one component (no "Learn more" drawer —
+// conflict B). CF-AR5-VERDICT-CONSOLIDATION-01: items 1 and 2 are now
+// removed, not blocked — the CHEAP/FAIR/EXPENSIVE position is superseded
+// by the V1 verdict (frozen spec §14.9 AR0-4; Methodology v2.1 D3 adopts no
+// C/F/E cut-points), which the one verdict slot already shows. Always visible, one component (no "Learn more" drawer —
 // §17.12: "QUICK READ / the finding block, always visible"). A state or
 // flag that qualifies or suppresses an output travels with the item it
 // belongs to; it is never one click away behind a disclosure.

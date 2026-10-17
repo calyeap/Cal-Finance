@@ -22,34 +22,45 @@ vi.mock("@/lib/analyzer/verdict", () => ({
   deriveVerdict: (...args: unknown[]) => deriveVerdict(...args),
 }));
 
+// CF-AR5-VERDICT-CONSOLIDATION-01 — the run's recorded verdict judgements
+// are read (never written) and handed to deriveVerdict with the result.
+const RECORDED = { uncertainty: null, closeCalls: [], thesis: null, management: null, moatMechanism: null, processItems: null };
+const getVerdictJudgements = vi.fn();
+vi.mock("@/lib/analyzer/verdictJudgementStore", () => ({
+  getVerdictJudgements: (...args: unknown[]) => getVerdictJudgements(...args),
+}));
+
 const { screenVerdictDisplay, gateIncompleteReason } = await import("./verdictDisplay");
 
 beforeEach(() => {
   computeAnalysisForRun.mockReset();
   deriveVerdict.mockReset();
+  getVerdictJudgements.mockReset();
+  getVerdictJudgements.mockResolvedValue(RECORDED);
 });
 
 const RUN_ID = "11111111-1111-1111-1111-111111111111";
 
 describe("screenVerdictDisplay — reads the existing run's verdict, never derives one itself", () => {
   it("returns deriveVerdict's status and reason exactly as computed, for a real run", async () => {
-    const result = {} as AnalysisResult;
+    const result = { ticker: "MSFT" } as AnalysisResult;
     computeAnalysisForRun.mockResolvedValue(result);
-    deriveVerdict.mockReturnValue({ status: "INCOMPLETE", reason: "some existing reason" });
+    deriveVerdict.mockReturnValue({ status: "INCOMPLETE", state: "INCOMPLETE", reason: "some existing reason" });
 
     const display = await screenVerdictDisplay(RUN_ID);
 
     expect(computeAnalysisForRun).toHaveBeenCalledWith(RUN_ID);
-    expect(deriveVerdict).toHaveBeenCalledWith(result);
-    expect(display).toEqual({ kind: "verdict", status: "INCOMPLETE", reason: "some existing reason" });
+    expect(getVerdictJudgements).toHaveBeenCalledWith("MSFT");
+    expect(deriveVerdict).toHaveBeenCalledWith({ ...result, verdictJudgements: RECORDED });
+    expect(display).toEqual({ kind: "verdict", status: "INCOMPLETE", state: "INCOMPLETE", reason: "some existing reason" });
   });
 
   it("passes through a non-INCOMPLETE status untouched — it is the report's own state, not synthesised here", async () => {
     computeAnalysisForRun.mockResolvedValue({} as AnalysisResult);
-    deriveVerdict.mockReturnValue({ status: "BUY", reason: "existing report reason" });
+    deriveVerdict.mockReturnValue({ status: "BUY", state: "ISSUED", reason: "existing report reason" });
 
     const display = await screenVerdictDisplay(RUN_ID);
-    expect(display).toEqual({ kind: "verdict", status: "BUY", reason: "existing report reason" });
+    expect(display).toEqual({ kind: "verdict", status: "BUY", state: "ISSUED", reason: "existing report reason" });
   });
 
   it("when Step 2's spot-check is itself incomplete, reports gate-incomplete with the outstanding fact ids", async () => {

@@ -121,7 +121,11 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     expect(v1.result.gates.leverage.result).toBe("PASS");
     expect(v1.result.trust.status).toBe("UNUSABLE");
     expect(v1.result.fairValueRange.kind).toBe("suppressed");
-    expect(v1.verdict.status).toBe("INCOMPLETE");
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — no verdict: the un-adopted sheet
+    // (pending adoption), or, where the recorded sheet is absent, an
+    // unbounded Base.
+    expect(v1.verdict.status).not.toMatch(/^(BUY|HOLD|SELL)$/);
+    expect(["PENDING ADOPTION", "CANNOT BOUND VALUE", "INCOMPLETE"]).toContain(v1.verdict.state);
 
     // Confirm the profile, then refresh: version 2. Nothing about the §4.4
     // judgment changes here — the durable override is untouched by a
@@ -133,7 +137,8 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     expect(v2.result.gates.leverage.result).toBe("PASS");
     expect(v2.result.trust.status).toBe("UNUSABLE");
     expect(v2.result.fairValueRange.kind).toBe("suppressed");
-    expect(v2.verdict.status).toBe("INCOMPLETE");
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — the un-adopted sheet: pending adoption.
+    expect(v2.verdict.state).toBe("PENDING ADOPTION");
     expect(v2.verdict.reason).toMatch(/Pending adoption/);
 
     // Version 1 is byte-for-byte reopenable exactly as it was, after version

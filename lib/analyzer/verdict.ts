@@ -1,127 +1,282 @@
+import Decimal from "decimal.js";
 import type { AnalysisResult } from "./types";
 import { PROFILE_NOT_CONFIRMED_DETAIL } from "./trust";
-import { synthesizeVerdictV1 } from "./verdictSynthesisV1";
+import { formatRate } from "./discountRate";
+import {
+  CHECK_RATES,
+  UNCERTAINTY_LEVELS,
+  evaluateVerdictCheck,
+  type CheckRate,
+  type V1Zone,
+  type VerdictCheck,
+} from "./verdictSynthesisV1";
+import { evaluateQualityBar, type QualityBarResult } from "./qualityBar";
+import { NOT_SURE, NO_VERDICT_JUDGEMENTS, type Recorded } from "./verdictJudgements";
 
 // ---------------------------------------------------------------------------
-// CF-V2-PROOF-01's verdict boundary — bounded correction on PR #140 per
-// Calvin's 18 Sep 2026 CALVIN DECISION RECEIPT:
+// CF-AR5-VERDICT-CONSOLIDATION-01 — the one verdict path (Methodology v2.1
+// D3/D4 on Verdict synthesis policy v1; product-decisions items 1, 3, 28, 29;
+// frozen spec §14.9 AR0-4, AR0-5).
 //
-//   "A fair-value range or any other single diagnostic must not by itself
-//   determine BUY / HOLD / SELL. The verdict must synthesize the whole
-//   approved methodology and evidence." ... "If decision-critical evidence
-//   is insufficient to support a reliable conclusion, return analysis
-//   incomplete / failure with cause and recovery path; do not manufacture
-//   HOLD."
+// In order:
+//   1. global prerequisite — trust, a usable range, a confirmed profile and a
+//      price, for every cause adoption would not clear. A Base that cannot
+//      be formed is "can't bound value"; anything else missing is
+//      INCOMPLETE. Never a HOLD;
+//   2. pending adoption — the final verdict waits for the sheet's adoption
+//      (product-decisions item 30; Calvin, Option A on #447); then a
+//      positive Base;
+//   3. thesis broken → SELL (policy v1's independent SELL condition);
+//   4. the nine-point check (verdictSynthesisV1.ts): automatic, one
+//      uncertainty question, or a close call, resolved by Calvin's recorded
+//      answer where one exists — "not sure" resolves nothing;
+//   5. a BUY zone needs D4's bar (qualityBar.ts): PASS → BUY, FAIL → HOLD,
+//      OPEN → "BUY candidate — needs your quality call".
 //
-// The top-level vocabulary stays BUY / HOLD / SELL (the ruling is explicit
-// that this overrides the frozen spec's CHEAP/FAIR/EXPENSIVE wording for
-// this slot). But comparing price against the range alone — the earlier
-// shape of this function — was exactly the single-diagnostic problem the
-// ruling forbids.
+// Pending-judgement states (adoption, the question, the close call, the BUY
+// candidate) are not verdicts (AR0-4): their status is PENDING, never
+// BUY/HOLD/SELL. Every `reason` is a template filled from computed numbers
+// and recorded answers; no AI text reaches it.
 //
-// The only second input named anywhere in this outcome's methodology is
-// §10.6.2's required-versus-achieved growth comparator, and §10.6.5 already
-// rules that this fact "may not exist in the current fact set. Acquiring it
-// is milestone M8 work" — sequencing, not deferral.
-//
-// CORRECTED, CF-M9-BLOCKER14-RECON-01, 24 Sep 2026: `achievedRevenueCagr`
-// (CF-VERDICT-NONPOLICY-GAPS-01) now carries the achieved half of that
-// comparator on AnalysisResult, but only as Step 7's explanatory input
-// (§13) — the required half (one of the nine M7 reverse-DCF cells,
-// §10.6.2) is still not assembled onto AnalysisResult for any run, so the
-// full required-versus-achieved comparator this function would need to
-// synthesize past INCOMPLETE still does not exist. Inventing a different
-// second signal, or picking a grid cell and building the M8 comparator
-// here, would both be exactly what this outcome's HARD BOUNDS forbid
-// (manufacturing new finance policy; no M9 implementation before this
-// proof passes).
-//
-// So from 24 Sep 2026 (the correction above) until this outcome, the §10.6.2
-// seven-step comparator remained the only path this function tried, and it
-// never finished acquiring its own second input — not because any run's
-// facts were bad, but because that input had not been acquired. This
-// function said so honestly rather than manufacturing BUY / HOLD / SELL from
-// the range alone or manufacturing HOLD as a safe default.
-//
-// CF-ANALYZER-STAGE3-VERDICT-FINISH-01, 16 Oct 2026: that §10.6.2 path
-// (`CALVIN RULING — C`) is not the only approved mechanism. The live Cal
-// Finance Methodology's own "Verdict synthesis policy v1" (APPROVED 22 Sep
-// 2026) is a second, independent, already-complete synthesis — price versus
-// the Base scenario value, banded by an uncertainty bucket — that Calvin's
-// `CALVIN RULING — NO` on PR #430 (2026-10-14) confirmed is still approved
-// and not superseded ("do not retire the 22 Sep V1 bands yet"). It shares no
-// field with ruling C's growth-licensing structure (verdictSynthesisV1.ts's
-// own header has the full reconciliation) and is implemented below as this
-// function's fallback, in place of the permanent COMPARATOR_NOT_YET_AVAILABLE
-// result every prior run received. It still fails closed — INCOMPLETE, never
-// a manufactured BUY/HOLD/SELL — wherever its own open items (the
-// uncertainty-bucket formula; the unbuilt business-quality/thesis-
-// invalidation judgement) would actually change the answer.
+// The same result — facts, adopted sheet, policy, code and recorded
+// judgements (AR0-5) — always gives the same verdict: this is a pure function
+// of the stored result, which carries the judgements it was computed with.
 // ---------------------------------------------------------------------------
 
-export type VerdictStatus = "BUY" | "HOLD" | "SELL" | "INCOMPLETE";
+export type VerdictStatus = "BUY" | "HOLD" | "SELL" | "INCOMPLETE" | "PENDING";
+
+export type VerdictState =
+  | "ISSUED"
+  | "INCOMPLETE"
+  | "CANNOT BOUND VALUE"
+  | "PENDING ADOPTION"
+  | "UNCERTAINTY QUESTION"
+  | "CLOSE CALL"
+  | "BUY CANDIDATE";
+
+/** How an issued verdict was reached. */
+export type VerdictBasis = "ALL NINE CHECKS AGREE" | "YOUR UNCERTAINTY ANSWER" | "YOUR CLOSE CALL" | "THESIS BROKEN";
+
+export const BUY_CANDIDATE_LABEL = "BUY candidate — needs your quality call";
 
 export interface VerdictResult {
   status: VerdictStatus;
+  state: VerdictState;
   reason: string;
+  /** The nine-point check, wherever it was computed. */
+  check: VerdictCheck | null;
+  /** The rates the check used, wherever it was computed. */
+  rates: Record<CheckRate, Decimal> | null;
+  basis: VerdictBasis | null;
+  /** D4's bar, wherever a BUY zone made it relevant. */
+  qualityBar: QualityBarResult | null;
+  /** The inputs fingerprint a close-call answer must be bound to; null where the result carries none. */
+  closeCallBinding: string | null;
+}
+
+/** A verdict as a saved version records it (snapshotStore.ts). */
+export type StoredVerdict = Pick<VerdictResult, "status" | "state" | "reason">;
+
+const EMPTY = { check: null, rates: null, basis: null, qualityBar: null, closeCallBinding: null } as const;
+
+function incomplete(reason: string, state: "INCOMPLETE" | "CANNOT BOUND VALUE" = "INCOMPLETE"): VerdictResult {
+  return { status: "INCOMPLETE", state, reason, ...EMPTY };
+}
+
+function money(value: Decimal): string {
+  return `$${value.toDecimalPlaces(2).toFixed(2)}`;
+}
+
+function times(value: Decimal): string {
+  return `${value.toDecimalPlaces(2).toFixed(2)}×`;
+}
+
+function dated<T>(r: Recorded<T>): string {
+  return `recorded ${r.recordedAt.slice(0, 10)}, version ${r.version}`;
+}
+
+/** "price $499.70 is 1.62× / 1.76× / 1.93× Base $308.52 / $283.31 / $259.36 at 8.5% / 9.0% / 9.5%" */
+function checkLine(price: Decimal, check: VerdictCheck, baseAt: Record<CheckRate, Decimal>, rates: Record<CheckRate, Decimal>): string {
+  const list = <T>(f: (r: CheckRate) => T) => CHECK_RATES.map(f).join(" / ");
+  return (
+    `price ${money(price)} is ${list((r) => times(check.ratios[r]))} the Base fair value ` +
+    `${list((r) => money(baseAt[r]))} at ${list((r) => formatRate(rates[r]))}`
+  );
+}
+
+function gridLine(check: VerdictCheck, rates: Record<CheckRate, Decimal>): string {
+  return CHECK_RATES.map(
+    (r) => `at ${formatRate(rates[r])}: ${UNCERTAINTY_LEVELS.map((u) => `${u} ${check.grid[r][u]}`).join(", ")}`
+  ).join("; ");
 }
 
 export function deriveVerdict(result: AnalysisResult): VerdictResult {
-  if (result.trust.status === "UNUSABLE") {
-    const detail = result.trust.determinedBy[0]?.detail ?? "the fair-value range is not usable";
-    return {
-      status: "INCOMPLETE",
-      reason: `Decision-critical analysis is incomplete — ${detail}`,
-    };
-  }
+  const judgements = result.verdictJudgements ?? NO_VERDICT_JUDGEMENTS;
+  const d2 = result.valuationBasis?.d2;
 
+  // A cause the un-adopted sheet itself produced (no D2 value is computed
+  // from it) is not an independent blocker: adoption is the remedy, and the
+  // state says so. Every other cause is reported first, since adopting the
+  // sheet would not clear it.
+  const pendingAdoption = d2 !== undefined && d2.status === "PENDING ADOPTION";
+  const causedByAdoption = (text: string): boolean => pendingAdoption && text.includes("Pending adoption:");
+
+  // 1 — the global prerequisite, for causes adoption would not clear.
   const range = result.fairValueRange;
-
-  if (range.kind === "suppressed") {
-    return {
-      status: "INCOMPLETE",
-      reason: `Decision-critical analysis is incomplete — ${range.cause}`,
-    };
+  const trustDetail = result.trust.determinedBy[0]?.detail ?? "the fair-value range is not usable";
+  if (result.trust.status === "UNUSABLE" && !causedByAdoption(trustDetail)) {
+    return incomplete(`Can't bound value — decision-critical analysis is incomplete: ${trustDetail}`, "CANNOT BOUND VALUE");
   }
-
+  if (range.kind === "suppressed" && !causedByAdoption(range.cause)) {
+    return incomplete(`Can't bound value — no defensible Base fair value can be formed: ${range.cause}`, "CANNOT BOUND VALUE");
+  }
   if (range.kind === "pre-revenue-distribution") {
-    return {
-      status: "INCOMPLETE",
-      reason: "The pre-revenue valuation model does not yet define a BUY / HOLD / SELL boundary.",
-    };
+    return incomplete("The pre-revenue valuation model does not yet define a BUY / HOLD / SELL boundary.");
   }
-
-  // §10.6.3's third render condition, checked explicitly rather than being
-  // reached only incidentally through the COMPARATOR_NOT_YET_AVAILABLE
-  // fallback below. AnalysisResult carries no dedicated PROFILE NOT CONFIRMED
-  // field of its own (§6.3's *Cannot judge* input lives on TrustInput, one
-  // level upstream of this function) — trust.ts's own qualifying-flag entry,
-  // written with this exact detail string whenever profileHumanConfirmed is
-  // false, is the state this function reads instead.
-  const profileNotConfirmed = result.trust.determinedBy.some(
-    (d) => d.kind === "qualifying flag" && d.detail === PROFILE_NOT_CONFIRMED_DETAIL
-  );
-  if (profileNotConfirmed) {
-    return {
-      status: "INCOMPLETE",
-      reason:
-        "Decision-critical analysis is incomplete — PROFILE NOT CONFIRMED is active on the valuation path " +
-        "(spec §10.6.3): the position does not render until a human confirms the profile.",
-    };
+  // §10.6.3's PROFILE NOT CONFIRMED, read from trust.ts's own qualifying-flag
+  // entry (AnalysisResult carries no separate field for it).
+  if (result.trust.determinedBy.some((d) => d.kind === "qualifying flag" && d.detail === PROFILE_NOT_CONFIRMED_DETAIL)) {
+    return incomplete(
+      "Decision-critical analysis is incomplete — PROFILE NOT CONFIRMED is active on the valuation path " +
+        "(spec §10.6.3): no verdict renders until a human confirms the profile."
+    );
   }
-
-  // §3.4 — no "approximate" price state; the empty-timestamp sentinel is
-  // this run's own honest "no price was available" signal (buildAcquiredRun),
-  // never a zero price to divide by.
+  // §3.4 — the empty timestamp is the run's own "no price" signal, never a zero price.
   if (result.price.timestamp === "") {
+    return incomplete("Decision-critical analysis is incomplete — no price was available for this run, so price / Base cannot be formed.");
+  }
+
+  // 2 — the final verdict waits for adoption.
+  if (pendingAdoption) {
+    return { status: "PENDING", state: "PENDING ADOPTION", reason: `Pending adoption — ${d2.statement}`, ...EMPTY };
+  }
+
+  const base = result.scenarioOutputs.values.base;
+  if (!base.isFinite() || base.lessThanOrEqualTo(0)) {
+    return incomplete(`Can't bound value — the Base fair value (${base.toString()}) is not a positive, finite figure.`, "CANNOT BOUND VALUE");
+  }
+
+  const price = result.price.value;
+
+  // 3 — thesis broken → SELL (policy v1's independent SELL condition).
+  if (judgements.thesis !== null && judgements.thesis.answer === "broken") {
     return {
-      status: "INCOMPLETE",
+      status: "SELL",
+      state: "ISSUED",
       reason:
-        "Decision-critical analysis is incomplete — no price was available for this run, so the Verdict " +
-        "synthesis policy v1 (Methodology, approved 22 Sep 2026) valuation anchor (price / Base) cannot be formed.",
+        `SELL — you recorded the thesis as broken (${dated(judgements.thesis)}). A fully invalidated thesis produces SELL ` +
+        `(Verdict synthesis policy v1); price ${money(price)} against the Base fair value ${money(base)} does not change it.`,
+      ...EMPTY,
+      basis: "THESIS BROKEN",
     };
   }
 
-  const synthesis = synthesizeVerdictV1(result.price.value, result.scenarioOutputs.values.base);
-  return { status: synthesis.status, reason: synthesis.reason };
+  // 4 — the nine-point check.
+  const discountRate = result.valuationBasis?.discountRate;
+  const inputs = result.verdictInputs;
+  if (discountRate === undefined || inputs === undefined) {
+    return incomplete("Decision-critical analysis is incomplete — this result was stored before the nine-point verdict check existed; re-run it.");
+  }
+  if (inputs.baseAtCheckRates === null) {
+    return incomplete(
+      `Decision-critical analysis is incomplete — the Base fair value cannot be revalued at ${formatRate(discountRate.checkRates.lower)} ` +
+        `and ${formatRate(discountRate.checkRates.upper)} for the ±0.5pp check: ${inputs.baseAtCheckRatesCause ?? "no cause recorded"}.`
+    );
+  }
+  const baseAt = inputs.baseAtCheckRates;
+  const unbounded = CHECK_RATES.find((r) => !baseAt[r].isFinite() || baseAt[r].lessThanOrEqualTo(0));
+  if (unbounded !== undefined) {
+    return incomplete(`Can't bound value — the Base fair value at the ${unbounded} check rate is not a positive, finite figure.`, "CANNOT BOUND VALUE");
+  }
+
+  const rates: Record<CheckRate, Decimal> = {
+    lower: discountRate.checkRates.lower,
+    rate: discountRate.rate,
+    upper: discountRate.checkRates.upper,
+  };
+  const check = evaluateVerdictCheck({ price, baseAt });
+  const binding = result.runIdentity?.inputsFingerprint ?? null;
+  const numbers = checkLine(price, check, baseAt, rates);
+  const common = { check, rates, closeCallBinding: binding };
+
+  const routing = check.routing;
+  if (routing.kind === "AUTOMATIC") {
+    return resolveZone(routing.zone, "ALL NINE CHECKS AGREE", `${numbers} — the ${routing.zone} band at all nine rate × uncertainty checks.`);
+  }
+
+  if (routing.kind === "UNCERTAINTY QUESTION") {
+    const byLevel = UNCERTAINTY_LEVELS.map((u) => `${u} ${routing.byLevel[u]}`).join(", ");
+    const answer = judgements.uncertainty;
+    if (answer !== null && answer.answer !== NOT_SURE) {
+      const zone = routing.byLevel[answer.answer];
+      return resolveZone(
+        zone,
+        "YOUR UNCERTAINTY ANSWER",
+        `${numbers}. The three rates agree; only the uncertainty level matters (${byLevel}). You set ${answer.answer} uncertainty (${dated(answer)}), so the ${zone} band.`
+      );
+    }
+    const unsure = answer !== null ? ` You answered "not sure" (${dated(answer)}), which does not settle it.` : "";
+    return {
+      status: "PENDING",
+      state: "UNCERTAINTY QUESTION",
+      reason: `One question for you — ${numbers}. The three rates agree; only the uncertainty level matters: ${byLevel}.${unsure}`,
+      ...EMPTY,
+      ...common,
+    };
+  }
+
+  const answer = binding === null ? undefined : judgements.closeCalls.find((c) => c.boundTo === binding);
+  if (answer !== undefined && answer.answer !== NOT_SURE && routing.zones.includes(answer.answer)) {
+    return resolveZone(
+      answer.answer,
+      "YOUR CLOSE CALL",
+      `${numbers}. The rate-band ends disagree (${gridLine(check, rates)}). You made the close call: the ${answer.answer} band (${dated(answer)}).`
+    );
+  }
+  const unsure = answer !== undefined && answer.answer === NOT_SURE ? ` You answered "not sure" (${dated(answer)}), which does not settle it.` : "";
+  return {
+    status: "PENDING",
+    state: "CLOSE CALL",
+    reason: `Close call for you — ${numbers}. The rate-band ends disagree: ${gridLine(check, rates)}.${unsure}`,
+    ...EMPTY,
+    ...common,
+  };
+
+  // 5 — HOLD and SELL issue; a BUY zone needs D4's bar.
+  function resolveZone(zone: V1Zone, basis: VerdictBasis, why: string): VerdictResult {
+    if (zone !== "BUY") return { status: zone, state: "ISSUED", reason: `${zone} — ${why}`, ...EMPTY, ...common, basis };
+    const bar = evaluateQualityBar({
+      moatClass: d2?.moatClass ?? null,
+      roicFloor: inputs?.roicFloor ?? null,
+      judgements,
+    });
+    if (bar.status === "PASS") {
+      return { status: "BUY", state: "ISSUED", reason: `BUY — ${why} The quality bar passes: ${bar.met.join("; ")}.`, ...EMPTY, ...common, basis, qualityBar: bar };
+    }
+    if (bar.status === "FAIL") {
+      return {
+        status: "HOLD",
+        state: "ISSUED",
+        reason: `HOLD — ${why} Valuation reaches the BUY band, but the quality bar for BUY is not met: ${bar.failed.join("; ")}. Cheap without the bar is HOLD, never BUY.`,
+        ...EMPTY,
+        ...common,
+        basis,
+        qualityBar: bar,
+      };
+    }
+    return {
+      status: "PENDING",
+      state: "BUY CANDIDATE",
+      reason: `${BUY_CANDIDATE_LABEL} — ${why} Still open: ${bar.open.join("; ")}.`,
+      ...EMPTY,
+      ...common,
+      basis,
+      qualityBar: bar,
+    };
+  }
+}
+
+/** True for BUY / HOLD / SELL — the only statuses that are a verdict (product-decisions item 1). */
+export function isIssuedVerdict(verdict: VerdictResult): verdict is VerdictResult & { status: "BUY" | "HOLD" | "SELL" } {
+  return verdict.state === "ISSUED";
 }

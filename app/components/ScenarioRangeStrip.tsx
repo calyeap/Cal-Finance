@@ -19,7 +19,9 @@ import { fairValueRangeUnavailableLine, notComputedLine, positionHiddenLine } fr
 // without its adjacent restatement.
 //
 // Two items named in the contract's slot-4 "must contain" column are not
-// rendered here, honestly, because no computation for them exists anywhere
+// rendered here (CF-AR5-VERDICT-CONSOLIDATION-01: and never will be — the
+// position is removed, superseded by the V1 verdict, frozen spec §14.9
+// AR0-4), because no computation for them exists anywhere
 // in this codebase for any run: the CHEAP/FAIR/EXPENSIVE/INCONCLUSIVE
 // position and its §10.6.4 action clause both require the full §10.6.2
 // growth comparator — required side and achieved side, matched on the same

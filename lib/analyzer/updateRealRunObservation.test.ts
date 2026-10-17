@@ -154,9 +154,12 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
           // that SELL was off the superseded Stage-2 Base (product-decisions
           // item 27, D2). MSFT's sheet carries no D2 input, so the verdict
           // is INCOMPLETE and says why; EV and leverage are unchanged.
-          expect(verdict.status).toBe("INCOMPLETE");
+          // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change:
+          // the un-adopted sheet is the pending-adoption state.
+          expect(verdict.status).not.toMatch(/^(BUY|HOLD|SELL)$/);
           expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
           expect(verdict.reason).toMatch(/Pending adoption|scenario dollar values/);
+          expect(verdict.state).toBe(/Pending adoption/.test(verdict.reason) ? "PENDING ADOPTION" : "CANNOT BOUND VALUE");
           expect(result.trust.status).toBe("UNUSABLE");
           expect(result.gates.leverage.result).toBe("PASS");
           expect(result.fairValueRange.kind).toBe("suppressed");

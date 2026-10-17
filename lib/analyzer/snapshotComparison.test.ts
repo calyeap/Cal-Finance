@@ -4,6 +4,7 @@ import { diffStoredSnapshots, type SnapshotComparison } from "./snapshotComparis
 import { deriveVerdict } from "./verdict";
 import { assembleAnalysisResult } from "./assemble";
 import { MSFT_FIXTURE } from "./fixtures/msft";
+import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 import type { AnalysisResult } from "./types";
 import type { StoredSnapshot } from "./snapshotStore";
 import type { AiLayerReport } from "./reportAnalysis";
@@ -180,8 +181,15 @@ describe("diffStoredSnapshots", () => {
     // different price still inside that same zone changes the reason's own
     // numbers without changing the HOLD status — the independent-fields
     // property this test exists to check.
-    const a = baseResult();
-    const stillHold: AnalysisResult = { ...a, price: { ...a.price, value: new Decimal(520) } };
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: a verdict
+    // now needs an adopted sheet valued by the engine (the ±0.5pp check
+    // revalues the Base), so this case uses the MSFT fixture with the stated
+    // D2 test inputs and no typed values. Its Base is $344.27 at 9.0%
+    // ($373.55 / $318.75 at 8.5% / 9.5%); $350 and $360 both sit inside the
+    // HOLD zone at all nine checks.
+    const engine = assembleAnalysisResult({ ...withStatedD2Inputs(MSFT_FIXTURE), scenarioValues: null });
+    const a: AnalysisResult = { ...engine, price: { ...engine.price, value: new Decimal(350) } };
+    const stillHold: AnalysisResult = { ...engine, price: { ...engine.price, value: new Decimal(360) } };
 
     expect(deriveVerdict(a).status).toBe("HOLD");
     expect(deriveVerdict(stillHold).status).toBe("HOLD");

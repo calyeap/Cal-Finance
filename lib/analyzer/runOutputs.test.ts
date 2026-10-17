@@ -9,6 +9,7 @@ import { getRunOutput } from "./snapshotStore";
 import { canonicalJson, fingerprint } from "./runIdentity";
 import { getRecordedJudgementState } from "./runStore";
 import { deriveVerdict } from "./verdict";
+import { NO_VERDICT_JUDGEMENTS } from "./verdictJudgements";
 
 // ---------------------------------------------------------------------------
 // CF-AR3-REPRODUCIBLE-RUNS-01 — reproducible, dated runs, through the real
@@ -54,11 +55,9 @@ describe("CF-AR3 — the report reads stored outputs", () => {
     expect(snapshot.inputsFingerprint).toBe(report.result.runIdentity!.inputsFingerprint);
     expect(snapshot.factSnapshot.length).toBe(report.result.facts.length);
     expect(snapshot.priceSnapshot.price?.timestamp).toBe(report.result.price.timestamp);
-    // The AR5 judgement slots exist, unfilled.
-    expect(snapshot.judgementSnapshot.uncertainty).toBeNull();
-    expect(snapshot.judgementSnapshot.moatClass).toBeNull();
-    expect(snapshot.judgementSnapshot.managementRating).toBeNull();
-    expect(snapshot.judgementSnapshot.thesisState).toBeNull();
+    // The AR5 judgement slots (CF-AR5-VERDICT-CONSOLIDATION-01) are part of
+    // the stored tuple; nothing is recorded on this run.
+    expect(snapshot.judgementSnapshot.verdictJudgements).toEqual(NO_VERDICT_JUDGEMENTS);
     expect(snapshot.judgementSnapshot.judgments).toEqual([
       { judgmentKey: "NON-OPERATING INVESTMENTS", selection: "None of these are non-operating" },
     ]);

@@ -1,4 +1,6 @@
 import Decimal from "decimal.js";
+import type { RoicFloorResult } from "./roicFloor";
+import type { VerdictJudgements } from "./verdictJudgements";
 
 // Stock Analyzer v1 — the Analysis Result contract (spec §10.0, §10.0.1).
 // This file is the schema every calculation module, acquisition source and
@@ -1081,36 +1083,22 @@ export interface AchievedGrowth {
 }
 
 // ---------------------------------------------------------------------------
-// CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 — §10.6.2 Step 2's growth licence.
-// Schema lives here, independent of the module that computes it
-// (`lib/analyzer/growthLicence.ts`), matching this file's own convention for
-// every other M-module result above. See that module's doc comment for what
-// this is and is not allowed to decide.
+// CF-AR5-VERDICT-CONSOLIDATION-01 — what the D3 check and D4's computed floor
+// read off a run (verdict.ts). Schema here, computed in assemble.ts.
 // ---------------------------------------------------------------------------
 
-export type GrowthLicenceStatus = "YES" | "NO" | "UNKNOWN";
-
-export interface GrowthLicenceResult {
-  status: GrowthLicenceStatus;
-  reason: string;
-}
-
-// ---------------------------------------------------------------------------
-// CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 (REVIEW correction) — §10.6.2's
-// explicit, testable blocker classification. Schema lives here, independent
-// of the module that computes it (`lib/analyzer/verdictBlockers.ts`), matching
-// this file's own convention for every other M-module result above.
-// ---------------------------------------------------------------------------
-
-export type VerdictBlockerKind = "OPEN POLICY" | "DATA" | "CODE";
-
-export interface VerdictBlocker {
-  /** Which step of the §10.6.2 seven-step derivation this blocks, or
-   * "policy constants" for the §7.1 register (not itself one of the seven
-   * steps). */
-  step: string;
-  kind: VerdictBlockerKind;
-  cause: string;
+export interface VerdictInputs {
+  /**
+   * Base fair value per share at the D1 rate − 0.5pp, the rate, and + 0.5pp
+   * (Methodology v2.1 D1/D3), the terminal return moving with the rate as D2
+   * defines it (rate + moat credit) — the same revaluation M14's rate row
+   * uses. Null where the Base shown is not the engine's own (a typed figure
+   * cannot be revalued) or cannot be computed; `baseAtCheckRatesCause` says why.
+   */
+  baseAtCheckRates: { lower: Decimal; rate: Decimal; upper: Decimal } | null;
+  baseAtCheckRatesCause: string | null;
+  /** D4 item 2 — 5-yr average ROIC including goodwill against the D1 rate. */
+  roicFloor: RoicFloorResult;
 }
 
 // ---------------------------------------------------------------------------
@@ -1219,24 +1207,6 @@ export interface AnalysisResult {
   // real RawInput: a value, or the stated reason there is none — never a
   // silent gap and never fabricated.
   achievedRevenueCagr: RawInput<AchievedGrowth>;
-  // CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 — §10.6.2 Step 2's growth licence
-  // (`lib/analyzer/growthLicence.ts`), read from the RONIC ladder
-  // (`diagnostics.reinvestmentRonic.ronic`), evaluated at the run's D1 rate
-  // since AR0-2. Exposed here for inspection/testing, independent of
-  // `deriveVerdict`'s own user-facing reason text. Always present: YES/NO
-  // only where the ladder reads unequivocally, UNKNOWN otherwise, with the
-  // precise cause — never a default.
-  growthLicence: GrowthLicenceResult;
-  // CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 (REVIEW correction) — the ordered
-  // blocker classification `lib/analyzer/verdictBlockers.ts` reads off this
-  // run's own `trust` and `policy.undefinedConstants`, never off
-  // `growthLicence` or `deriveVerdict`'s own wording (both unchanged by it).
-  // Always present as a real array: empty only where trust is not UNUSABLE
-  // for this run AND every UNDEFINED_POLICY_CONSTANTS field is configured —
-  // which never happens today, since the Step 3 and Step 4/5 entries are
-  // unconditional open-house-policy blockers for every company (see that
-  // module's own doc comment).
-  verdictBlockers: VerdictBlocker[];
   // Populated only for the pre-revenue profile.
   preRevenue: PreRevenueModule | null;
   // Populated only after the independent blind-challenger call completes
@@ -1268,6 +1238,13 @@ export interface AnalysisResult {
   // inputs this result was valued under. Absent on a snapshot stored before
   // this field existed.
   valuationBasis?: ValuationBasis;
+  // CF-AR5-VERDICT-CONSOLIDATION-01 — the D3 check's revalued Base and D4's
+  // computed floor. Absent on a snapshot stored before this field existed.
+  verdictInputs?: VerdictInputs;
+  // CF-AR5-VERDICT-CONSOLIDATION-01 — Calvin's recorded verdict judgements
+  // this result was stored with (frozen spec §14.9 AR0-5), attached by
+  // reportAnalysis.ts from the run's recorded state; absent means none.
+  verdictJudgements?: VerdictJudgements;
 }
 
 export interface RunIdentity {

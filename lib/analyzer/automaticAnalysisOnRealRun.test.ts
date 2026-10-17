@@ -292,10 +292,15 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
         expect(result.gates.leverage.result).toBe("PASS");
         expect(result.trust.status).toBe("UNUSABLE");
         expect(result.fairValueRange.kind).toBe("suppressed");
-        expect(verdict.status).toBe("INCOMPLETE");
+        // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: the
+        // un-adopted sheet is its own pending-adoption state, not INCOMPLETE;
+        // where another file has removed the recorded sheet, A4's
+        // fixture-carried values leave the Base unbounded instead.
+        expect(verdict.status).not.toMatch(/^(BUY|HOLD|SELL)$/);
         expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
         expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
         expect(verdict.reason).toMatch(/Pending adoption|scenario dollar values/);
+        expect(verdict.state).toBe(/Pending adoption/.test(verdict.reason) ? "PENDING ADOPTION" : "CANNOT BOUND VALUE");
       } else {
         // 22 Sep 02:24:07Z (B) — OKLO's verdict stays honestly INCOMPLETE,
         // blocked upstream of any synthesis by the leverage precondition.
@@ -375,7 +380,8 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
     // Same state as the shared block above; this test exercises the
     // detail-route judgment path rather than the automatic pass, but reaches
     // the identical financial state, so the same verdict follows.
-    expect(verdict.status).toBe("INCOMPLETE");
+    expect(verdict.status).not.toMatch(/^(BUY|HOLD|SELL)$/);
+    expect(verdict.state).toBe(/Pending adoption/.test(verdict.reason) ? "PENDING ADOPTION" : "CANNOT BOUND VALUE");
     expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
   });
 

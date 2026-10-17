@@ -1,7 +1,10 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
-import type { AnalysisResult, TrustStatus } from "@/lib/analyzer/types";
+import type { AnalysisResult } from "@/lib/analyzer/types";
 import type { VerdictResult } from "@/lib/analyzer/verdict";
+import { NO_VERDICT_JUDGEMENTS } from "@/lib/analyzer/verdictJudgements";
+import type { UncertaintyProposalReport } from "@/lib/analyzer/uncertaintyProposalStore";
+import { VerdictJudgementPanel } from "./VerdictJudgementPanel";
 import { DominantVerdictSlot } from "./DominantVerdictSlot";
 import { PriceChartPanel } from "./PriceChartPanel";
 import { ScenarioRangeStrip } from "./ScenarioRangeStrip";
@@ -9,10 +12,10 @@ import { AnalyzerRightRail } from "./AnalyzerRightRail";
 import {
   trustStatusLine,
   trustConsequenceLine,
-  uncertaintyLevel,
+  uncertaintyBadge,
   incompleteVerdictExplanation,
   priceVsRangeHeadline,
-  completedVerdictExplanation,
+  verdictExplanation,
   rateInUseLine,
 } from "@/lib/analyzer/trustCopy";
 import { createDeepSnapshotAction, beginUpdateRunAction } from "@/app/actions/analyzer";
@@ -55,11 +58,14 @@ export function isAnalyzerTabSlug(value: string): value is AnalyzerTabSlug {
   return ANALYZER_TABS.some((t) => t.slug === value);
 }
 
-function UncertaintyBadge({ status }: { status: TrustStatus }) {
-  const level = uncertaintyLevel(status);
+// CF-AR5-VERDICT-CONSOLIDATION-01 — the D3 uncertainty level Calvin set (or
+// whether it matters at all), no longer the run's evidence completeness
+// relabelled (trustCopy.ts `uncertaintyBadge`).
+function UncertaintyBadge({ verdict, result }: { verdict: VerdictResult; result: AnalysisResult }) {
+  const badge = uncertaintyBadge(verdict, result.verdictJudgements);
   return (
-    <span className="az-uncertainty" data-level={level}>
-      {level} uncertainty
+    <span className="az-uncertainty" data-level={badge.level ?? "unset"}>
+      {badge.text}
     </span>
   );
 }
@@ -70,6 +76,7 @@ export function AnalyzerReportFrame({
   verdict,
   profileNotConfirmed,
   activeTab,
+  uncertaintyProposal = null,
   children,
 }: {
   runId: string;
@@ -77,6 +84,7 @@ export function AnalyzerReportFrame({
   verdict: VerdictResult;
   profileNotConfirmed: boolean;
   activeTab: AnalyzerTabSlug;
+  uncertaintyProposal?: UncertaintyProposalReport | null;
   children: ReactNode;
 }) {
   const trust = result.trust;
@@ -124,17 +132,9 @@ export function AnalyzerReportFrame({
                 trustStatus: trust.status,
                 profileNotConfirmed,
               })}
-              completedExplanation={
-                verdict.status === "INCOMPLETE"
-                  ? undefined
-                  : completedVerdictExplanation({
-                      status: verdict.status,
-                      price: result.price.value,
-                      base: result.scenarioOutputs.values.base,
-                    })
-              }
+              explanation={verdictExplanation(verdict, result.price.value, result.scenarioOutputs.values.base)}
             />
-            <UncertaintyBadge status={trust.status} />
+            <UncertaintyBadge verdict={verdict} result={result} />
           </div>
           <div className="az-hero-price">
             <PriceChartPanel price={result.price} priceState={priceState} />
@@ -191,6 +191,17 @@ export function AnalyzerReportFrame({
             </button>
           </form>
         </div>
+
+        {(activeTab === "overview" || activeTab === "risks") && (
+          <VerdictJudgementPanel
+            runId={runId}
+            verdict={verdict}
+            judgements={result.verdictJudgements ?? NO_VERDICT_JUDGEMENTS}
+            moatClass={result.valuationBasis?.d2.moatClass ?? null}
+            proposal={uncertaintyProposal}
+            mode={activeTab === "risks" ? "all" : "pending"}
+          />
+        )}
 
         <div className="az-tabbody">{children}</div>
       </div>

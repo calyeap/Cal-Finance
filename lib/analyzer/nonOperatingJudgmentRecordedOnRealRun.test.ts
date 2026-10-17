@@ -105,7 +105,10 @@ describe("CF-S44-RECORD-01 — MSFT's §4.4 ruling recorded on a real run", () =
     const result = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
 
-    expect(verdict.status).toBe("INCOMPLETE");
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: the
+    // un-adopted sheet is its own pending-adoption state (not a verdict).
+    expect(verdict.status).not.toMatch(/^(BUY|HOLD|SELL)$/);
+    expect(verdict.state).toBe(/Pending adoption/.test(verdict.reason) ? "PENDING ADOPTION" : "CANNOT BOUND VALUE");
     expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
     expect(verdict.reason).toMatch(NO_MSFT_VALUATION);
   });
