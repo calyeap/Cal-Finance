@@ -162,11 +162,13 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
         expect(hero.textContent).not.toMatch(/see Evidence/i);
         expect(hero.textContent).toMatch(/^No valuation verdict for this company yet — /);
       }
-      // All eight Overview tab slots (5-11 plus the new slot 12, REQUIRED
-      // OVERVIEW CONTENT item 9), in the fixed order — the route still
-      // renders the whole Overview tab body, not a reduced one.
+      // Quick Read plus all eight Overview tab slots (5-11 plus the new
+      // slot 12, REQUIRED OVERVIEW CONTENT item 9), in the fixed order —
+      // the route still renders the whole Overview tab body, not a reduced
+      // one (CF-AR1-QUICK-READ-OVERVIEW-01 adds Quick Read first).
       const slots = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
-      expect(slots).toHaveLength(8);
+      expect(slots).toHaveLength(9);
+      expect(slots[0]).toBe("slot-quickread");
     });
 
     it("the Evidence tab renders Sections B and J from the run alone, with no redirect", async () => {

@@ -4,6 +4,7 @@ import type { AnalysisResult, Profile, SuppressingState } from "@/lib/analyzer/t
 import { ValuationStrip } from "./ValuationStrip";
 import { boundState, isBoundTo, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
 import { trustStatusLine } from "@/lib/analyzer/trustCopy";
+import { plainReason } from "@/lib/analyzer/overviewCopy";
 
 // IA-audit restoration (2026-09-05) — Quick Read's eight items are the
 // AUTHORISED INTERIM STATE of §17.16, not its full contract. §17.16
@@ -84,6 +85,40 @@ function SecLink({ id, children }: { id: string; children: ReactNode }) {
   return <a href={`#${id}`}>{children}</a>;
 }
 
+// CF-AR1-QUICK-READ-OVERVIEW-01 — the two things that change when this
+// file's content is rendered on the Overview tab instead of (or in addition
+// to) Evidence: the lettered sections (`SecLink`) this component points to
+// exist only on the Evidence tab's own page under the seven-tab shell, so a
+// pointer to one from Overview would be a dead, unresolvable anchor — the
+// same reason `overviewCopy.ts` already forbids a bare `"see Evidence"`
+// placeholder. And every raw `SuppressingState` literal shown in bold here
+// must instead go through `overviewCopy.ts`'s plain-English translation
+// (DO item 3). Both are pure presentation swaps on a `plain` flag; no
+// branch condition, figure or computation anywhere in this file changes.
+// `QuickRead`'s own call (Evidence tab) always passes `plain={false}` and
+// so renders byte-for-byte as before this outcome.
+
+/** The Evidence-only "— see Section X" pointer; dropped entirely when `plain`. */
+function sectionPointer(plain: boolean, id: string, label: ReactNode = `Section ${id}`): ReactNode {
+  if (plain) return null;
+  return (
+    <>
+      {" "}
+      — see <SecLink id={id}>{label}</SecLink>
+    </>
+  );
+}
+
+/** A technical state name — bold and raw on Evidence, overviewCopy.ts's plain English when `plain`. */
+function stateClause(
+  plain: boolean,
+  state: SuppressingState,
+  cause = "",
+  leverage?: AnalysisResult["gates"]["leverage"]
+): ReactNode {
+  return plain ? plainReason(state, cause, leverage) : <b>{state}</b>;
+}
+
 interface QuickReadItem {
   label: string;
   body: ReactNode;
@@ -94,7 +129,7 @@ interface QuickReadItem {
 // register (§17.16). This is the content that used to live behind the
 // single "Learn more" drawer; it is the same restatement, just always
 // visible under its own named item instead of hidden behind a disclosure.
-function dataAndModelQualityItem(result: AnalysisResult): ReactNode {
+function dataAndModelQualityItem(result: AnalysisResult, plain: boolean): ReactNode {
   const { states, trust } = result;
   const consolidated = consolidateStates(states.suppressing);
   const anyNonDefaultProvenanceFact = result.facts.some(
@@ -108,14 +143,20 @@ function dataAndModelQualityItem(result: AnalysisResult): ReactNode {
   const bullets: ReactNode[] = [
     ...consolidated.map((c) => (
       <li key={`s-${c.state}`}>
-        Output(s) return <b>{c.state}</b>
-        {c.sectionRef ? (
-          <>
-            {" — see "}
-            <SecLink id={c.sectionRef}>Section {c.sectionRef}</SecLink>
-          </>
+        {plain ? (
+          <>One or more outputs are not computed yet — {plainReason(c.state, "", result.gates.leverage)}.</>
         ) : (
-          "."
+          <>
+            Output(s) return <b>{c.state}</b>
+            {c.sectionRef ? (
+              <>
+                {" — see "}
+                <SecLink id={c.sectionRef}>Section {c.sectionRef}</SecLink>
+              </>
+            ) : (
+              "."
+            )}
+          </>
         )}
       </li>
     )),
@@ -127,8 +168,17 @@ function dataAndModelQualityItem(result: AnalysisResult): ReactNode {
     ...(anyNonDefaultProvenanceFact
       ? [
           <li key="prov">
-            One or more facts in <SecLink id="B">Section B</SecLink> carry a non-default provenance marker
-            (secondary source, AI-extracted, or unverified).
+            {plain ? (
+              <>
+                One or more facts behind this analysis carry a non-default provenance marker (secondary source,
+                AI-extracted, or unverified).
+              </>
+            ) : (
+              <>
+                One or more facts in <SecLink id="B">Section B</SecLink> carry a non-default provenance marker
+                (secondary source, AI-extracted, or unverified).
+              </>
+            )}
           </li>,
         ]
       : []),
@@ -158,9 +208,14 @@ function dataAndModelQualityItem(result: AnalysisResult): ReactNode {
 }
 
 // --- Item 7, "Strongest challenger point" ---------------------------------
-function challengerItem(result: AnalysisResult): ReactNode {
+function challengerItem(result: AnalysisResult, plain: boolean): ReactNode {
   if (result.challenger === null) {
-    return (
+    return plain ? (
+      <p className="t">
+        Findings from the independent challenger call will appear on the Risks &amp; Thesis tab, unreconciled with
+        the analysis above, once that call completes.
+      </p>
+    ) : (
       <p className="t">
         Findings from the independent challenger call appear in <SecLink id="I2">Section I2</SecLink>, unreconciled
         with the analysis above, once that call completes.
@@ -169,35 +224,49 @@ function challengerItem(result: AnalysisResult): ReactNode {
   }
   const first = result.challenger.findings[0];
   if (!first) {
-    return (
+    return plain ? (
+      <p className="t">The independent challenger call completed with no findings recorded.</p>
+    ) : (
       <p className="t">
         The independent challenger call completed with no findings recorded — see <SecLink id="I2">Section I2</SecLink>.
       </p>
     );
   }
-  return (
+  return plain ? (
+    <p className="t">
+      {first.claimOrFactReference} — unreconciled with the analysis above; the full finding is on the Risks &amp;
+      Thesis tab.
+    </p>
+  ) : (
     <p className="t">
       {first.claimOrFactReference} — see <SecLink id="I2">Section I2</SecLink>, unreconciled with the analysis above.
     </p>
   );
 }
 
-function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
+/**
+ * Quick Read's own eight items (§17.16). `plain` is presentation-only (DO
+ * item 3 / sectionPointer's own doc comment above) — every branch condition
+ * and figure below is identical regardless of its value.
+ */
+function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[] {
   const { gates, states, priceImplied, preRevenue, fairValueRange, scenarioOutputs } = result;
   const marginAtHigh = states.qualifying.some((q) => q.flag === "MARGIN AT HISTORICAL HIGH");
 
-  const challengerItemBody = challengerItem(result);
-  const dataQualityBody = dataAndModelQualityItem(result);
+  const challengerItemBody = challengerItem(result, plain);
+  const dataQualityBody = dataAndModelQualityItem(result, plain);
 
   // --- Gate/leverage refusal takes priority over everything else -------
-  if (gates.gate0.result !== "PASS") {
+  const gate0Result = gates.gate0.result;
+  if (gate0Result !== "PASS") {
     return [
       {
         label: "Main finding",
         body: (
           <p className="qlead">
-            Calboard cannot value {result.companyName} with this method — <b>{gates.gate0.result}</b> (
-            <SecLink id="C">Section C</SecLink>).
+            Calboard cannot value {result.companyName} with this method —{" "}
+            {plain ? plainReason(gate0Result, "") : <b>{gate0Result}</b>}
+            {!plain && <> (<SecLink id="C">Section C</SecLink>)</>}.
           </p>
         ),
       },
@@ -205,20 +274,24 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         label: "Price vs scenarios",
         body: (
           <p className="t">
-            Every price-implied and scenario output is suppressed under this state — see <SecLink id="H">Section H</SecLink>.
+            Every price-implied and scenario output is suppressed under this state{sectionPointer(plain, "H")}.
           </p>
         ),
       },
       {
         label: "What today's price requires",
-        body: <p className="t">Not shown — no valuation output survives this gate. See <SecLink id="C">Section C</SecLink>.</p>,
+        body: (
+          <p className="t">
+            Not shown — no valuation output survives this gate.{!plain && <> See <SecLink id="C">Section C</SecLink>.</>}
+          </p>
+        ),
       },
       {
         label: "What supports the case",
         body: (
           <p className="t">
-            Facts, and whatever multiples and history diagnostics remain arithmetically defined, are still shown —
-            see <SecLink id="D">Section D</SecLink>.
+            Facts, and whatever multiples and history diagnostics remain arithmetically defined, are still shown
+            {sectionPointer(plain, "D")}.
           </p>
         ),
       },
@@ -226,8 +299,8 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         label: "What worries Calboard",
         body: (
           <p className="t">
-            The gate refuses outright rather than producing a confident-looking answer from the wrong model — see{" "}
-            <SecLink id="C">Section C</SecLink>.
+            The gate refuses outright rather than producing a confident-looking answer from the wrong model
+            {sectionPointer(plain, "C")}.
           </p>
         ),
       },
@@ -235,8 +308,7 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         label: "Biggest uncertainty",
         body: (
           <p className="t">
-            Whether the classification itself is right — see <SecLink id="C">Section C</SecLink> for the exact test
-            that fired.
+            Whether the classification itself is right{plain ? "." : <> — see <SecLink id="C">Section C</SecLink> for the exact test that fired.</>}
           </p>
         ),
       },
@@ -252,16 +324,15 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         body: (
           <p className="qlead">
             The leverage precondition fails for {result.companyName}, so every rate-dependent output here is
-            suppressed (<b>LEVERAGE UNSUPPORTED IN v1</b> — <SecLink id="C">Section C</SecLink>).
+            suppressed — {stateClause(plain, "LEVERAGE UNSUPPORTED IN v1", "", gates.leverage)}
+            {!plain && <> (<SecLink id="C">Section C</SecLink>)</>}.
           </p>
         ),
       },
       {
         label: "Price vs scenarios",
         body: (
-          <p className="t">
-            The fair-value range is suppressed under this state — see <SecLink id="H">Section H</SecLink>.
-          </p>
+          <p className="t">The fair-value range is suppressed under this state{sectionPointer(plain, "H")}.</p>
         ),
       },
       {
@@ -269,7 +340,7 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         body: (
           <p className="t">
             Not shown — the reverse-DCF grid, steady-state EV/PVGO, implied exit multiple and the fair-value range
-            are all suppressed. See <SecLink id="E">Section E</SecLink>.
+            are all suppressed.{!plain && <> See <SecLink id="E">Section E</SecLink>.</>}
           </p>
         ),
       },
@@ -277,8 +348,8 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         label: "What supports the case",
         body: (
           <p className="t">
-            Facts and whatever diagnostics do not depend on the levered structure remain shown — see{" "}
-            <SecLink id="D">Section D</SecLink>.
+            Facts and whatever diagnostics do not depend on the levered structure remain shown
+            {sectionPointer(plain, "D")}.
           </p>
         ),
       },
@@ -286,8 +357,8 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         label: "What worries Calboard",
         body: (
           <p className="t">
-            A capital structure this levered can no longer be treated as a straightforward unlevered claim — see{" "}
-            <SecLink id="C">Section C</SecLink>.
+            A capital structure this levered can no longer be treated as a straightforward unlevered claim
+            {sectionPointer(plain, "C")}.
           </p>
         ),
       },
@@ -295,7 +366,7 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         label: "Biggest uncertainty",
         body: (
           <p className="t">
-            The net debt ratio itself and whether it is likely to change — see <SecLink id="C">Section C</SecLink>.
+            The net debt ratio itself and whether it is likely to change{sectionPointer(plain, "C")}.
           </p>
         ),
       },
@@ -318,13 +389,16 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         body: (
           <p className="qlead">
             Calboard cannot show a fair-value distribution for {result.companyName} on this run —{" "}
-            <b>{fairValueRange.state}</b> (<SecLink id="D">Section D</SecLink>).
+            {stateClause(plain, fairValueRange.state, fairValueRange.cause)}
+            {!plain && <> (<SecLink id="D">Section D</SecLink>)</>}.
           </p>
         ),
       },
       {
         label: "Price vs scenarios",
-        body: (
+        body: plain ? (
+          <p className="t">{plainReason(fairValueRange.state, fairValueRange.cause)}.</p>
+        ) : (
           <p className="t">
             {fairValueRange.cause} <SecLink id="D">Section D</SecLink>
           </p>
@@ -334,7 +408,7 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         label: "What today's price requires",
         body: (
           <p className="t">
-            Not shown — no fair-value distribution survives this state. See <SecLink id="D">Section D</SecLink>.
+            Not shown — no fair-value distribution survives this state.{!plain && <> See <SecLink id="D">Section D</SecLink>.</>}
           </p>
         ),
       },
@@ -343,7 +417,7 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         body: (
           <p className="t">
             Whichever success definitions and funding-stack figures remain independently computable are still shown
-            — see <SecLink id="D">Section D</SecLink>.
+            {sectionPointer(plain, "D")}.
           </p>
         ),
       },
@@ -352,7 +426,7 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         body: (
           <p className="t">
             The acquired cash-per-share basis is not established, so the failure floor and any success weight built
-            on it are withheld rather than shown on an invented basis — see <SecLink id="D">Section D</SecLink>.
+            on it are withheld rather than shown on an invented basis{sectionPointer(plain, "D")}.
           </p>
         ),
       },
@@ -360,8 +434,8 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         label: "Biggest uncertainty",
         body: (
           <p className="t">
-            Whether a later run can acquire the missing cash, share or burn evidence this basis needs — see{" "}
-            <SecLink id="D">Section D</SecLink>.
+            Whether a later run can acquire the missing cash, share or burn evidence this basis needs
+            {sectionPointer(plain, "D")}.
           </p>
         ),
       },
@@ -390,14 +464,11 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
             {anyWorthLessThanFailure ? (
               <>
                 On one or more of the modelled ways {result.companyName} could succeed, shareholders would end up
-                with less than if it simply held its cash (<b>THIS SUCCESS IS WORTH LESS THAN FAILURE</b>) — see{" "}
-                <SecLink id="D">Section D</SecLink> for which.
+                with less than if it simply held its cash — {stateClause(plain, "THIS SUCCESS IS WORTH LESS THAN FAILURE")}
+                {!plain && <> — see <SecLink id="D">Section D</SecLink> for which</>}.
               </>
             ) : (
-              <>
-                Every modelled way {result.companyName} could succeed is worth more than simply holding its cash —
-                none returns THIS SUCCESS IS WORTH LESS THAN FAILURE.
-              </>
+              <>Every modelled way {result.companyName} could succeed is worth more than simply holding its cash.</>
             )}
           </p>
         ),
@@ -407,8 +478,8 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         body: (
           <p className="t">
             Not a bear-bull range. The outcomes are separate worlds, so the output is a distribution: failure{" "}
-            {formatDollar(fairValueRange.failure)}, success as commonly described {rangeText}.{" "}
-            <SecLink id="H">Section H</SecLink>
+            {formatDollar(fairValueRange.failure)}, success as commonly described {rangeText}.
+            {!plain && <> <SecLink id="H">Section H</SecLink></>}
           </p>
         ),
       },
@@ -417,7 +488,7 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         body: (
           <p className="t">
             Success as today&apos;s price requires is {formatDollar(fairValueRange.successAsPriceRequires)} per
-            share. <SecLink id="H">Section H</SecLink>
+            share.{!plain && <> <SecLink id="H">Section H</SecLink></>}
           </p>
         ),
       },
@@ -427,13 +498,10 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
           <ul>
             <li>
               A cash floor of {formatDollar(fairValueRange.cashFloor)} per share that does not depend on{" "}
-              {result.companyName}&apos;s operations succeeding — <SecLink id="H">Section H</SecLink>
+              {result.companyName}&apos;s operations succeeding{sectionPointer(plain, "H")}
             </li>
             {anyClearsFloor && (
-              <li>
-                At least one modelled success clears the cash floor by a wide margin —{" "}
-                <SecLink id="D">Section D</SecLink>
-              </li>
+              <li>At least one modelled success clears the cash floor by a wide margin{sectionPointer(plain, "D")}</li>
             )}
           </ul>
         ),
@@ -444,15 +512,15 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
           <ul>
             {anyWorthLessThanFailure && (
               <li>
-                One or more success definitions return <b>THIS SUCCESS IS WORTH LESS THAN FAILURE</b> — a finding,
-                not an error. <SecLink id="D">Section D</SecLink>
+                One or more success definitions show {stateClause(plain, "THIS SUCCESS IS WORTH LESS THAN FAILURE")} —
+                a finding, not an error.{!plain && <> <SecLink id="D">Section D</SecLink></>}
               </li>
             )}
             {anyRateCapped && (
               <li>
                 The levered cost-of-equity cap binds on one or more success definitions (
-                <b>RATE CAPPED — VALUE IS AN UPPER BOUND</b>), so those values are upper bounds —{" "}
-                <SecLink id="D">Section D</SecLink>
+                <b>RATE CAPPED — VALUE IS AN UPPER BOUND</b>), so those values are upper bounds
+                {sectionPointer(plain, "D")}
               </li>
             )}
             {!anyWorthLessThanFailure && !anyRateCapped && <li>No value-level concern is active for this analysis.</li>}
@@ -464,7 +532,7 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         body: (
           <p className="t">
             The capacity ramp shape used in the funding stack — back-loaded versus steady moves the same success
-            case's value. <SecLink id="D">Section D</SecLink>
+            case&apos;s value.{sectionPointer(plain, "D")}
           </p>
         ),
       },
@@ -500,9 +568,9 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
           {growthLine}{" "}
           {anyDegenerateCell && (
             <>
-              One or more reverse-DCF scenarios return no number at all (
-              <b>DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE</b>) rather than a misleading one — see{" "}
-              <SecLink id="E">Section E</SecLink> for which.
+              One or more reverse-DCF scenarios return no number at all rather than a misleading one —{" "}
+              {stateClause(plain, "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE")}
+              {!plain && <> — see <SecLink id="E">Section E</SecLink> for which</>}.
             </>
           )}
         </p>
@@ -522,13 +590,11 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
         <p className="t">
           {insideRange ? "Inside" : "Outside"} the authored bear-bull range, with the weighted value shown inside the
           range rather than as a headline
-          {fairValueRange.scenarioLabelsWarning && " (the bounds are scenario labels, not confidence bounds)"}.{" "}
-          <SecLink id="H">Section H</SecLink>
+          {fairValueRange.scenarioLabelsWarning && " (the bounds are scenario labels, not confidence bounds)"}.
+          {!plain && <> <SecLink id="H">Section H</SecLink></>}
         </p>
       ) : (
-        <p className="t">
-          The fair-value range is suppressed — see <SecLink id="H">Section H</SecLink>.
-        </p>
+        <p className="t">The fair-value range is suppressed{sectionPointer(plain, "H")}.</p>
       ),
     },
     {
@@ -538,12 +604,12 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
           <p className="t">
             {formatPct(cleanCell.fiveYearGrowth.value)} revenue growth for five years at r ={" "}
             {formatPct(new Decimal(cleanCell.rate), 0)}, equivalent to {formatPct(cleanCell.tenYearCagr.value)} over
-            ten. <SecLink id="E">Section E</SecLink>
+            ten.{!plain && <> <SecLink id="E">Section E</SecLink></>}
           </p>
         ) : (
           <p className="t">
-            No cell in the reverse-DCF grid resolves to a usable growth figure at this run's inputs.{" "}
-            <SecLink id="E">Section E</SecLink>
+            No cell in the reverse-DCF grid resolves to a usable growth figure at this run&apos;s inputs.
+            {!plain && <> <SecLink id="E">Section E</SecLink></>}
           </p>
         ),
     },
@@ -552,15 +618,12 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
       body: (
         <ul>
           {ronicAboveEveryRate && (
-            <li>
-              Return on new capital of {formatPct(ronic.value)}, above every discount rate tested —{" "}
-              <SecLink id="D">Section D</SecLink>
-            </li>
+            <li>Return on new capital of {formatPct(ronic.value)}, above every discount rate tested{sectionPointer(plain, "D")}</li>
           )}
           {cleanCell && (
             <li>
-              At least one reverse-DCF cell resolves to a usable growth figure rather than returning a state —{" "}
-              <SecLink id="E">Section E</SecLink>
+              At least one reverse-DCF cell resolves to a usable growth figure rather than returning a state
+              {sectionPointer(plain, "E")}
             </li>
           )}
           {!ronicAboveEveryRate && !cleanCell && <li>No supporting figure resolves cleanly for this analysis.</li>}
@@ -574,13 +637,13 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
           {marginAtHigh && (
             <li>
               Operating margin sits at or near its own ten-year high (<b>MARGIN AT HISTORICAL HIGH</b>), and the
-              reverse-DCF grid is run from that level — <SecLink id="D">Section D</SecLink>
+              reverse-DCF grid is run from that level{sectionPointer(plain, "D")}
             </li>
           )}
           {anyDegenerateCell && (
             <li>
-              One or more reverse-DCF cells return <b>DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE</b> rather than a
-              number — <SecLink id="E">Section E</SecLink>
+              One or more reverse-DCF cells return no number — {stateClause(plain, "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE")}
+              {sectionPointer(plain, "E")}
             </li>
           )}
           {!marginAtHigh && !anyDegenerateCell && <li>No value-level concern is active for this analysis.</li>}
@@ -592,12 +655,11 @@ function buildQuickRead(result: AnalysisResult): QuickReadItem[] {
       body: marginAtHigh ? (
         <p className="t">
           Which margin level is the right base for the reverse-DCF grid — the current level or the ten-year median.
-          The gap drives the whole grid. <SecLink id="D">Section D</SecLink>
+          The gap drives the whole grid.{sectionPointer(plain, "D")}
         </p>
       ) : (
         <p className="t">
-          The cells that do resolve, and how much of their value sits in the terminal period.{" "}
-          <SecLink id="E">Section E</SecLink>
+          The cells that do resolve, and how much of their value sits in the terminal period.{sectionPointer(plain, "E")}
         </p>
       ),
     },
@@ -637,7 +699,7 @@ function applyInterpretedPageOne(items: QuickReadItem[], result: AnalysisResult)
 }
 
 export function QuickRead({ result }: { result: AnalysisResult }) {
-  const items = applyInterpretedPageOne(buildQuickRead(result), result);
+  const items = applyInterpretedPageOne(buildQuickRead(result, false), result);
   const profileLabel = PROFILE_LABELS[result.profile.confirmedOrOverridden];
   // CF-PRICE-DISPLAY-HONESTY-RECON-01 — result.price.timestamp is "" on a
   // priceless run (§3.4's own always-present sentinel); the clause is
@@ -663,5 +725,33 @@ export function QuickRead({ result }: { result: AnalysisResult }) {
         </div>
       ))}
     </section>
+  );
+}
+
+/**
+ * CF-AR1-QUICK-READ-OVERVIEW-01 — Quick Read's own items (§17.16), rendered
+ * in the Overview tab body (DO item 1). Same branch logic and figures as
+ * `QuickRead` above, via the same `buildQuickRead`/`applyInterpretedPageOne`
+ * — nothing here is computed twice or differently. Two differences only,
+ * both presentational: the bear/base/bull/current-price grid is omitted —
+ * the hero's `ScenarioRangeStrip`, shared by every tab, already renders it
+ * immediately above (no duplicate verdict card) — and `buildQuickRead`'s
+ * `plain` flag routes every technical state name through overviewCopy.ts
+ * and drops the Evidence-only "see Section X" cross-reference (see
+ * `sectionPointer`'s doc comment above).
+ */
+export function OverviewQuickRead({ result }: { result: AnalysisResult }) {
+  const items = applyInterpretedPageOne(buildQuickRead(result, true), result);
+
+  return (
+    <div className="ovslot" id="slot-quickread">
+      <h3>Quick read</h3>
+      {items.map((item) => (
+        <div className="qitem" key={item.label}>
+          <span className="k">{item.label}</span>
+          {item.body}
+        </div>
+      ))}
+    </div>
   );
 }

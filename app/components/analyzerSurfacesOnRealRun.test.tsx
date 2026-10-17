@@ -73,7 +73,17 @@ async function openRealRun(ticker: string, companyName: string): Promise<RealRun
 // CF-DESIGN-AUTHORITY-CUTOVER-01 — AnalyzerOverview now renders only the
 // Overview tab's own body (slots 5-11); slots 1-4 and 12 moved to
 // AnalyzerReportFrame, exercised separately below.
-const OVERVIEW_TAB_SLOT_ORDER = ["slot-5", "slot-6", "slot-7", "slot-8", "slot-9", "slot-10", "slot-11", "slot-12"];
+const OVERVIEW_TAB_SLOT_ORDER = [
+  "slot-quickread",
+  "slot-5",
+  "slot-6",
+  "slot-7",
+  "slot-8",
+  "slot-9",
+  "slot-10",
+  "slot-11",
+  "slot-12",
+];
 
 const REPORT_SECTION_ORDER = ["quickread", "A", "C", "D", "E", "F", "G", "H", "I", "I2", "B", "J", "atglance"];
 
