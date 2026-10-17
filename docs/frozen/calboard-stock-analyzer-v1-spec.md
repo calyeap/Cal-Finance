@@ -2,6 +2,8 @@
 
 **Status:** APPROVED FOR BUILD — Command Center, 5 September 2026. M1–M6 were built and shipped against it. Amendment M7 was approved on 7 September 2026 and is recorded below and in §14; M7-b and M7-c amended it further the same day. A disagreement between this document and the build is a defect to be raised, not drift for a later session to correct on its own judgment.
 
+**Amendment AR0 — 17 October 2026 (Analyzer Reset).** Records the consequences of Calvin's approved decisions D1–D6 for this contract: discount rate, one reverse-DCF solve, terminal returns, the verdict, judgements as versioned inputs, scenario authorship and recent analyses. See §14.9; finance semantics live in Cal Finance Methodology v2.1.
+
 **Amendment M7 — APPROVED by Command Center, 7 September 2026.** This document carries the M7 amendment: eighteen changes across this spec, the interaction design and `mock-human-steps.html`, of which twelve land here. The amendment implements **Calvin's recorded override of 6 September 2026** on the no-verdict boundary, together with eleven further changes to Step 1, Step 2, the step numbering, the trust vocabulary and the page-one contract. **§14 is the amendment record.** It lists every change, every reading the amendment had to make, and the follow-ups it deliberately did not fix. **This amended text is the operative contract.** Command Center approved the amendment on 6 September 2026 and recorded it on the Product Decision Log, but the approval was not written into the artefacts until 7 September. For a day both documents declared themselves not in force while every dispatch assumed they were. Amendments M7-b and M7-c were applied during that window; both stand, and both are recorded in §14.
 
 **Date:** 5 September 2026. Amendment M7 drafted 6 September 2026.
@@ -124,7 +126,7 @@ Two rules govern this step.
 
 **Step 6 — Profile confirmation.** Analyst confirms the recommended profile, overrides it, or answers **Cannot judge**. Every override, its reason, and the fact that nothing under an overridden gate has been validated are recorded. *Cannot judge* uses the recommended profile provisionally, records the profile as **not human-confirmed**, and raises PROFILE NOT CONFIRMED (§6.3, §9.4).
 
-**Step 7 — Analyst scenarios.** Analyst supplies three scenarios per §10 Step 3, with drivers set together, anchors written down, and a per-scenario share count where financing differs.
+**Step 7 — Analyst scenarios.** Analyst supplies three scenarios per §10 Step 3, with drivers set together, anchors written down, and a per-scenario share count where financing differs. *[Amended AR0-6, §14.9: for a new ticker the analyst authors the scenarios by adopting — optionally adjusting — a price-blind AI draft whose every driver cites its anchor; the final verdict waits for adoption.]*
 
 > **Why 6 and 7 are two steps.** They were one step and one number in the frozen text, and they are two different human jobs. Step 6 is a judgment about **what kind of company this is** — an act of classification, made against evidence the software has already assembled, whose failure mode is deferring to the recommendation. Step 7 is an act of **authorship**: the analyst writes assumptions that did not previously exist, and its failure mode is incoherent paths across the three columns. Collapsing them under one number let the second inherit the first's completed feeling. Splitting them is a numbering change only — no calculation, no gate and no state moves with it.
 
@@ -551,7 +553,7 @@ Independently of which profile row is chosen. Two different claims needing diffe
 
 - PVGO computed on median-margin NOPAT as well as current NOPAT, with the gap reported
 - P/E computed at three margin levels: current, the window median, and one stress level between them (policy stress levels where Gate 1 returned HISTORY INSUFFICIENT)
-- The reverse DCF run at **all three** margin levels, not one
+- The reverse DCF run at **all three** margin levels, not one *[Amended AR0-2, §14.9: one reverse-DCF solve; margin levels move to sensitivity.]*
 - A bear scenario in which the **margin reverts** — not merely growth slowing
 
 **Additional, and only when B fires — the cyclicality set:**
@@ -613,10 +615,10 @@ Everything in this section is software. No model judgment enters any of it.
 |---|---|---|
 | Path shape | constant growth years 1–5, linear fade to terminal by year 10, terminal thereafter | fixed |
 | Terminal growth | **3.0%** | fixed; never above nominal GDP; >3–3.5% is a red flag |
-| Terminal ROIC (diagnostic reverse DCF only) | **r + 3 percentage points** | **PROVISIONAL** — must carry the label "assumes a permanent 3-point return premium for every company" (I16) |
-| Rate grid | **8% / 10% / 12%** for every company, with the profile's own band marked | fixed |
+| Terminal ROIC (diagnostic reverse DCF only) | **r + 3 percentage points** | **PROVISIONAL** — must carry the label "assumes a permanent 3-point return premium for every company" (I16) · *Retired by AR0-2 and AR0-3 (§14.9): one convention — the rate plus the D2 moat credit* |
+| Rate grid | **8% / 10% / 12%** for every company, with the profile's own band marked | fixed · *Retired by AR0-2 (§14.9)* |
 | Margin levels | current, window median, one stress level | fixed |
-| Discount bands | ~8–9% large stable low-leverage; ~10–12% high-growth or cyclical profitable | fixed by policy |
+| Discount bands | ~8–9% large stable low-leverage; ~10–12% high-growth or cyclical profitable | fixed by policy · *Replaced by AR0-1 (§14.9): Cal Finance Methodology v2.1 D1* |
 | Rate minus terminal growth | must be ≥ ~4–5 points | hard constraint |
 | Pre-revenue construction lead | **2 years** | **PROVISIONAL** — first-order, worth $27/share on OKLO's 8 GW case |
 | Levered cost-of-equity cap | **30%** | **PROVISIONAL** — capped cells labelled RATE CAPPED (I12) |
@@ -655,7 +657,7 @@ Each module states its inputs, its suppression conditions and its output states.
 | RONIC > 200% | computed at 200%, **RONIC CAPPED AT 200%** | display guard, not a valuation |
 | otherwise | computed | — |
 
-**Evaluated per grid cell** because "the rate in that cell" differs across 8/10/12%. A company with a computed RONIC of 9% is clean at 8% and LOW RONIC at 10% and 12%. The engineer must not evaluate the ladder once per company.
+**Evaluated per grid cell** because "the rate in that cell" differs across 8/10/12%. A company with a computed RONIC of 9% is clean at 8% and LOW RONIC at 10% and 12%. The engineer must not evaluate the ladder once per company. *[Amended AR0-2, §14.9: with one solve, "the rate in that cell" is the D1 rate.]*
 
 **CAPITAL-LIGHT flag:** where computed RONIC exceeds 60%, flag CAPITAL-LIGHT and additionally express reinvestment as **working-capital intensity (ΔNWC ÷ Δrevenue)**. Independent of the ladder; can fire alongside the cap.
 
@@ -665,7 +667,7 @@ Each module states its inputs, its suppression conditions and its output states.
 
 **M6 — Steady-state EV and PVGO.** Steady-state EV = median-margin NOPAT ÷ discount rate. PVGO = current EV − steady-state EV. PVGO ÷ EV is the fraction of value that is a bet on future growth. **The comparison must be EV to EV.** Where trigger A or B has fired, both current and median-margin are shown with the gap called out. Suppressed where there is no NOPAT to normalise, and where LEVERAGE UNSUPPORTED IN v1 is active.
 
-**M7 — Diagnostic reverse DCF.** The 8/10/12% grid × three margin levels. Every input is a filed fact or a policy rule; nothing is chosen.
+**M7 — Diagnostic reverse DCF.** The 8/10/12% grid × three margin levels. Every input is a filed fact or a policy rule; nothing is chosen. *[Amended AR0-2, §14.9: one solve on the main valuation engine at the D1 rate, on the scenario DCF's conventions.]*
 
 Reported as: **years 1–5 growth AND the equivalent ten-year CAGR AND the year-10 revenue.** All three, always. The five-year figure alone reads as far more demanding than the same path actually is — Microsoft's price requires 18.5% for five years at r = 8%, which is a **13.7% ten-year CAGR**, at the low end of its own 13.8–14.7% history rather than above it.
 
@@ -683,7 +685,7 @@ RONIC printed beside every implied-growth figure **together with its state**.
 
 **M8 — Terminal diagnostics.** Terminal share of value, reported **every time**. 60–75% normal for a healthy mature company on a ten-year explicit period; >75% caution; >85% the model is a multiple in disguise. A **low** terminal share is also information.
 
-Terminal cash flow consistency: **terminal FCF = terminal NOPAT × (1 − g ÷ terminal ROIC)**. Do not take final-year FCF × (1+g). Worth 4.5% of value on the Microsoft base case.
+Terminal cash flow consistency: **terminal FCF = terminal NOPAT × (1 − g ÷ terminal ROIC)**. Do not take final-year FCF × (1+g). Worth 4.5% of value on the Microsoft base case. *[AR0-3, §14.9: terminal ROIC is the rate plus the D2 moat credit; the identity is unchanged.]*
 
 **M9 — Implied exit multiple.** Labelled by **the metric it actually divides**. In the manual test a row headed "terminal value / FY36 revenue" was in fact terminal value ÷ FY36 EBIT, and the required cross-check was never performed. The label is not cosmetic.
 
@@ -775,7 +777,7 @@ Retained cash flow is computed after cash operating costs, corporate overhead, i
 
 ### 8.1 The boundary
 
-Deterministic code handles calculations, gates, states and rules. AI interprets, explains, challenges and summarises. **AI does not choose valuation assumptions and does not issue buy/sell decisions.** Calvin is the final decision-maker.
+Deterministic code handles calculations, gates, states and rules. AI interprets, explains, challenges and summarises. **AI does not choose valuation assumptions and does not issue buy/sell decisions.** Calvin is the final decision-maker. *[Amended AR0-4 and AR0-6, §14.9: AI may draft scenarios for the analyst to adopt — the adopted sheet is the analyst's; the verdict is the deterministic V1 verdict.]*
 
 **Amendment M7 did not move this line, and the valuation position does not cross it.** The CHEAP / FAIR / EXPENSIVE position and its action clause (§10.6) are computed by **[S]** from fields the analyzer already holds. They are deterministic, reproducible and auditable — the same inputs always produce the same position. Nothing in §8 is relaxed to make room for them, and an AI-authored headline verdict remains prohibited exactly as before, for the reason recorded in §14: it would be unreproducible and unauditable.
 
@@ -786,15 +788,15 @@ Deterministic code handles calculations, gates, states and rules. AI interprets,
 | §3.1 | Check the analyst's chosen growth path against base rates and history; say in plain English what would have to be true. **Not choose it** |
 | §5 | Identify hypersensitivity as a signal the model is fragile, usually because the terminal dominates or growth and discount rate are close |
 | §6 | Translate the price-implied diagnostics into a sentence and compare with base rates and history |
-| §10 Step 3 | Assist the analyst in constructing scenarios. The analyst authors them |
+| §10 Step 3 | Assist the analyst in constructing scenarios. The analyst authors them *(AR0-6, §14.9: by adopting a price-blind draft)* |
 | §10 Step 5 | Plausibility of each assumption against base rates and history; internal consistency flags; plain-English statement of what the price requires |
 
 ### 8.3 Hard limits
 
-1. **[C] issues no verdict, no target and no recommendation.** (§10 Step 5.) Not softened, not implied, not phrased as a question that carries one. The CHEAP / FAIR / EXPENSIVE position and its action clause are **[S]** output computed under §10.6: [C] may **restate** the position in prose under §10.7, and may not author one, vary one, soften one, qualify one, or reason toward one of its own. Where the position is suppressed, [C] reports the state and says nothing in its place — limit 5 applies to the position exactly as it applies to any other suppressed output.
+1. **[C] issues no verdict, no target and no recommendation.** (§10 Step 5.) Not softened, not implied, not phrased as a question that carries one. The CHEAP / FAIR / EXPENSIVE position and its action clause are **[S]** output computed under §10.6: [C] may **restate** the position in prose under §10.7, and may not author one, vary one, soften one, qualify one, or reason toward one of its own. Where the position is suppressed, [C] reports the state and says nothing in its place — limit 5 applies to the position exactly as it applies to any other suppressed output. *[AR0-4, §14.9: the position is now the V1 verdict; [C] may still only restate it.]*
 2. **[C] may cite base rates only from supplied data, never from memory. Otherwise it must say none is available.** (I18.) This is the single most important limit in this section — it is the direct control on the failure path §3 exists to prevent.
 3. **[C] does not supply facts.** It reads the fact set. Any figure in [C] output that is not traceable to the acquired fact set is a defect.
-4. **[C] does not choose assumptions.** Discount band and terminal growth come from policy. Scenarios come from the analyst.
+4. **[C] does not choose assumptions.** Discount band and terminal growth come from policy. Scenarios come from the analyst. *[AR0-6, §14.9: the analyst adopts them from a separate price-blind drafting call; [C] still chooses none.]*
 5. **[C] does not override a state.** Where a module returned INCOMPLETE, NOT COMPUTABLE, UNSUPPORTED PROFILE or any other suppressing state, [C] reports the state. It does not reason around it, estimate past it, or describe what the number would probably have been.
 6. **[C] does not aggregate or vote.** No multi-persona structure, no confidence tallies, no synthesis of several generated opinions into a score. (§13.)
 
@@ -973,7 +975,7 @@ One status per run, computed by **[S]**, displayed on page one. Three values, al
 | `states` | Every active suppressing state (§9.3) and qualifying flag (§9.4), each bound to the output it applies to |
 | `diagnostics` | Modules M1–M14, each value carrying its own states, flags and inherited labels |
 | `scenarios` | The three analyst scenarios with drivers, written anchors, per-scenario share counts and explicit revenue paths where used |
-| `price_implied` | Steady-state EV and PVGO, the reverse-DCF grid with RONIC and its per-cell state, implied exit multiple with the metric it divides |
+| `price_implied` | Steady-state EV and PVGO, the reverse-DCF grid with RONIC and its per-cell state *(AR0-2, §14.9: one solve)*, implied exit multiple with the metric it divides |
 | `challenger` | The §8.5 findings, each with its claim reference, evidence reference and what-would-have-to-be-true |
 | `interpretation` | The §8.2 output, with each statement referencing the values it rests on |
 | `policy` | Every policy constant in force for this run, including the four undefined ones (§7.1), and every PROVISIONAL threshold with what it was calibrated on |
@@ -1004,7 +1006,7 @@ The report is ordered so that **what the market assumes** and **what the analyst
 
 **D — Deterministic diagnostics.** Modules M1–M14, each carrying its states and flags at the point of display.
 
-**E — Price-implied diagnostics.** Steady-state EV and PVGO share; the diagnostic reverse-DCF grid with RONIC and its state beside every cell; implied exit multiple labelled by the metric it divides.
+**E — Price-implied diagnostics.** Steady-state EV and PVGO share; the diagnostic reverse-DCF grid with RONIC and its state beside every cell; implied exit multiple labelled by the metric it divides. *[AR0-2, §14.9: one solve.]*
 
 **F — Analyst scenarios.** Three scenarios, each with its drivers set together, its anchors written down, and its own share count where financing differs. Explicit year-by-year revenue paths where a constant growth rate does not describe the company.
 
@@ -1056,6 +1058,8 @@ The eight v1 caveats from the register carry display text. Those with fixed word
 
 ### 10.6 The valuation position and its action clause
 
+> **Superseded as the verdict mechanism — amendment AR0-4, §14.9 (17 October 2026).** The V1 verdict (Cal Finance Methodology v2.1) is the only verdict rule, and CHEAP / FAIR / EXPENSIVE labels go (`docs/product-decisions.md` items 22 and 28). AR5 removes this position; until then the implementation stands. Fixed rule 1 below reads with Calvin's judgements as versioned inputs (AR0-5).
+
 Authorised by Calvin's recorded override of 6 September 2026 (§1.1, §14). One position per run, computed by **[S]**.
 
 #### 10.6.1 Vocabulary
@@ -1105,7 +1109,7 @@ The position is derived from a single underwritten-value-versus-price comparison
 
 One rule is fixed here and is not configuration:
 
-1. **The same inputs always produce the same position.** No per-company adjustment, no override, no model in the path.
+1. **The same inputs always produce the same position.** No per-company adjustment, no override, no model in the path. *[AR0-5, §14.9: the inputs include the adopted sheet version, policy version, code version and Calvin's recorded judgements — dated, versioned inputs, never overrides.]*
 
 **Why deterministic and not an AI call, recorded because it will be asked again:** an AI-authored headline verdict would be unreproducible and unauditable. Two runs on identical inputs could differ, and neither could be traced. That is the failure §3 exists to prevent, applied to the loudest sentence in the report.
 
@@ -1302,7 +1306,7 @@ Observable conditions. Each is PASS / FAIL, not a judgment.
 | B2 | Gate 1 suppresses without refusing, and licenses no cyclicality claim (V2) |
 | B3 | The leverage precondition fails closed on missing inputs and offers no remedy (V1, V8) |
 | B4 | The levered-residual exception applies to pre-revenue success cases and does not refuse them (V6) |
-| B5 | The RONIC ladder is evaluated **per grid cell**, verifiable by a company whose RONIC falls between two grid rates |
+| B5 | The RONIC ladder is evaluated **per grid cell**, verifiable by a company whose RONIC falls between two grid rates *(AR0-2, §14.9: with one solve the ladder is evaluated against the D1 rate; AR4 replaces this check)* |
 | B6 | Every degenerate solver output returns a state; no cell anywhere returns a number with a warning glyph (V4) |
 | B7 | Triggers A and B are evaluated separately, and A alone produces no cyclicality claim (V4) |
 | B8 | Every suppressing state in §9.3 is reachable and displays as its state |
@@ -1412,7 +1416,7 @@ Observable conditions. Each is PASS / FAIL, not a judgment.
 - Sector Intelligence
 - Research Memory
 - Opportunity Discovery
-- Saved Analysis
+- Saved Analysis *(AR0-7, §14.9: a compact recent-analyses list and "Save this version" — the dated decision record — are allowed)*
 - Fear/greed or contrarian layers
 - Multi-investor or persona voting — including in the §8.5 challenger path, which is one call returning findings, not a panel returning a tally
 - Autonomous trading, and any recommendation beyond the entry-side action clause of §10.6.4
@@ -1675,6 +1679,37 @@ The other seven frozen artefacts (`calfinance-methodology-v2.md`, `calboard-valu
 - **Screens 2 and 3.** Both keep every control and every disclosure they had. They are reached from Sources / Details instead of standing in the path.
 
 **Not in this amendment.** No §9.3 or §9.4 vocabulary changes — the state vocabulary stays at twenty-four. No new acceptance criterion. No thresholds, cut-points or renderer changes. No mock changes. No methodology-document changes. `docs/frozen/calboard-stock-analyzer-v1-design.md` is untouched; the M9 design contract carries the matching route/ordering note in its own §2.3.
+
+### 14.9 Amendment AR0 — Analyzer Reset decisions D1–D6, 17 October 2026
+
+**Documents only. Eight changes, one file.** Drafted 17 October 2026 against the frozen artefacts, whose SHA-256 hashes were verified byte-exact before any edit:
+
+| File | SHA-256 verified before edit |
+|---|---|
+| `calboard-stock-analyzer-v1-spec.md` | `e40f990803c14cd8bbe0e18ce6c4afa31c6803c80d68978172e09a05a143e8e4` |
+
+The other seven frozen artefacts (`calfinance-methodology-v2.md`, `calboard-valuation-methodology.md`, `calboard-stock-analyzer-v1-design.md`, `mock-screen1-entry.html`, `mock-human-steps.html`, `mock-report-msft.html`, `mock-report-oklo.html`) were verified against the same manifest and are **untouched** by this amendment.
+
+**The authority.** Calvin approved the Analyzer Reset master plan — decisions D1–D6 and the AR0–AR8 sequence — on 17 October 2026, and gave the explicit AR0 go the same day (`CF-AR0-RECORD-DECISIONS-01`, issue #447; this amendment is `CF-AR0-SPEC-AMEND-01`, issue #448). The finance rules are recorded in Cal Finance Methodology v2.1 (D1–D4) and the product decisions in `docs/product-decisions.md` items 26–31. **This amendment records their consequences for this contract; it decides nothing.** Where this record and those authorities differ, they govern (`docs/technical-specs.md`).
+
+**When each change takes effect.** Each row states the approved target. Until the Analyzer Reset milestone named beside it lands, the existing implementation stands; that milestone builds against this text and deletes what it replaces.
+
+| # | Change | Authority | Sections touched | Built by |
+|---|---|---|---|---|
+| AR0-1 | **Discount rate.** The §7.1 discount bands are replaced by the Methodology v2.1 D1 rule: stable businesses at the market's expected return; cyclical industries (SEC SIC industry code, or trigger B of §6.4) and pre-revenue companies at market + 2pp; growth alone never raises the rate; every verdict is also checked at ±0.5pp; valid only where §6.5's leverage precondition passes. The rate in use is a dated policy input recorded in every report | D1 | §7.1 | AR4 |
+| AR0-2 | **One reverse-DCF solve.** M7 becomes one solve on the main valuation engine, at the D1 rate and on the same conventions as the scenario DCF, replacing the 8% / 10% / 12% grid × three margin levels and its separate `r + 3pp` terminal ROIC. The §7.1 rate-grid and diagnostic terminal-ROIC rows retire with it. Rate-band ends, growth, margin, return on new investment and moat move to sensitivity. Every reference to the grid, its nine cells or per-cell evaluation reads as that single solve | D1, D2 | §6.4, §7.1, §7.2 M5 and M7, §10.0.1, §10.2 E, §12.2 B5 | AR4 |
+| AR0-3 | **Reinvestment and terminal returns.** Reinvestment is NOPAT × growth ÷ return on new investment, fading to terminal by year 10; mid-year timing, terminal at 9.5 years, valued at the price date on a TTM base. The terminal return on new capital is the rate plus the D2 moat credit (+0 / +1 / +3pp for none / narrow / wide; bear +0; bull = base +1.5pp). M8's terminal FCF identity is unchanged | D2 | §7.1, §7.2 M8 | AR3 (timing), AR4 |
+| AR0-4 | **Verdict.** §10.6's CHEAP / FAIR / EXPENSIVE / INCONCLUSIVE position and its entry-only action clause are superseded as the verdict mechanism: the V1 verdict (Methodology) is the only verdict rule, checked at three rates × three uncertainty levels, with its "why" reasons templated from computed numbers. The required-versus-achieved growth comparison (§10.6.2 Step 7, §10.6.4) stays available as computed content for those reasons. Pending-judgement states (one question, close call, BUY candidate) are not verdicts | D3, D4 | §8.1, §8.3 limit 1, §10.6 | AR5 |
+| AR0-5 | **Judgements as versioned inputs.** §10.6.2's fixed rule 1 reads: the same fact snapshot, adopted assumption sheet, policy version, code version and recorded judgements always produce the same verdict. Calvin's judgements (uncertainty answer, moat class, management rating, thesis state) are dated, versioned inputs — never a per-company override — and "not sure" is recorded as such and never counts as agreement | D3, D4 | §10.6.2 | AR3, AR5 |
+| AR0-6 | **Scenario authorship.** For a new ticker, a separate price-blind drafting call proposes the three scenarios with every driver citing its anchor; the analyst authors them by adopting the draft, adjusting any driver first if wanted. The report, valuation and verdict zone appear automatically; the final verdict waits for adoption; re-runs of an adopted sheet complete automatically. MSFT and NVDA re-adopt once after D2 adds the return-on-new-investment driver. The §8.2 interpretation layer still chooses no assumption | D5 | §2 Step 7, §8.1, §8.2, §8.3 limit 4 | AR6 |
+| AR0-7 | **Recent analyses.** A compact recent-analyses list and "Save this version" (the dated decision record) are no longer excluded. Thesis Tracker / Thesis Record stays excluded | D6 | §13.1 | AR7 |
+| AR0-8 | This record, the header line and the in-place markers | — | header, §14.9 | — |
+
+**Reading AR0-a — the 22 September normal-path requirement (§14.8) stands.** Facts, gates and routine verification still need no human after ticker entry, and the report renders without interaction. The judgements AR0-4 to AR0-6 introduce are asked only when the answer changes the final verdict or completes an adoption. Calvin approved D5 as keeping that ruling's intent; `docs/product-decisions.md` item 30 records the narrowing for the final verdict only.
+
+**Reading AR0-b — amended by marker, not rewritten.** Each touched clause carries a short marker pointing here; the frozen text beside it is otherwise left as written, so the diff stays reviewable. Where a marker and the old text differ, the marker and this record govern.
+
+**Not in this amendment.** No §9.3 or §9.4 vocabulary change — states a milestone adds or retires are recorded with it. No threshold or cut-point (the V1 bands live in the Methodology). M10's ±1% display sensitivity is unchanged; the ±0.5pp verdict check of AR0-1 is separate from it. No design-document or mock change. No methodology-document change — the repo snapshot `calfinance-methodology-v2.md` predates v2.1, as `docs/technical-specs.md` records. No application code.
 
 ---
 ## APPENDIX — TRACEABILITY
