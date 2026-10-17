@@ -3,7 +3,7 @@ import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
 import { deriveVerdict } from "./verdict";
-import { type RecordedAnalystBundleInput } from "./acquisition/recordedBundles";
+import { bundleInForce } from "./sheets/testSupport";
 import { revenueSeries, comparatorRecency, achievedRevenueCagr } from "./calibration/inputs";
 
 // ---------------------------------------------------------------------------
@@ -44,7 +44,7 @@ const NVDA_TICKER = "NVDA";
  * (the other two stay blank, per the draft). Nothing here is re-derived,
  * rounded or corrected (HARD BOUNDS: transcription only).
  */
-function approvedNvdaBundle(): RecordedAnalystBundleInput {
+function approvedNvdaBundle() {
   return {
     profile: "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY",
     classificationInputs: {
@@ -135,8 +135,9 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
   });
 
   it("migration 008's durably recorded bundle is byte-identical to the approved content this file transcribes", async () => {
-    const { recordedAnalystInputBundle } = await import("./acquisition/recordedBundles");
-    const durable = await recordedAnalystInputBundle(NVDA_TICKER);
+    // CF-AR6-ANY-TICKER-DRAFTS-01 — read through NVDA's sheet, migration
+    // 014's copy of migration 008's row (the recorded store's reader is gone).
+    const durable = await bundleInForce(NVDA_TICKER);
     expect(durable).not.toBeNull();
     const approved = approvedNvdaBundle();
     expect(durable?.inputs.profile.confirmedOrOverridden).toBe(approved.profile);
@@ -352,13 +353,13 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     expect(candidates[0].value.toString()).toBe("47898000000");
 
     // The two deliberately-blank §7.1 constants round-trip as null, never a
-    // substituted zero (recordedBundles.ts's own contract).
+    // substituted zero (the sheet's own contract, sheets/sheet.ts).
     expect(state.fixture.configuredConstants.preRevenueUnleveredRate).toBeNull();
     expect(state.fixture.configuredConstants.projectDebtCost).toBeNull();
     expect(state.fixture.configuredConstants.nopatTaxRate?.toString()).toBe("0.21");
   });
 
-  it("the two deliberately-blank §7.1 constants and the scenario values round-trip byte-faithful from the recorded store", async () => {
+  it("the two deliberately-blank §7.1 constants and the scenario values round-trip byte-faithful from the migrated sheet", async () => {
     const runId = await createRun(NVDA_TICKER, "NVIDIA Corporation");
     await completeSpotCheck(runId);
     const state = await loadGateState(runId);

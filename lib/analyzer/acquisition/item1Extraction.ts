@@ -55,12 +55,14 @@ function decodeEntities(text: string): string {
 }
 
 /**
- * HTML to plain text, for this rule's own use only. Deliberately small: it
+ * HTML to plain text. Deliberately small: it
  * turns block-level boundaries into line breaks and strips everything else —
  * enough to make the standalone-line boundary check meaningful, not a general
- * HTML renderer. No dependency is added for it (SCOPE item 1).
+ * HTML renderer. No dependency is added for it (SCOPE item 1). Also reads an
+ * earnings-release exhibit as text for the assumption-sheet research
+ * (sheets/research.ts, CF-AR6-ANY-TICKER-DRAFTS-01).
  */
-function htmlToPlainText(html: string): string {
+export function htmlToPlainText(html: string): string {
   const withoutScripts = html.replace(/<script[\s\S]*?<\/script>/gi, " ").replace(/<style[\s\S]*?<\/style>/gi, " ");
   const withLineBreaks = withoutScripts.replace(BLOCK_TAG_RE, "\n");
   const withoutTags = withLineBreaks.replace(/<[^>]+>/g, " ");

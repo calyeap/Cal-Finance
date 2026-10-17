@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
-import { recordAnalystBundle, type RecordedAnalystBundleInput } from "./acquisition/recordedBundles";
+import { resetSheetsToMigrated } from "./sheets/testSupport";
 import type { AnalysisResult } from "./types";
 
 // ---------------------------------------------------------------------------
@@ -43,56 +43,16 @@ async function openOkloRunUnchanged(): Promise<AnalysisResult> {
   return computeAnalysisForRun(runId);
 }
 
-function approvedNvdaBundle(): RecordedAnalystBundleInput {
-  return {
-    profile: "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY",
-    classificationInputs: {
-      revenueScale: "large",
-      fcfCharacter: "positive_volatile",
-      revenueGrowthBand: ">30%",
-      capitalIntensity: "0.028",
-      cyclicality: { tenYearMarginRange: "0.4751", worstSingleYearChange: "0.2165" },
-      balanceSheetNature: "asset-light",
-    },
-    scenarios: {
-      bear: {
-        revenueGrowthOrPath: "0.05",
-        operatingMargin: "0.30",
-        reinvestmentCapitalIntensity: "0.02",
-        shareCount: "24.1",
-        writtenAnchor: "AI/datacenter capex cycle corrects; growth slows sharply but stays positive.",
-      },
-      base: {
-        revenueGrowthOrPath: "0.20",
-        operatingMargin: "0.50",
-        reinvestmentCapitalIntensity: "0.04",
-        shareCount: "24.1",
-        writtenAnchor: "AI-driven datacenter demand continues but decelerates off the FY2026 base.",
-      },
-      bull: {
-        revenueGrowthOrPath: "0.35",
-        operatingMargin: "0.60",
-        reinvestmentCapitalIntensity: "0.05",
-        shareCount: "24.1",
-        writtenAnchor: "AI/accelerated-computing demand sustains at a high level.",
-      },
-    },
-    scenarioValues: { bear: "28.08", base: "102.38", bull: "296.44" },
-    configuredConstants: {
-      nopatTaxRate: "0.21",
-      stressMarginLevel: "0.15",
-      preRevenueUnleveredRate: null,
-      projectDebtCost: null,
-    },
-  };
-}
 
+// CF-AR6-ANY-TICKER-DRAFTS-01 — NVDA's sheet is migration 014's copy of
+// migration 008's approved bundle; restoring the migrated sheets leaves it
+// exactly where the migrations put it.
 async function seedApprovedNvdaBundle(): Promise<void> {
-  await recordAnalystBundle("NVDA", approvedNvdaBundle());
+  await resetSheetsToMigrated();
 }
 
 async function openNvdaObservationRun(): Promise<AnalysisResult> {
-  await recordAnalystBundle("NVDA", approvedNvdaBundle());
+  await resetSheetsToMigrated();
   const runId = await createRun("NVDA", "NVIDIA Corporation");
   await completeSpotCheck(runId);
   const state = await loadGateState(runId);

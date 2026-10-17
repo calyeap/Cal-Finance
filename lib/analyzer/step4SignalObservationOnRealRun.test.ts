@@ -4,7 +4,7 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
-import { recordAnalystBundle, type RecordedAnalystBundleInput } from "./acquisition/recordedBundles";
+import { resetSheetsToMigrated } from "./sheets/testSupport";
 import { boundState, NOT_COMPUTED_BINDING } from "./notComputed";
 import type { AnalysisResult, QualifyingFlag } from "./types";
 
@@ -25,8 +25,8 @@ import type { AnalysisResult, QualifyingFlag } from "./types";
 // Each run's own recording/cleanup discipline is copied verbatim from its
 // precedent file rather than invented: MSFT records Calvin's §4.4 ruling
 // (issue #188) via recordJudgment, OKLO is opened unchanged, NVDA transcribes
-// the approved Step-7 bundle via recordAnalystBundle and deletes it before and
-// after itself.
+// the approved Step-7 bundle (now its migrated sheet, restored before and
+// after itself — CF-AR6-ANY-TICKER-DRAFTS-01).
 // ---------------------------------------------------------------------------
 
 async function completeSpotCheck(runId: string): Promise<void> {
@@ -63,62 +63,17 @@ async function openOkloRunUnchanged(): Promise<AnalysisResult> {
  * approved draft this was taken from; not repeated here — see that file's
  * docstring). Written anchors are trimmed here since only the scenario
  * dispersion and evidence-quality flags are under observation in this pass. */
-function approvedNvdaBundle(): RecordedAnalystBundleInput {
-  return {
-    profile: "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY",
-    classificationInputs: {
-      revenueScale: "large",
-      fcfCharacter: "positive_volatile",
-      revenueGrowthBand: ">30%",
-      capitalIntensity: "0.028",
-      cyclicality: { tenYearMarginRange: "0.4751", worstSingleYearChange: "0.2165" },
-      balanceSheetNature: "asset-light",
-    },
-    scenarios: {
-      bear: {
-        revenueGrowthOrPath: "0.05",
-        operatingMargin: "0.30",
-        reinvestmentCapitalIntensity: "0.02",
-        shareCount: "24.1",
-        writtenAnchor: "AI/datacenter capex cycle corrects; growth slows sharply but stays positive.",
-      },
-      base: {
-        revenueGrowthOrPath: "0.20",
-        operatingMargin: "0.50",
-        reinvestmentCapitalIntensity: "0.04",
-        shareCount: "24.1",
-        writtenAnchor: "AI-driven datacenter demand continues but decelerates off the FY2026 base.",
-      },
-      bull: {
-        revenueGrowthOrPath: "0.35",
-        operatingMargin: "0.60",
-        reinvestmentCapitalIntensity: "0.05",
-        shareCount: "24.1",
-        writtenAnchor: "AI/accelerated-computing demand sustains at a high level.",
-      },
-    },
-    scenarioValues: { bear: "28.08", base: "102.38", bull: "296.44" },
-    configuredConstants: {
-      nopatTaxRate: "0.21",
-      stressMarginLevel: "0.15",
-      preRevenueUnleveredRate: null,
-      projectDebtCost: null,
-    },
-  };
-}
 
-// CF-ANALYZER-V1-SETTLE-01 (issue #392) — migration 008 now durably seeds
-// this exact bundle for NVDA. A bare DELETE would erase that durable seed
-// for any other test file expecting it, for the whole rest of the test
-// run; re-recording the same approved content (recordAnalystBundle's own
-// ON CONFLICT upsert) leaves NVDA exactly where migration 008 puts it,
-// both between this file's own tests and after the whole file finishes.
+// CF-ANALYZER-V1-SETTLE-01 (issue #392) — migration 008 durably seeds NVDA's
+// approved bundle; CF-AR6-ANY-TICKER-DRAFTS-01's migration 014 carries it
+// into NVDA's version 1 sheet. Restoring the migrated sheets leaves NVDA
+// exactly where the migrations put it, between tests and after the file.
 async function seedApprovedNvdaBundle(): Promise<void> {
-  await recordAnalystBundle("NVDA", approvedNvdaBundle());
+  await resetSheetsToMigrated();
 }
 
 async function openNvdaObservationRun(): Promise<AnalysisResult> {
-  await recordAnalystBundle("NVDA", approvedNvdaBundle());
+  await resetSheetsToMigrated();
   const runId = await createRun("NVDA", "NVIDIA Corporation");
   await completeSpotCheck(runId);
   const state = await loadGateState(runId);
@@ -141,17 +96,11 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
       "TRUNCATE analyzer_run_fact_decisions, analyzer_run_judgments, analyzer_runs CASCADE"
     );
     await seedApprovedNvdaBundle();
-    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — this file's own header scopes
-    // it to issue #318's "bounded, no-new-capture observation": MSFT with
-    // only the §4.4 judgment recorded, no scenario-driver bundle, exactly
-    // the committed-fixture-carry-over state this file's assertions encode.
-    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) landed a
-    // durable MSFT scenario-driver bundle afterward, which this file
-    // predates and never adopted, so this suite's own MSFT row is deleted
-    // here rather than left to whatever another file's cleanup order
-    // happens to leave behind — deterministic either way, not an
-    // accident of execution order.
-    await getPool().query("DELETE FROM analyzer_recorded_analyst_bundles WHERE ticker = $1", ["MSFT"]);
+    // CF-AR6-ANY-TICKER-DRAFTS-01 — reviewed evaluator change. This file
+    // used to delete MSFT's recorded row so MSFT fell back to the committed
+    // MSFT_FIXTURE carry-over. That fallback is deleted (issue #454 DO 6):
+    // MSFT now reads its migrated sheet — migration 010's bundle, version 1,
+    // pending adoption — which is what the MSFT test below observes.
   });
 
   afterAll(async () => {
@@ -166,17 +115,18 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
   it("MSFT (§4.4 ruled) — option A renders a real range; option B carries no SECONDARY/UNVERIFIED/AI-EXTRACTED flag", async () => {
     const result = await openMsftRunWithRuling();
 
-    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — the fair-value range no
-    // longer presents MSFT_FIXTURE's own $265/$510/$650 as this real run's
-    // computed scenario values; it is honestly suppressed, and trust (§9.6
-    // rule 1) and Section G's scenario-values row follow that exactly as
-    // they already do for any other suppressed range.
+    // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — the fair-value range never
+    // presents MSFT_FIXTURE's own $265/$510/$650 as this real run's computed
+    // scenario values. CF-AR6-ANY-TICKER-DRAFTS-01 — reviewed evaluator
+    // change: that fixture no longer reaches the run at all; MSFT's migrated
+    // sheet is pending adoption, so the range is suppressed for that reason,
+    // and trust (§9.6 rule 1) follows it as for any other suppressed range.
     expect(result.trust.status).toBe("UNUSABLE");
     expect(result.gates.gate1.state).toBeNull();
     expect(result.gates.gate1.filedYearsCount).toBe(13);
     expect(result.fairValueRange.kind).toBe("suppressed");
     if (result.fairValueRange.kind === "suppressed") {
-      expect(result.fairValueRange.cause).toContain("scenario dollar values");
+      expect(result.fairValueRange.cause).toMatch(/^Pending adoption/);
     }
     expect(result.scenarioOutputs.values.bear.isNaN()).toBe(true);
     expect(result.scenarioOutputs.values.base.isNaN()).toBe(true);
@@ -208,9 +158,12 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
     expect(result.scenarioOutputs.values.base.isNaN()).toBe(true);
     expect(result.scenarioOutputs.values.bull.isNaN()).toBe(true);
     expect(result.scenarioOutputs.weightedDistribution.isNaN()).toBe(true);
+    // CF-AR6-ANY-TICKER-DRAFTS-01 — reviewed evaluator change: OKLO_FIXTURE
+    // no longer reaches the run; OKLO's sheet records it cannot be concluded
+    // from filed history, and that is the bound cause.
     const bound = boundState(result.states, NOT_COMPUTED_BINDING.scenarioValues);
     expect(bound?.state).toBe("INCOMPLETE");
-    expect(bound?.cause).toMatch(/M5\/M7 validation fixture/);
+    expect(bound?.cause).toMatch(/^Can't conclude/);
 
     expect(result.states.qualifying.map((q) => q.flag)).toEqual(["SHORT HISTORY"]);
     expect(provenanceQualifierFlagsPresent(result.states.qualifying)).toEqual([]);

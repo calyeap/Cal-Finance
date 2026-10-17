@@ -1,16 +1,11 @@
-import { describe, it, expect, beforeEach, afterAll } from "vitest";
+import { describe, it, expect, afterAll, beforeAll } from "vitest";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative } from "node:path";
 import { getPool } from "../../db";
-import {
-  recordAnalystBundle,
-  hasRecordedAnalystBundle,
-  getRecordedAnalystBundleInput,
-  recordedAnalystInputBundle,
-  type RecordedAnalystBundleInput,
-} from "./recordedBundles";
-import { analystInputsFor, TICKERS_WITH_ANALYST_INPUTS } from "./analystInputs";
+import { analystInputsFor } from "./analystInputs";
 import { isSupportedTicker } from "../gate";
+import { resetSheetsToMigrated } from "../sheets/testSupport";
+import { sheetInForce } from "../sheets/sheetStore";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYST-DRAFT-NVDA-01 / CF-ANALYST-DRAFT-NVDA-SCENARIO-02 — SCOPE
@@ -48,123 +43,15 @@ import { isSupportedTicker } from "../gate";
 //      PR #295) so a fresh run no longer needs the per-run human act
 //      CF-NVDA-RUN-OBSERVE-01's own HARD BOUNDS previously required —
 //      pinned below as the current, intentional state, not a regression.
+//
+// CF-AR6-ANY-TICKER-DRAFTS-01 — reviewed evaluator change. Part 1 tested the
+// recorded-bundle store's own write rules; that store is deleted (its rows
+// are migration 014's version 1 sheets), so part 1 goes with it. Part 2's
+// "resolution path is unchanged" pins are restated for the one resolver that
+// replaces it: MSFT and NVDA resolve their migrated sheets, and OKLO — whose
+// committed fixture no longer reaches a real run — resolves a sheet that
+// records it cannot be concluded from filed history.
 // ---------------------------------------------------------------------------
-
-const DRAFT_TICKER = "ZZZNVDADRAFT";
-
-function nvdaDraftScenarios() {
-  return {
-    bear: {
-      revenueGrowthOrPath: "0.05",
-      operatingMargin: "0.30",
-      reinvestmentCapitalIntensity: "0.02",
-      shareCount: "24.1",
-      writtenAnchor:
-        "AI/datacenter capex cycle corrects and operating margin reverts toward its ten-year median, " +
-        "echoing the FY2023 correction (margin fell to 15.7% that year on inventory and export-control " +
-        "effects); growth slows sharply but stays positive, not a revenue contraction.",
-    },
-    base: {
-      revenueGrowthOrPath: "0.20",
-      operatingMargin: "0.50",
-      reinvestmentCapitalIntensity: "0.04",
-      shareCount: "24.1",
-      writtenAnchor:
-        "AI-driven datacenter demand continues but decelerates materially off the FY2026 base as the " +
-        "hyperscaler capex cycle normalizes; margin gives back some of its recent expansion but stays " +
-        "well above the historical median.",
-    },
-    bull: {
-      revenueGrowthOrPath: "0.35",
-      operatingMargin: "0.60",
-      reinvestmentCapitalIntensity: "0.05",
-      shareCount: "24.1",
-      writtenAnchor:
-        "AI/accelerated-computing demand sustains at a high level, operating margin holds near its " +
-        "current elevated level, and NVIDIA continues investing aggressively in capacity.",
-    },
-  };
-}
-
-/** The drafted field set exactly as `nvda-step7-draft.md` states it, scenario
- * values included: blank, per CF-ANALYST-DRAFT-NVDA-SCENARIO-02's named
- * evidence gap, never a hand-estimated number. */
-function nvdaDraftInput(): RecordedAnalystBundleInput {
-  return {
-    profile: "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY",
-    classificationInputs: {
-      revenueScale: "large",
-      fcfCharacter: "positive_volatile",
-      revenueGrowthBand: ">30%",
-      capitalIntensity: "0.028",
-      cyclicality: { tenYearMarginRange: "0.4751", worstSingleYearChange: "0.2165" },
-      balanceSheetNature: "asset-light",
-    },
-    scenarios: nvdaDraftScenarios(),
-    scenarioValues: { bear: "", base: "", bull: "" },
-    configuredConstants: {
-      nopatTaxRate: "0.21",
-      stressMarginLevel: "0.15",
-      preRevenueUnleveredRate: null,
-      projectDebtCost: null,
-    },
-  };
-}
-
-describe("CF-ANALYST-DRAFT-NVDA-SCENARIO-02 — the drafted scenario-value gap behaves as the store's own rules say it should", () => {
-  beforeEach(async () => {
-    await getPool().query("DELETE FROM analyzer_recorded_analyst_bundles WHERE ticker = $1", [DRAFT_TICKER]);
-  });
-
-  afterAll(async () => {
-    await getPool().query("DELETE FROM analyzer_recorded_analyst_bundles WHERE ticker = $1", [DRAFT_TICKER]);
-  });
-
-  it("the drafted bundle, with its scenario values left as a named gap, is refused by recordAnalystBundle — a scenario value is REQUIRED, unlike a driver", async () => {
-    await expect(recordAnalystBundle(DRAFT_TICKER, nvdaDraftInput())).rejects.toThrow(/scenario value/i);
-    expect(await hasRecordedAnalystBundle(DRAFT_TICKER)).toBe(false);
-  });
-
-  it("every other drafted field — profile, classification, scenario drivers and written anchors, §7.1 constants — is unchanged from CF-ANALYST-DRAFT-NVDA-01 and validates on its own", async () => {
-    // Recorded with placeholder scenario values solely to exercise the
-    // store's validation of the fields CALVIN RULING — C left untouched;
-    // these numbers are not proposed anywhere in the draft itself.
-    const input = { ...nvdaDraftInput(), scenarioValues: { bear: "1", base: "1", bull: "1" } };
-    await expect(recordAnalystBundle(DRAFT_TICKER, input)).resolves.not.toThrow();
-
-    const stored = await getRecordedAnalystBundleInput(DRAFT_TICKER);
-    expect(stored).not.toBeNull();
-    expect(stored?.input.profile).toBe("HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY");
-    expect(stored?.input.classificationInputs).toEqual(nvdaDraftInput().classificationInputs);
-    expect(stored?.input.scenarios).toEqual(nvdaDraftScenarios());
-    expect(stored?.input.configuredConstants.nopatTaxRate).toBe("0.21");
-    expect(stored?.input.configuredConstants.preRevenueUnleveredRate).toBeNull();
-    expect(stored?.input.configuredConstants.projectDebtCost).toBeNull();
-
-    const bundle = await recordedAnalystInputBundle(DRAFT_TICKER);
-    expect(bundle).not.toBeNull();
-    expect(bundle?.inputs.scenarios.bear.writtenAnchor).toContain("corrects and operating margin reverts");
-    // Never synthesised for a recorded bundle, regardless of profile (SCOPE item 6 / migration 006's header).
-    expect(bundle?.inputs.revalueBaseCaseAtRate).toBeNull();
-    expect(bundle?.inputs.preRevenue).toBeNull();
-  });
-
-  // CF-ANALYZER-V1-SETTLE-01 (issue #392) — NVDA itself now durably
-  // resolves (migration 008), so this no longer proves the throwaway row's
-  // absence from NVDA by NVDA having no bundle at all; it proves the same
-  // non-leak directly, by content — the throwaway's placeholder "$1"
-  // scenario values never reach the real ticker's own, differently-sourced
-  // (and differently valued) recorded bundle.
-  it("the throwaway row is never presented as the real NVDA ticker's bundle", async () => {
-    const input = { ...nvdaDraftInput(), scenarioValues: { bear: "1", base: "1", bull: "1" } };
-    await recordAnalystBundle(DRAFT_TICKER, input);
-
-    const nvda = await recordedAnalystInputBundle("NVDA");
-    expect(nvda).not.toBeNull();
-    expect(nvda?.inputs.scenarioValues?.bear.toString()).not.toBe("1");
-    expect(nvda?.inputs.scenarioValues?.bear.toString()).toBe("28.08");
-  });
-});
 
 const REPO_ROOT = join(__dirname, "..", "..", "..");
 const THIS_FILE = relative(REPO_ROOT, __filename).replace(/\.js$/, ".ts");
@@ -218,27 +105,31 @@ describe("CF-ANALYST-DRAFT-NVDA-01 — the draft artefact is not imported by any
   });
 });
 
-describe("CF-ANALYST-DRAFT-NVDA-01 — the runtime resolution path is unchanged (SCOPE item 6)", () => {
-  it("TICKERS_WITH_ANALYST_INPUTS still names exactly the two committed bundles", () => {
-    expect(TICKERS_WITH_ANALYST_INPUTS).toEqual(["MSFT", "OKLO"]);
+describe("CF-ANALYST-DRAFT-NVDA-01 — the runtime resolution path, restated for the sheet store (CF-AR6-ANY-TICKER-DRAFTS-01)", () => {
+  beforeAll(async () => {
+    await resetSheetsToMigrated();
   });
 
-  it("analystInputsFor still resolves MSFT and OKLO from their committed bundles", async () => {
+  it("analystInputsFor resolves MSFT's migrated sheet, and OKLO's committed fixture never reaches a real run", async () => {
     const msft = await analystInputsFor("MSFT");
-    const oklo = await analystInputsFor("OKLO");
     expect(msft?.inputs.profile.confirmedOrOverridden).toBe("MATURE_PROFITABLE_STABLE_FCF");
-    expect(oklo?.inputs.profile.confirmedOrOverridden).toBe("PRE_REVENUE_UNPROFITABLE");
+    expect(msft?.inputs.sheet?.origin).toBe("MIGRATED BUNDLE");
+
+    const oklo = await analystInputsFor("OKLO");
+    expect(oklo?.inputs.sheet?.origin).toBe("CANNOT CONCLUDE");
+    expect(oklo?.inputs.preRevenue).toBeNull();
+    expect(oklo?.inputs.scenarioValuesAreFixtureCarried).toBe(false);
+    for (const key of ["bear", "base", "bull"] as const) expect(oklo?.inputs.scenarios[key].revenueGrowthOrPath).toBeNull();
   });
 
   // CF-ANALYZER-V1-SETTLE-01 (issue #392) — migration 008 durably records
   // NVDA's already Calvin-approved scenario bundle (PR #295, "CALVIN
-  // RULING — APPROVE AS DRAFTED"), the same content
-  // nvdaRealRunObservation.test.ts already proved end to end through the
-  // gated pipeline, transcribed byte-faithful rather than recorded fresh by
-  // this file. NVDA resolving now is the intentional effect of that
-  // migration, not a drift this file failed to catch.
-  it("NVDA now has a durably recorded bundle (migration 008) and analystInputsFor(\"NVDA\") resolves it", async () => {
-    expect(await hasRecordedAnalystBundle("NVDA")).toBe(true);
+  // RULING — APPROVE AS DRAFTED"); migration 014 carries it into NVDA's
+  // version 1 sheet, a draft awaiting one re-adoption.
+  it("NVDA has a durably migrated sheet (migrations 008 and 014) and analystInputsFor(\"NVDA\") resolves it", async () => {
+    const sheet = await sheetInForce("NVDA");
+    expect(sheet?.status).toBe("DRAFT");
+    expect(sheet?.origin).toBe("MIGRATED BUNDLE");
     const bundle = await analystInputsFor("NVDA");
     expect(bundle).not.toBeNull();
     expect(bundle?.inputs.profile.confirmedOrOverridden).toBe("HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY");
@@ -252,6 +143,7 @@ describe("CF-ANALYST-DRAFT-NVDA-01 — the runtime resolution path is unchanged 
   });
 
   afterAll(async () => {
+    await resetSheetsToMigrated();
     await getPool().end();
   });
 });

@@ -257,6 +257,11 @@ export function verdictExplanation(verdict: VerdictResult, price?: Decimal, base
     case "CANNOT BOUND VALUE":
       return null;
     case "PENDING ADOPTION":
+      // CF-AR6-ANY-TICKER-DRAFTS-01 — a complete draft is valued: its zone
+      // shows, and the verdict waits for one adopt (product-decisions item 30).
+      if (verdict.draftZone != null) {
+        return `${span ?? "Price against Base"}: the draft assumption sheet points to ${verdict.draftZone}. No verdict until you adopt the sheet, as drafted or adjusted.`;
+      }
       return "No verdict until you adopt this company's assumption sheet — its moat class and the return on new investment for each scenario.";
     case "UNCERTAINTY QUESTION": {
       if (verdict.check === null || verdict.check.routing.kind !== "UNCERTAINTY QUESTION") return null;

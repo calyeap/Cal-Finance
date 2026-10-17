@@ -351,9 +351,10 @@ export interface ScenarioDriverSet {
   // new investment for this scenario (anchored to the company's
   // incremental-return history), fading to the terminal return by year 10.
   // Reinvestment is NOPAT × next-year growth ÷ this — it, not
-  // `reinvestmentCapitalIntensity` above, drives value. Calvin's input (an
-  // agent never authors it, product-decisions item 19); absent or null
-  // means the sheet is pending adoption and no D2 value is computed.
+  // `reinvestmentCapitalIntensity` above, drives value. A price-blind draft
+  // may propose it with its anchor; Calvin's adoption is the authorship
+  // (product-decisions items 19 and 30, CF-AR6-ANY-TICKER-DRAFTS-01). Absent
+  // or null: the sheet is pending adoption and no D2 value is computed.
   returnOnNewInvestment?: Decimal | null;
 }
 
@@ -622,7 +623,10 @@ export interface DiscountRateInUse {
  * says so in plain language (Calvin, 17 Oct 2026, Option A on #447).
  */
 export interface D2Inputs {
-  status: "ADOPTED" | "PENDING ADOPTION";
+  // CF-AR6-ANY-TICKER-DRAFTS-01 — DRAFT: the inputs are complete on a sheet
+  // not yet adopted. It values like an adopted sheet; only the final verdict
+  // waits for adoption (product-decisions item 30).
+  status: "ADOPTED" | "DRAFT" | "PENDING ADOPTION";
   missing: string[];
   moatClass: MoatClass | null;
   // Rate + moat credit (bear +0; bull = base + 1.5pp); null while pending.
@@ -630,9 +634,26 @@ export interface D2Inputs {
   statement: string;
 }
 
+/**
+ * CF-AR6-ANY-TICKER-DRAFTS-01 — the assumption sheet a run is valued on
+ * (lib/analyzer/sheets/, migration 014): which version, whether adopted, and
+ * where it came from. `cannotConclude` is set where no sheet could be drafted
+ * from filed history (e.g. pre-revenue): no value is computed.
+ */
+export interface AssumptionSheetReference {
+  id: number;
+  version: number;
+  status: "DRAFT" | "ADOPTED";
+  origin: "AI DRAFT" | "CANNOT CONCLUDE" | "MIGRATED BUNDLE" | "ADOPTED AS DRAFTED" | "ADOPTED WITH ADJUSTMENTS";
+  recordedAt: string;
+  cannotConclude: string | null;
+}
+
 export interface ValuationBasis {
   discountRate: DiscountRateInUse;
   d2: D2Inputs;
+  /** Absent on a result valued from a hand-authored fixture (tests) or stored before AR6. */
+  sheet?: AssumptionSheetReference | null;
 }
 
 export interface PriceImplied {

@@ -93,6 +93,8 @@ export interface AnalystInputs {
   /** CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — see
    * `CompanyFixture.recordedScenarioValuesComputeFromDrivers`'s own doc comment. */
   recordedScenarioValuesComputeFromDrivers?: boolean;
+  /** CF-AR6-ANY-TICKER-DRAFTS-01 — the assumption sheet these inputs come from. */
+  sheet?: CompanyFixture["sheet"];
   revalueBaseCaseAtRate: CompanyFixture["revalueBaseCaseAtRate"];
   configuredConstants: CompanyFixture["configuredConstants"];
   preRevenue: CompanyFixture["preRevenue"];
@@ -665,6 +667,7 @@ export function buildCompanyInputs(
     ),
     scenarioValuesAreFixtureCarried: analyst.scenarioValuesAreFixtureCarried,
     recordedScenarioValuesComputeFromDrivers: analyst.recordedScenarioValuesComputeFromDrivers,
+    sheet: analyst.sheet ?? null,
     revalueBaseCaseAtRate: analyst.revalueBaseCaseAtRate,
     configuredConstants: analyst.configuredConstants,
     achievedRevenueCagr: achievedRevenueCagrResult,
@@ -743,7 +746,7 @@ function instantValueAt(series: AnnualSeries | null, fiscalYear: number): number
  * a proxy or a default for a genuinely missing REQUIRED fact: it is what the
  * ruling itself says an absent separate lease-liability tag means.
  */
-function investedCapitalAt(
+export function investedCapitalAt(
   fiscalYear: number,
   equitySeries: AnnualSeries | null,
   debtSeries: AnnualSeries | null,

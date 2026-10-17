@@ -1,27 +1,55 @@
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
 import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
-import { AnalystBundleForm } from "@/app/components/AnalystBundleForm";
-import { getRecordedAnalystBundleInput } from "@/lib/analyzer/acquisition/recordedBundles";
-import { TICKERS_WITH_ANALYST_INPUTS } from "@/lib/analyzer/acquisition/analystInputs";
+import { AssumptionSheetPanel, RedraftForm } from "@/app/components/AssumptionSheetPanel";
+import { sheetHistory } from "@/lib/analyzer/sheets/sheetStore";
+import { validationContextFor } from "@/lib/analyzer/sheets/adopt";
+import { validateSheet, type ValidatorFinding } from "@/lib/analyzer/sheets/validators";
+import type { AssumptionSheet } from "@/lib/analyzer/sheets/sheet";
 
-// CF-ANALYST-INPUT-ENTRY-01 — the entry/review screen for one ticker. A
-// SEPARATE authoring surface (SCOPE item 3): reached only by typing a
-// ticker here, never from the normal ticker -> analyze -> report path, and
-// an already-recorded bundle can be reviewed and corrected on the same
-// route rather than through a second form.
+// CF-AR6-ANY-TICKER-DRAFTS-01 — one ticker's assumption sheet (product-
+// decisions item 30, D5): the sheet in force, the latest draft where it
+// differs, each driver with its anchor and sources, the validators, adopt /
+// adjust, and a fresh draft. Reached from a report whose verdict waits for
+// adoption, or by ticker. Nothing here computes a valuation or a verdict.
 
-export default async function AnalystInputsTickerPage({
+async function findingsFor(ticker: string, sheet: AssumptionSheet): Promise<ValidatorFinding[]> {
+  if (sheet.content.cannotConclude) return [];
+  try {
+    const ctx = await validationContextFor(ticker, sheet.content);
+    const requireAnchors = sheet.origin === "AI DRAFT";
+    return [...validateSheet(sheet.content, { ...ctx, requireAnchors, forAdoption: sheet.status === "ADOPTED" }), ...ctx.stale];
+  } catch (err) {
+    return [
+      {
+        check: "STALE",
+        severity: "WARNING",
+        message: `the company's filed history could not be read to check this sheet (${err instanceof Error ? err.message : String(err)})`,
+      },
+    ];
+  }
+}
+
+export default async function AssumptionSheetPage({
   params,
   searchParams,
 }: {
   params: Promise<{ ticker: string }>;
-  searchParams: Promise<{ saved?: string }>;
+  searchParams: Promise<{ run?: string; adopted?: string; drafted?: string; refused?: string }>;
 }) {
   const { ticker: rawTicker } = await params;
-  const { saved } = await searchParams;
+  const { run, adopted, drafted, refused } = await searchParams;
   const ticker = decodeURIComponent(rawTicker).trim().toUpperCase();
-  const isCommitted = TICKERS_WITH_ANALYST_INPUTS.includes(ticker);
-  const recorded = isCommitted ? null : await getRecordedAnalystBundleInput(ticker);
+  const runId = run ?? null;
+  const history = await sheetHistory(ticker);
+  const latestAdopted = [...history].reverse().find((s) => s.status === "ADOPTED") ?? null;
+  const latestDraft = [...history].reverse().find((s) => s.status === "DRAFT") ?? null;
+  const inForce = latestAdopted ?? latestDraft;
+  const pendingDraft = latestDraft !== null && (latestAdopted === null || latestDraft.version > latestAdopted.version) ? latestDraft : null;
+
+  const panels: { sheet: AssumptionSheet; adoptable: boolean; findings: ValidatorFinding[] }[] = [];
+  if (pendingDraft !== null) panels.push({ sheet: pendingDraft, adoptable: true, findings: await findingsFor(ticker, pendingDraft) });
+  if (latestAdopted !== null) panels.push({ sheet: latestAdopted, adoptable: pendingDraft === null, findings: await findingsFor(ticker, latestAdopted) });
+  const stale = panels.some((p) => p.findings.some((f) => f.check === "STALE"));
 
   return (
     <AnalyzerShell>
@@ -29,52 +57,73 @@ export default async function AnalystInputsTickerPage({
       <div className="cb-steps">
         <div className="wrap">
           <div className="sechead">
-            <h2>Analyst inputs — {ticker}</h2>
-            <span className="screenlabel">Separate authoring surface — not a step in the normal path</span>
+            <h2>Assumption sheet — {ticker}</h2>
+            <span className="screenlabel">Price-blind draft · your adoption finalises the verdict</span>
           </div>
           <hr className="rule" />
 
-          {isCommitted ? (
-            <div className="state">
-              <span className="name">{ticker} already has a committed bundle</span>
-              <span className="cause">
-                {ticker}&rsquo;s analyst inputs ship committed in code
-                (lib/analyzer/acquisition/analystInputs.ts), not recorded through this entry path.
-                This screen edits only recorded bundles.
-              </span>
+          {adopted && (
+            <div className="ack">
+              <span className="name">Adopted</span>
+              <p>
+                Version {adopted} is now {ticker}&rsquo;s sheet in force.{" "}
+                {runId !== null && <a href={`/analyzer/${encodeURIComponent(runId)}`}>Back to the report</a>}
+              </p>
             </div>
+          )}
+          {drafted && (
+            <div className="ack">
+              <span className="name">Drafted</span>
+              <p>Version {drafted} is a new draft, waiting for your adoption.</p>
+            </div>
+          )}
+          {refused && (
+            <div className="state">
+              <span className="name">Not done</span>
+              <span className="cause">{refused}</span>
+            </div>
+          )}
+
+          {inForce === null ? (
+            <p className="why">
+              {ticker} has no assumption sheet yet. One is drafted the first time {ticker} is analysed, or now, below.
+            </p>
           ) : (
-            <>
-              {saved === "1" && (
-                <div className="ack">
-                  <span className="name">Recorded</span>
-                  <p>
-                    {ticker}&rsquo;s analyst inputs are saved and readable by analystInputsFor.{" "}
-                    {ticker} can now open a run.
-                  </p>
-                </div>
-              )}
-              <p className="why">
-                {recorded === null
-                  ? `${ticker} has no recorded bundle yet — it still cannot open a run.`
-                  : (() => {
-                      const recordedOn = new Date(recorded.meta.recordedAt).toISOString().slice(0, 10);
-                      const updatedOn = new Date(recorded.meta.updatedAt).toISOString().slice(0, 10);
-                      return (
-                        `${ticker} has a recorded bundle, entered ${recordedOn}` +
-                        (updatedOn !== recordedOn ? `, last corrected ${updatedOn}.` : ".") +
-                        ` Saving below replaces it.`
-                      );
-                    })()}
-              </p>
-              <p className="why">
-                Every field left blank is recorded and returned as absent — never a zero, never a
-                default — and reports INCOMPLETE at exactly that field. These values are entered by
-                an analyst on this system, not acquired from filings, and render distinguished from
-                this run&rsquo;s acquired facts.
-              </p>
-              <AnalystBundleForm ticker={ticker} existing={recorded?.input ?? null} />
-            </>
+            <p className="why">
+              In force: version {inForce.version} ({inForce.status === "ADOPTED" ? "adopted" : "draft — the final verdict waits for your adoption"}).
+              {pendingDraft !== null && latestAdopted !== null && ` A newer draft, version ${pendingDraft.version}, waits for your adoption; version ${latestAdopted.version} stays in force until then.`}
+            </p>
+          )}
+
+          {panels.map((p) => (
+            <AssumptionSheetPanel key={p.sheet.id} sheet={p.sheet} findings={p.findings} runId={runId} adoptable={p.adoptable} />
+          ))}
+
+          <RedraftForm
+            ticker={ticker}
+            runId={runId}
+            why={
+              stale
+                ? "This sheet reads stale against the latest filings (see the checks above). A fresh draft is a new version; your adopted sheet stays in force until you adopt it."
+                : "A fresh price-blind draft from the latest filings, as a new version. Your adopted sheet, if any, stays in force until you adopt the new one."
+            }
+          />
+
+          {history.length > 0 && (
+            <section aria-label="Versions">
+              <div className="sechead" style={{ marginTop: 32 }}>
+                <h3>Versions</h3>
+                <span className="screenlabel">Append-only</span>
+              </div>
+              <ul className="note">
+                {history.map((s) => (
+                  <li key={s.id}>
+                    Version {s.version} — {s.status.toLowerCase()}, {s.origin.toLowerCase()}, {s.recordedAt.slice(0, 10)}
+                    {s.adoptedFrom !== null && ` (from version ${history.find((h) => h.id === s.adoptedFrom)?.version ?? "?"})`}
+                  </li>
+                ))}
+              </ul>
+            </section>
           )}
         </div>
       </div>

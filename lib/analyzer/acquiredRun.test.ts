@@ -313,96 +313,27 @@ describe("a real OKLO run — pre-revenue, thinner filings", () => {
     }
   });
 
-  // CB-H3-IMPLEMENT-01 — CalFinance Methodology v2's acquired-run cash basis
-  // (approved 11 Sep 2026). The real acquired cash balance ($1,644,704,000 as
-  // of 2026-06-30) over the real acquired shares outstanding (186,017,650)
-  // is ~$8.84/share — not the M5 validation fixture's illustrative $3.10 —
-  // and the real acquired quarterly burn ($17,867,000 for the quarter ended
-  // 2026-03-31) implies ~92 quarters of runway, not the fixture's 8.
-  it("reports cash per share and runway from the real acquired facts, not the M5 fixture's $3.10/8-quarter placeholders", async () => {
+  // CB-H3-IMPLEMENT-01's two OKLO tests (cash per share and runway from the
+  // real acquired facts; the success weight suppressed for want of a
+  // per-definition V_success date) asserted on the pre-revenue block built
+  // around OKLO_FIXTURE's synthetic unit economics, funding stack and success
+  // values. CF-AR6-ANY-TICKER-DRAFTS-01 — reviewed evaluator change: that
+  // fixture no longer reaches a real run (issue #454 DO 6), and no honest
+  // pre-revenue block exists without it, so OKLO's real run carries none and
+  // its sheet records that the valuation cannot be concluded from filed
+  // history. What still holds, pinned here: the acquired cash, share and burn
+  // facts stay in the fact set, and no fixture figure reaches the run.
+  it("carries no fixture-built pre-revenue block; its acquired cash, share and burn facts stay in the fact set", async () => {
     const run = await oklo();
+    expect(run.fixture.preRevenue).toBeNull();
+    expect(run.fixture.sheet?.origin).toBe("CANNOT CONCLUDE");
     const result = assembleAnalysisResult(run.fixture);
-    expect(result.preRevenue).not.toBeNull();
-    const pr = result.preRevenue!;
-
-    expect(pr.cashPerShare.toDecimalPlaces(2).toString()).toBe("8.84");
-    expect(pr.cashPerShare.toString()).not.toBe("3.1");
-    expect(pr.cashPerShareAsOfDate).toBe("2026-06-30");
-
-    expect(pr.runway.toDecimalPlaces(0).toString()).toBe("92");
-    expect(pr.runway.toString()).not.toBe("8");
-    expect(pr.quarterlyBurnAsOfDate).toMatch(/2026-01-01/);
-    expect(pr.quarterlyBurnAsOfDate).toMatch(/2026-03-31/);
-
-    // V_fail is the same acquired basis, on its own date — never the
-    // fixture's constant.
-    for (const row of pr.successDefinitions) {
-      expect(row.vFail.toDecimalPlaces(2).toString()).toBe("8.84");
-      expect(row.vFailAsOfDate).toBe("2026-06-30");
+    expect(result.preRevenue).toBeNull();
+    for (const id of ["cash-balance", "shares-outstanding", "quarterly-burn"]) {
+      const fact = run.fixture.facts.find((f) => f.id === id);
+      expect(fact?.value).not.toBeNull();
     }
-
-    // H3 conformance correction — provenance is carried through the
-    // acquisition seam, not dropped at the raw-value boundary (companyInputs.ts
-    // used to obtain these via raw(), losing the sourceClass/extractionType/
-    // verificationState every other acquired input carries). The combined
-    // weakest-input tokens for cash per share must match combining the two
-    // underlying facts' own provenance directly — never CLEAN_PROVENANCE
-    // asserted independently of what was actually acquired.
-    const cashFact = run.fixture.facts.find((f) => f.id === "cash-balance")!;
-    const sharesFact = run.fixture.facts.find((f) => f.id === "shares-outstanding")!;
-    const burnFact = run.fixture.facts.find((f) => f.id === "quarterly-burn")!;
-    expect(pr.cashPerShareProvenance).toEqual(
-      combineProvenance(
-        { sourceClass: cashFact.sourceClass, extractionType: cashFact.extractionType, verificationState: cashFact.verificationState },
-        { sourceClass: sharesFact.sourceClass, extractionType: sharesFact.extractionType, verificationState: sharesFact.verificationState }
-      )
-    );
-    expect(pr.quarterlyBurnProvenance).toEqual({
-      sourceClass: burnFact.sourceClass,
-      extractionType: burnFact.extractionType,
-      verificationState: burnFact.verificationState,
-    });
-    for (const row of pr.successDefinitions) {
-      expect(row.vFailProvenance).toEqual(pr.cashPerShareProvenance);
-    }
-
-    // No suppression bound to cashPerShare/quarterlyBurn/runway — every
-    // input needed for them was actually acquired on this run.
-    expect(boundState(result.states, NOT_COMPUTED_BINDING.cashPerShare)).toBeNull();
-    expect(boundState(result.states, NOT_COMPUTED_BINDING.quarterlyBurn)).toBeNull();
-    expect(boundState(result.states, NOT_COMPUTED_BINDING.runway)).toBeNull();
-  });
-
-  // CalFinance Methodology v2's second ruling: the success weight requires
-  // V_fail and V_success on the SAME valuation date and comparable basis.
-  // This run's V_fail is dated to the real acquired cash balance
-  // (2026-06-30). V_success has no per-definition date or basis at all on a
-  // real run — Step 7 (the real analyst-authored per-definition valuation
-  // date/basis) does not exist yet, so companyInputs.ts explicitly nulls out
-  // the M5 illustrative fixture's own vSuccessAsOfDate/vSuccessBasis rather
-  // than reporting them as if they were this company's real acquired
-  // evidence (H3 conformance correction — a quote timestamp or "as of
-  // today" is not valuation-date evidence, and neither is an illustrative
-  // fixture's own reference date). Every success definition must be
-  // suppressed for this reason — "not established", never a fabricated
-  // date mismatch or an interpolated weight built on invented evidence.
-  it("suppresses the success weight — V_success has no per-definition date or basis on a real run (Step 7 not built) — never interpolating on invented evidence", async () => {
-    const run = await oklo();
-    const result = assembleAnalysisResult(run.fixture);
-    const pr = result.preRevenue!;
-    expect(pr.successDefinitions.length).toBeGreaterThan(0);
-    for (const row of pr.successDefinitions) {
-      expect(row.state.kind).toBe("NOT COMPUTED / SUPPRESSED");
-      if (row.state.kind === "NOT COMPUTED / SUPPRESSED") {
-        expect(row.state.cause).toMatch(/V_success/);
-        expect(row.state.cause).toMatch(/not established/);
-      }
-      // V_fail's own endpoint still renders with its real acquired date
-      // (§7.2 M16's weight table) — the weight is withheld, not the figure.
-      expect(row.vFailAsOfDate).toBe("2026-06-30");
-      expect(row.vSuccessAsOfDate).toBeNull();
-      expect(row.vSuccess.isNaN()).toBe(false);
-    }
+    expect(result.fairValueRange.kind).toBe("suppressed");
   });
 
   // CB-AUDIT-FIX-01B / CB-AUDIT-01 H4c and H2. The validation set has no

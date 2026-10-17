@@ -155,7 +155,7 @@ async function main(): Promise<void> {
   mkdirSync(outDir, { recursive: true });
   const file = (suffix: string) => path.join(outDir, `${ticker.toLowerCase()}-${suffix}`);
 
-  let stage = "resolve this company's analyst inputs (committed, recorded or AI-proposed bundle)";
+  let stage = "resolve this company's assumption sheet (in force, or a fresh price-blind draft)";
   let runId: string | null = null;
   const timings: StageTiming[] = [];
   let attempts: AiAttempt[] = [];
@@ -167,7 +167,7 @@ async function main(): Promise<void> {
     // in-process caches let the run below reuse this answer, not re-ask it.
     if ((await analystInputsFor(ticker)) === null) {
       throw new Error(
-        `no analyst-input bundle could be resolved for ${ticker}, so a run cannot open — the [analyzer] log lines in this ticker's console name the cause`
+        `no assumption sheet could be resolved or drafted for ${ticker}, so a run cannot open — the [analyzer] log lines in this ticker's console name the cause`
       );
     }
     stage = "create the run";

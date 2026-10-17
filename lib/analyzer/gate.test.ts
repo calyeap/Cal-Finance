@@ -114,54 +114,14 @@ describe("the §2 ordering rule, enforced at the route boundary", () => {
     expect(assembleSpy).toHaveBeenCalledTimes(1);
   });
 
-  // H3 conformance correction (CB-H3-CONFORMANCE-02). Reproduces the exact
-  // counterexample the outcome names: a Cannot-verify decision on
-  // cash-balance/shares-outstanding/quarterly-burn used to leave H3's
-  // computed value and its acquisition-time (pre-decision) provenance
-  // tokens intact, because buildCompanyInputs computes the acquired cash
-  // basis once, before any decision exists, and gate.ts's applyDecisions
-  // only rewrote `fixture.facts` — never the already-built preRevenue block.
-  // With deriveH3CashBasis re-run over this run's OWN post-decision facts,
-  // every rejected fact must suppress its dependent H3 output to INCOMPLETE
-  // — never a computed number beside a stale CONFIRMED-looking mark.
-  //
-  // These three facts are tag-mapped (§3.8.1) and so are not themselves
-  // QUEUED for OKLO — but §3.8.1 is explicit that an exempt fact is "not
-  // spot-checked; it is not hidden", and this run's own decision store
-  // still accepts a decision recorded against them directly (an analyst
-  // annotating a shown-but-not-required fact). Recording one is exactly the
-  // "Cannot verify" scenario the outcome's counterexample describes.
-  it("suppresses H3's cash/burn/runway to INCOMPLETE — never a stale computed number — once cash, shares and burn are all Cannot verify", async () => {
-    const runId = await createRun("OKLO", "Oklo Inc.");
-    for (const factId of await queuedIdsForRun(runId)) {
-      await recordFactDecision(runId, factId, "CONFIRMED", null);
-    }
-    for (const factId of ["cash-balance", "shares-outstanding", "quarterly-burn"]) {
-      await recordFactDecision(runId, factId, "NOT CONFIRMED", "NOT LOCATED");
-    }
-
-    const result = await computeAnalysisForRun(runId);
-    const pr = result.preRevenue!;
-    expect(pr.cashPerShare.isNaN()).toBe(true);
-    expect(pr.quarterlyBurn.isNaN()).toBe(true);
-    expect(pr.runway.isNaN()).toBe(true);
-    expect(boundState(result.states, NOT_COMPUTED_BINDING.cashPerShare)?.state).toBe("INCOMPLETE");
-    expect(boundState(result.states, NOT_COMPUTED_BINDING.quarterlyBurn)?.state).toBe("INCOMPLETE");
-    expect(boundState(result.states, NOT_COMPUTED_BINDING.runway)?.state).toBe("INCOMPLETE");
-    // Every V_fail cell is unavailable too — never the rejected value.
-    expect(pr.cashPerShareProvenance).toBeNull();
-    for (const row of pr.successDefinitions) {
-      expect(row.vFail.isNaN()).toBe(true);
-      expect(row.vFailProvenance).toBeNull();
-    }
-  });
-
-  // Rejecting only the shares-outstanding fact must not take burn/runway
-  // down with it (independent dependency scoping, H3 conformance
-  // correction) — cash per share is INCOMPLETE, but burn (which does not
-  // depend on shares at all) and runway (which depends on cash balance and
-  // burn, not shares) both still compute.
-  it("suppresses only cash per share — not burn or runway — when shares outstanding alone is Cannot verify", async () => {
+  // The two H3 gating tests that stood here asserted on OKLO's pre-revenue
+  // block, which was built around OKLO_FIXTURE's synthetic unit economics.
+  // CF-AR6-ANY-TICKER-DRAFTS-01 — reviewed evaluator change: that fixture no
+  // longer reaches a real run (issue #454 DO 6) and OKLO's real run carries
+  // no pre-revenue block, so they are replaced by what still holds on the
+  // same route: a fact decided "Cannot verify" carries that state onto the
+  // run's fact set, and no H3 figure is computed from a fixture.
+  it("carries a fact decided Cannot verify onto the run's fact set, and computes no fixture-built H3 figure", async () => {
     const runId = await createRun("OKLO", "Oklo Inc.");
     for (const factId of await queuedIdsForRun(runId)) {
       await recordFactDecision(runId, factId, "CONFIRMED", null);
@@ -169,13 +129,8 @@ describe("the §2 ordering rule, enforced at the route boundary", () => {
     await recordFactDecision(runId, "shares-outstanding", "NOT CONFIRMED", "NOT LOCATED");
 
     const result = await computeAnalysisForRun(runId);
-    const pr = result.preRevenue!;
-    expect(pr.cashPerShare.isNaN()).toBe(true);
-    expect(boundState(result.states, NOT_COMPUTED_BINDING.cashPerShare)?.state).toBe("INCOMPLETE");
-    expect(pr.quarterlyBurn.isNaN()).toBe(false);
-    expect(pr.runway.isNaN()).toBe(false);
-    expect(boundState(result.states, NOT_COMPUTED_BINDING.quarterlyBurn)).toBeNull();
-    expect(boundState(result.states, NOT_COMPUTED_BINDING.runway)).toBeNull();
+    expect(result.preRevenue).toBeNull();
+    expect(result.facts.find((f) => f.id === "shares-outstanding")?.verificationState).toBe("NOT CONFIRMED");
   });
 
   // A deep link or API call carrying an id that was never issued must not
