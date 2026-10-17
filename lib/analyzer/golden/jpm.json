@@ -1,0 +1,101 @@
+{
+  "ticker": "JPM",
+  "cik": "0000019617",
+  "entityName": "JPMORGAN CHASE & CO",
+  "sic": "6021",
+  "sicDescription": "National Commercial Banks",
+  "classification": {
+    "cyclicality": "stable",
+    "preRevenue": false,
+    "refused": true,
+    "reason": "SIC 6021 is a depository institution (SIC 6000-699x) — DCF/NOPAT-based valuation is structurally unsuitable for a bank, by construction, not because of any data gap: for a bank, debt/leverage IS the business model (deposits and borrowings fund the loan book), not a financing choice layered on top of an operating business the way the EV bridge (lib/analyzer/modules/enterpriseValue.ts) assumes for every other golden company. The engine must refuse JPM outright, not force a NOPAT/EV number out of a bank. classifyCyclicality('6021') itself returns 'stable' (no confirmed cyclical SIC prefix matches 6021) — that literal table output is NOT what drives the refusal; refused=true is a separate, structural, bank-specific override, confirmed here only as a documentation fact, not read from cyclicalSic.ts."
+  },
+  "provenance": {
+    "source": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000019617.json, fresh and untrimmed, as supplied to this session by the orchestrating session.",
+    "capturedAt": "2026-10-17",
+    "pageCitationNote": "www.sec.gov is blocked from this sandbox; no page number is obtainable. Substituting accession number + XBRL concept label + exact fiscal period + form type, per the issue's own ESCALATE 'smallest substitute' clause."
+  },
+  "facts": {
+    "revenue": {
+      "conceptLabel": "Revenues",
+      "xbrlConcept": "us-gaap:Revenues",
+      "value": 182447000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-008131",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "CAPTURED BUT NOT A DCF-COMPARABLE 'REVENUE' — this is JPM's own structural-absence golden fact. us-gaap:Revenues is present with a real, current value, so this is NOT simply a missing tag; but the XBRL element's own official description (read directly from the real capture's tag metadata) is: 'Amount of revenue recognized from goods sold, services rendered, insurance premiums, or other activities... Includes... investment and interest income before deduction of interest expense when recognized as a component of revenue, and sales and trading gain (loss).' That is total net revenue for a bank (net interest income + noninterest revenue, gross of interest expense netting conventions specific to banks) — structurally not the same concept as a product/service company's net sales that reverseDcf.ts's baseYearRevenue assumes. This is the real, data-grounded basis for refusing JPM: not an absent tag, a present tag that means something categorically different for a depository institution."
+    },
+    "operatingIncome": null,
+    "operatingIncomeNote": "us-gaap:OperatingIncomeLoss is entirely absent from JPM's real captured facts — banks do not report operating income the way a non-financial company does (interest expense is netted against interest income before arriving at net revenue, not treated as a financing cost below an operating line).",
+    "incomeTaxExpense": {
+      "conceptLabel": "Income Tax Expense (Benefit)",
+      "xbrlConcept": "us-gaap:IncomeTaxExpenseBenefit",
+      "value": 15547000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-008131",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "incomeBeforeTax": {
+      "conceptLabel": "Income (Loss) from Continuing Operations before Income Taxes, Noncontrolling Interest",
+      "xbrlConcept": "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+      "value": 72595000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-008131",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "netIncome": {
+      "conceptLabel": "Net Income (Loss) Attributable to Parent",
+      "xbrlConcept": "us-gaap:NetIncomeLoss",
+      "value": 57048000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-008131",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "totalDebt": null,
+    "totalDebtNote": "DELIBERATELY NOT COMPUTED — not a data gap, a structural one. For a depository institution, 'total debt' in the non-financial-company EV-bridge sense (lib/analyzer/modules/enterpriseValue.ts: debt + leases − cash, added to market cap) has no coherent meaning: JPM's balance sheet is dominated by deposits and trading liabilities that ARE its funding model, not discretionary financing layered over an operating business. Observed anyway, for completeness, as a second real tag-drift instance (bonus, not asserted by tagDrift.test.ts): us-gaap:LongTermDebt is dead for JPM (last 10-K row FY2013, 267889000000); us-gaap:LongTermDebtNoncurrent/Current are entirely absent; us-gaap:ShortTermBorrowings is live (FY2025, 64776000000) but is only one small component of a bank's real funding stack (deposits, long-term debt issued through other disclosures, trading liabilities — none of which this harness attempts to reconstruct, since no engine total-debt figure should be computed for a refused company in the first place).",
+    "cashAndEquivalents": {
+      "conceptLabel": "Cash, Cash Equivalents, Restricted Cash and Restricted Cash Equivalents",
+      "xbrlConcept": "us-gaap:CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents",
+      "value": 343338000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-008131",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "us-gaap:CashAndCashEquivalentsAtCarryingValue (used for every other golden company) is itself DEAD for JPM — its last 10-K row is FY2018 (278793000000, filed 2019-02-26) — a THIRD real tag-drift instance, noted here but not separately asserted by tagDrift.test.ts. Used the live replacement tag instead, same pattern as KO/NUE's debt tags."
+    },
+    "dilutedWeightedAverageShares": {
+      "conceptLabel": "Weighted Average Number of Shares Outstanding, Diluted",
+      "xbrlConcept": "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding",
+      "value": 2781500000,
+      "unit": "shares",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-008131",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    }
+  },
+  "price": null,
+  "priceNote": "No live/fresh stock price is obtainable for JPM from this sandbox and no previously-captured JPM price exists in this repo's offline fixtures. Omitted rather than invented. Also moot: JPM is refused before a price-implied valuation would ever be computed.",
+  "notes": [
+    "The golden fact that matters most for JPM, per this outcome's own DO item 1: SIC 6021 (confirmed directly from the real submissions endpoint) plus the structural mismatch in what its 'Revenues' tag actually measures (above) is the basis for refusing JPM — not a missing-data cascade. goldenFacts.test.ts asserts refused===true for JPM directly from this JSON."
+  ]
+}

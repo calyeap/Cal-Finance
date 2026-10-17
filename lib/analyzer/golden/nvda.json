@@ -1,0 +1,121 @@
+{
+  "ticker": "NVDA",
+  "cik": "0001045810",
+  "entityName": "NVIDIA CORP",
+  "sic": "3674",
+  "sicDescription": "Semiconductors & Related Devices",
+  "classification": {
+    "cyclicality": "cyclical",
+    "preRevenue": false,
+    "refused": false,
+    "reason": "SIC 3674 starts with the confirmed cyclical prefix 367 (semiconductors) in cyclicalSic.ts. Expected cyclical (DO item 1/5)."
+  },
+  "provenance": {
+    "source": "https://data.sec.gov/api/xbrl/companyfacts/CIK0001045810.json — fresh, full/untrimmed capture supplied by the orchestrating session specifically because the repo's existing lib/analyzer/acquisition/captures/nvda-companyfacts.json is a stale trimmed capture; NOT used as the source here.",
+    "capturedAt": "2026-10-17",
+    "pageCitationNote": "www.sec.gov is blocked from this sandbox; no page number is obtainable. Substituting accession number + XBRL concept label + exact fiscal period + form type, per the issue's own ESCALATE 'smallest substitute' clause."
+  },
+  "facts": {
+    "revenue": {
+      "conceptLabel": "Revenues",
+      "xbrlConcept": "us-gaap:Revenues",
+      "value": 215938000000,
+      "unit": "USD",
+      "periodStart": "2025-01-27",
+      "periodEnd": "2026-01-25",
+      "accessionNumber": "0001045810-26-000021",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": "NVDA's fiscal year ends in late January; this is FY2026 (ended 2026-01-25). Matches the real figure already pinned in lib/analyzer/acquisition/selectTagged.test.ts (toBe(215938000000)) — an independent cross-check, not re-derived from that test. NVDA's own RevenueFromContractWithCustomerExcludingAssessedTax tag is dead since FY2022; Revenues is the live tag."
+    },
+    "operatingIncome": {
+      "conceptLabel": "Operating Income (Loss)",
+      "xbrlConcept": "us-gaap:OperatingIncomeLoss",
+      "value": 130387000000,
+      "unit": "USD",
+      "periodStart": "2025-01-27",
+      "periodEnd": "2026-01-25",
+      "accessionNumber": "0001045810-26-000021",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "incomeTaxExpense": {
+      "conceptLabel": "Income Tax Expense (Benefit)",
+      "xbrlConcept": "us-gaap:IncomeTaxExpenseBenefit",
+      "value": 21383000000,
+      "unit": "USD",
+      "periodStart": "2025-01-27",
+      "periodEnd": "2026-01-25",
+      "accessionNumber": "0001045810-26-000021",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "incomeBeforeTax": {
+      "conceptLabel": "Income (Loss) from Continuing Operations before Income Taxes, Noncontrolling Interest",
+      "xbrlConcept": "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+      "value": 141450000000,
+      "unit": "USD",
+      "periodStart": "2025-01-27",
+      "periodEnd": "2026-01-25",
+      "accessionNumber": "0001045810-26-000021",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "netIncome": {
+      "conceptLabel": "Net Income (Loss) Attributable to Parent",
+      "xbrlConcept": "us-gaap:NetIncomeLoss",
+      "value": 120067000000,
+      "unit": "USD",
+      "periodStart": "2025-01-27",
+      "periodEnd": "2026-01-25",
+      "accessionNumber": "0001045810-26-000021",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "totalDebt": {
+      "conceptLabel": "Long-term Debt, Excluding Current Maturities + Long-term Debt, Current Maturities",
+      "xbrlConcept": "us-gaap:LongTermDebtNoncurrent + us-gaap:LongTermDebtCurrent",
+      "value": 8468000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2026-01-25",
+      "accessionNumber": "0001045810-26-000021",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": "7469000000 (noncurrent) + 999000000 (current) = 8468000000, which independently equals the combined us-gaap:LongTermDebt tag's own FY2026 value (8468000000) — a useful internal cross-check. Both component tags are live/current for NVDA."
+    },
+    "cashAndEquivalents": {
+      "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",
+      "xbrlConcept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+      "value": 10605000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2026-01-25",
+      "accessionNumber": "0001045810-26-000021",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "dilutedWeightedAverageShares": {
+      "conceptLabel": "Weighted Average Number of Shares Outstanding, Diluted",
+      "xbrlConcept": "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding",
+      "value": 24514000000,
+      "unit": "shares",
+      "periodStart": "2025-01-27",
+      "periodEnd": "2026-01-25",
+      "accessionNumber": "0001045810-26-000021",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    }
+  },
+  "price": null,
+  "priceNote": "No live/fresh stock price is obtainable for NVDA from this sandbox (query1/query2.finance.yahoo.com confirmed blocked) and no previously-captured NVDA price exists in this repo's offline fixtures (only MSFT and OKLO have one). Omitted rather than invented.",
+  "notes": [
+    "us-gaap:MarketableSecuritiesCurrent — a DIFFERENT fact from any of the ones captured above, but the DO item 6 worked tag-drift example this issue specifically names for NVDA — is dead/stale as of period end 2025-10-26 (last filed 2025-11-19); it is silently absent for the 2026-01-25, 2026-04-26 and 2026-07-26 periods even though NVDA's capture's most recent filing anywhere is 2026-08-26 and other marketable-securities-family tags (AvailableForSaleSecuritiesDebtSecurities, EquitySecuritiesFvNi, DebtSecuritiesCurrent) kept reporting through that date. Confirmed and asserted by lib/analyzer/golden/tagDrift.test.ts against these exact real row values; not re-derived here, only cross-referenced."
+  ]
+}
