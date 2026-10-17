@@ -6,7 +6,6 @@ import type { AnalysisResult } from "./types";
 import { isSpotCheckComplete, queuedFacts, undecidedFacts, applyDecisions } from "./spotCheck";
 import { getRun, getFactDecisions, getJudgments, getCompanyJudgmentOverride, type AnalyzerRun } from "./runStore";
 import { buildAcquiredRun, type AcquiredRunInputs } from "./acquiredRun";
-import { deriveH3CashBasis } from "./acquisition/companyInputs";
 import { constrainedAndPassedFactIds } from "./crosschecks/run";
 import type { DerivedExemptionEvidence } from "./spotCheck";
 import { analystInputsFor, TICKERS_WITH_ANALYST_INPUTS } from "./acquisition/analystInputs";
@@ -339,6 +338,28 @@ export interface GateState {
    * recomputing it from a different set of facts.
    */
   derivedExemption: DerivedExemptionEvidence;
+  /** The market data this state was built on — fetched, or the run's pinned snapshot. */
+  market: MarketSnapshot;
+}
+
+/**
+ * The market data a run is valued on: its price and the provider figures read
+ * beside it. CF-AR3-REPRODUCIBLE-RUNS-01 — fetched once, when the run is first
+ * computed, then stored with that output (snapshotStore.ts saveRunOutput) and handed back
+ * here on every later computation of the same run, so a run stays valued at
+ * its own price date instead of whatever the market says on the day it is
+ * reopened.
+ */
+export interface MarketSnapshot {
+  price: { value: Decimal; timestamp: string; source: string } | null;
+  fiftyTwoWeek: FiftyTwoWeekRange | null;
+  epsTrailing: Decimal | null;
+  epsForward: Decimal | null;
+}
+
+export interface LoadGateStateOptions {
+  /** This run's pinned market data. Omitted, it is fetched (the run's first computation). */
+  market?: MarketSnapshot;
 }
 
 /**
@@ -347,7 +368,7 @@ export interface GateState {
  * use it to decide what to render; computeAnalysisForRun uses it to decide
  * whether to compute at all.
  */
-export async function loadGateState(runId: string): Promise<GateState> {
+export async function loadGateState(runId: string, options: LoadGateStateOptions = {}): Promise<GateState> {
   const run = await getRun(runId);
   if (run === null) throw new RunNotFoundError(runId);
 
@@ -357,24 +378,16 @@ export async function loadGateState(runId: string): Promise<GateState> {
     throw new RunNotFoundError(runId);
   }
 
-  const [decisions, judgments, price, eps, nonOperatingOverride] = await Promise.all([
+  const [decisions, judgments, nonOperatingOverride, market] = await Promise.all([
     getFactDecisions(runId),
     getJudgments(runId),
-    latestPrice(run.ticker),
-    fundamentals(run.ticker),
     // CF-ANALYZER-V1-SETTLE-01 — Calvin ruling 2: a durable company-level
     // override, consulted only as a fallback below when this run has no
     // per-run judgment of its own (migration 007).
     getCompanyJudgmentOverride(run.ticker, "NON-OPERATING INVESTMENTS"),
+    options.market ?? fetchMarketSnapshot(run.ticker),
   ]);
-
-  // §7.2 M3's 52-week range, fetched once here and passed to BOTH
-  // buildAcquiredRun calls below — never fetched a second time for the
-  // judgment-resolved call, exactly as `price` above already is not. Keyed to
-  // the price's own as-of date (fiftyTwoWeekRange's own doc); no price means
-  // no date to key the window to, so the range is null rather than anchored
-  // to an unrelated "now".
-  const fiftyTwoWeek = price === null ? null : await fiftyTwoWeekRange(run.ticker, price.timestamp);
+  const { price, fiftyTwoWeek, epsTrailing, epsForward } = market;
 
   // Acquire once to learn the candidate investment line items, then resolve
   // §4.4's judgment against them. Enterprise value depends on the outcome:
@@ -382,8 +395,6 @@ export async function loadGateState(runId: string): Promise<GateState> {
   // EV-based output is INCOMPLETE. That is the correct state — no tag says
   // which of a company's investments are non-operating.
   const source = isOffline() ? ("CAPTURE" as const) : undefined;
-  const epsTrailing = eps?.epsTrailing ?? null;
-  const epsForward = eps?.epsForward ?? null;
   const withoutJudgment = await buildAcquiredRun({
     ticker: run.ticker,
     runId,
@@ -405,38 +416,22 @@ export async function loadGateState(runId: string): Promise<GateState> {
     withoutJudgment.acquired.acquisition.candidateNonOperatingInvestments
   );
 
-  // The second call is served from the acquisition cache, so this costs no
-  // additional EDGAR request — and fiftyTwoWeek/epsTrailing/epsForward are the
-  // SAME values fetched once above, so it costs no additional market-data
-  // request either.
-  const acquired =
-    nonOperatingInvestments === null
-      ? withoutJudgment
-      : await buildAcquiredRun({
-          ticker: run.ticker,
-          runId,
-          price,
-          fiftyTwoWeek,
-          epsTrailing,
-          epsForward,
-          nonOperatingInvestments,
-          source,
-        });
-
-  const crossCheckFailedFactIds = acquired.acquired.crossCheckFailedFactIds;
-  const fixture = acquired.fixture;
+  // The queue is the ACQUISITION-TIME fact set's: which facts need a decision
+  // is decided before any decision exists.
+  const acquiredFacts = withoutJudgment.fixture.facts;
+  const crossCheckFailedFactIds = withoutJudgment.acquired.crossCheckFailedFactIds;
 
   // The evidence the derived-fact exemption rests on (Command Center, 8
   // September 2026): which facts a §3.8.2 cross-check actually constrained
   // against other facts and passed. Derived here, from this run's own report,
   // so a stale or absent report cannot exempt anything.
   const derivedExemption = {
-    crossCheckConstrainedFactIds: constrainedAndPassedFactIds(acquired.acquired.crossChecks),
+    crossCheckConstrainedFactIds: constrainedAndPassedFactIds(withoutJudgment.acquired.crossChecks),
   };
 
   const decidedFactIds = new Set(decisions.map((d) => d.factId));
   const outstanding = undecidedFacts(
-    fixture.facts,
+    acquiredFacts,
     decidedFactIds,
     crossCheckFailedFactIds,
     derivedExemption
@@ -450,7 +445,7 @@ export async function loadGateState(runId: string): Promise<GateState> {
   // re-derives it. A second derivation downstream is how the screen and the
   // data came to disagree.
   const facts = applyDecisions(
-    fixture.facts,
+    acquiredFacts,
     // CF-ANALYZER-AUTORUN-01 — the whole stored decision now, not only its
     // decision half: the origin and the §3.8.4 code travel onto the fact so
     // every surface reads the same record, and none of them has to ask the
@@ -465,36 +460,29 @@ export async function loadGateState(runId: string): Promise<GateState> {
     derivedExemption
   );
 
-  // H3's acquired cash basis (cashPerShare / quarterlyBurn / runway) is
-  // computed above, inside `acquired`/`fixture`, from the RAW acquisition-time
-  // facts — before this run's decisions exist. `applyDecisions` just above
-  // only rewrites `facts`' own verificationState; left alone, a Cannot-verify
-  // decision on cash-balance/shares-outstanding/quarterly-burn would leave the
-  // H3 value and its acquisition-time provenance tokens intact, contrary to
-  // §3.8/§5.2 (H3 conformance correction). Re-deriving it here, from the SAME
-  // `facts` this run's decisions just produced, is not a second decision
-  // mechanism — `deriveH3CashBasis` is the one function both this call and
-  // `buildCompanyInputs` use; only the fact array behind it changes.
-  const preRevenue =
-    fixture.preRevenue === null
-      ? null
-      : (() => {
-          const h3 = deriveH3CashBasis(facts);
-          return {
-            ...fixture.preRevenue,
-            cashPerShare: h3.cashBasis.cashPerShare,
-            cashPerShareAsOfDate: h3.cashBasis.cashPerShareAsOfDate,
-            cashPerShareCause: h3.cashBasis.cashPerShareCause,
-            cashPerShareProvenance: h3.cashPerShareProvenance,
-            quarterlyBurn: h3.cashBasis.quarterlyBurn,
-            quarterlyBurnAsOfDate: h3.cashBasis.quarterlyBurnAsOfDate,
-            quarterlyBurnCause: h3.cashBasis.quarterlyBurnCause,
-            quarterlyBurnProvenance: h3.quarterlyBurnProvenance,
-            runway: h3.cashBasis.runway,
-            runwayCause: h3.cashBasis.runwayCause,
-            runwayProvenance: h3.runwayProvenance,
-          };
-        })();
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — the calculation inputs are built from THESE
+  // facts, not the acquisition-time ones. Before, only `fixture.facts` was
+  // replaced: every module input kept its acquisition-time provenance, so a
+  // fact this run decided NOT CONFIRMED still fed enterprise value, H3's cash
+  // basis needed a second derivation here to catch up, and a confirmed fact
+  // still reported "spot-check pending" in its figures. Building the inputs
+  // once from the decided facts gates every dependent output on the decision
+  // (figures.ts computedValue) through the one mechanism. The second
+  // acquisition is served from the acquisition cache, and the market data is
+  // the SAME snapshot used above — no second EDGAR or market-data request.
+  const decidedById = new Map(facts.map((f) => [f.id, f]));
+  const acquired = await buildAcquiredRun({
+    ticker: run.ticker,
+    runId,
+    price,
+    fiftyTwoWeek,
+    epsTrailing,
+    epsForward,
+    nonOperatingInvestments,
+    source,
+    decideFacts: (acquisitionFacts) => acquisitionFacts.map((f) => decidedById.get(f.id) ?? f),
+  });
+  const fixture = acquired.fixture;
 
   return {
     run,
@@ -506,8 +494,6 @@ export async function loadGateState(runId: string): Promise<GateState> {
     // and this run's own cross-check outcomes replace that default.
     fixture: {
       ...fixture,
-      facts,
-      preRevenue,
       trustInputs: {
         profileHumanConfirmed: run.profileHumanConfirmed,
         crossCheckFailedFactIds: [...crossCheckFailedFactIds],
@@ -515,10 +501,10 @@ export async function loadGateState(runId: string): Promise<GateState> {
       },
     },
     decidedFactIds,
-    queuedCount: queuedFacts(fixture.facts, crossCheckFailedFactIds, derivedExemption).length,
+    queuedCount: queuedFacts(acquiredFacts, crossCheckFailedFactIds, derivedExemption).length,
     outstandingFactIds: outstanding,
     spotCheckComplete: isSpotCheckComplete(
-      fixture.facts,
+      acquiredFacts,
       decidedFactIds,
       crossCheckFailedFactIds,
       derivedExemption
@@ -526,7 +512,20 @@ export async function loadGateState(runId: string): Promise<GateState> {
     acquired,
     crossCheckFailedFactIds,
     derivedExemption,
+    market,
   };
+}
+
+/**
+ * This run's market data, fetched: the price, then the 52-week range keyed to
+ * the price's own as-of date (fiftyTwoWeekRange's own doc — no price means no
+ * date to key the window to, so the range is null rather than anchored to an
+ * unrelated "now"), and EPS off the same feed.
+ */
+async function fetchMarketSnapshot(ticker: string): Promise<MarketSnapshot> {
+  const [price, eps] = await Promise.all([latestPrice(ticker), fundamentals(ticker)]);
+  const fiftyTwoWeek = price === null ? null : await fiftyTwoWeekRange(ticker, price.timestamp);
+  return { price, fiftyTwoWeek, epsTrailing: eps?.epsTrailing ?? null, epsForward: eps?.epsForward ?? null };
 }
 
 /**
@@ -538,11 +537,24 @@ export async function loadGateState(runId: string): Promise<GateState> {
  * failing path.
  */
 export async function computeAnalysisForRun(runId: string): Promise<AnalysisResult> {
-  const state = await loadGateState(runId);
+  return (await computeRunOutput(runId)).result;
+}
+
+/**
+ * computeAnalysisForRun, with the inputs it computed from: the engine input
+ * (re-assembling it reproduces the result) and the market data it used.
+ * CF-AR3-REPRODUCIBLE-RUNS-01 — what the report stores (reportAnalysis.ts).
+ * The same gate, in the same order: the check precedes the call.
+ */
+export async function computeRunOutput(
+  runId: string,
+  options: LoadGateStateOptions = {}
+): Promise<{ result: AnalysisResult; fixture: CompanyFixture; market: MarketSnapshot }> {
+  const state = await loadGateState(runId, options);
 
   if (!state.spotCheckComplete) {
     throw new SpotCheckIncompleteError(runId, state.outstandingFactIds);
   }
 
-  return assembleAnalysisResult(state.fixture);
+  return { result: assembleAnalysisResult(state.fixture), fixture: state.fixture, market: state.market };
 }

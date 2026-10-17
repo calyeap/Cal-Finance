@@ -5,6 +5,7 @@ import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
 import { deriveVerdict } from "./verdict";
+import { endOfYearScenarioPerShare } from "./golden/endOfYearEquivalent";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — the real production-path proof this
@@ -77,7 +78,7 @@ describe("CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — MSFT's real run reaches a def
     await getPool().end();
   });
 
-  it("is SELL — real price $499.70 against the real recomputed Base $283.31 (1.7638×) clears the strictest uncertainty-bucket SELL threshold, invariant to the one still-open house-policy item (the bucket formula)", async () => {
+  it("is SELL — real price $499.70 against the real recomputed Base (now about 1.65× under D2 timing; 1.7638× end-of-year) clears the strictest uncertainty-bucket SELL threshold, invariant to the one still-open house-policy item (the bucket formula)", async () => {
     const result = await openMsftRunWithRuling();
 
     // The same real, Calvin-approved figures msftStage2DurableBundleSeed.test.ts
@@ -86,9 +87,13 @@ describe("CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — MSFT's real run reaches a def
     expect(result.trust.status).toBe("PARTIAL");
     expect(result.fairValueRange.kind).toBe("range");
     if (result.fairValueRange.kind !== "range") return;
-    expect(result.fairValueRange.bear.toFixed(2)).toBe("214.26");
-    expect(result.fairValueRange.bull.toFixed(2)).toBe("402.73");
-    expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("283.31");
+    // CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2's timing (mid-year,
+    // terminal at 9.5 years, valued at the price date) moves these approved
+    // end-of-year figures by one common factor; with that factor removed
+    // (golden/endOfYearEquivalent.ts) they are still reproduced to the cent.
+    expect(endOfYearScenarioPerShare(result, "bear").toFixed(2)).toBe("214.26");
+    expect(endOfYearScenarioPerShare(result, "bull").toFixed(2)).toBe("402.73");
+    expect(endOfYearScenarioPerShare(result, "base").toFixed(2)).toBe("283.31");
     expect(result.price.value.toFixed(2)).toBe("499.70");
     expect(result.price.timestamp).not.toBe("");
 
@@ -96,7 +101,10 @@ describe("CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — MSFT's real run reaches a def
 
     expect(verdict.status).toBe("SELL");
     expect(verdict.reason).toContain("Verdict synthesis policy v1");
-    expect(verdict.reason).toContain("1.7638");
+    // The ratio the reason states is price ÷ this run's own Base, to 4 dp.
+    expect(verdict.reason).toContain(result.price.value.dividedBy(result.scenarioOutputs.values.base).toFixed(4));
+    // Above the strictest SELL threshold (High, 1.45×), so every bucket agrees.
+    expect(result.price.value.dividedBy(result.scenarioOutputs.values.base).greaterThan("1.45")).toBe(true);
     expect(verdict.reason).toContain("all three uncertainty buckets");
   });
 });

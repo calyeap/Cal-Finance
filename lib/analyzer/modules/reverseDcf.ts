@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 import { POLICY } from "../policy";
 import { resolveMarginLevels } from "../marginLevels";
 import { growthAt } from "../growthPath";
+import { explicitYearDiscountTime, terminalDiscountTime } from "../valuationTiming";
 import { combineProvenance, CLEAN_PROVENANCE } from "../provenance";
 import { computedValue, suppressedValue } from "../figures";
 import type {
@@ -59,7 +60,12 @@ import type {
 // Terminal construction (unchanged from the original implementation, and
 // was never the source of the earlier mismatch): terminal FCF = terminal
 // NOPAT × (1 − terminal growth ÷ terminal ROIC), terminal ROIC = rate + 3pp
-// (I16), discounted from year 10 (§7.2 M8).
+// (I16). Discounting follows Methodology v2.1 D2's timing
+// (CF-AR3-REPRODUCIBLE-RUNS-01, valuationTiming.ts): mid-year cash flows,
+// the terminal value from 9.5 years, valued at the price date. The frozen
+// v1.0.1 reference grid the calibration note above reproduced was
+// end-of-year; D2 supersedes that convention, so the grid's solved growth
+// rates move with it.
 
 // Calibration note: a wider bracket (explored up to +300%) crosses a real
 // reinvestment-collapse region for ANY finite RONIC — once g exceeds RONIC
@@ -105,6 +111,9 @@ export interface ReverseDcfInput {
   // row, so an unconfigured run (null, the default) returns INCOMPLETE on
   // all nine cells rather than a subset.
   configuredNopatTaxRate?: Decimal | null;
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — years from the base period end to the
+  // price date (valuationTiming.ts). Absent values at the base period end.
+  stubYears?: Decimal;
 }
 
 export function computeReverseDcfGrid(input: ReverseDcfInput): ReverseDcfCell[] {
@@ -139,7 +148,8 @@ export function computeReverseDcfGrid(input: ReverseDcfInput): ReverseDcfCell[] 
           missingBase.length > 0 ? null : (input.baseYearRevenue as SourcedValue<Decimal>),
           missingBase.length > 0 ? null : (input.targetEnterpriseValue as SourcedValue<Decimal>),
           input.lagBiasDirection,
-          nopatTaxRate as Decimal // guaranteed non-null when missingBase is empty
+          nopatTaxRate as Decimal, // guaranteed non-null when missingBase is empty
+          input.stubYears ?? new Decimal(0)
         )
       );
     }
@@ -170,7 +180,8 @@ function computeSingleCell(
   // caller sets every marginFigure to a suppressed INCOMPLETE (short-
   // circuiting before this value is ever read) when the tax rate itself
   // is unconfigured.
-  nopatTaxRate: Decimal | null
+  nopatTaxRate: Decimal | null,
+  stubYears: Decimal
 ): ReverseDcfCell {
   if (marginFigure.suppressed) {
     return {
@@ -222,7 +233,8 @@ function computeSingleCell(
     ronicValue,
     baseYearRevenue.value,
     targetEnterpriseValue.value,
-    nopatTaxRate as Decimal
+    nopatTaxRate as Decimal,
+    stubYears
   );
 
   if (solveResult.kind === "no-solution") {
@@ -315,7 +327,10 @@ export function projectReverseDcfValue(
   // its other rows, rather than silently reverting to the policy default
   // whenever a base case chooses a different terminal growth. The formula
   // itself is unchanged.
-  terminalGrowth: Decimal = POLICY.terminalGrowth
+  terminalGrowth: Decimal = POLICY.terminalGrowth,
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — years from the base period end to the
+  // price date (valuationTiming.ts).
+  stubYears: Decimal = new Decimal(0)
 ): ReverseDcfProjection {
   const discountFactorBase = new Decimal(1).plus(rate);
   const afterTax = new Decimal(1).minus(nopatTaxRate);
@@ -337,7 +352,7 @@ export function projectReverseDcfValue(
     const nextGrowth = growthAt(t + 1, growth, terminalGrowth);
     const reinvestment = nopat.mul(nextGrowth).dividedBy(ronic);
     const fcff = nopat.minus(reinvestment);
-    pvSum = pvSum.plus(fcff.dividedBy(discountFactorBase.pow(t)));
+    pvSum = pvSum.plus(fcff.dividedBy(discountFactorBase.pow(explicitYearDiscountTime(t, stubYears))));
   }
 
   const year10Revenue = revenues[10];
@@ -347,8 +362,8 @@ export function projectReverseDcfValue(
   // §7.2 M8: terminal FCF = terminal NOPAT × (1 − g ÷ terminal ROIC), never
   // final-year FCF × (1+g).
   const terminalFcf = terminalNopat.mul(new Decimal(1).minus(terminalGrowth.dividedBy(terminalRoic)));
-  const terminalValueAtYear10 = terminalFcf.dividedBy(rate.minus(terminalGrowth));
-  const terminalValuePV = terminalValueAtYear10.dividedBy(discountFactorBase.pow(10));
+  const terminalValue = terminalFcf.dividedBy(rate.minus(terminalGrowth));
+  const terminalValuePV = terminalValue.dividedBy(discountFactorBase.pow(terminalDiscountTime(stubYears)));
 
   const tenYearCagr = year10Revenue.dividedBy(baseRevenue).pow(new Decimal(1).dividedBy(10)).minus(1);
 
@@ -367,14 +382,15 @@ function solveImpliedGrowth(
   ronic: Decimal,
   baseRevenue: Decimal,
   targetEnterpriseValue: Decimal,
-  nopatTaxRate: Decimal
+  nopatTaxRate: Decimal,
+  stubYears: Decimal
 ): SolveResult {
   const samples: Decimal[] = [];
   for (let i = 0; i <= MONOTONICITY_SAMPLE_COUNT; i++) {
     const g = GROWTH_SEARCH_LO.plus(
       GROWTH_SEARCH_HI.minus(GROWTH_SEARCH_LO).mul(i).dividedBy(MONOTONICITY_SAMPLE_COUNT)
     );
-    samples.push(projectReverseDcfValue(g, margin, ronic, rate, baseRevenue, nopatTaxRate).ev);
+    samples.push(projectReverseDcfValue(g, margin, ronic, rate, baseRevenue, nopatTaxRate, undefined, stubYears).ev);
   }
 
   let increasing = true;
@@ -401,7 +417,9 @@ function solveImpliedGrowth(
   let hi = GROWTH_SEARCH_HI;
   for (let iter = 0; iter < BISECTION_ITERATIONS; iter++) {
     const mid = lo.plus(hi.minus(lo).dividedBy(2));
-    const midDiff = projectReverseDcfValue(mid, margin, ronic, rate, baseRevenue, nopatTaxRate).ev.minus(targetEnterpriseValue);
+    const midDiff = projectReverseDcfValue(mid, margin, ronic, rate, baseRevenue, nopatTaxRate, undefined, stubYears).ev.minus(
+      targetEnterpriseValue
+    );
     const loBranchIsPositive = increasing ? loDiff.greaterThan(0) : loDiff.lessThan(0);
     const midIsSameSignAsLo = increasing
       ? (midDiff.greaterThan(0)) === loBranchIsPositive
@@ -414,7 +432,7 @@ function solveImpliedGrowth(
   }
 
   const solvedGrowth = lo.plus(hi).dividedBy(2);
-  const finalProjection = projectReverseDcfValue(solvedGrowth, margin, ronic, rate, baseRevenue, nopatTaxRate);
+  const finalProjection = projectReverseDcfValue(solvedGrowth, margin, ronic, rate, baseRevenue, nopatTaxRate, undefined, stubYears);
   const terminalSharePercent = finalProjection.terminalValuePV.dividedBy(finalProjection.ev).mul(100);
 
   if (terminalSharePercent.greaterThan(100)) {

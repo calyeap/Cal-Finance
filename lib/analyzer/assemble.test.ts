@@ -6,6 +6,7 @@ import { OKLO_FIXTURE } from "./fixtures/oklo";
 import { computeUnitExitBreakEvenPrice } from "./modules/preRevenue";
 import { computeScenarioEnterpriseValue } from "./modules/scenarioOutputs";
 import { buildFixedShapeGrowthPath } from "./growthPath";
+import { projectReverseDcfValue } from "./modules/reverseDcf";
 import { POLICY } from "./policy";
 import { windowMedian, windowRange, worstSingleYearDecline } from "./marginMath";
 import { boundState, NOT_COMPUTED_BINDING } from "./notComputed";
@@ -212,16 +213,37 @@ describe("assembleAnalysisResult — MSFT fixture", () => {
     closeTo(diagnostic.value.value, 0.209, 0.001);
   });
 
-  it("M7 reverse-DCF grid: exactly 4 of 9 cells DEGENERATE, the current-margin/8% cell reproduces 18.5% growth / 13.7% ten-year CAGR", () => {
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — this pinned the frozen v1.0.1 grid (4 of 9
+  // DEGENERATE; 18.5% / 13.7% at current margin, 8%), which was calibrated to
+  // end-of-year discounting. Methodology v2.1 D2's mid-year timing moves every
+  // solved figure (now 17.6% / 13.1%) and lifts one cell out of DEGENERATE,
+  // so the pin is replaced by what the grid must satisfy under any timing:
+  // each solved cell reproduces the target EV, a higher rate needs more
+  // growth, and every suppressed cell names a real state.
+  it("M7 reverse-DCF grid: nine cells; every solved current-margin cell round-trips to the target EV, and implied growth rises with the rate", () => {
     const cells = result.priceImplied.reverseDcfGrid;
     expect(cells).toHaveLength(9);
-    const degenerate = cells.filter((c) => c.fiveYearGrowth.suppressed && c.fiveYearGrowth.state === "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE");
-    expect(degenerate).toHaveLength(4);
+    for (const c of cells.filter((c) => c.fiveYearGrowth.suppressed)) {
+      if (!c.fiveYearGrowth.suppressed) continue;
+      expect(["DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE", "INCOMPLETE"]).toContain(c.fiveYearGrowth.state);
+    }
+    expect(cells.some((c) => !c.fiveYearGrowth.suppressed)).toBe(true);
 
-    const currentAt8 = cells.find((c) => c.marginLevel === "current" && c.rate === 0.08);
-    expect(currentAt8?.fiveYearGrowth.suppressed).toBe(false);
-    if (currentAt8 && !currentAt8.fiveYearGrowth.suppressed) closeTo(currentAt8.fiveYearGrowth.value, 0.185, 0.0015);
-    if (currentAt8 && !currentAt8.tenYearCagr.suppressed) closeTo(currentAt8.tenYearCagr.value, 0.137, 0.0015);
+    const target = MSFT_FIXTURE.reverseDcf.targetEnterpriseValue!.value;
+    const margin = MSFT_FIXTURE.reverseDcf.currentMargin!.value;
+    const base = MSFT_FIXTURE.reverseDcf.baseYearRevenue!.value;
+    const tax = MSFT_FIXTURE.configuredConstants.nopatTaxRate!;
+    const solved = cells
+      .filter((c) => c.marginLevel === "current" && !c.fiveYearGrowth.suppressed && !c.ronic.suppressed)
+      .sort((a, b) => a.rate - b.rate);
+    expect(solved.length).toBeGreaterThan(0);
+    for (const c of solved) {
+      if (c.fiveYearGrowth.suppressed || c.ronic.suppressed) continue;
+      const ev = projectReverseDcfValue(c.fiveYearGrowth.value, margin, c.ronic.value, new Decimal(c.rate), base, tax).ev;
+      expect(ev.minus(target).abs().dividedBy(target).toNumber()).toBeLessThan(1e-9);
+    }
+    const growths = solved.map((c) => (c.fiveYearGrowth.suppressed ? NaN : c.fiveYearGrowth.value.toNumber()));
+    for (let i = 1; i < growths.length; i++) expect(growths[i]).toBeGreaterThan(growths[i - 1]);
   });
 
   it("M11 FCF yield + growth: PRECONDITION FAILED, matching the mock", () => {

@@ -4,6 +4,7 @@ import { getPool } from "../db";
 import { createRun, recordFactDecision, recordJudgment, recordProfileDecision } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
 import { deriveVerdict } from "./verdict";
+import { endOfYearScenarioPerShare } from "./golden/endOfYearEquivalent";
 import { POLICY } from "./policy";
 import { selectionToNonOperatingInvestments } from "./acquisition/nonOperatingJudgment";
 
@@ -111,11 +112,13 @@ describe("CF-S44-RECORD-01 — MSFT's §4.4 ruling recorded on a real run", () =
     const result = await openMsftRunWithRuling();
 
     expect(result.fairValueRange.kind).toBe("range");
-    if (result.fairValueRange.kind === "range") {
-      expect(result.fairValueRange.bear.toFixed(2)).toBe("214.26");
-      expect(result.fairValueRange.bull.toFixed(2)).toBe("402.73");
-    }
-    expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("283.31");
+    // CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2's timing (mid-year,
+    // terminal at 9.5 years, valued at the price date) moves these approved
+    // end-of-year figures by one common factor; with that factor removed
+    // (golden/endOfYearEquivalent.ts) they are still reproduced to the cent.
+    expect(endOfYearScenarioPerShare(result, "bear").toFixed(2)).toBe("214.26");
+    expect(endOfYearScenarioPerShare(result, "bull").toFixed(2)).toBe("402.73");
+    expect(endOfYearScenarioPerShare(result, "base").toFixed(2)).toBe("283.31");
   });
 
   it("the verdict is now a real SELL under the live Methodology's Verdict synthesis policy v1 — never A4's retired scenario-values cause or the old LEVERAGE UNSUPPORTED IN v1 cause", async () => {

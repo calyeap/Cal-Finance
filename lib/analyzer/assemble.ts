@@ -30,6 +30,7 @@ import {
 } from "./modules/sensitivity";
 import {
   computeScenarioEnterpriseValue,
+  computeScenarioValuation,
   computeScenarioOutputs,
   rateSearchBracket,
   buildFadingReinvestmentIntensityPath,
@@ -50,7 +51,9 @@ import {
 } from "./modules/preRevenue";
 import { evaluateGate0, evaluateGate1, evaluateLeverage, evaluateTriggerA, evaluateTriggerB } from "./gates";
 import type { Gate0Input, Gate1Input, LeverageInput, TriggerMarginInput } from "./gates";
-import { CLEAN_PROVENANCE } from "./provenance";
+import { CLEAN_PROVENANCE, combineProvenance } from "./provenance";
+import { stubYearsBetween } from "./valuationTiming";
+import { codeVersion, fingerprint } from "./runIdentity";
 import { computeTrustStatus } from "./trust";
 import {
   gate0Cause,
@@ -168,11 +171,10 @@ export interface CompanyFixture {
 
   rateSensitivityCells: { plusOnePoint: Decimal; minusOnePoint: Decimal } | null;
 
-  // M8 needs a terminal PV directly — neither M7's exported cell type nor
-  // M15's scenario function surfaces its internal terminal value as a
-  // standalone figure, and this file does not duplicate either module's
-  // terminal-value formula to extract one. The fixture author computes it
-  // from whichever cell/scenario it represents and supplies it here.
+  // M9's terminal value, supplied by the fixture author. Null on every
+  // fixture and acquired run today. M8 no longer reads it: since
+  // CF-AR3-REPRODUCIBLE-RUNS-01 the terminal share comes from the base
+  // scenario's own M15 valuation (computeScenarioValuation).
   terminalValuePv: Decimal | null;
 
   // M9 — explicitly labelled by the metric it actually divides (§7.2 M9).
@@ -261,6 +263,22 @@ export interface CompanyFixture {
 
   // Populated only for the pre-revenue profile.
   preRevenue: PreRevenueFixture | null;
+
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2's TTM base: the twelve
+  // months `reverseDcf.baseYearRevenue` covers and when they end, so both
+  // DCF engines can be valued at the price date (valuationTiming.ts).
+  // companyInputs.ts sets it on every acquired run; a hand-authored fixture
+  // that omits it is valued at its base period end (no stub) and its timing
+  // record says the base period end is unknown.
+  valuationBase?: ValuationBase | null;
+}
+
+export interface ValuationBase {
+  periodEnd: string;
+  // "TTM" — four contiguous discrete quarters; "FISCAL YEAR" — the latest
+  // annual figure, used where no TTM is computable or the annual figure is
+  // the more recent twelve months.
+  kind: "TTM" | "FISCAL YEAR";
 }
 
 /**
@@ -358,7 +376,23 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   const currentMarketCap: Decimal | null = enterpriseValueBridge.suppressed
     ? null
     : enterpriseValueBridge.value.marketCap;
-  const baseRevenueSourced = fixture.reverseDcf.baseYearRevenue;
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — the valuations below read base revenue's
+  // bare value, so a NOT CONFIRMED base revenue is withheld here exactly as a
+  // missing one is; figures that carry its provenance are gated by
+  // computedValue (figures.ts) instead. M7 reads fixture.reverseDcf directly
+  // and is gated that way.
+  const baseRevenueSourced =
+    fixture.reverseDcf.baseYearRevenue?.provenance.verificationState === "NOT CONFIRMED"
+      ? null
+      : fixture.reverseDcf.baseYearRevenue;
+
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — "valued at the price date" (Methodology
+  // v2.1 D2). The real price's own date, never the $0 display sentinel's
+  // (a priceless run has nothing to roll forward to and is valued at its
+  // base period end).
+  const priceDate = fixture.enterpriseValue.price !== null ? fixture.price.timestamp : null;
+  const basePeriodEnd = fixture.valuationBase?.periodEnd ?? null;
+  const stubYears = stubYearsBetween(basePeriodEnd, priceDate);
 
   // --- §6.5 — the leverage precondition, AFTER M1 ---------------------------
   //
@@ -441,11 +475,17 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   const nopatTaxRateForRun = fixture.configuredConstants.nopatTaxRate;
   const medianMarginNopat: SourcedValue<Decimal> | null =
     fixture.reverseDcf.medianMargin !== null && baseRevenueSourced !== null && nopatTaxRateForRun !== null
-      ? sourced(baseRevenueSourced.value.mul(fixture.reverseDcf.medianMargin.value).mul(new Decimal(1).minus(nopatTaxRateForRun)))
+      ? {
+          value: baseRevenueSourced.value.mul(fixture.reverseDcf.medianMargin.value).mul(new Decimal(1).minus(nopatTaxRateForRun)),
+          provenance: combineProvenance(baseRevenueSourced.provenance, fixture.reverseDcf.medianMargin.provenance),
+        }
       : null;
   const currentMarginNopat: SourcedValue<Decimal> | null =
     fixture.reverseDcf.currentMargin !== null && baseRevenueSourced !== null && nopatTaxRateForRun !== null
-      ? sourced(baseRevenueSourced.value.mul(fixture.reverseDcf.currentMargin.value).mul(new Decimal(1).minus(nopatTaxRateForRun)))
+      ? {
+          value: baseRevenueSourced.value.mul(fixture.reverseDcf.currentMargin.value).mul(new Decimal(1).minus(nopatTaxRateForRun)),
+          provenance: combineProvenance(baseRevenueSourced.provenance, fixture.reverseDcf.currentMargin.provenance),
+        }
       : null;
 
   const steadyStateEvPvgo = computeSteadyStateEvPvgo({
@@ -474,6 +514,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     ronicCells,
     configuredStressMarginLevel: fixture.configuredConstants.stressMarginLevel,
     configuredNopatTaxRate: fixture.configuredConstants.nopatTaxRate,
+    stubYears,
   });
 
   // --- M9 — implied exit multiple, labelled by the metric it actually divides
@@ -483,8 +524,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // enterprise value. `currentEnterpriseValue` was being passed here, which
   // silently computed "today's EV ÷ a future year's metric" and called it an
   // implied EXIT multiple. The genuinely corresponding figure is
-  // `fixture.terminalValuePv` (M8's terminal PV, from the same approved DCF
-  // path `computeTerminalDiagnostics` reads below) — which is null for every
+  // `fixture.terminalValuePv` (a DCF's own terminal value) — which is null for every
   // acquired run today (see `CompanyFixture.terminalValuePv`'s own doc
   // comment: no acquisition-time terminal-value path is wired yet). Null
   // input correctly suppresses this diagnostic as INCOMPLETE/NOT COMPUTED
@@ -496,12 +536,60 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     fixture.impliedExitMultipleMetric.metricName
   );
 
-  // --- M8 — terminal diagnostics (fixture supplies the terminal PV directly
-  // — see CompanyFixture.terminalValuePv's own doc comment for why) --------
+  // --- M8 — terminal diagnostics, from this run's own base scenario DCF ----
+  //
+  // CF-AR3-REPRODUCIBLE-RUNS-01. This used to divide a fixture-supplied
+  // terminal PV (null on every fixture and acquired run) by today's market
+  // EV, falling back to a literal 0 — so no report ever carried a real
+  // terminal share. It is now the terminal value's share of the base
+  // scenario's own M15 valuation: the same drivers, fade, rate, tax rate and
+  // timing the base case's value below is computed from. Where any of those
+  // is missing the share is NaN with its cause bound (notComputed.ts), never
+  // a zero.
+  const baseScenarioDrivers = fixture.scenarios.base;
+  let terminalNotComputedCause: string | null = null;
+  const baseScenarioValuation = (() => {
+    if (baseRevenueSourced === null) {
+      terminalNotComputedCause = "base-year revenue is INCOMPLETE on this run (missing, or NOT CONFIRMED)";
+      return null;
+    }
+    if (nopatTaxRateForRun === null) {
+      terminalNotComputedCause = "missing REQUIRED input: the NOPAT tax rate (§7.1), not configured for this run";
+      return null;
+    }
+    if (
+      baseScenarioDrivers.operatingMargin === null ||
+      baseScenarioDrivers.reinvestmentCapitalIntensity === null ||
+      !(baseScenarioDrivers.revenueGrowthOrPath instanceof Decimal)
+    ) {
+      terminalNotComputedCause =
+        "missing REQUIRED input: the base scenario's growth, margin and reinvestment drivers are not all authored as single rates for this run";
+      return null;
+    }
+    return computeScenarioValuation(
+      baseRevenueSourced.value,
+      buildFixedShapeGrowthPath(baseScenarioDrivers.revenueGrowthOrPath),
+      baseScenarioDrivers.operatingMargin,
+      baseScenarioDrivers.terminalRoic != null
+        ? buildFadingReinvestmentIntensityPath(
+            baseScenarioDrivers.reinvestmentCapitalIntensity,
+            baseScenarioDrivers.operatingMargin,
+            nopatTaxRateForRun,
+            POLICY.terminalGrowth,
+            baseScenarioDrivers.terminalRoic
+          )
+        : baseScenarioDrivers.reinvestmentCapitalIntensity,
+      POLICY.rateGrid[1],
+      nopatTaxRateForRun,
+      undefined,
+      baseScenarioDrivers.terminalRoic,
+      stubYears
+    );
+  })();
   const terminal =
-    fixture.terminalValuePv !== null && currentEnterpriseValue !== null
-      ? computeTerminalDiagnostics(fixture.terminalValuePv, currentEnterpriseValue.value)
-      : { terminalShareOfValue: new Decimal(0), terminalFcfConsistencyApplied: true as const };
+    baseScenarioValuation !== null
+      ? computeTerminalDiagnostics(baseScenarioValuation.terminalValuePv, baseScenarioValuation.enterpriseValue)
+      : { terminalShareOfValue: new Decimal(NaN), terminalFcfConsistencyApplied: true as const };
 
   // --- M10 — rate sensitivity ------------------------------------------------
   //
@@ -592,7 +680,8 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
               rate,
               nopatTaxRateForRun,
               terminalGrowth,
-              sensitivityBaseScenario.terminalRoic
+              sensitivityBaseScenario.terminalRoic,
+              stubYears
             );
           const baseCaseValue = scenarioValueAt(sensitivityBaseGrowth, sensitivityBaseMargin);
 
@@ -700,7 +789,8 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       POLICY.rateGrid[1],
       nopatTaxRateForRun,
       undefined,
-      driver.terminalRoic
+      driver.terminalRoic,
+      stubYears
     );
     // The bridge's own net debt/cash/non-operating-investments term, held
     // constant across bear/base/bull exactly as the debt and cash on a
@@ -899,6 +989,9 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // fair-value range, so none removes it.
   if (rateSensitivityMissing !== null) {
     suppressing.push(notComputed(NOT_COMPUTED_BINDING.rateSensitivity, "INCOMPLETE", rateSensitivityMissing));
+  }
+  if (terminalNotComputedCause !== null) {
+    suppressing.push(notComputed(NOT_COMPUTED_BINDING.terminalShareOfValue, "INCOMPLETE", terminalNotComputedCause));
   }
   // G. Three different outcomes all arrive as a null rate, and they are
   // three different statements: no revaluation function was supplied, so
@@ -1271,6 +1364,8 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       fixture.trustInputs.profileAutoResolved !== null && gate0.result === "PASS",
   });
 
+  const factsForIdentity = fixture.facts.map((f) => ({ ...f, retrievalTimestamp: null }));
+
   return {
     schemaVersion: fixture.schemaVersion,
     runId: fixture.runId,
@@ -1325,9 +1420,31 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     marketContext: fixture.marketContext ?? { sic: null, sicDescription: null },
     latestFiling: fixture.latestFiling ?? null,
     policy: {
+      version: fingerprint("policy", POLICY),
       constants: POLICY,
       undefinedConstants: fixture.configuredConstants,
       provisionalLabels: buildProvisionalLabels(),
+    },
+    runIdentity: {
+      codeVersion: codeVersion(),
+      // The run id names the run, not its inputs, and a fact's retrieval
+      // timestamp says when it was fetched, not what it is: two runs on
+      // identical inputs share these fingerprints.
+      inputsFingerprint: fingerprint("inputs", { ...fixture, runId: null, facts: factsForIdentity }),
+      factSnapshot: fingerprint("facts", factsForIdentity),
+      sheetVersion: fingerprint("sheet", {
+        scenarios: fixture.scenarios,
+        scenarioValues: fixture.scenarioValues,
+        configuredConstants: fixture.configuredConstants,
+      }),
+      priceSnapshot: fixture.enterpriseValue.price === null ? null : { value: fixture.price.value, timestamp: fixture.price.timestamp },
+      valuationTiming: {
+        convention: "MID-YEAR",
+        valuationDate: priceDate,
+        basePeriodEnd,
+        basePeriodKind: fixture.valuationBase?.kind ?? null,
+        stubYears,
+      },
     },
   };
 }

@@ -327,18 +327,14 @@ export function buildSlotCatalogue(result: AnalysisResult): SlotCatalogue {
     diagnostics.impliedReturnOnNewCapital.value,
     (v) => pct(v)
   );
-  // CB-AUDIT-01 H4: no fixture in this codebase supplies a real
-  // terminalValuePv (see CompanyFixture.terminalValuePv's doc comment) — so
-  // `diagnostics.terminal` is always assemble.ts's own "not computed"
-  // placeholder today, never a genuine M8 result. Because the schema gives
-  // this field no way to say that (`terminalShareOfValue: Decimal` and
-  // `terminalFcfConsistencyApplied: true` are typed as though every
-  // instance were real), there is no signal on AnalysisResult this
-  // catalogue can check before deciding whether to hand [C] a real number
-  // — so no slot is offered for it at all, rather than risk handing [C] a
-  // fabricated one. Reinstating this slot needs a schema change giving
-  // `terminal` a real/not-computed distinction (e.g. Figure<TerminalDiagnostics>),
-  // which is out of scope here.
+  // CB-AUDIT-01 H4: `diagnostics.terminal` was assemble.ts's own "not
+  // computed" placeholder (a literal 0) on every run, and the schema gave it
+  // no way to say so — so no slot is offered for it, rather than risk handing
+  // [C] a fabricated number. Since CF-AR3-REPRODUCIBLE-RUNS-01 it is computed
+  // from the base scenario's DCF, NaN with a bound state
+  // (NOT_COMPUTED_BINDING.terminalShareOfValue) where that DCF cannot run;
+  // a result stored before then still carries the placeholder. Offering the
+  // slot (bound, as the rate sensitivity's below) is a separate change.
   const rateSensitivityState = boundState(result.states, NOT_COMPUTED_BINDING.rateSensitivity);
   b.bound(
     "diagnostics.rateSensitivity.plusOnePoint",

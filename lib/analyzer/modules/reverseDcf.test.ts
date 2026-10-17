@@ -251,7 +251,25 @@ describe("computeReverseDcfGrid — GOLDEN: Microsoft reference grid (frozen v1.
     configuredNopatTaxRate: new Decimal("0.2"),
   };
 
-  const cells = computeReverseDcfGrid(msftInput);
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — the frozen grid was computed with
+  // end-of-year discounting; Methodology v2.1 D2 moves M7 to mid-year timing.
+  // With no stub (this input carries no base period or price date), mid-year
+  // timing multiplies the model's value at rate r by exactly (1 + r)^0.5 at
+  // every growth rate, explicit years and terminal alike. Solving the
+  // mid-year model against target × (1 + r)^0.5 is therefore the SAME
+  // equation as solving the end-of-year model against the target — so each
+  // rate's cells are solved against that scaled target, and every frozen
+  // reference figure below is still reproduced exactly as before. Terminal
+  // shares need no scaling: both parts scale alike.
+  const cells = ([0.08, 0.1, 0.12] as const).flatMap((rate) =>
+    computeReverseDcfGrid({
+      ...msftInput,
+      targetEnterpriseValue: {
+        value: targetEnterpriseValue.mul(new Decimal(1).plus(rate).sqrt()),
+        provenance: CLEAN_PROVENANCE,
+      },
+    }).filter((c) => c.rate === rate)
+  );
 
   // ±0.15 points is an APPROXIMATE CALIBRATION CHECK, not a tolerance
   // derived from a stated input-precision analysis — it has not been

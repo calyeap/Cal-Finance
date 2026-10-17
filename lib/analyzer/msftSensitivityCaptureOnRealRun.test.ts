@@ -4,6 +4,8 @@ import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } 
 import { computeAnalysisForRun, loadGateState } from "./gate";
 import type { AnalysisResult } from "./types";
 import type { TornadoDriver, TornadoRowResult, TwoWayTableResult } from "./modules/sensitivity";
+import type Decimal from "decimal.js";
+import { endOfYearEnterpriseValue, sameToPrecision } from "./golden/endOfYearEquivalent";
 
 // ---------------------------------------------------------------------------
 // CF-STEP4-MSFT-RANGE-CAPTURE-01 (issue #324) — observes the MSFT-only
@@ -81,17 +83,26 @@ describe("CF-STEP4-MSFT-RANGE-CAPTURE-01 — MSFT's growth/margin tornado and tw
     // exceeds margin's (24.47%), so A1 (growth alone) and A2 (max across
     // available rows) still read IDENTICAL for MSFT — the combined gate
     // doc's own point survives this correction unchanged.
-    expect(growthRow.fullRangeValueImpact.toString()).toBe("0.48846512490800969627");
+    // CF-AR3-REPRODUCIBLE-RUNS-01 — a ratio of two values from the same M15
+    // model: Methodology v2.1 D2's timing scales both by one common factor, so
+    // it is unchanged; the 1e-15 allowance is decimal.js rounding of the
+    // fractional (1 + r)^0.5 power, at the 20th significant digit.
+    expect(growthRow.fullRangeValueImpact.minus("0.48846512490800969627").abs().lessThan("1e-15")).toBe(true);
     expect(growthRow.displayed).toBe(true);
-    expect(growthRow.values.map((v) => v.toString())).toEqual([
+    // Absolute M15 values: reproduced with D2's timing factor removed
+    // (golden/endOfYearEquivalent.ts), to the pin's own precision.
+    const endOfYear = (v: Decimal) => endOfYearEnterpriseValue(result, v);
+    const matches = (values: readonly Decimal[], pinned: string[]) =>
+      expect(values.map((v, i) => sameToPrecision(endOfYear(v), pinned[i]))).toEqual(pinned.map(() => true));
+    matches(growthRow.values, [
       "1676081914421.5470769",
       "2068964793072.3220586",
       "2703937717350.9159262",
     ]);
 
-    expect(marginRow.fullRangeValueImpact.toString()).toBe("0.24471297471512425894");
+    expect(marginRow.fullRangeValueImpact.minus("0.24471297471512425894").abs().lessThan("1e-15")).toBe(true);
     expect(marginRow.displayed).toBe(true);
-    expect(marginRow.values.map((v) => v.toString())).toEqual([
+    matches(marginRow.values, [
       "1694645853766.5089845",
       "1917005795302.6690607",
       "2209584665744.9849507",
@@ -120,11 +131,12 @@ describe("CF-STEP4-MSFT-RANGE-CAPTURE-01 — MSFT's growth/margin tornado and tw
       // axis at the approved candidate's own base driver (growth 0.14,
       // margin 0.45), which this grid's own three fixed points don't pass
       // through.
-      expect(twoWayGrowthMargin.cells.map((row) => row.map((c) => c.toString()))).toEqual([
+      const pinnedCells = [
         ["1343989856586.6415681", "1524268402268.4474157", "1761477015007.6656362"],
         ["1665716925164.3986792", "1884622910600.1285138", "2172657101962.9309277"],
         ["2186793711998.3449204", "2467529029189.7406093", "2836917604441.5770421"],
-      ]);
+      ];
+      twoWayGrowthMargin.cells.forEach((row, i) => matches(row, pinnedCells[i]));
     }
 
     expect(twoWayRateTerminalGrowth.available).toBe(false);

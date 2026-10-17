@@ -24,12 +24,13 @@ describe("computeScenarioEnterpriseValue", () => {
 
     // Hand-computed: terminal NOPAT = 100*0.3*1.03 = 30.9; terminal ROIC =
     // 0.13; terminal FCF = 30.9*(1-0.03/0.13); TV_10 = that /(0.1-0.03);
-    // discounted by 1.1^10.
+    // discounted by 1.1^9.5 — Methodology v2.1 D2's terminal at 9.5 years
+    // (CF-AR3-REPRODUCIBLE-RUNS-01; was 1.1^10 under end-of-year timing).
     const terminalNopat = new Decimal(100).mul("0.3").mul(new Decimal(1).plus("0.03"));
     const terminalRoic = rate.plus("0.03");
     const terminalFcf = terminalNopat.mul(new Decimal(1).minus(new Decimal("0.03").dividedBy(terminalRoic)));
     const tv10 = terminalFcf.dividedBy(rate.minus("0.03"));
-    const expected = tv10.dividedBy(new Decimal(1).plus(rate).pow(10));
+    const expected = tv10.dividedBy(new Decimal(1).plus(rate).pow("9.5"));
 
     expect(ev.toDecimalPlaces(6).toString()).toBe(expected.toDecimalPlaces(6).toString());
   });

@@ -26,8 +26,13 @@ function cleanRonicCells(value: number): { rate: DiscountRate; state: RonicLadde
   return ([0.08, 0.1, 0.12] as DiscountRate[]).map((rate) => ({ rate, state: "CLEAN" as RonicLadderState, value: D(value) }));
 }
 
-describe("INVARIANT — zero growth and zero terminal growth: EV = NOPAT ÷ r (DO item 2)", () => {
-  it("holds exactly — PASSES as observed; a flat perpetuity decomposes exactly into the 10-year explicit annuity plus its own terminal continuation, so this is a genuine identity of the formula, not an approximation", () => {
+// CF-AR3-REPRODUCIBLE-RUNS-01 — reviewed evaluator change, as AR2's
+// knownReds.test.ts note asked of AR3: under Methodology v2.1 D2's mid-year
+// timing (cash flows at t − 0.5, terminal at 9.5 years) every perpetuity
+// identity below carries a (1 + r)^0.5 factor. The identities themselves are
+// unchanged; only the timing they are evaluated under moved.
+describe("INVARIANT — zero growth and zero terminal growth: EV = NOPAT ÷ r × (1 + r)^0.5 (DO item 2; mid-year timing since AR3)", () => {
+  it("holds exactly — a flat perpetuity decomposes exactly into the 10-year explicit annuity plus its own terminal continuation, so this is a genuine identity of the formula, not an approximation", () => {
     const margin = D("0.4");
     const ronic = D("0.3"); // irrelevant at g=0: reinvestment = nopat * 0 / ronic = 0 regardless of ronic
     const rate = D("0.1");
@@ -36,7 +41,7 @@ describe("INVARIANT — zero growth and zero terminal growth: EV = NOPAT ÷ r (D
 
     const result = projectReverseDcfValue(D(0), margin, ronic, rate, baseRevenue, taxRate, D(0));
     const nopat = baseRevenue.mul(margin).mul(D(1).minus(taxRate));
-    const expected = nopat.dividedBy(rate);
+    const expected = nopat.dividedBy(rate).mul(D(1).plus(rate).sqrt());
 
     expect(result.ev.minus(expected).abs().toNumber()).toBeLessThan(1e-6);
   });
@@ -67,7 +72,7 @@ describe("INVARIANT — single-stage Gordon equivalence for constant growth from
     // SAME ronic the explicit 10-year path actually uses for reinvestment.
     const nopat1 = baseRevenue.mul(D(1).plus(g)).mul(margin).mul(D(1).minus(taxRate));
     const fcff1 = nopat1.mul(D(1).minus(g.dividedBy(ronic)));
-    const gordonEv = fcff1.dividedBy(rate.minus(g));
+    const gordonEv = fcff1.dividedBy(rate.minus(g)).mul(D(1).plus(rate).sqrt()); // mid-year (AR3)
 
     expect(engine.ev.toNumber()).toBeCloseTo(gordonEv.toNumber(), 0);
   });
@@ -83,7 +88,7 @@ describe("INVARIANT — single-stage Gordon equivalence for constant growth from
     const engine = projectReverseDcfValue(g, margin, ronic, rate, baseRevenue, taxRate, g);
     const nopat1 = baseRevenue.mul(D(1).plus(g)).mul(margin).mul(D(1).minus(taxRate));
     const fcff1 = nopat1.mul(D(1).minus(g.dividedBy(ronic)));
-    const gordonEv = fcff1.dividedBy(rate.minus(g));
+    const gordonEv = fcff1.dividedBy(rate.minus(g)).mul(D(1).plus(rate).sqrt()); // mid-year (AR3)
 
     expect(engine.ev.minus(gordonEv).abs().toNumber()).toBeLessThan(1e-6);
   });

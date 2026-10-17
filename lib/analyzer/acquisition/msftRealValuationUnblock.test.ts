@@ -227,7 +227,11 @@ describe("CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — recorded bundle now takes pr
         new Decimal(margin),
         new Decimal(reinvestment),
         POLICY.rateGrid[1],
-        nopatTaxRate
+        nopatTaxRate,
+        undefined,
+        undefined,
+      // CF-AR3-REPRODUCIBLE-RUNS-01 — valued at this run's own price date (D2).
+        result.runIdentity!.valuationTiming.stubYears
       )
         .minus(netDebtBridge)
         .dividedBy(new Decimal(dilutedShares))
