@@ -2,6 +2,7 @@ import type Decimal from "decimal.js";
 import type { FairValueRange, LeverageResult, TrustStatus } from "./types";
 import { verdictUnavailableLine } from "./overviewCopy";
 import type { VerdictStatus } from "./verdict";
+import { POLICY } from "./policy";
 
 // ---------------------------------------------------------------------------
 // The page-one trust sentences, DERIVED from the computed status.
@@ -253,4 +254,28 @@ export function completedVerdictExplanation({
     case "INCOMPLETE":
       return `${lead}in a range the approved verdict policy does not yet resolve to BUY, HOLD or SELL.`;
   }
+}
+
+// ---------------------------------------------------------------------------
+// CF-AR1-QUICK-READ-OVERVIEW-01 — product-decisions.md item 26 (Analyzer
+// Reset D1): Calvin approved a market-anchored, two-band discount-rate
+// convention, reset yearly, growth alone never raising it. AR4 is where the
+// engine itself switches to that convention (frozen spec §14.9, AR0-1); this
+// outcome changes no rate, no formula and no policy constant — it only
+// states, beside whatever rate-derived figure the verdict slot already
+// shows outside Evidence, that the figure still prices off the fixed policy
+// rate below, not the approved convention, so nobody reads a pre-AR4 verdict
+// as final. The rate itself is read from the same `POLICY.rateGrid[1]` every
+// scenario valuation already discounts at (assemble.ts's `dynamicScenarioValue`
+// and `computeSteadyStateEvPvgo` call) — not a second, independently-chosen
+// figure.
+// ---------------------------------------------------------------------------
+
+/** The verdict slot's rate-convention caveat, until AR4 lands. */
+export function rateConventionCaveat(): string {
+  const ratePct = POLICY.rateGrid[1].mul(100).toFixed(0);
+  return (
+    `Rate convention under review — this reading still prices off the fixed ${ratePct}% discount rate; ` +
+    "the Analyzer Reset's market-anchored rate (D1) lands in AR4. See the Valuation tab's sensitivity for how it moves with the rate."
+  );
 }

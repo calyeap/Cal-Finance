@@ -66,6 +66,60 @@ describe("DominantVerdictSlot — completed path", () => {
   });
 });
 
+// CF-AR1-QUICK-READ-OVERVIEW-01 — DO item 2: until AR5 lands, the verdict
+// slot carries a "rate convention under review" caveat beside any
+// rate-derived reading outside Evidence, naming the fixed policy rate the
+// code still uses (trustCopy.ts's `rateConventionCaveat` reads
+// `POLICY.rateGrid[1]`, currently 10%). RED on the base: this caveat did
+// not exist anywhere in this component.
+describe("DominantVerdictSlot — rate-convention caveat (CF-AR1-QUICK-READ-OVERVIEW-01)", () => {
+  it("a completed verdict outside Evidence carries the caveat, naming the fixed rate", () => {
+    const { container } = render(
+      <DominantVerdictSlot
+        verdict={{ status: "SELL", reason: "The evidence supports it." }}
+        trustStatus="PARTIAL"
+        completedExplanation="Price $510.12 is above Base."
+      />
+    );
+    expect(screen.getByText("SELL")).not.toBeNull();
+    expect(container.textContent).toContain("Rate convention under review");
+    expect(container.textContent).toContain("10%");
+  });
+
+  it("the same completed verdict on the Evidence tab carries no caveat — Evidence's content is unchanged by this outcome", () => {
+    const { container } = render(
+      <DominantVerdictSlot
+        verdict={{ status: "SELL", reason: "The evidence supports it." }}
+        trustStatus="PARTIAL"
+        isEvidenceTab
+      />
+    );
+    expect(container.textContent).not.toContain("Rate convention under review");
+  });
+
+  it("the INCOMPLETE price-vs-range headline outside Evidence also carries the caveat (it is rate-derived too)", () => {
+    const { container } = render(
+      <DominantVerdictSlot
+        verdict={{ status: "INCOMPLETE", reason: "No comparator yet." }}
+        trustStatus="PARTIAL"
+        priceVsRangeHeadline="Trading 64% of the way from the bear case to the bull case modeled for this company."
+      />
+    );
+    expect(container.textContent).toContain("Rate convention under review");
+  });
+
+  it("an INCOMPLETE verdict with no defensible range (no rate-derived figure shown) carries no caveat", () => {
+    const { container } = render(
+      <DominantVerdictSlot
+        verdict={{ status: "INCOMPLETE", reason: "No range." }}
+        trustStatus="UNUSABLE"
+        incompleteExplanation="This run's underlying data isn't reliable enough yet to support a verdict."
+      />
+    );
+    expect(container.textContent).not.toContain("Rate convention under review");
+  });
+});
+
 // M9-CONFIDENCE-LABEL-01 (issue #201) — the ConfidenceIndicator label is a
 // pure mapping from AnalysisResult.trust.status, exercised for all three
 // TrustStatus values on the completed path, and against the copy bounds

@@ -4,6 +4,7 @@ import type { AnalysisResult, InterpretationStatement } from "@/lib/analyzer/typ
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import type { Step4ForecastDispersionReading } from "@/lib/analyzer/modules/sensitivity";
 import { AiLayerNote, humanizeCause } from "./AnalyzerReport";
+import { OverviewQuickRead } from "./QuickRead";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 import { formatCompactUsd } from "@/lib/formatUsd";
 import {
@@ -282,6 +283,13 @@ export function AnalyzerOverview({ result, aiLayer }: { result: AnalysisResult; 
 
   return (
     <div className="ovtab overview">
+      {/* CF-AR1-QUICK-READ-OVERVIEW-01 — product-decisions.md item 20
+          ("Quick Read first"): Quick Read's own items render first in the
+          Overview body, ahead of the M9 design-contract slots below. Plain
+          language throughout (overviewCopy.ts) and no second verdict card —
+          see OverviewQuickRead's own doc comment (QuickRead.tsx). */}
+      <OverviewQuickRead result={result} />
+
       {/* Slot 5 — restated from the Business tab's own excerpt. */}
       <BusinessDescriptionSlot result={result} />
 
