@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { classifyCyclicality, type CyclicalityClass } from "./cyclicalSic";
+import { classifyCyclicality, CYCLICAL_SIC_CLASSES, type CyclicalityClass } from "./cyclicalSic";
+import sicValidationSet from "./sicValidationSet.json";
 
 import msft from "./msft.json";
 import cost from "./cost.json";
@@ -188,6 +189,48 @@ describe("golden facts — D1 SIC classification table reproduces the expected e
 
   it.each(ALL)("%s: classifyCyclicality(sic) matches this outcome's expected eight-company split", (ticker, company) => {
     expect(classifyCyclicality(company.sic)).toBe(expected[ticker]);
+  });
+});
+
+describe("D1 cyclical SIC list — validated on a wider real company set (DO item 5)", () => {
+  // sicValidationSet.json: 50 real SEC SIC codes captured from
+  // data.sec.gov/submissions by scripts/evidence/golden/captureSicValidationSet.ts.
+  // `expected` is each company's economic classification, written before
+  // and independently of the table — never derived from classifyCyclicality.
+  const companies = sicValidationSet.companies;
+
+  // The one documented miss, observed on the real capture rather than
+  // predicted: Sherwin-Williams makes paint (chemicals, cyclical) but files
+  // under SIC 5200, Retail-Building Materials. SIC is the filer's own primary
+  // code, so the table cannot see it; D1's trigger-B route (§6.4) is the
+  // backstop. Listed here so a new miss — or this one disappearing — fails.
+  const DOCUMENTED_MISSES = ["SHW"];
+
+  it("covers a set wider than the golden eight, on both sides of the split", () => {
+    expect(companies.length).toBeGreaterThanOrEqual(40);
+    expect(companies.filter((c) => c.expected === "cyclical").length).toBeGreaterThanOrEqual(20);
+    expect(companies.filter((c) => c.expected === "stable").length).toBeGreaterThanOrEqual(20);
+  });
+
+  it("every company's real SIC classifies as expected, except exactly the documented misses", () => {
+    const misses = companies.filter((c) => classifyCyclicality(c.sic) !== c.expected).map((c) => c.ticker);
+    expect(misses).toEqual(DOCUMENTED_MISSES);
+  });
+
+  it("each of the four D1-confirmed members is present, marked confirmed, and exercised by at least one real company", () => {
+    const confirmed = CYCLICAL_SIC_CLASSES.filter((c) => c.confirmed).map((c) => c.prefix).sort();
+    expect(confirmed).toEqual(["28", "331", "367", "371"]);
+    for (const prefix of confirmed) {
+      expect(companies.some((c) => c.sic.startsWith(prefix) && classifyCyclicality(c.sic) === "cyclical")).toBe(true);
+    }
+  });
+
+  it("pharmaceutical preparations (283x) and soaps/cosmetics (284x) stay stable inside the chemicals band", () => {
+    for (const ticker of ["JNJ", "PFE", "MRK", "ABT", "PG", "CL"]) {
+      const c = companies.find((x) => x.ticker === ticker)!;
+      expect(c.sic.startsWith("283") || c.sic.startsWith("284")).toBe(true);
+      expect(classifyCyclicality(c.sic)).toBe("stable");
+    }
   });
 });
 

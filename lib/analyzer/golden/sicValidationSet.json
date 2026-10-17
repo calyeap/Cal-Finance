@@ -1,0 +1,408 @@
+{
+  "provenance": {
+    "source": "https://data.sec.gov/submissions/CIK##########.json (fields: name, sic, sicDescription, tickers)",
+    "capturedAt": "2026-10-17"
+  },
+  "companies": [
+    {
+      "ticker": "X",
+      "cik": "0001163302",
+      "entityName": "UNITED STATES STEEL CORP",
+      "sic": "3312",
+      "sicDescription": "Steel Works, Blast Furnaces & Rolling Mills (Coke Ovens)",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "CLF",
+      "cik": "0000764065",
+      "entityName": "CLEVELAND-CLIFFS INC.",
+      "sic": "1000",
+      "sicDescription": "Metal Mining",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "STLD",
+      "cik": "0001022671",
+      "entityName": "STEEL DYNAMICS INC",
+      "sic": "3312",
+      "sicDescription": "Steel Works, Blast Furnaces & Rolling Mills (Coke Ovens)",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "AA",
+      "cik": "0001675149",
+      "entityName": "Alcoa Corp",
+      "sic": "3334",
+      "sicDescription": "Primary Production of  Aluminum",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "FCX",
+      "cik": "0000831259",
+      "entityName": "FREEPORT-MCMORAN INC",
+      "sic": "1000",
+      "sicDescription": "Metal Mining",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "NEM",
+      "cik": "0001164727",
+      "entityName": "NEWMONT Corp /DE/",
+      "sic": "1040",
+      "sicDescription": "Gold and Silver Ores",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "MU",
+      "cik": "0000723125",
+      "entityName": "MICRON TECHNOLOGY INC",
+      "sic": "3674",
+      "sicDescription": "Semiconductors & Related Devices",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "AMD",
+      "cik": "0000002488",
+      "entityName": "ADVANCED MICRO DEVICES INC",
+      "sic": "3674",
+      "sicDescription": "Semiconductors & Related Devices",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "INTC",
+      "cik": "0000050863",
+      "entityName": "INTEL CORP",
+      "sic": "3674",
+      "sicDescription": "Semiconductors & Related Devices",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "F",
+      "cik": "0000037996",
+      "entityName": "FORD MOTOR CO",
+      "sic": "3711",
+      "sicDescription": "Motor Vehicles & Passenger Car Bodies",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "GM",
+      "cik": "0001467858",
+      "entityName": "General Motors Co",
+      "sic": "3711",
+      "sicDescription": "Motor Vehicles & Passenger Car Bodies",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "DOW",
+      "cik": "0001751788",
+      "entityName": "DOW INC.",
+      "sic": "2821",
+      "sicDescription": "Plastic Materials, Synth Resins & Nonvulcan Elastomers",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "LYB",
+      "cik": "0001489393",
+      "entityName": "LyondellBasell Industries N.V.",
+      "sic": "2860",
+      "sicDescription": "Industrial Organic Chemicals",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "SHW",
+      "cik": "0000089800",
+      "entityName": "SHERWIN WILLIAMS CO",
+      "sic": "5200",
+      "sicDescription": "Retail-Building Materials, Hardware, Garden Supply",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "XOM",
+      "cik": "0000034088",
+      "entityName": "EXXON MOBIL CORP",
+      "sic": "2911",
+      "sicDescription": "Petroleum Refining",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "COP",
+      "cik": "0001163165",
+      "entityName": "CONOCOPHILLIPS",
+      "sic": "2911",
+      "sicDescription": "Petroleum Refining",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "SLB",
+      "cik": "0000087347",
+      "entityName": "SLB LIMITED/NV",
+      "sic": "1389",
+      "sicDescription": "Oil & Gas Field Services, NEC",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "HAL",
+      "cik": "0000045012",
+      "entityName": "HALLIBURTON CO",
+      "sic": "1389",
+      "sicDescription": "Oil & Gas Field Services, NEC",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "DAL",
+      "cik": "0000027904",
+      "entityName": "DELTA AIR LINES, INC.",
+      "sic": "4512",
+      "sicDescription": "Air Transportation, Scheduled",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "UAL",
+      "cik": "0000100517",
+      "entityName": "United Airlines Holdings, Inc.",
+      "sic": "4512",
+      "sicDescription": "Air Transportation, Scheduled",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "ODFL",
+      "cik": "0000878927",
+      "entityName": "OLD DOMINION FREIGHT LINE, INC.",
+      "sic": "4213",
+      "sicDescription": "Trucking (No Local)",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "DHI",
+      "cik": "0000882184",
+      "entityName": "HORTON D R INC /DE/",
+      "sic": "1531",
+      "sicDescription": "Operative Builders",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "LEN",
+      "cik": "0000920760",
+      "entityName": "LENNAR CORP /NEW/",
+      "sic": "1520",
+      "sicDescription": "General Bldg Contractors - Residential Bldgs",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "MLM",
+      "cik": "0000916076",
+      "entityName": "MARTIN MARIETTA MATERIALS INC",
+      "sic": "1400",
+      "sicDescription": "Mining & Quarrying of  Nonmetallic Minerals (No Fuels)",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "VMC",
+      "cik": "0001396009",
+      "entityName": "Vulcan Materials CO",
+      "sic": "1400",
+      "sicDescription": "Mining & Quarrying of  Nonmetallic Minerals (No Fuels)",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "IP",
+      "cik": "0000051434",
+      "entityName": "INTERNATIONAL PAPER CO /NEW/",
+      "sic": "2621",
+      "sicDescription": "Paper Mills",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "CAT",
+      "cik": "0000018230",
+      "entityName": "CATERPILLAR INC",
+      "sic": "3531",
+      "sicDescription": "Construction Machinery & Equip",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "DE",
+      "cik": "0000315189",
+      "entityName": "DEERE & CO",
+      "sic": "3523",
+      "sicDescription": "Farm Machinery & Equipment",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "BA",
+      "cik": "0000012927",
+      "entityName": "BOEING CO",
+      "sic": "3721",
+      "sicDescription": "Aircraft",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "MAR",
+      "cik": "0001048286",
+      "entityName": "MARRIOTT INTERNATIONAL INC /MD/",
+      "sic": "7011",
+      "sicDescription": "Hotels & Motels",
+      "expected": "cyclical"
+    },
+    {
+      "ticker": "AAPL",
+      "cik": "0000320193",
+      "entityName": "Apple Inc.",
+      "sic": "3571",
+      "sicDescription": "Electronic Computers",
+      "expected": "stable"
+    },
+    {
+      "ticker": "ORCL",
+      "cik": "0001341439",
+      "entityName": "ORACLE CORP",
+      "sic": "7372",
+      "sicDescription": "Services-Prepackaged Software",
+      "expected": "stable"
+    },
+    {
+      "ticker": "GOOGL",
+      "cik": "0001652044",
+      "entityName": "Alphabet Inc.",
+      "sic": "7370",
+      "sicDescription": "Services-Computer Programming, Data Processing, Etc.",
+      "expected": "stable"
+    },
+    {
+      "ticker": "V",
+      "cik": "0001403161",
+      "entityName": "VISA INC.",
+      "sic": "7389",
+      "sicDescription": "Services-Business Services, NEC",
+      "expected": "stable"
+    },
+    {
+      "ticker": "PG",
+      "cik": "0000080424",
+      "entityName": "PROCTER & GAMBLE Co",
+      "sic": "2840",
+      "sicDescription": "Soap, Detergents, Cleang Preparations, Perfumes, Cosmetics",
+      "expected": "stable"
+    },
+    {
+      "ticker": "CL",
+      "cik": "0000021665",
+      "entityName": "COLGATE PALMOLIVE CO",
+      "sic": "2844",
+      "sicDescription": "Perfumes, Cosmetics & Other Toilet Preparations",
+      "expected": "stable"
+    },
+    {
+      "ticker": "PEP",
+      "cik": "0000077476",
+      "entityName": "PEPSICO INC",
+      "sic": "2080",
+      "sicDescription": "Beverages",
+      "expected": "stable"
+    },
+    {
+      "ticker": "WMT",
+      "cik": "0000104169",
+      "entityName": "Walmart Inc.",
+      "sic": "5331",
+      "sicDescription": "Retail-Variety Stores",
+      "expected": "stable"
+    },
+    {
+      "ticker": "AMZN",
+      "cik": "0001018724",
+      "entityName": "AMAZON COM INC",
+      "sic": "5961",
+      "sicDescription": "Retail-Catalog & Mail-Order Houses",
+      "expected": "stable"
+    },
+    {
+      "ticker": "HD",
+      "cik": "0000354950",
+      "entityName": "HOME DEPOT, INC.",
+      "sic": "5211",
+      "sicDescription": "Retail-Lumber & Other Building Materials Dealers",
+      "expected": "stable"
+    },
+    {
+      "ticker": "MCD",
+      "cik": "0000063908",
+      "entityName": "MCDONALDS CORP",
+      "sic": "5812",
+      "sicDescription": "Retail-Eating  Places",
+      "expected": "stable"
+    },
+    {
+      "ticker": "JNJ",
+      "cik": "0000200406",
+      "entityName": "JOHNSON & JOHNSON",
+      "sic": "2834",
+      "sicDescription": "Pharmaceutical Preparations",
+      "expected": "stable"
+    },
+    {
+      "ticker": "PFE",
+      "cik": "0000078003",
+      "entityName": "PFIZER INC",
+      "sic": "2834",
+      "sicDescription": "Pharmaceutical Preparations",
+      "expected": "stable"
+    },
+    {
+      "ticker": "MRK",
+      "cik": "0000310158",
+      "entityName": "Merck & Co., Inc.",
+      "sic": "2834",
+      "sicDescription": "Pharmaceutical Preparations",
+      "expected": "stable"
+    },
+    {
+      "ticker": "ABT",
+      "cik": "0000001800",
+      "entityName": "ABBOTT LABORATORIES",
+      "sic": "2834",
+      "sicDescription": "Pharmaceutical Preparations",
+      "expected": "stable"
+    },
+    {
+      "ticker": "T",
+      "cik": "0000732717",
+      "entityName": "AT&T INC.",
+      "sic": "4813",
+      "sicDescription": "Telephone Communications (No Radiotelephone)",
+      "expected": "stable"
+    },
+    {
+      "ticker": "NEE",
+      "cik": "0000753308",
+      "entityName": "NEXTERA ENERGY INC",
+      "sic": "4911",
+      "sicDescription": "Electric Services",
+      "expected": "stable"
+    },
+    {
+      "ticker": "DUK",
+      "cik": "0001326160",
+      "entityName": "Duke Energy CORP",
+      "sic": "4931",
+      "sicDescription": "Electric & Other Services Combined",
+      "expected": "stable"
+    },
+    {
+      "ticker": "WM",
+      "cik": "0000823768",
+      "entityName": "WASTE MANAGEMENT INC",
+      "sic": "4953",
+      "sicDescription": "Refuse Systems",
+      "expected": "stable"
+    },
+    {
+      "ticker": "UNP",
+      "cik": "0000100885",
+      "entityName": "UNION PACIFIC CORP",
+      "sic": "4011",
+      "sicDescription": "Railroads, Line-Haul Operating",
+      "expected": "stable"
+    }
+  ]
+}
