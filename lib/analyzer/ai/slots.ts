@@ -213,15 +213,15 @@ export function buildSlotCatalogue(result: AnalysisResult): SlotCatalogue {
   // came from policy, and this is where it reads it from rather than recalling
   // one (§8.3 limit 4).
   b.value("policy.terminalGrowth", "terminal growth rate from policy", policy.constants.terminalGrowth, (v) => pct(v));
-  b.value(
-    "policy.terminalRoicPremium",
-    "terminal ROIC premium assumed for every company",
-    policy.constants.terminalRoicPremium,
-    (v) => pct(v, 0)
-  );
-  policy.constants.rateGrid.forEach((rate, i) => {
-    b.value(`policy.rateGrid.${i}`, "discount rate from the policy grid", rate, (v) => pct(v, 0));
-  });
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the one dated D1 rate this run
+  // was valued at, and the D2 moat credits (frozen spec §14.9 AR0-1, AR0-3).
+  const basis = result.valuationBasis;
+  if (basis !== undefined) {
+    b.value("valuationBasis.discountRate", "discount rate in use (Methodology v2.1 D1)", basis.discountRate.rate, (v) => pct(v));
+    b.add("valuationBasis.discountRate.basis", "why this rate band", basis.discountRate.basis);
+    b.add("valuationBasis.discountRate.effectiveFrom", "date of the rate in use", basis.discountRate.effectiveFrom);
+    b.add("valuationBasis.d2.statement", "assumption-sheet adoption state for the D2 inputs", basis.d2.statement);
+  }
 
   // --- §10 E — price-implied diagnostics ----------------------------------
   b.figure("priceImplied.steadyStateEv", "steady-state enterprise value", priceImplied.steadyStateEv, bigMoney);
@@ -243,13 +243,12 @@ export function buildSlotCatalogue(result: AnalysisResult): SlotCatalogue {
     );
   }
 
-  for (const cell of priceImplied.reverseDcfGrid) {
-    const at = `${cell.marginLevel} margin at r = ${pct(new Decimal(cell.rate), 0)}`;
-    const key = `priceImplied.reverseDcf.${cell.marginLevel}@${cell.rate}`;
-    b.figure(`${key}.fiveYearGrowth`, `price-implied growth for years 1-5, ${at}`, cell.fiveYearGrowth, (v) => pct(v));
-    b.figure(`${key}.tenYearCagr`, `price-implied ten-year CAGR, ${at}`, cell.tenYearCagr, (v) => pct(v));
-    b.figure(`${key}.year10Revenue`, `price-implied year-10 revenue, ${at}`, cell.year10Revenue, bigMoney);
-    b.figure(`${key}.ronic`, `return on new invested capital, ${at}`, cell.ronic, (v) => pct(v));
+  {
+    const solve = priceImplied.reverseDcf;
+    const at = `the base scenario at r = ${pct(solve.rate)}`;
+    b.figure("priceImplied.reverseDcf.fiveYearGrowth", `price-implied growth for years 1-5, ${at}`, solve.fiveYearGrowth, (v) => pct(v));
+    b.figure("priceImplied.reverseDcf.tenYearCagr", `price-implied ten-year CAGR, ${at}`, solve.tenYearCagr, (v) => pct(v));
+    b.figure("priceImplied.reverseDcf.year10Revenue", `price-implied year-10 revenue, ${at}`, solve.year10Revenue, bigMoney);
   }
 
   // --- §10 D — deterministic diagnostics -----------------------------------

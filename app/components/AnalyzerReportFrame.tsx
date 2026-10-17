@@ -13,6 +13,7 @@ import {
   incompleteVerdictExplanation,
   priceVsRangeHeadline,
   completedVerdictExplanation,
+  rateInUseLine,
 } from "@/lib/analyzer/trustCopy";
 import { createDeepSnapshotAction, beginUpdateRunAction } from "@/app/actions/analyzer";
 import { boundState, NOT_COMPUTED_BINDING } from "@/lib/analyzer/notComputed";
@@ -110,6 +111,7 @@ export function AnalyzerReportFrame({
               verdict={verdict}
               trustStatus={trust.status}
               isEvidenceTab={activeTab === "evidence"}
+              rateInUse={rateInUseLine(result.valuationBasis)}
               incompleteExplanation={incompleteVerdictExplanation({
                 trustStatus: trust.status,
                 fairValueRange: result.fairValueRange,

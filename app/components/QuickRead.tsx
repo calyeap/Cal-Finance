@@ -351,7 +351,7 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
         label: "What today's price requires",
         body: (
           <p className="t">
-            Not shown — the reverse-DCF grid, steady-state EV/PVGO, implied exit multiple and the fair-value range
+            Not shown — the reverse DCF, steady-state EV/PVGO, implied exit multiple and the fair-value range
             are all suppressed.{!plain && <> See <SecLink id="E">Section E</SecLink>.</>}
           </p>
         ),
@@ -566,20 +566,24 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
   }
 
   // --- Mature / high-growth (reverse-DCF applies) -------------------------
-  const cleanCell = priceImplied.reverseDcfGrid.find((c) => !c.fiveYearGrowth.suppressed && !c.tenYearCagr.suppressed);
-  const anyDegenerateCell = priceImplied.reverseDcfGrid.some(
-    (c) => c.fiveYearGrowth.suppressed && c.fiveYearGrowth.state === "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE"
-  );
+  // M7's one solve (frozen spec §14.9 AR0-2); absent on a snapshot stored
+  // before AR4, which carried the retired grid instead.
+  const solve = priceImplied.reverseDcf as typeof priceImplied.reverseDcf | undefined;
+  const cleanCell = solve !== undefined && !solve.fiveYearGrowth.suppressed && !solve.tenYearCagr.suppressed ? solve : undefined;
+  const anyDegenerateCell =
+    solve !== undefined && solve.fiveYearGrowth.suppressed && solve.fiveYearGrowth.state === "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE";
   const ronic = result.diagnostics.impliedReturnOnNewCapital.value;
-  const ronicAboveEveryRate =
-    !ronic.suppressed && result.policy.constants.rateGrid.every((r) => ronic.value.greaterThan(r));
+  const rateInUse = result.valuationBasis?.discountRate.rate ?? null;
+  const ronicAboveEveryRate = !ronic.suppressed && rateInUse !== null && ronic.value.greaterThan(rateInUse);
 
   const growthLine =
     cleanCell && !cleanCell.fiveYearGrowth.suppressed && !cleanCell.tenYearCagr.suppressed
       ? `Today's price implies roughly ${formatPct(cleanCell.tenYearCagr.value)} annual growth over ten years (${formatPct(
           cleanCell.fiveYearGrowth.value
-        )} for the next five, at the ${cleanCell.marginLevel} margin and ${formatPct(new Decimal(cleanCell.rate), 0)} discount rate).`
-      : "The reverse-DCF grid does not resolve to a usable growth figure at this run's inputs.";
+        )} for the next five, at the base scenario's margin and a ${formatPct(cleanCell.rate)} discount rate).`
+      : solve !== undefined && solve.fiveYearGrowth.suppressed && /^Pending adoption/.test(solve.fiveYearGrowth.cause)
+        ? `What today's price implies is not computed yet — ${plainReason("INCOMPLETE", solve.fiveYearGrowth.cause)}.`
+        : "The reverse DCF does not resolve to a usable growth figure at this run's inputs.";
 
   const inRange = fairValueRange.kind === "range" ? scenarioOutputs.priceLocationWithinRange : null;
   const insideRange = inRange !== null && inRange.greaterThanOrEqualTo(0) && inRange.lessThanOrEqualTo(1);
@@ -594,12 +598,12 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
             <>
               {plain ? (
                 <>
-                  One or more reverse-DCF scenarios return no number at all rather than a misleading one —{" "}
+                  The reverse DCF returns no number at all rather than a misleading one —{" "}
                   {plainReason("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE", "")}.
                 </>
               ) : (
                 <>
-                  One or more reverse-DCF scenarios return no number at all (
+                  The reverse DCF returns no number at all (
                   <b>DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE</b>) rather than a misleading one — see{" "}
                   <SecLink id="E">Section E</SecLink> for which.
                 </>
@@ -636,12 +640,14 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
         cleanCell && !cleanCell.fiveYearGrowth.suppressed && !cleanCell.tenYearCagr.suppressed ? (
           <p className="t">
             {formatPct(cleanCell.fiveYearGrowth.value)} revenue growth for five years at r ={" "}
-            {formatPct(new Decimal(cleanCell.rate), 0)}, equivalent to {formatPct(cleanCell.tenYearCagr.value)} over
+            {formatPct(cleanCell.rate)}, equivalent to {formatPct(cleanCell.tenYearCagr.value)} over
             ten.{!plain && <> <SecLink id="E">Section E</SecLink></>}
           </p>
         ) : (
           <p className="t">
-            No cell in the reverse-DCF grid resolves to a usable growth figure at this run&apos;s inputs.
+            {solve !== undefined && solve.fiveYearGrowth.suppressed && /^Pending adoption/.test(solve.fiveYearGrowth.cause)
+              ? `Not computed yet — ${plainReason("INCOMPLETE", solve.fiveYearGrowth.cause)}.`
+              : "The reverse DCF does not resolve to a usable growth figure at this run's inputs."}
             {!plain && <> <SecLink id="E">Section E</SecLink></>}
           </p>
         ),
@@ -651,11 +657,11 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
       body: (
         <ul>
           {ronicAboveEveryRate && (
-            <li>Return on new capital of {formatPct(ronic.value)}, above every discount rate tested{sectionPointer(plain, "D", " — ")}</li>
+            <li>Return on new capital of {formatPct(ronic.value)}, above the discount rate in use{sectionPointer(plain, "D", " — ")}</li>
           )}
           {cleanCell && (
             <li>
-              At least one reverse-DCF cell resolves to a usable growth figure rather than returning a state
+              The reverse DCF resolves to a usable growth figure rather than returning a state
               {sectionPointer(plain, "E", " — ")}
             </li>
           )}
@@ -670,16 +676,16 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
           {marginAtHigh && (
             <li>
               Operating margin sits at or near its own ten-year high (<b>MARGIN AT HISTORICAL HIGH</b>), and the
-              reverse-DCF grid is run from that level{sectionPointer(plain, "D", " — ")}
+              base scenario the reverse DCF holds may start from that level{sectionPointer(plain, "D", " — ")}
             </li>
           )}
           {anyDegenerateCell && (
             <li>
               {plain ? (
-                <>One or more reverse-DCF cells return no number — {plainReason("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE", "")}</>
+                <>The reverse DCF returns no number — {plainReason("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE", "")}</>
               ) : (
                 <>
-                  One or more reverse-DCF cells return <b>DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE</b> rather than a
+                  The reverse DCF returns <b>DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE</b> rather than a
                   number — <SecLink id="E">Section E</SecLink>
                 </>
               )}
@@ -693,12 +699,12 @@ function buildQuickRead(result: AnalysisResult, plain: boolean): QuickReadItem[]
       label: "Biggest uncertainty",
       body: marginAtHigh ? (
         <p className="t">
-          Which margin level is the right base for the reverse-DCF grid — the current level or the ten-year median.
-          The gap drives the whole grid.{sectionPointer(plain, "D", " ")}
+          Which margin level is the right base — the current level or the ten-year median. The gap moves the
+          valuation; the margin sensitivity shows by how much.{sectionPointer(plain, "D", " ")}
         </p>
       ) : (
         <p className="t">
-          The cells that do resolve, and how much of their value sits in the terminal period.{sectionPointer(plain, "E", " ")}
+          How much of the value sits in the terminal period.{sectionPointer(plain, "E", " ")}
         </p>
       ),
     },

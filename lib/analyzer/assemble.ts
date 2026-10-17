@@ -14,7 +14,8 @@ import {
 import { evaluateGrowthLicence } from "./growthLicence";
 import { evaluateVerdictBlockers } from "./verdictBlockers";
 import { computeSteadyStateEvPvgo } from "./modules/steadyStateEvPvgo";
-import { computeReverseDcfGrid, type ReverseDcfInput } from "./modules/reverseDcf";
+import { solveReverseDcf, type ReverseDcfFacts } from "./modules/reverseDcf";
+import { selectDiscountRate, terminalReturnOnNewCapital } from "./discountRate";
 import { computeTerminalDiagnostics } from "./modules/terminalDiagnostics";
 import { computeImpliedExitMultiple } from "./modules/impliedExitMultiple";
 import { computeRateSensitivity, rateSensitivityNotModelled } from "./modules/rateSensitivity";
@@ -26,14 +27,13 @@ import {
   computeTornado,
   computeGrowthMarginTable,
   computeRateTerminalGrowthTable,
-  selectStep4ForecastDispersionReading,
+  type AnalystSuppliedRange,
 } from "./modules/sensitivity";
 import {
-  computeScenarioEnterpriseValue,
   computeScenarioValuation,
   computeScenarioOutputs,
   rateSearchBracket,
-  buildFadingReinvestmentIntensityPath,
+  type ScenarioValuation,
 } from "./modules/scenarioOutputs";
 import { buildFixedShapeGrowthPath } from "./growthPath";
 import { sensitivityRangesFor } from "./acquisition/analystInputs";
@@ -67,8 +67,10 @@ import type {
   BusinessSectionContent,
   FactRecord,
   Figure,
+  D2Inputs,
   LatestFiling,
   MarketContextSectionContent,
+  MoatClass,
   OverrideRecord,
   Profile,
   ProfileClassificationInputs,
@@ -159,9 +161,8 @@ export interface CompanyFixture {
   ronic: RonicInput;
   impliedReturnOnNewCapital: ImpliedReturnOnNewCapitalInput | null;
 
-  // Everything reverseDcf.ts's ReverseDcfInput needs EXCEPT gate1State and
-  // ronicCells, both threaded through from gates/M5 by this function.
-  reverseDcf: Omit<ReverseDcfInput, "gate1State" | "ronicCells">;
+  // The facts M6 and M7 read (reverseDcf.ts ReverseDcfFacts).
+  reverseDcf: ReverseDcfFacts;
 
   fcfYieldGrowth: FcfYieldGrowthInput;
 
@@ -171,16 +172,12 @@ export interface CompanyFixture {
 
   rateSensitivityCells: { plusOnePoint: Decimal; minusOnePoint: Decimal } | null;
 
-  // M9's terminal value, supplied by the fixture author. Null on every
-  // fixture and acquired run today. M8 no longer reads it: since
-  // CF-AR3-REPRODUCIBLE-RUNS-01 the terminal share comes from the base
-  // scenario's own M15 valuation (computeScenarioValuation).
-  terminalValuePv: Decimal | null;
-
-  // M9 — explicitly labelled by the metric it actually divides (§7.2 M9).
-  impliedExitMultipleMetric: { value: SourcedValue<Decimal> | null; metricName: string };
-
   scenarios: ScenarioInputSet;
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — Methodology v2.1 D2's moat class,
+  // Calvin's per-company JUDGEMENT on the assumption sheet: the terminal
+  // return on new capital is the rate plus its credit. Absent or null means
+  // the sheet is pending adoption (resolveD2Inputs).
+  moatClass?: MoatClass | null;
   // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (issue #399). null only for
   // a bundle with no analyst-authored dollar values (an AI-proposed bundle —
   // acquisition/analystInputs.ts's aiProposedAnalystInputBundle): assembly
@@ -439,8 +436,23 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // --- M4 — FCF ------------------------------------------------------------
   const fcf = computeFcf(fixture.fcf);
 
+  // --- Methodology v2.1 D1 — the one rate this run is valued at ----------
+  //
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 (frozen spec §14.9 AR0-1). Replaces
+  // the 8/10/12% grid's middle cell every rate-dependent module below used to
+  // read. The rate, its band, the route that chose it and its dated policy
+  // row are recorded in `valuationBasis` for the report.
+  const discountRate = selectDiscountRate({
+    sic: fixture.marketContext?.sic ?? null,
+    triggerBFired: triggerB.fired,
+    profile: fixture.profile.confirmedOrOverridden,
+    leveragePass: leverage.result === "PASS",
+    priceDate,
+  });
+  const rate = discountRate.rate;
+
   // --- M5 — reinvestment / RONIC + implied-return-on-new-capital diagnostic
-  const reinvestmentRonic = computeReinvestmentRonic(fixture.reinvestment, fixture.ronic);
+  const reinvestmentRonic = computeReinvestmentRonic(fixture.reinvestment, fixture.ronic, rate);
   // §10.0.1 / §10.2 Section D require every M1-M14 diagnostic in the
   // output, and V4 pins this one's MSFT value at 20.9% — so it belongs in
   // DiagnosticsResult like every other M1-M14 figure (schema corrected;
@@ -464,8 +476,6 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         currentNopat: null,
         currentYearNopatGrowth: null,
       });
-
-  const ronicCells = reinvestmentRonic.ronic.suppressed ? [] : reinvestmentRonic.ronic.value.cells;
 
   // --- M6 — steady-state EV / PVGO -----------------------------------------
   // Steady-state EV needs median-margin NOPAT directly. Derived here from
@@ -492,104 +502,108 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     currentEnterpriseValue,
     medianMarginNopat,
     currentNopat: currentMarginNopat,
-    discountRate: sourced(POLICY.rateGrid[1]),
+    discountRate: sourced(rate),
     leverageUnsupported: leverage.result === "LEVERAGE UNSUPPORTED IN v1",
     triggerAOrBFired: triggerA.fired || triggerB.fired,
   });
 
-  // --- M7 — reverse DCF grid (nine cells) -----------------------------------
+  // --- Methodology v2.1 D2 — the sheet's inputs, and the one engine -------
+  //
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 (frozen spec §14.9 AR0-3). A sheet
+  // without a return on new investment for every scenario and a moat class
+  // is PENDING ADOPTION (Calvin, 17 Oct 2026, Option A on #447): no D2 value
+  // is computed from it — not by the engine, and not from a dollar figure
+  // typed under the superseded conventions — and the report says so. No
+  // agent authors either input (product-decisions item 19).
+  const d2 = resolveD2Inputs(fixture, rate);
+
+  // Every value below — M7, M8, M9, M14, M15 and the expected return — is
+  // this one function: the scenario's growth (fixed path shape), margin and
+  // return on new investment, the D2 terminal, the D1 rate and D2 timing.
+  // `cause` names the first missing input where it cannot run.
+  type ScenarioRun = { valuation: ScenarioValuation; cause: null } | { valuation: null; cause: string };
+  const valueScenario = (
+    key: keyof ScenarioSet,
+    overrides: { growth?: Decimal; margin?: Decimal; ronic?: Decimal; terminalRoic?: Decimal; rate?: Decimal } = {}
+  ): ScenarioRun => {
+    const driver = fixture.scenarios[key];
+    if (baseRevenueSourced === null) {
+      return { valuation: null, cause: "base-year revenue is INCOMPLETE on this run (missing, or NOT CONFIRMED)" };
+    }
+    if (nopatTaxRateForRun === null) {
+      return { valuation: null, cause: "missing REQUIRED input: the NOPAT tax rate (§7.1), not configured for this run" };
+    }
+    if (d2.terminal === null) return { valuation: null, cause: d2.statement };
+    const growth = overrides.growth ?? (driver.revenueGrowthOrPath instanceof Decimal ? driver.revenueGrowthOrPath : null);
+    const margin = overrides.margin ?? driver.operatingMargin;
+    if (growth === null || margin === null) {
+      return {
+        valuation: null,
+        cause: `missing REQUIRED input: the ${key} scenario's growth and margin are not both authored as single rates for this run`,
+      };
+    }
+    const valuation = computeScenarioValuation(
+      baseRevenueSourced.value,
+      buildFixedShapeGrowthPath(growth),
+      margin,
+      overrides.ronic ?? (driver.returnOnNewInvestment as Decimal),
+      overrides.terminalRoic ?? d2.terminal[key],
+      overrides.rate ?? rate,
+      nopatTaxRateForRun,
+      POLICY.terminalGrowth,
+      stubYears
+    );
+    return { valuation, cause: null };
+  };
+  const baseRun = valueScenario("base");
+
+  // --- M7 — the reverse DCF: one solve on the main engine (AR0-2) ----------
   //
   // Same seam as §6.5's leverage precondition, above: companyInputs.ts sets
   // `reverseDcf.targetEnterpriseValue` to null because "filled by assemble
-  // from M1's own output", and until this fix nothing did the filling — so
-  // every acquired run returned all nine cells INCOMPLETE regardless of the
-  // company's actual price/value picture. The fixture's own value still wins
-  // where it supplies one; where it supplies null and M1 is itself
-  // suppressed, `currentEnterpriseValue` is null and the grid fails closed
-  // exactly as before (§5.4 — the cascade must not be softened).
-  const reverseDcfGrid = computeReverseDcfGrid({
-    ...fixture.reverseDcf,
+  // from M1's own output". The fixture's own value still wins where it
+  // supplies one; where it supplies null and M1 is itself suppressed,
+  // `currentEnterpriseValue` is null and the solve fails closed (§5.4).
+  const baseDriver = fixture.scenarios.base;
+  const reverseDcf = solveReverseDcf({
+    baseYearRevenue: baseRevenueSourced,
     targetEnterpriseValue: fixture.reverseDcf.targetEnterpriseValue ?? currentEnterpriseValue,
-    gate1State: gate1.state,
-    ronicCells,
-    configuredStressMarginLevel: fixture.configuredConstants.stressMarginLevel,
-    configuredNopatTaxRate: fixture.configuredConstants.nopatTaxRate,
+    rate,
+    nopatTaxRate: nopatTaxRateForRun,
+    heldDrivers:
+      d2.terminal !== null && baseDriver.operatingMargin !== null
+        ? {
+            operatingMargin: baseDriver.operatingMargin,
+            returnOnNewInvestment: baseDriver.returnOnNewInvestment as Decimal,
+            terminalReturnOnNewCapital: d2.terminal.base,
+          }
+        : null,
+    heldDriversMissing: d2.terminal === null ? d2.statement : "missing REQUIRED input: the base scenario's operating margin",
     stubYears,
   });
 
-  // --- M9 — implied exit multiple, labelled by the metric it actually divides
-  //
-  // A3 correction: `computeImpliedExitMultiple`'s first parameter is named
-  // `terminalValue` — the DCF's own terminal valuation — not today's
-  // enterprise value. `currentEnterpriseValue` was being passed here, which
-  // silently computed "today's EV ÷ a future year's metric" and called it an
-  // implied EXIT multiple. The genuinely corresponding figure is
-  // `fixture.terminalValuePv` (a DCF's own terminal value) — which is null for every
-  // acquired run today (see `CompanyFixture.terminalValuePv`'s own doc
-  // comment: no acquisition-time terminal-value path is wired yet). Null
-  // input correctly suppresses this diagnostic as INCOMPLETE/NOT COMPUTED
-  // rather than substituting a same-period approximation.
-  const terminalValuePvSourced = fixture.terminalValuePv !== null ? sourced(fixture.terminalValuePv) : null;
-  const impliedExitMultiple = computeImpliedExitMultiple(
-    terminalValuePvSourced,
-    fixture.impliedExitMultipleMetric.value,
-    fixture.impliedExitMultipleMetric.metricName
-  );
-
   // --- M8 — terminal diagnostics, from this run's own base scenario DCF ----
   //
-  // CF-AR3-REPRODUCIBLE-RUNS-01. This used to divide a fixture-supplied
-  // terminal PV (null on every fixture and acquired run) by today's market
-  // EV, falling back to a literal 0 — so no report ever carried a real
-  // terminal share. It is now the terminal value's share of the base
-  // scenario's own M15 valuation: the same drivers, fade, rate, tax rate and
-  // timing the base case's value below is computed from. Where any of those
-  // is missing the share is NaN with its cause bound (notComputed.ts), never
-  // a zero.
-  const baseScenarioDrivers = fixture.scenarios.base;
-  let terminalNotComputedCause: string | null = null;
-  const baseScenarioValuation = (() => {
-    if (baseRevenueSourced === null) {
-      terminalNotComputedCause = "base-year revenue is INCOMPLETE on this run (missing, or NOT CONFIRMED)";
-      return null;
-    }
-    if (nopatTaxRateForRun === null) {
-      terminalNotComputedCause = "missing REQUIRED input: the NOPAT tax rate (§7.1), not configured for this run";
-      return null;
-    }
-    if (
-      baseScenarioDrivers.operatingMargin === null ||
-      baseScenarioDrivers.reinvestmentCapitalIntensity === null ||
-      !(baseScenarioDrivers.revenueGrowthOrPath instanceof Decimal)
-    ) {
-      terminalNotComputedCause =
-        "missing REQUIRED input: the base scenario's growth, margin and reinvestment drivers are not all authored as single rates for this run";
-      return null;
-    }
-    return computeScenarioValuation(
-      baseRevenueSourced.value,
-      buildFixedShapeGrowthPath(baseScenarioDrivers.revenueGrowthOrPath),
-      baseScenarioDrivers.operatingMargin,
-      baseScenarioDrivers.terminalRoic != null
-        ? buildFadingReinvestmentIntensityPath(
-            baseScenarioDrivers.reinvestmentCapitalIntensity,
-            baseScenarioDrivers.operatingMargin,
-            nopatTaxRateForRun,
-            POLICY.terminalGrowth,
-            baseScenarioDrivers.terminalRoic
-          )
-        : baseScenarioDrivers.reinvestmentCapitalIntensity,
-      POLICY.rateGrid[1],
-      nopatTaxRateForRun,
-      undefined,
-      baseScenarioDrivers.terminalRoic,
-      stubYears
-    );
-  })();
+  // CF-AR3-REPRODUCIBLE-RUNS-01: the terminal value's share of the base
+  // scenario's own M15 valuation. Where any input is missing the share is
+  // NaN with its cause bound (notComputed.ts), never a zero.
+  const terminalNotComputedCause: string | null = baseRun.cause;
   const terminal =
-    baseScenarioValuation !== null
-      ? computeTerminalDiagnostics(baseScenarioValuation.terminalValuePv, baseScenarioValuation.enterpriseValue)
+    baseRun.valuation !== null
+      ? computeTerminalDiagnostics(baseRun.valuation.terminalValuePv, baseRun.valuation.enterpriseValue)
       : { terminalShareOfValue: new Decimal(NaN), terminalFcfConsistencyApplied: true as const };
+
+  // --- M9 — implied exit multiple, labelled by the metric it actually divides
+  //
+  // The base scenario's own terminal value (undiscounted, at year 10) over
+  // its own year-10 operating income — both from the valuation M8 reads.
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 deleted the fixture-supplied
+  // terminal-value placeholder this used to read (null on every run).
+  const impliedExitMultiple = computeImpliedExitMultiple(
+    baseRun.valuation !== null ? sourced(baseRun.valuation.terminalValue) : null,
+    baseRun.valuation !== null ? sourced(baseRun.valuation.year10OperatingIncome) : null,
+    "year-10 operating income (EBIT), base scenario"
+  );
 
   // --- M10 — rate sensitivity ------------------------------------------------
   //
@@ -623,91 +637,62 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // --- M13 — shape mismatch -------------------------------------------------
   const shapeMismatch = computeShapeMismatch(fixture.shapeMismatch.guidedNearTermGrowth, fixture.shapeMismatch.impliedConstantGrowth);
 
-  // --- M14 — sensitivity (§7.2). CF-STEP4-MSFT-RANGE-CAPTURE-01 wires the
-  // MSFT-only growth/operating-margin AnalystSuppliedRange capture
-  // (analystInputs.ts, authorised by CALVIN RULING — A) into the existing
-  // tornado/two-way machinery (sensitivity.ts). Every valuationFunction below
-  // closes over `computeScenarioEnterpriseValue` — the SAME M15 model this
-  // run's own scenario valuation uses (imported above, previously unused at
-  // this call site) — never a second model; sensitivity.ts's own header
-  // states this is self-consistent for both the growth tornado row and the
-  // growth x margin table, since neither names RONIC. discountRate,
-  // terminalGrowth and RONIC stay uncaptured (ruling A forbids expanding
-  // beyond growth/margin absent fresh evidence), so those rows and the rate x
-  // terminal-growth table are wired through the SAME real functions with a
-  // null range each, reproducing `validateRange`'s own
-  // "missing REQUIRED analyst-supplied range" cause rather than a hand-typed
-  // stand-in for it.
+  // --- M14 — sensitivity (§7.2), on the same engine ---------------------------
+  //
+  // AR0-2 moves the rate-band ends, growth, margin, return on new investment
+  // and moat here. Every row varies one input of the base scenario's own
+  // valuation (valueScenario above) and holds the rest:
+  // - growth, operating margin: the analyst-supplied ranges
+  //   (sensitivityRangesFor — MSFT only, CALVIN RULING — A); absent ranges
+  //   report the module's own "missing REQUIRED analyst-supplied range";
+  // - discount rate: D1's own ±0.5pp check points, the terminal return
+  //   moving with the rate as D2 defines it (rate + moat credit);
+  // - return on new investment: the adopted sheet's own bear / base / bull
+  //   values;
+  // - moat: D2's three credits;
+  // - terminal growth: no range is approved, so it stays unavailable.
   const sensitivityRanges = sensitivityRangesFor(fixture.ticker);
-  const sensitivityBaseScenario = fixture.scenarios.base;
-  const sensitivityBaseGrowth =
-    sensitivityBaseScenario.revenueGrowthOrPath instanceof Decimal ? sensitivityBaseScenario.revenueGrowthOrPath : null;
-  const sensitivityBaseMargin = sensitivityBaseScenario.operatingMargin;
-  const sensitivityBaseCapitalIntensity = sensitivityBaseScenario.reinvestmentCapitalIntensity;
-
   const sensitivity: SensitivityResult =
-    sensitivityRanges === null ||
-    baseRevenueSourced === null ||
-    nopatTaxRateForRun === null ||
-    sensitivityBaseGrowth === null ||
-    sensitivityBaseMargin === null ||
-    sensitivityBaseCapitalIntensity === null
+    baseRun.valuation === null || d2.terminal === null || d2.moatClass === null
       ? buildSensitivityResult()
       : (() => {
-          // CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01
-          // (2026-10-15): when the base scenario carries its own
-          // terminalRoic, fade reinvestment intensity through years 6-10
-          // toward the SAME terminal-implied level the terminal formula
-          // below already assumes (buildFadingReinvestmentIntensityPath),
-          // using THIS call's own margin and terminalGrowth — the same
-          // "SAME M15 model, self-consistent" invariant REVIEW-38749099399-1
-          // already named for this closure. A base scenario with no
-          // terminalRoic keeps passing the flat capitalIntensity, unchanged.
-          const scenarioValueAt = (growth: Decimal, margin: Decimal, terminalGrowth: Decimal = POLICY.terminalGrowth, rate: Decimal = POLICY.rateGrid[1]): Decimal =>
-            computeScenarioEnterpriseValue(
-              baseRevenueSourced.value,
-              buildFixedShapeGrowthPath(growth),
-              margin,
-              sensitivityBaseScenario.terminalRoic != null
-                ? buildFadingReinvestmentIntensityPath(
-                    sensitivityBaseCapitalIntensity,
-                    margin,
-                    nopatTaxRateForRun,
-                    terminalGrowth,
-                    sensitivityBaseScenario.terminalRoic
-                  )
-                : sensitivityBaseCapitalIntensity,
-              rate,
-              nopatTaxRateForRun,
-              terminalGrowth,
-              sensitivityBaseScenario.terminalRoic,
-              stubYears
-            );
-          const baseCaseValue = scenarioValueAt(sensitivityBaseGrowth, sensitivityBaseMargin);
-
-          const tornado = computeTornado(baseCaseValue, {
-            growth: { range: sensitivityRanges.growth, valuationFunction: (g) => scenarioValueAt(g, sensitivityBaseMargin) },
-            operatingMargin: { range: sensitivityRanges.operatingMargin, valuationFunction: (m) => scenarioValueAt(sensitivityBaseGrowth, m) },
-            discountRate: { range: null, valuationFunction: () => baseCaseValue },
-            terminalGrowth: { range: null, valuationFunction: () => baseCaseValue },
-            ronic: { range: null, valuationFunction: () => baseCaseValue },
-          });
-          const twoWayGrowthMargin = computeGrowthMarginTable(sensitivityRanges.growth, sensitivityRanges.operatingMargin, (g, m) =>
-            scenarioValueAt(g, m)
-          );
-          const twoWayRateTerminalGrowth = computeRateTerminalGrowthTable(null, null, (r, tg) =>
-            scenarioValueAt(sensitivityBaseGrowth, sensitivityBaseMargin, tg, r)
-          );
-
-          return {
-            tornado,
-            twoWayGrowthMargin,
-            twoWayRateTerminalGrowth,
-            debtShareRemoved: true,
-            // CF-STEP4-READING-IMPL-01 — the ruled Step 4 reading, derived
-            // solely from this run's own tornado rows above.
-            forecastDispersion: selectStep4ForecastDispersionReading(tornado),
+          const baseCaseValue = baseRun.valuation.enterpriseValue;
+          const terminalCredit = d2.terminal.base.minus(rate);
+          const at = (overrides: Parameters<typeof valueScenario>[1]): Decimal => {
+            const run = valueScenario("base", overrides);
+            return run.valuation === null ? new Decimal(NaN) : run.valuation.enterpriseValue;
           };
+          const checkRange: AnalystSuppliedRange = {
+            values: [discountRate.checkRates.lower, rate, discountRate.checkRates.upper],
+            rationale: "Methodology v2.1 D1: the rate in use and its ±0.5pp verdict check points",
+          };
+          const ronicRange: AnalystSuppliedRange = {
+            values: [
+              fixture.scenarios.bear.returnOnNewInvestment as Decimal,
+              fixture.scenarios.base.returnOnNewInvestment as Decimal,
+              fixture.scenarios.bull.returnOnNewInvestment as Decimal,
+            ],
+            rationale: "the adopted sheet's bear / base / bull return on new investment",
+          };
+          const moatRange: AnalystSuppliedRange = {
+            values: [POLICY.moatCredit.none, POLICY.moatCredit.narrow, POLICY.moatCredit.wide],
+            rationale: "Methodology v2.1 D2: the moat credit for none / narrow / wide",
+          };
+          const tornado = computeTornado(baseCaseValue, {
+            growth: { range: sensitivityRanges?.growth ?? null, valuationFunction: (g) => at({ growth: g }) },
+            operatingMargin: { range: sensitivityRanges?.operatingMargin ?? null, valuationFunction: (m) => at({ margin: m }) },
+            discountRate: { range: checkRange, valuationFunction: (r) => at({ rate: r, terminalRoic: r.plus(terminalCredit) }) },
+            terminalGrowth: { range: null, valuationFunction: () => baseCaseValue },
+            ronic: { range: ronicRange, valuationFunction: (x) => at({ ronic: x }) },
+            moat: { range: moatRange, valuationFunction: (credit) => at({ terminalRoic: rate.plus(credit) }) },
+          });
+          const twoWayGrowthMargin = computeGrowthMarginTable(
+            sensitivityRanges?.growth ?? null,
+            sensitivityRanges?.operatingMargin ?? null,
+            (g, m) => at({ growth: g, margin: m })
+          );
+          const twoWayRateTerminalGrowth = computeRateTerminalGrowthTable(checkRange, null, () => baseCaseValue);
+          return { tornado, twoWayGrowthMargin, twoWayRateTerminalGrowth, debtShareRemoved: true as const };
         })();
 
   // --- M15 — scenario outputs ------------------------------------------------
@@ -725,10 +710,8 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
 
   // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A. Where no analyst authored
   // dollar scenario values (fixture.scenarioValues === null — an AI-proposed
-  // bundle), this derives them through the SAME M15 model every explicit
-  // bundle's own hand-authored figures are consistent with: each scenario's
-  // drivers run through computeScenarioEnterpriseValue (unmodified) to an
-  // enterprise value, then the SAME debt/cash/non-operating-investments
+  // bundle), each scenario is valued through the SAME engine (valueScenario)
+  // to an enterprise value, then the SAME debt/cash/non-operating-investments
   // bridge term this run's own M1 output already carries converts that to
   // an equity value, divided by this scenario's own share count. Never a
   // second valuation model, and never computed where a REQUIRED input is
@@ -742,85 +725,42 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   let scenarioValuesMissing: string | null = scenarioValuesBlockedAsFixtureCarried
     ? "this run's scenario dollar values are carried from the M5/M7 validation fixture (analystInputs.ts), not computed for this real acquired report — no acquisition-time valuation path supplies them yet (A4, CF-ANALYZER-INTEGRITY-PHASE-A-01)"
     : null;
+  // The bridge's own net debt/cash/non-operating-investments term, held
+  // constant across bear/base/bull exactly as the debt and cash on a
+  // company's balance sheet do not change by scenario — inverting the
+  // identical M1 formula rather than re-deriving a second one.
+  const perShare = (enterpriseValue: Decimal, shareCount: Decimal): Decimal | null =>
+    currentEnterpriseValue === null || currentMarketCap === null
+      ? null
+      : enterpriseValue.minus(currentEnterpriseValue.value.minus(currentMarketCap)).dividedBy(shareCount);
   const dynamicScenarioValue = (key: keyof ScenarioSet): Decimal => {
-    const driver = fixture.scenarios[key];
-    if (baseRevenueSourced === null) {
-      scenarioValuesMissing = "base-year revenue is INCOMPLETE on this run";
-      return new Decimal(NaN);
-    }
-    if (nopatTaxRateForRun === null) {
-      scenarioValuesMissing = "nopatTaxRate is not configured for this run (§7.1)";
-      return new Decimal(NaN);
-    }
     if (currentEnterpriseValue === null || currentMarketCap === null) {
       scenarioValuesMissing = "enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply";
       return new Decimal(NaN);
     }
-    if (
-      driver.revenueGrowthOrPath === null ||
-      driver.operatingMargin === null ||
-      driver.reinvestmentCapitalIntensity === null ||
-      !(driver.revenueGrowthOrPath instanceof Decimal)
-    ) {
-      scenarioValuesMissing = `${key} scenario drivers are not authored for this run, or use an explicit year-by-year path this computation does not take`;
+    const run = valueScenario(key);
+    if (run.valuation === null) {
+      scenarioValuesMissing = run.cause;
       return new Decimal(NaN);
     }
-    // CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 (2026-10-15):
-    // the SAME fade scenarioValueAt (M14) above applies — years 6-10 of
-    // this scenario's own reinvestment intensity move toward the
-    // terminal-implied level the formula below already assumes, rather than
-    // jumping straight from a flat explicit-period rate into it. A driver
-    // with no terminalRoic keeps the flat capitalIntensity, unchanged.
-    const scenarioCapitalIntensity =
-      driver.terminalRoic != null
-        ? buildFadingReinvestmentIntensityPath(
-            driver.reinvestmentCapitalIntensity,
-            driver.operatingMargin,
-            nopatTaxRateForRun,
-            POLICY.terminalGrowth,
-            driver.terminalRoic
-          )
-        : driver.reinvestmentCapitalIntensity;
-    const scenarioEnterpriseValue = computeScenarioEnterpriseValue(
-      baseRevenueSourced.value,
-      buildFixedShapeGrowthPath(driver.revenueGrowthOrPath),
-      driver.operatingMargin,
-      scenarioCapitalIntensity,
-      POLICY.rateGrid[1],
-      nopatTaxRateForRun,
-      undefined,
-      driver.terminalRoic,
-      stubYears
-    );
-    // The bridge's own net debt/cash/non-operating-investments term, held
-    // constant across bear/base/bull exactly as the debt and cash on a
-    // company's balance sheet do not change by scenario — inverting the
-    // identical M1 formula (enterpriseValue = marketCap + debt - cash -
-    // nonOperatingInvestments) rather than re-deriving a second one.
-    const netDebtBridge = currentEnterpriseValue.value.minus(currentMarketCap);
-    const equityValue = scenarioEnterpriseValue.minus(netDebtBridge);
-    return equityValue.dividedBy(driver.shareCount);
+    return perShare(run.valuation.enterpriseValue, fixture.scenarios[key].shareCount) as Decimal;
   };
 
   // CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 (REVIEW-38678066585-1, CORRECT) —
   // `fixture.recordedScenarioValuesComputeFromDrivers`'s own doc comment:
   // only a bundle read back from the recorded store (recordedBundles.ts)
-  // with every scenario's three drivers authored sets this, so a typed
-  // dollar figure on that one source stops standing in for a real
-  // computation once there is enough to compute one, through the SAME
-  // dynamicScenarioValue path above — never a hand-authored test fixture
+  // with every scenario's drivers authored sets this, so a typed dollar
+  // figure on that one source stops standing in for a real computation once
+  // there is enough to compute one — never a hand-authored test fixture
   // (MSFT_FIXTURE/OKLO_FIXTURE used directly) or a partially-driven recorded
   // bundle, both of which keep the typed figure exactly as before.
   //
   // The trial below falls back to the typed figure when the recomputation
-  // itself cannot run — e.g. NVDA's own recorded bundle (migration 008) has
-  // every driver authored, but NVDA's EV bridge is INCOMPLETE for reasons
-  // unrelated to this outcome (three pre-existing missing REQUIRED inputs),
-  // so dynamicScenarioValue returns NaN for it. NVDA's already-approved
-  // typed figures ($28.08/$102.38/$296.44) are a genuine recorded analyst
-  // bundle in their own right; losing them to a NaN this outcome did not fix
-  // would be a regression this outcome does not need to cause to unblock
-  // MSFT, whose EV bridge is complete and so recomputes successfully.
+  // itself cannot run for a reason other than D2 adoption — e.g. NVDA's EV
+  // bridge is INCOMPLETE for unrelated reasons. A sheet PENDING ADOPTION
+  // never falls back: its typed figures were computed under the superseded
+  // rate and reinvestment conventions, and D2 forbids presenting a value for
+  // it at all.
   const recordedBundleFullyDriven =
     fixture.scenarioValues !== null &&
     !scenarioValuesBlockedAsFixtureCarried &&
@@ -843,7 +783,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // check.
   //
   // `dilutedSharesForRun` is this run's own M1 quantity, read back the same
-  // way `netDebtBridge` above already inverts M1's enterprise-value formula
+  // way `perShare` above already inverts M1's enterprise-value formula
   // rather than re-deriving a second one (marketCap = dilutedShares * price,
   // so dilutedShares = marketCap / price). The band is a plumbing sanity
   // bound — not a finance assumption and never used to pick or weight a
@@ -876,7 +816,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     const scenarioValuesMissingBeforeTrial = scenarioValuesMissing;
     const trial = { bear: dynamicScenarioValue("bear"), base: dynamicScenarioValue("base"), bull: dynamicScenarioValue("bull") };
     const trialFullyComputed = !trial.bear.isNaN() && !trial.base.isNaN() && !trial.bull.isNaN();
-    if (trialFullyComputed || fixture.scenarioValues === null) {
+    if (trialFullyComputed || fixture.scenarioValues === null || d2.status === "PENDING ADOPTION") {
       dynamicScenarioValues = trial;
     } else {
       // The recomputation did not run to completion and there is a typed
@@ -887,8 +827,38 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     }
   }
 
+  // Expected return at today's price: the discount rate at which the base
+  // case's own cash flows — terminal return held at the D1 rate plus the
+  // moat credit — are worth exactly the price. Searched above terminal
+  // growth, where the Gordon terminal value is defined. Only where the base
+  // value shown IS the engine's (a typed figure cannot be revalued).
+  const revalueBaseCaseAtRate =
+    dynamicScenarioValues !== null && !dynamicScenarioValues.base.isNaN() && currentEnterpriseValue !== null && currentMarketCap !== null
+      ? (r: Decimal): Decimal => {
+          const run = valueScenario("base", { rate: r });
+          return run.valuation === null
+            ? new Decimal(NaN)
+            : (perShare(run.valuation.enterpriseValue, fixture.scenarios.base.shareCount) as Decimal);
+        }
+      : fixture.revalueBaseCaseAtRate;
+  // The floor applies to the engine's own revaluation only; a fixture's
+  // supplied function keeps the solver's default bracket.
+  const rateSearchLo =
+    revalueBaseCaseAtRate !== fixture.revalueBaseCaseAtRate
+      ? POLICY.terminalGrowth.plus(EXPECTED_RETURN_SEARCH_FLOOR_ABOVE_TERMINAL_GROWTH)
+      : undefined;
+
+  // A recorded sheet (recordedBundles.ts sets the flag either way) pending
+  // adoption never falls back to its typed dollar figures either: they were
+  // entered under the superseded rate and reinvestment conventions. A
+  // hand-authored test fixture, which sets no flag, keeps its typed figures.
+  const recordedSheetPendingAdoption =
+    fixture.recordedScenarioValuesComputeFromDrivers !== undefined && d2.status === "PENDING ADOPTION";
+  if (recordedSheetPendingAdoption && dynamicScenarioValues === null && !scenarioValuesBlockedAsFixtureCarried && !recordedShareCountImplausible) {
+    scenarioValuesMissing = d2.statement;
+  }
   const effectiveScenarioValues =
-    scenarioValuesBlockedAsFixtureCarried || recordedShareCountImplausible || dynamicScenarioValues !== null
+    scenarioValuesBlockedAsFixtureCarried || recordedShareCountImplausible || dynamicScenarioValues !== null || recordedSheetPendingAdoption
       ? null
       : fixture.scenarioValues;
   const scenarioOutputs = computeScenarioOutputs({
@@ -900,7 +870,8 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     // plain sum (B1, third-pass fix; authorised for this one line only).
     weights: { bear: new Decimal("1").dividedBy(3), base: new Decimal("1").dividedBy(3), bull: new Decimal("1").dividedBy(3) },
     currentPrice,
-    revalueBaseCaseAtRate: fixture.revalueBaseCaseAtRate,
+    revalueBaseCaseAtRate,
+    rateSearchLo,
   });
 
   // --- §10 F — the analyst's scenarios, as the result carries them -----------
@@ -969,18 +940,15 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   if (fcfYieldGrowth.precondition === "PRECONDITION FAILED") {
     suppressing.push({ state: "PRECONDITION FAILED", appliesTo: "FCF yield + growth" });
   }
-  for (const cell of reverseDcfGrid) {
-    if (cell.fiveYearGrowth.suppressed) {
-      suppressing.push({
-        state: cell.fiveYearGrowth.state,
-        appliesTo: `reverse-DCF cell ${cell.marginLevel}/${cell.rate}`,
-        // One cell, never the grid and never the range (§9.3 row 5). MSFT
-        // renders its range with four of these active; OKLO renders its
-        // distribution summary with nine.
-        scope: "the affected reverse-DCF cell",
-        cause: cell.fiveYearGrowth.cause,
-      });
-    }
+  if (reverseDcf.fiveYearGrowth.suppressed) {
+    suppressing.push({
+      state: reverseDcf.fiveYearGrowth.state,
+      appliesTo: "the reverse-DCF solve",
+      // The solve only, never the range (§9.3 row 5's "affected reverse-DCF
+      // cell", which AR0-2 reads as the single solve).
+      scope: "the affected reverse-DCF cell",
+      cause: reverseDcf.fiveYearGrowth.cause,
+    });
   }
   // --- outputs the schema types as a bare Decimal (notComputed.ts) --------
   //
@@ -1003,12 +971,16 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // that order so a run that already had no revaluation function supplied
   // (every real acquired run and MSFT_FIXTURE, today) keeps its existing
   // cause unchanged regardless of price.
-  if (fixture.revalueBaseCaseAtRate === null) {
+  if (revalueBaseCaseAtRate === null) {
     suppressing.push(
       notComputed(
         NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice,
         "INCOMPLETE",
-        "missing REQUIRED input: a revaluation of the base case at other discount rates — none was supplied for this run, so no rate was solved for"
+        baseRun.cause ??
+          (currentEnterpriseValue === null
+            ? "missing REQUIRED input: enterprise value, which is INCOMPLETE on this run, so the base case has no per-share value to solve for"
+            : scenarioValuesMissing ??
+              "this run's scenario values are typed figures, not the engine's own valuation, so there is no base case to revalue at other rates")
       )
     );
   } else if (currentPrice === null) {
@@ -1024,8 +996,8 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     // each end". The bracket only: `states` is one of the members the blind
     // challenger receives (§8.5.1), so a base-case value written into a cause
     // here would reach the one call §8.5.2 keeps valuation outputs away from.
-    const b = rateSearchBracket(fixture.revalueBaseCaseAtRate);
-    const asPct = (r: Decimal) => `${r.mul(100).toFixed(0)}%`;
+    const b = rateSearchBracket(revalueBaseCaseAtRate, rateSearchLo);
+    const asPct = (r: Decimal) => `${r.mul(100).toDecimalPlaces(2).toString()}%`;
     suppressing.push(
       notComputed(
         NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice,
@@ -1193,7 +1165,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
           bear: scenarioOutputs.values.bear,
           bull: scenarioOutputs.values.bull,
           weightedValueInside: scenarioOutputs.weightedDistribution,
-          drivingInputs: ["years 1-5 revenue growth", "operating margin path", "reinvestment as % of NOPAT"],
+          drivingInputs: ["years 1-5 revenue growth", "operating margin path", "return on new investment"],
           scenarioLabelsWarning: triggerA.fired || triggerB.fired,
         };
 
@@ -1390,7 +1362,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       pvgo: steadyStateEvPvgo.pvgo,
       pvgoShareOfEv: steadyStateEvPvgo.pvgoShareOfEv,
       nopatGap: steadyStateEvPvgo.nopatGap,
-      reverseDcfGrid,
+      reverseDcf,
       impliedExitMultiple,
     },
     fairValueRange,
@@ -1436,6 +1408,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         scenarios: fixture.scenarios,
         scenarioValues: fixture.scenarioValues,
         configuredConstants: fixture.configuredConstants,
+        moatClass: fixture.moatClass ?? null,
       }),
       priceSnapshot: fixture.enterpriseValue.price === null ? null : { value: fixture.price.value, timestamp: fixture.price.timestamp },
       valuationTiming: {
@@ -1446,5 +1419,51 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         stubYears,
       },
     },
+    valuationBasis: { discountRate, d2: d2.public },
   };
+}
+
+// The lower end of the expected-return search, above terminal growth: the
+// Gordon terminal value is undefined at or below it. A plumbing bound, not
+// a finance value — an expected return this close to terminal growth is
+// reported as no solution in range.
+const EXPECTED_RETURN_SEARCH_FLOOR_ABOVE_TERMINAL_GROWTH = new Decimal("0.0025");
+
+const SCENARIO_KEYS = ["bear", "base", "bull"] as const;
+
+/**
+ * Methodology v2.1 D2 on this sheet: ADOPTED only with a moat class and a
+ * return on new investment for every scenario. The terminal return on new
+ * capital is the rate plus the moat credit — bear +0, base the class's
+ * credit, bull the base credit + 1.5pp.
+ */
+function resolveD2Inputs(
+  fixture: CompanyFixture,
+  rate: Decimal
+): { status: D2Inputs["status"]; moatClass: MoatClass | null; terminal: Record<keyof ScenarioSet, Decimal> | null; statement: string; public: D2Inputs } {
+  const moatClass = fixture.moatClass ?? null;
+  const missing: string[] = [];
+  if (moatClass === null) missing.push("moat class");
+  for (const key of SCENARIO_KEYS) {
+    const ronic = fixture.scenarios[key].returnOnNewInvestment ?? null;
+    if (ronic === null || !ronic.greaterThan(0)) missing.push(`${key} return on new investment`);
+  }
+  if (missing.length > 0 || moatClass === null) {
+    const statement =
+      `Pending adoption: this assumption sheet has no ${missing.join(", ")}, so its valuation under the approved rules ` +
+      "(Methodology v2.1 D2 — reinvestment from the return on new investment, terminal return from the moat class) is not " +
+      "computed. Calvin adopts the sheet with those inputs; no agent sets them.";
+    const d2: D2Inputs = { status: "PENDING ADOPTION", missing, moatClass, terminalReturnOnNewCapital: null, statement };
+    return { status: d2.status, moatClass, terminal: null, statement, public: d2 };
+  }
+  const terminal = {
+    bear: terminalReturnOnNewCapital(rate, moatClass, "bear"),
+    base: terminalReturnOnNewCapital(rate, moatClass, "base"),
+    bull: terminalReturnOnNewCapital(rate, moatClass, "bull"),
+  };
+  const statement = `Adopted: ${moatClass} moat — terminal return on new capital is the rate plus ${POLICY.moatCredit[moatClass]
+    .mul(100)
+    .toFixed(1)}pp (bear +0pp; bull +${POLICY.moatCredit[moatClass].plus(POLICY.bullMoatCreditUplift).mul(100).toFixed(1)}pp).`;
+  const d2: D2Inputs = { status: "ADOPTED", missing: [], moatClass, terminalReturnOnNewCapital: terminal, statement };
+  return { status: d2.status, moatClass, terminal, statement, public: d2 };
 }

@@ -5,6 +5,7 @@ import Decimal from "decimal.js";
 import { QuickRead } from "./QuickRead";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
+import { withStatedD2Inputs } from "@/lib/analyzer/fixtures/statedD2Inputs";
 import { OKLO_FIXTURE } from "@/lib/analyzer/fixtures/oklo";
 
 afterEach(cleanup);
@@ -44,14 +45,16 @@ describe("QuickRead — data and model quality points bound states at their own 
   it("unauthored scenario drivers point at Section F — not at D, though their cause names 'operating margin'", () => {
     const unauthored = { revenueGrowthOrPath: null, operatingMargin: null, reinvestmentCapitalIntensity: null };
     const result = assembleAnalysisResult({
-      ...MSFT_FIXTURE,
+      // STATED D2 test inputs (AR4), so a pending sheet is not the first
+      // INCOMPLETE either.
+      ...withStatedD2Inputs(MSFT_FIXTURE),
       // Both supplied, so the scenario drivers are the run's first INCOMPLETE.
       rateSensitivityCells: { plusOnePoint: new Decimal("0.05"), minusOnePoint: new Decimal("-0.05") },
       revalueBaseCaseAtRate: (rate: Decimal) => MSFT_FIXTURE.price.value.mul(new Decimal("0.1").dividedBy(rate)),
       scenarios: {
-        bear: { ...MSFT_FIXTURE.scenarios.bear, ...unauthored },
-        base: MSFT_FIXTURE.scenarios.base,
-        bull: MSFT_FIXTURE.scenarios.bull,
+        bear: { ...withStatedD2Inputs(MSFT_FIXTURE).scenarios.bear, ...unauthored },
+        base: withStatedD2Inputs(MSFT_FIXTURE).scenarios.base,
+        bull: withStatedD2Inputs(MSFT_FIXTURE).scenarios.bull,
       },
     });
     const { container } = render(<QuickRead result={result} />);
@@ -244,30 +247,41 @@ describe("QuickRead — MSFT", () => {
     expect(screen.queryByText(/MATURE_PROFITABLE_STABLE_FCF/)).toBeNull();
   });
 
-  it("consolidates the several DEGENERATE reverse-DCF cells into ONE line, not one per row, while keeping the state name visible and never inventing a count", () => {
-    render(<QuickRead result={result} />);
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — one solve (AR0-2), so the case is
+  // built directly: the solve itself returns DEGENERATE.
+  it("states a DEGENERATE reverse DCF in ONE line per item, keeping the state name visible and never inventing a count", () => {
+    const degenerate = { suppressed: true as const, state: "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE" as const, cause: "terminal share 105%" };
+    const withDegenerate = {
+      ...result,
+      priceImplied: { ...result.priceImplied, reverseDcf: { ...result.priceImplied.reverseDcf, fiveYearGrowth: degenerate, tenYearCagr: degenerate } },
+    };
+    render(<QuickRead result={withDegenerate} />);
     const matches = screen.getAllByText(/DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE/);
     // At most one in the main-finding sentence, one in "what worries
-    // Calboard", one in "data and model quality" — never one per
-    // underlying cell (4, per Section E's own grid).
+    // Calboard", one in "data and model quality".
     expect(matches.length).toBeLessThan(4);
     expect(matches.length).toBeGreaterThan(0);
     expect(screen.queryByText(/\d+ of \d+/)).toBeNull();
   });
 
-  // CF-AR3-REPRODUCIBLE-RUNS-01 — the figures are read off this result's own
-  // current-margin / 8% reverse-DCF cell (they were the frozen grid's 13.7% /
-  // 18.5% under end-of-year timing; Methodology v2.1 D2's mid-year timing
-  // moves them), so the rule asserted is the restatement itself.
-  const sectionECell = result.priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08)!;
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the figure is M7's one solve
+  // (AR0-2), which needs an adopted sheet: STATED D2 test inputs here. The
+  // rule asserted is the restatement itself.
+  const adopted = assembleAnalysisResult(withStatedD2Inputs(MSFT_FIXTURE));
+  const sectionECell = adopted.priceImplied.reverseDcf;
   const pctOf = (f: typeof sectionECell.tenYearCagr) => {
-    if (f.suppressed) throw new Error("the current-margin / 8% cell is expected to solve");
+    if (f.suppressed) throw new Error("the reverse DCF is expected to solve on an adopted sheet");
     return `${f.value.mul(100).toFixed(1)}%`;
   };
 
   it("main finding restates the price-implied growth figure already computed in Section E, not a new number", () => {
-    render(<QuickRead result={result} />);
+    render(<QuickRead result={adopted} />);
     expect(screen.getAllByText(new RegExp(pctOf(sectionECell.tenYearCagr).replace(".", "\\."))).length).toBeGreaterThan(0);
+  });
+
+  it("main finding says plainly, on a sheet pending adoption, that what the price implies is not computed yet", () => {
+    render(<QuickRead result={result} />);
+    expect(screen.getAllByText(/not computed yet — its assumption sheet is pending adoption/).length).toBeGreaterThan(0);
   });
 
   it("keeps MARGIN AT HISTORICAL HIGH visible inline, with its section reference, never behind a disclosure", () => {
@@ -282,7 +296,7 @@ describe("QuickRead — MSFT", () => {
   });
 
   it("main finding and 'what today's price requires' are distinct sentences, not a verbatim duplicate (defect B5)", () => {
-    const { container } = render(<QuickRead result={result} />);
+    const { container } = render(<QuickRead result={adopted} />);
     const items = Array.from(container.querySelectorAll(".qitem"));
     const mainFinding = items.find((el) => el.querySelector(".k")?.textContent === "Main finding");
     const priceRequires = items.find((el) => el.querySelector(".k")?.textContent === "What today's price requires");

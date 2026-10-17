@@ -1,24 +1,19 @@
 import { describe, it, expect } from "vitest";
 import Decimal from "decimal.js";
-import { computeReverseDcfGrid, type ReverseDcfInput } from "./reverseDcf";
-import type { DiscountRate } from "../types";
+import { solveReverseDcf } from "./reverseDcf";
 
 // INDEPENDENT VERIFICATION — deliberately does not import
-// projectReverseDcfValue, growthAt, or buildFixedShapeGrowthPath from the
-// production module or growthPath.ts. Every equation below is re-typed
-// from the written timing equations (this session's own reinvestment-
-// timing correction) into fresh code, so that agreement with the
-// production module's output is evidence the PRODUCTION CODE correctly
-// implements those equations — not a tautology from calling the same
-// function twice.
+// projectReverseDcfValue, computeScenarioValuation, growthAt,
+// buildFixedShapeGrowthPath or buildRonicPath. Every equation below is
+// re-typed from Methodology v2.1 D2 (frozen spec §14.9 AR0-3) into fresh
+// code, and solved by a separate bisection, so agreement with the
+// production solve is evidence the PRODUCTION CODE realises those
+// equations — not a tautology from calling the same function twice.
 //
-// This file answers ONE question: does `computeReverseDcfGrid` correctly
-// realise the stated formulas, for the stated fixture inputs? It does NOT
-// answer whether those formulas or fixture inputs describe the real
-// Microsoft — that is reverseDcf.test.ts's GOLDEN block, which compares
-// against the ORIGINAL (partially hash-verified, partially user-supplied)
-// reference numbers with a wide, approximate tolerance. Conflating the two
-// claims is exactly what this file exists to avoid.
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 rewrote this file for M7's one solve
+// (AR0-2). The question is unchanged: does `solveReverseDcf` correctly
+// realise the stated formulas for the stated inputs? Whether those inputs
+// describe a real company is the golden harness's (ar4Engine.test.ts).
 
 const PROVENANCE = {
   sourceClass: "PRIMARY" as const,
@@ -26,251 +21,74 @@ const PROVENANCE = {
   verificationState: "CONFIRMED" as const,
 };
 
-function sourced(value: number) {
-  return { value: new Decimal(value), provenance: PROVENANCE };
+const TERMINAL_GROWTH = 0.03; // §7.1
+
+// Revenue_t = Revenue_(t-1) × (1 + g_t), g: constant 1–5, linear to 3% by 10
+// NOPAT_t = Revenue_t × margin × (1 − tax)
+// RONIC_t: constant 1–5, linear to the terminal return by year 10
+// Reinvestment_t = NOPAT_t × g_(t+1) ÷ RONIC_t      [g_11 = terminal growth]
+// Terminal FCF = NOPAT_10 × (1 + g_T) × (1 − g_T ÷ terminal return)
+// Discounting: FCF_t from t − 0.5 years, TV from 9.5 years (D2 timing)
+interface Case {
+  revenue: number;
+  margin: number;
+  tax: number;
+  ronic: number;
+  terminal: number;
+  rate: number;
 }
 
-// --- independent re-implementation of the timing equations ----------------
-
-const TERMINAL_GROWTH = new Decimal("0.03"); // §7.1: terminal growth, fixed at 3.0%
-const TERMINAL_ROIC_PREMIUM = new Decimal("0.03"); // §7.1 / I16: terminal ROIC = r + 3pp
-
-function independentGrowthAt(t: number, constantGrowth: Decimal): Decimal {
-  if (t <= 5) return constantGrowth;
-  if (t <= 10) return constantGrowth.minus(constantGrowth.minus(TERMINAL_GROWTH).mul(t - 5).dividedBy(5));
-  return TERMINAL_GROWTH;
-}
-
-interface IndependentProjection {
-  ev: Decimal;
-  year10Revenue: Decimal;
-  tenYearCagr: Decimal;
-  terminalSharePct: Decimal;
-}
-
-// Revenue_t = Revenue_(t-1) * (1 + g_t)
-// NOPAT_t = Revenue_t * margin * (1 - tax)
-// Reinvestment_t = NOPAT_t * g_(t+1) / RONIC   [g_11 = terminal growth]
-// FCFF_t = NOPAT_t - Reinvestment_t
-// NOPAT_11 = NOPAT_10 * (1 + g_terminal)
-// Terminal FCFF_11 = NOPAT_11 * (1 - g_terminal / terminalROIC)
-// terminalROIC = r + 3pp
-// TV = Terminal FCFF_11 / (r - g_terminal)
-// Timing (Methodology v2.1 D2, CF-AR3-REPRODUCIBLE-RUNS-01): FCFF_t
-// discounted from t - 0.5 years, TV from 9.5 years — mid-year cash flows,
-// no stub (this fixture carries no base period or price date).
-function independentProject(
-  growth: Decimal,
-  margin: Decimal,
-  ronic: Decimal,
-  rate: Decimal,
-  baseRevenue: Decimal,
-  taxRate: Decimal
-): IndependentProjection {
-  const afterTax = new Decimal(1).minus(taxRate);
-  const discountBase = new Decimal(1).plus(rate);
-
-  const revenues: Decimal[] = [baseRevenue];
+function independentEv(c: Case, g: number): number {
+  const fade = (t: number, start: number, end: number) => (t <= 5 ? start : t <= 10 ? start - ((start - end) * (t - 5)) / 5 : end);
+  let revenue = c.revenue;
+  let ev = 0;
+  let nopat10 = 0;
   for (let t = 1; t <= 10; t++) {
-    revenues.push(revenues[t - 1].mul(new Decimal(1).plus(independentGrowthAt(t, growth))));
+    revenue *= 1 + fade(t, g, TERMINAL_GROWTH);
+    const nopat = revenue * c.margin * (1 - c.tax);
+    const reinvestment = (nopat * fade(t + 1, g, TERMINAL_GROWTH)) / fade(t, c.ronic, c.terminal);
+    ev += (nopat - reinvestment) / Math.pow(1 + c.rate, t - 0.5);
+    nopat10 = nopat;
   }
+  const tv = (nopat10 * (1 + TERMINAL_GROWTH) * (1 - TERMINAL_GROWTH / c.terminal)) / (c.rate - TERMINAL_GROWTH);
+  return ev + tv / Math.pow(1 + c.rate, 9.5);
+}
 
-  let pv = new Decimal(0);
-  for (let t = 1; t <= 10; t++) {
-    const nopat = revenues[t].mul(margin).mul(afterTax);
-    const nextGrowth = independentGrowthAt(t + 1, growth); // t=10 -> g_11 = terminal growth
-    const reinvestment = nopat.mul(nextGrowth).dividedBy(ronic);
-    const fcff = nopat.minus(reinvestment);
-    pv = pv.plus(fcff.dividedBy(discountBase.pow(t - 0.5)));
+function independentSolve(c: Case, target: number): number {
+  let lo = -0.5;
+  let hi = 1;
+  const increasing = independentEv(c, hi) > independentEv(c, lo);
+  for (let i = 0; i < 200; i++) {
+    const mid = (lo + hi) / 2;
+    if (independentEv(c, mid) < target === increasing) lo = mid;
+    else hi = mid;
   }
-
-  const year10Revenue = revenues[10];
-  const nopat10 = year10Revenue.mul(margin).mul(afterTax);
-  const nopat11 = nopat10.mul(new Decimal(1).plus(TERMINAL_GROWTH));
-  const terminalRoic = rate.plus(TERMINAL_ROIC_PREMIUM);
-  const terminalFcff11 = nopat11.mul(new Decimal(1).minus(TERMINAL_GROWTH.dividedBy(terminalRoic)));
-  const tv10 = terminalFcff11.dividedBy(rate.minus(TERMINAL_GROWTH));
-  const terminalPv = tv10.dividedBy(discountBase.pow(9.5));
-
-  const ev = pv.plus(terminalPv);
-  const tenYearCagr = year10Revenue.dividedBy(baseRevenue).pow(new Decimal(1).dividedBy(10)).minus(1);
-  const terminalSharePct = terminalPv.dividedBy(ev).mul(100);
-
-  return { ev, year10Revenue, tenYearCagr, terminalSharePct };
+  return (lo + hi) / 2;
 }
 
-// Independent bisection — its own loop, its own bracket handling, not a
-// call into reverseDcf.ts's solveImpliedGrowth.
-function independentSolve(
-  margin: Decimal,
-  ronic: Decimal,
-  rate: Decimal,
-  baseRevenue: Decimal,
-  taxRate: Decimal,
-  targetEv: Decimal
-): { growth: Decimal; projection: IndependentProjection } {
-  let lo = new Decimal("-0.5");
-  let hi = new Decimal("1");
-  const evAtLo = independentProject(lo, margin, ronic, rate, baseRevenue, taxRate).ev;
-  const increasing = evAtLo.lessThan(targetEv);
+const CASES: (Case & { name: string; target: number })[] = [
+  { name: "stable, narrow moat", revenue: 1000, margin: 0.4, tax: 0.2, ronic: 0.3, terminal: 0.1, rate: 0.09, target: 6000 },
+  { name: "cyclical, no moat", revenue: 500, margin: 0.15, tax: 0.21, ronic: 0.12, terminal: 0.11, rate: 0.11, target: 600 },
+  { name: "high return, wide moat", revenue: 2000, margin: 0.55, tax: 0.15, ronic: 0.74, terminal: 0.14, rate: 0.11, target: 40000 },
+  { name: "MSFT-shaped (Part 4.4 inputs, $B)", revenue: 331.839, margin: 0.45, tax: 0.19, ronic: 0.215, terminal: 0.1, rate: 0.09, target: 3934 },
+];
 
-  for (let i = 0; i < 80; i++) {
-    const mid = lo.plus(hi.minus(lo).dividedBy(2));
-    const evAtMid = independentProject(mid, margin, ronic, rate, baseRevenue, taxRate).ev;
-    const midBelowTarget = evAtMid.lessThan(targetEv);
-    if (increasing ? midBelowTarget : !midBelowTarget) {
-      lo = mid;
-    } else {
-      hi = mid;
-    }
-  }
-
-  const growth = lo.plus(hi).dividedBy(2);
-  return { growth, projection: independentProject(growth, margin, ronic, rate, baseRevenue, taxRate) };
-}
-
-// --- fixture (user-supplied inputs, unchanged from the golden test) -------
-
-const price = new Decimal("510.12");
-const shares = new Decimal("7.4255");
-const bridge = new Decimal("6.3");
-const targetEnterpriseValue = shares.mul(price).plus(bridge);
-const baseRevenue = new Decimal(332);
-const ronic = new Decimal("0.178");
-const taxRate = new Decimal("0.2");
-
-const marginByLevel: Record<string, Decimal> = {
-  current: new Decimal("0.468"),
-  median: new Decimal("0.418"),
-  stress: new Decimal("0.38"),
-};
-
-const msftInput: ReverseDcfInput = {
-  baseYearRevenue: sourced(332),
-  targetEnterpriseValue: { value: targetEnterpriseValue, provenance: PROVENANCE },
-  currentMargin: sourced(0.468),
-  medianMargin: sourced(0.418),
-  gate1State: null,
-  ronicCells: ([0.08, 0.1, 0.12] as DiscountRate[]).map((rate) => ({ rate, state: "CLEAN" as const, value: ronic })),
-  lagBiasDirection: "conservative",
-  configuredStressMarginLevel: new Decimal("0.38"),
-  configuredNopatTaxRate: taxRate,
-};
-
-const productionCells = computeReverseDcfGrid(msftInput);
-
-function productionCellFor(marginLevel: string, rate: number) {
-  return productionCells.find((c) => c.marginLevel === marginLevel && c.rate === rate)!;
-}
-
-// Tight tolerance: this compares two independently-coded implementations
-// of the SAME stated equations, both converged by 80-iteration bisection
-// over the same bracket — any real disagreement beyond numerical noise
-// indicates an actual implementation bug, not a modelling or reference-
-// data question. This is NOT the ±0.15-point historical-reproduction
-// tolerance in reverseDcf.test.ts's GOLDEN block.
-const IMPLEMENTATION_TOLERANCE = 0.001; // 0.001 percentage points
-
-function closeTo(actual: Decimal, expected: Decimal, tolerance: number) {
-  expect(actual.minus(expected).abs().toNumber()).toBeLessThan(tolerance);
-}
-
-describe("M7 independent implementation-correctness check (not a historical-reproduction check)", () => {
-  // CF-AR3-REPRODUCIBLE-RUNS-01 — the split between solved and DEGENERATE
-  // cells used to be listed by hand (five and four, the frozen end-of-year
-  // grid's). It is now decided by the INDEPENDENT solve itself: a cell whose
-  // independently solved growth puts the terminal share over 100% must be
-  // DEGENERATE in production, every other cell must be solved and agree.
-  // Under mid-year timing that is six solved and three DEGENERATE.
-  const allCells: [string, DiscountRate][] = (["current", "median", "stress"] as const).flatMap((m) =>
-    ([0.08, 0.1, 0.12] as DiscountRate[]).map((r): [string, DiscountRate] => [m, r])
-  );
-  const independentlyDegenerate = (marginLevel: string, rate: DiscountRate): boolean =>
-    independentSolve(marginByLevel[marginLevel], ronic, new Decimal(rate), baseRevenue, taxRate, targetEnterpriseValue)
-      .projection.terminalSharePct.greaterThan(100);
-  const solvableCells = allCells.filter(([m, r]) => !independentlyDegenerate(m, r));
-  const degenerateCells = allCells.filter(([m, r]) => independentlyDegenerate(m, r));
-
-  it("the independent solve classifies some cells each way, so both checks below run", () => {
-    expect(solvableCells.length).toBeGreaterThan(0);
-    expect(degenerateCells.length).toBeGreaterThan(0);
-  });
-
-  it.each(solvableCells)(
-    "%s margin @ r=%s: production's solved growth independently reproduces target EV, CAGR and year-10 revenue",
-    (marginLevel, rate) => {
-      const margin = marginByLevel[marginLevel];
-      const independent = independentSolve(margin, ronic, new Decimal(rate), baseRevenue, taxRate, targetEnterpriseValue);
-
-      // The independent solver itself must actually hit the target — a
-      // sanity check on the independent code, not on production.
-      closeTo(independent.projection.ev, targetEnterpriseValue, 0.5);
-
-      const productionCell = productionCellFor(marginLevel, rate);
-      expect(productionCell.fiveYearGrowth.suppressed).toBe(false);
-      if (productionCell.fiveYearGrowth.suppressed) return;
-
-      // Production's own solved growth, fed through the INDEPENDENT
-      // projection, must reproduce the INDEPENDENT target-EV solve and
-      // the independently-computed CAGR/revenue at that growth rate.
-      const atProductionsGrowth = independentProject(
-        productionCell.fiveYearGrowth.value,
-        margin,
-        ronic,
-        new Decimal(rate),
-        baseRevenue,
-        taxRate
-      );
-      closeTo(atProductionsGrowth.ev, targetEnterpriseValue, 0.5);
-
-      closeTo(productionCell.fiveYearGrowth.value.mul(100), independent.growth.mul(100), IMPLEMENTATION_TOLERANCE);
-
-      expect(productionCell.tenYearCagr.suppressed).toBe(false);
-      if (productionCell.tenYearCagr.suppressed) return;
-      closeTo(productionCell.tenYearCagr.value.mul(100), atProductionsGrowth.tenYearCagr.mul(100), IMPLEMENTATION_TOLERANCE);
-
-      expect(productionCell.year10Revenue.suppressed).toBe(false);
-      if (productionCell.year10Revenue.suppressed) return;
-      closeTo(productionCell.year10Revenue.value, atProductionsGrowth.year10Revenue, 0.5);
-
-      // Terminal share independently computed at production's growth must
-      // be under 100% — consistent with production leaving this cell
-      // unsuppressed.
-      expect(atProductionsGrowth.terminalSharePct.lessThanOrEqualTo(100)).toBe(true);
-    }
-  );
-
-  it.each(degenerateCells)(
-    "%s margin @ r=%s: production's DEGENERATE suppression is independently justified — solved growth implies terminal share over 100%%",
-    (marginLevel, rate) => {
-      const margin = marginByLevel[marginLevel];
-      const independent = independentSolve(margin, ronic, new Decimal(rate), baseRevenue, taxRate, targetEnterpriseValue);
-
-      // Independently confirm the target is actually reachable and the
-      // resulting terminal share genuinely exceeds 100% — the suppression
-      // is not merely trusted from production's own internal check.
-      closeTo(independent.projection.ev, targetEnterpriseValue, 0.5);
-      expect(independent.projection.terminalSharePct.greaterThan(100)).toBe(true);
-
-      const productionCell = productionCellFor(marginLevel, rate);
-      expect(productionCell.fiveYearGrowth.suppressed).toBe(true);
-      if (!productionCell.fiveYearGrowth.suppressed) return;
-      expect(productionCell.fiveYearGrowth.state).toBe("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE");
-
-      // Cross-check the terminal-share percentage embedded in production's
-      // cause string against the independently computed value.
-      const match = productionCell.fiveYearGrowth.cause.match(/terminal share (\d+)%/);
-      expect(match).not.toBeNull();
-      const productionReportedPct = new Decimal(match![1]);
-      closeTo(productionReportedPct, independent.projection.terminalSharePct, 1); // whole-percent formatting in the cause string
-    }
-  );
-
-  it("confirms the full nine-cell suppression pattern independently: production solves exactly the independently solvable cells", () => {
-    for (const [m, r] of solvableCells) expect(productionCellFor(m, r).fiveYearGrowth.suppressed).toBe(false);
-    for (const [m, r] of degenerateCells) {
-      const cell = productionCellFor(m, r);
-      expect(cell.fiveYearGrowth.suppressed && cell.fiveYearGrowth.state).toBe("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE");
-    }
+describe("M7 independent implementation-correctness check — one solve on the main engine", () => {
+  it.each(CASES)("$name: production growth = independent growth", (c) => {
+    const solve = solveReverseDcf({
+      baseYearRevenue: { value: new Decimal(c.revenue), provenance: PROVENANCE },
+      targetEnterpriseValue: { value: new Decimal(c.target), provenance: PROVENANCE },
+      rate: new Decimal(c.rate),
+      nopatTaxRate: new Decimal(c.tax),
+      heldDrivers: {
+        operatingMargin: new Decimal(c.margin),
+        returnOnNewInvestment: new Decimal(c.ronic),
+        terminalReturnOnNewCapital: new Decimal(c.terminal),
+      },
+      heldDriversMissing: null,
+    });
+    expect(solve.fiveYearGrowth.suppressed).toBe(false);
+    if (solve.fiveYearGrowth.suppressed) return;
+    expect(solve.fiveYearGrowth.value.toNumber()).toBeCloseTo(independentSolve(c, c.target), 9);
   });
 });

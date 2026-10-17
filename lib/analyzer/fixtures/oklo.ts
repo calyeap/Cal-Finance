@@ -304,12 +304,12 @@ export const OKLO_FIXTURE: CompanyFixture = {
     // Explicitly not run for the pre-revenue profile (§1: "do not use...
     // DCF as a point estimate" here): pre-revenue means no revenue or
     // margin to project, so baseYearRevenue/currentMargin are null and the
-    // grid correctly returns INCOMPLETE on all nine cells rather than a
-    // fabricated valuation. targetEnterpriseValue is left null here too, but
+    // reverse DCF correctly returns INCOMPLETE rather than a fabricated
+    // valuation. targetEnterpriseValue is left null here too, but
     // no longer stays null in the assembled result — CB-RDCF-EV-01 fills it
     // from M1's own enterprise value (§6.5's seam, reused), which this
     // fixture's own `enterpriseValue` block above legitimately computes.
-    // That fill alone does not revive the grid: the missing revenue/margin
+    // That fill alone does not revive the solve: the missing revenue/margin
     // still fails it closed.
     baseYearRevenue: null,
     targetEnterpriseValue: null,
@@ -339,8 +339,6 @@ export const OKLO_FIXTURE: CompanyFixture = {
   shapeMismatch: { guidedNearTermGrowth: null, impliedConstantGrowth: null },
 
   rateSensitivityCells: null,
-  terminalValuePv: null,
-  impliedExitMultipleMetric: { value: null, metricName: "not applicable — pre-revenue" },
 
   scenarios: {
     bear: { revenueGrowthOrPath: new Decimal(0), operatingMargin: new Decimal(0), reinvestmentCapitalIntensity: new Decimal(0), shareCount: new Decimal(205), writtenAnchor: "Wind-down; cash returned to shareholders." },

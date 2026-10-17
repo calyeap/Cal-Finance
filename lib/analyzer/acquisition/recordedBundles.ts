@@ -62,11 +62,13 @@ export interface RecordedScenarioDriverInput {
   reinvestmentCapitalIntensity: string | null;
   shareCount: string;
   writtenAnchor: string;
-  /** Optional, scenario-specific terminal ROIC override (§3.5) — Decimal, as
-   * text. Independent of the three drivers above: leaving it blank/absent
-   * never blocks the dynamic-recomputation path and keeps the existing
-   * diagnostic r+3pp default (CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01). */
-  terminalRoic?: string | null;
+  /** Methodology v2.1 D2's return on new investment for this scenario —
+   * Decimal, as text. Blank/absent means not yet adopted: the sheet is
+   * pending adoption and no D2 value is computed (assemble.ts
+   * resolveD2Inputs). Absent on every row recorded before this field
+   * existed. A `terminalRoic` key a row recorded before D2 may still carry
+   * is no longer read: D2 sets the terminal return from the moat class. */
+  returnOnNewInvestment?: string | null;
 }
 
 export interface RecordedScenarios {
@@ -89,8 +91,13 @@ export interface RecordedConfiguredConstants {
   projectDebtCost: string | null;
 }
 
+/** Methodology v2.1 D2's moat class — Calvin's per-company judgement. */
+export type RecordedMoatClass = "none" | "narrow" | "wide";
+
 export interface RecordedAnalystBundleInput {
   profile: RecordableProfile;
+  /** Null until adopted (migration 012's moat_class column). */
+  moatClass?: RecordedMoatClass | null;
   classificationInputs: RecordedClassificationInputs;
   scenarios: RecordedScenarios;
   scenarioValues: RecordedScenarioValues;
@@ -103,6 +110,7 @@ export interface RecordedAnalystBundleMeta {
 }
 
 const SCENARIO_KEYS = ["bear", "base", "bull"] as const;
+const MOAT_CLASSES: readonly RecordedMoatClass[] = ["none", "narrow", "wide"];
 const NULLABLE_DRIVER_KEYS = [
   "revenueGrowthOrPath",
   "operatingMargin",
@@ -167,14 +175,11 @@ export async function recordAnalystBundle(
     for (const driverKey of NULLABLE_DRIVER_KEYS) {
       optionalDecimal(scenario[driverKey], `${key} ${driverKey}`);
     }
-    const terminalRoic = optionalDecimal(scenario.terminalRoic ?? null, `${key} terminalRoic`);
-    // REVIEW-38751207194-1, CORRECT — division-safety guard only, no new
-    // economic floor or finance policy. computeScenarioEnterpriseValue
-    // divides by terminalRoic (G.dividedBy(terminalRoic)); a zero or
-    // negative value yields Infinity/a sign-flipped terminal value rather
-    // than a refused write, a silent non-finite valuation downstream.
-    if (terminalRoic !== null && !terminalRoic.greaterThan(0)) {
-      throw new Error(`${key} terminalRoic must be positive`);
+    const returnOnNewInvestment = optionalDecimal(scenario.returnOnNewInvestment ?? null, `${key} returnOnNewInvestment`);
+    // Division-safety guard only, no economic floor: the engine divides by
+    // it (reinvestment = NOPAT × growth ÷ return on new investment).
+    if (returnOnNewInvestment !== null && !returnOnNewInvestment.greaterThan(0)) {
+      throw new Error(`${key} returnOnNewInvestment must be positive`);
     }
     requireDecimal(input.scenarioValues[key], `${key} scenario value`);
   }
@@ -183,6 +188,11 @@ export async function recordAnalystBundle(
   optionalDecimal(input.configuredConstants.stressMarginLevel, "stressMarginLevel");
   optionalDecimal(input.configuredConstants.preRevenueUnleveredRate, "preRevenueUnleveredRate");
   optionalDecimal(input.configuredConstants.projectDebtCost, "projectDebtCost");
+
+  const moatClass = input.moatClass ?? null;
+  if (moatClass !== null && !MOAT_CLASSES.includes(moatClass)) {
+    throw new Error(`Unsupported moat class: ${moatClass}`);
+  }
 
   requireDecimal(input.classificationInputs.capitalIntensity, "capital intensity");
   requireDecimal(input.classificationInputs.cyclicality.tenYearMarginRange, "ten-year margin range");
@@ -193,10 +203,11 @@ export async function recordAnalystBundle(
 
   await getPool().query(
     `INSERT INTO analyzer_recorded_analyst_bundles
-       (ticker, profile, classification_inputs, scenarios, scenario_values, configured_constants)
-     VALUES ($1, $2, $3, $4, $5, $6)
+       (ticker, profile, classification_inputs, scenarios, scenario_values, configured_constants, moat_class)
+     VALUES ($1, $2, $3, $4, $5, $6, $7)
      ON CONFLICT (ticker) DO UPDATE SET
        profile = EXCLUDED.profile,
+       moat_class = EXCLUDED.moat_class,
        classification_inputs = EXCLUDED.classification_inputs,
        scenarios = EXCLUDED.scenarios,
        scenario_values = EXCLUDED.scenario_values,
@@ -209,6 +220,7 @@ export async function recordAnalystBundle(
       JSON.stringify(input.scenarios),
       JSON.stringify(input.scenarioValues),
       JSON.stringify(input.configuredConstants),
+      moatClass,
     ]
   );
 }
@@ -219,6 +231,7 @@ interface StoredRow {
   scenarios: RecordedScenarios;
   scenario_values: RecordedScenarioValues;
   configured_constants: RecordedConfiguredConstants;
+  moat_class: RecordedMoatClass | null;
   recorded_at: string;
   updated_at: string;
 }
@@ -228,7 +241,7 @@ async function fetchRow(rawTicker: string): Promise<StoredRow | null> {
   if (ticker === "") return null;
   const { rows } = await getPool().query(
     `SELECT profile, classification_inputs, scenarios, scenario_values, configured_constants,
-            recorded_at, updated_at
+            moat_class, recorded_at, updated_at
        FROM analyzer_recorded_analyst_bundles
       WHERE ticker = $1`,
     [ticker]
@@ -255,6 +268,7 @@ export async function getRecordedAnalystBundleInput(
       scenarios: row.scenarios,
       scenarioValues: row.scenario_values,
       configuredConstants: row.configured_constants,
+      moatClass: row.moat_class,
     },
     meta: { recordedAt: row.recorded_at, updatedAt: row.updated_at },
   };
@@ -270,10 +284,9 @@ function driverFromStorage(d: RecordedScenarioDriverInput): ScenarioDriverInputs
     ),
     shareCount: requireDecimal(d.shareCount, "shareCount"),
     writtenAnchor: d.writtenAnchor,
-    // Absent on every row recorded before this field existed (e.g. NVDA's
-    // migration 008 seed) — optionalDecimal(null, ...) returns null, so
-    // those rows resolve identically to before this field was added.
-    terminalRoic: optionalDecimal(d.terminalRoic ?? null, "terminalRoic"),
+    // Absent on every row recorded before D2 (MSFT's and NVDA's seeds
+    // included) — those sheets resolve as pending adoption.
+    returnOnNewInvestment: optionalDecimal(d.returnOnNewInvestment ?? null, "returnOnNewInvestment"),
   };
 }
 
@@ -341,6 +354,7 @@ export async function recordedAnalystInputBundle(ticker: string): Promise<Analys
         },
       },
       scenarios,
+      moatClass: row.moat_class,
       scenarioValues: {
         bear: requireDecimal(row.scenario_values.bear, "bear scenario value"),
         base: requireDecimal(row.scenario_values.base, "base scenario value"),

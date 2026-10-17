@@ -4,10 +4,12 @@ import { CLEAN_PROVENANCE } from "./provenance";
 import { computedValue, suppressedValue } from "./figures";
 import type { Figure, Gate1Result } from "./types";
 
-// Shared "three margin levels" resolution — current / median / stress —
-// used by both M2's P/E-at-three-levels diagnostic and M7's reverse-DCF
-// grid (§6.4's mandatory diagnostic set; §7.2 M7's "8/10/12% grid × three
-// margin levels").
+// Shared "three margin levels" resolution — current / median / stress
+// (§6.4's mandatory diagnostic set). M7's reverse DCF read it until AR0-2
+// (frozen spec §14.9) made M7 one solve and moved margin levels to the
+// sensitivity table; the resolution rule itself, §6.2's substitute triad
+// included, is unchanged and kept (the issue's "Delete exactly" list does
+// not name it).
 //
 // Under HISTORY INSUFFICIENT, §6.2 gives its own substitute triad — current
 // margin, and that margin reduced by one quarter and by one half in

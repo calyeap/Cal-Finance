@@ -7,18 +7,45 @@ import type { PolicyConstants, UndefinedPolicyConstants } from "./types";
 // "explicit configuration... not buried as literals in code") has one place
 // to change.
 
-// Named once so `step4DispersionTierLowMediumBoundary` below can share the
-// exact same value as `sensitivityDisplayThreshold` rather than a second
-// literal that could silently drift from it (CF-STEP4-TIER-BOUNDARY-
-// DEFAULT-01 SCOPE 2).
-const SENSITIVITY_DISPLAY_THRESHOLD = new Decimal("0.1");
-
 export const POLICY: PolicyConstants = {
   terminalGrowth: new Decimal("0.03"),
-  // r + 3 percentage points — PROVISIONAL, must carry the I16 label wherever
-  // it drives a figure (§7.1, §10.4).
-  terminalRoicPremium: new Decimal("0.03"),
-  rateGrid: [new Decimal("0.08"), new Decimal("0.1"), new Decimal("0.12")],
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — Cal Finance Methodology v2.1 D1
+  // (frozen spec §14.9 AR0-1), replacing the §7.1 discount bands and the
+  // 8/10/12% rate grid. Stable businesses at the market's expected return;
+  // cyclical industries (SEC SIC code, cyclicalSic.ts, or trigger B) and
+  // pre-revenue companies at market + 2pp; growth alone never raises the
+  // rate. Valid only inside the §6.5 net-debt gate. Reset yearly: each
+  // reset is a new dated row, never an edit of an old one, so a stored
+  // run's policy version still names the rate it used (discountRate.ts).
+  discountRate: {
+    table: [
+      {
+        effectiveFrom: "2026-10-17",
+        stable: new Decimal("0.09"),
+        cyclicalOrPreRevenue: new Decimal("0.11"),
+        provenance: {
+          approval:
+            "Approved values, Calvin, 17 Oct 2026 (Methodology v2.1 D1; docs/product-decisions.md item 26).",
+          evidence:
+            "At approval: 10-yr Treasury 5.09% + Damodaran implied equity premium 3.7–4.2% — 9.0% either way.",
+          measurementConvention:
+            "Yearly reset measured as Damodaran's published implied expected return on the S&P 500 (8.99% in " +
+            "his October 2026 update), rounded to the nearest 0.5% — an AI DEFAULT inside the D1 rule, " +
+            "reconciled 17 Oct 2026; the annual methodology review may change it. Provenance, not a rule value.",
+        },
+      },
+    ],
+    // D1: "every verdict is also checked at ±0.5pp" — the check points AR5
+    // reads; also the rate-band ends M14's sensitivity varies (AR0-2).
+    verdictCheckOffset: new Decimal("0.005"),
+  },
+  // Methodology v2.1 D2 (frozen spec §14.9 AR0-3), replacing the r + 3pp
+  // terminal ROIC: the terminal return on new capital after year 10 is the
+  // rate plus this credit for Calvin's moat class (a JUDGEMENT input on the
+  // assumption sheet). Bear takes +0 whatever the class; bull takes the
+  // base scenario's credit plus `bullMoatCreditUplift`.
+  moatCredit: { none: new Decimal("0"), narrow: new Decimal("0.01"), wide: new Decimal("0.03") },
+  bullMoatCreditUplift: new Decimal("0.015"),
   // PROVISIONAL — first-order, worth $27/share on OKLO's 8 GW case (§7.1).
   preRevenueConstructionLeadYears: 2,
   // PROVISIONAL — capped cells labelled RATE CAPPED (I12).
@@ -60,14 +87,7 @@ export const POLICY: PolicyConstants = {
   shapeMismatchGapPoints: new Decimal("0.15"),
   // An input whose full plausible range moves value by less than this is
   // not displayed in the sensitivity table (§7.2 M14).
-  sensitivityDisplayThreshold: SENSITIVITY_DISPLAY_THRESHOLD,
-  // Step 4 B2 dispersion tier (CF-STEP4-TIER-BOUNDARY-DEFAULT-01) — AI
-  // DEFAULT under the OWNER gate-compression rule, not a CALVIN RULING; see
-  // POLICY_THRESHOLD_PROVENANCE below for basis and direction of error.
-  // LOW below this value; MEDIUM at or above it, below the next boundary.
-  step4DispersionTierLowMediumBoundary: SENSITIVITY_DISPLAY_THRESHOLD,
-  // MEDIUM below this value; HIGH at or above it.
-  step4DispersionTierMediumHighBoundary: new Decimal("0.25"),
+  sensitivityDisplayThreshold: new Decimal("0.1"),
   // M11 precondition: (capex + lease additions) ÷ D&A must fall in this
   // band, or the output is PRECONDITION FAILED (§7.2).
   fcfYieldGrowthPreconditionBand: [new Decimal("0.8"), new Decimal("1.5")],
@@ -124,11 +144,6 @@ export interface PolicyThresholdProvenance {
 }
 
 export const POLICY_THRESHOLD_PROVENANCE: Partial<Record<keyof PolicyConstants, PolicyThresholdProvenance>> = {
-  terminalRoicPremium: {
-    status: "PROVISIONAL",
-    calibration:
-      'Assumes a permanent 3-point return premium for every company (I16); must carry that label wherever it drives a figure (§7.1, §10.4).',
-  },
   preRevenueConstructionLeadYears: {
     status: "PROVISIONAL",
     calibration: "First-order estimate; worth $27/share on OKLO's 8 GW case (§7.1).",
@@ -164,27 +179,6 @@ export const POLICY_THRESHOLD_PROVENANCE: Partial<Record<keyof PolicyConstants, 
   seasonalityPriorYearThreshold: {
     status: "PROVISIONAL",
     calibration: "Comes from I4 and has no observations behind it (§7.2 M12).",
-  },
-  step4DispersionTierLowMediumBoundary: {
-    status: "PROVISIONAL",
-    calibration:
-      "AI DEFAULT (CF-STEP4-TIER-BOUNDARY-DEFAULT-01), not a CALVIN RULING. Anchored in the already-approved " +
-      "sensitivityDisplayThreshold (§7.2 M14: a driver whose full plausible range moves value by less than this " +
-      "is not even displayed) — a driver the approved policy will not show cannot honestly be called anything " +
-      "but LOW dispersion, so this imports no new judgement beyond that existing constant. Reversible by Calvin " +
-      "at any time; retired by a fresh Calvin ruling on the LOW/MEDIUM boundary itself.",
-  },
-  step4DispersionTierMediumHighBoundary: {
-    status: "PROVISIONAL",
-    calibration:
-      "AI DEFAULT (CF-STEP4-TIER-BOUNDARY-DEFAULT-01), not a CALVIN RULING. No approved anchor exists — red-team " +
-      "judgement with no observations behind it. Direction of error: the conservative direction for an " +
-      "uncertainty reading is to over-report rather than under-report dispersion, so the lower of the credible " +
-      "boundaries (0.25, not e.g. 0.50) is chosen deliberately. Consequence: MSFT's real run " +
-      "(fullRangeValueImpact 0.48598121081564411663) reads HIGH under this default and would read MEDIUM under " +
-      "a 0.50 boundary; neither is consumed by anything today, so neither changes a supported result. Retired " +
-      "by capturing a second company's AnalystSuppliedRange to validate the boundary against more than one " +
-      "observation (explicitly not dispatched by this outcome — requires its own Calvin permission).",
   },
 };
 

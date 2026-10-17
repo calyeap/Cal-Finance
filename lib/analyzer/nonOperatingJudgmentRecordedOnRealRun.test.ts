@@ -4,7 +4,6 @@ import { getPool } from "../db";
 import { createRun, recordFactDecision, recordJudgment, recordProfileDecision } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
 import { deriveVerdict } from "./verdict";
-import { endOfYearScenarioPerShare } from "./golden/endOfYearEquivalent";
 import { POLICY } from "./policy";
 import { selectionToNonOperatingInvestments } from "./acquisition/nonOperatingJudgment";
 
@@ -85,54 +84,30 @@ describe("CF-S44-RECORD-01 — MSFT's §4.4 ruling recorded on a real run", () =
     expect(result.gates.leverage.netDebtRatio!.lessThan(POLICY.leverageThreshold)).toBe(true);
   });
 
-  it("trust is PARTIAL — CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) retires A4's fixture-carried suppression for MSFT; a real range now computes, and the remaining gap is the genuinely unsupplied rate-sensitivity capture, never the old fixture-carried cause", async () => {
-    // Before migration 010, MSFT's scenario dollar values were carried from
-    // the validation fixture and A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01)
-    // honestly suppressed the range for that reason, dropping trust to
-    // UNUSABLE. The durably recorded Stage-2 bundle is a real,
-    // driver-authored analyst bundle — never fixture-carried — so that
-    // suppression no longer applies to MSFT. Trust still reads PARTIAL, but
-    // now for a genuine, unrelated gap: no revaluation-at-other-discount-
-    // rates was ever supplied for this run (revalueBaseCaseAtRate stays
-    // null — migration 010 does not record one, matching every other
-    // recorded/fixture bundle in this codebase), so the ±1% rate
-    // sensitivity and the price-implied discount rate both stay INCOMPLETE.
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change. These
+  // pinned the 16 Oct 2026 Stage-2 range ($214.26/$283.31/$402.73), its
+  // PARTIAL trust and its SELL, all superseded by product-decisions item 27
+  // (D2). MSFT's sheet — migration 010's recorded one, or the committed
+  // fixture carry-over if another file has removed that row — carries no D2
+  // input, so no range is valued for this real run. What the §4.4 ruling
+  // still settles (the EV bridge and leverage, above) is unchanged.
+  const NO_MSFT_VALUATION = /scenario dollar values|Pending adoption/;
+
+  it("with no D2 sheet adopted, the range is not valued — suppressed with the reason, and trust follows it to UNUSABLE", async () => {
     const result = await openMsftRunWithRuling();
 
-    expect(result.trust.status).toBe("PARTIAL");
-    expect(result.fairValueRange.kind).toBe("range");
-    expect(
-      result.trust.determinedBy.some(
-        (d) => d.kind === "incomplete input" && d.detail.includes("±1% rate sensitivity")
-      )
-    ).toBe(true);
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    if (result.fairValueRange.kind === "suppressed") expect(result.fairValueRange.cause).toMatch(NO_MSFT_VALUATION);
+    expect(result.trust.status).toBe("UNUSABLE");
   });
 
-  it("the fair-value range is now a real, computed range — the Calvin-approved $214.26/$283.31/$402.73 Stage-2 candidate (issue #442), never the retired validation fixture's $265/$510/$650", async () => {
-    const result = await openMsftRunWithRuling();
-
-    expect(result.fairValueRange.kind).toBe("range");
-    // CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2's timing (mid-year,
-    // terminal at 9.5 years, valued at the price date) moves these approved
-    // end-of-year figures by one common factor; with that factor removed
-    // (golden/endOfYearEquivalent.ts) they are still reproduced to the cent.
-    expect(endOfYearScenarioPerShare(result, "bear").toFixed(2)).toBe("214.26");
-    expect(endOfYearScenarioPerShare(result, "bull").toFixed(2)).toBe("402.73");
-    expect(endOfYearScenarioPerShare(result, "base").toFixed(2)).toBe("283.31");
-  });
-
-  it("the verdict is now a real SELL under the live Methodology's Verdict synthesis policy v1 — never A4's retired scenario-values cause or the old LEVERAGE UNSUPPORTED IN v1 cause", async () => {
+  it("the verdict is INCOMPLETE for that reason — never the old LEVERAGE UNSUPPORTED IN v1 cause, never a manufactured HOLD", async () => {
     const result = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
 
-    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — real price $499.70 against the
-    // real recomputed Base $283.31 (1.7638×) clears the strictest
-    // uncertainty-bucket SELL threshold invariantly; see verdict.test.ts and
-    // msftStage3VerdictOnRealRun.test.ts.
-    expect(verdict.status).toBe("SELL");
+    expect(verdict.status).toBe("INCOMPLETE");
     expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
-    expect(verdict.reason).not.toContain("scenario dollar values");
-    expect(verdict.reason).toContain("Verdict synthesis policy v1");
+    expect(verdict.reason).toMatch(NO_MSFT_VALUATION);
   });
 
   it("a selection combining the ruled tag with a narrower one double-counts — the ruled run never carries the all-candidates sum", async () => {

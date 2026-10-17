@@ -17,7 +17,7 @@ import { computedValue, suppressedValue } from "../figures";
 import { CLEAN_PROVENANCE } from "../provenance";
 import type { AnnualSeries } from "../acquisition/history";
 import type { CompanyFactsDocument } from "../acquisition/secClient";
-import type { ReverseDcfCell } from "../types";
+import type { ReverseDcfSolve } from "../types";
 
 function series(tag: string, values: [number, number][]): AnnualSeries {
   return {
@@ -39,29 +39,21 @@ function tenPercentSeries(): AnnualSeries {
   return series("us-gaap:Revenues", values);
 }
 
-function solvedCell(marginLevel: ReverseDcfCell["marginLevel"], rate: ReverseDcfCell["rate"], five: string, ten: string): ReverseDcfCell {
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — M7 is one solve (frozen spec §14.9
+// AR0-2); these build that solve's two shapes.
+function solvedSolve(rate: string, five: string, ten: string): ReverseDcfSolve {
   return {
-    marginLevel,
-    rate,
+    rate: new Decimal(rate),
     fiveYearGrowth: computedValue(new Decimal(five), CLEAN_PROVENANCE),
     tenYearCagr: computedValue(new Decimal(ten), CLEAN_PROVENANCE),
     year10Revenue: computedValue(new Decimal(1000), CLEAN_PROVENANCE),
-    ronic: computedValue(new Decimal("0.4"), CLEAN_PROVENANCE),
-    lagBiasDirection: "conservative",
+    heldAt: null,
   };
 }
 
-function suppressedCell(marginLevel: ReverseDcfCell["marginLevel"], rate: ReverseDcfCell["rate"], state: "INCOMPLETE" | "NOT COMPUTABLE", cause: string): ReverseDcfCell {
+function suppressedSolve(rate: string, state: "INCOMPLETE" | "NOT COMPUTABLE", cause: string): ReverseDcfSolve {
   const figure = suppressedValue(state, cause);
-  return {
-    marginLevel,
-    rate,
-    fiveYearGrowth: figure,
-    tenYearCagr: figure,
-    year10Revenue: figure,
-    ronic: figure,
-    lagBiasDirection: "conservative",
-  };
+  return { rate: new Decimal(rate), fiveYearGrowth: figure, tenYearCagr: figure, year10Revenue: figure, heldAt: null };
 }
 
 describe("price location within the scenario range (§10.6.2 input A)", () => {
@@ -160,39 +152,21 @@ describe("achieved revenue CAGR (§10.6.2's comparator fact)", () => {
   });
 });
 
-describe("required growth, read off M7's grid (§10.6.2 input B)", () => {
-  it("returns every solved cell without reducing the grid to one figure", () => {
-    // Which of the nine cells the position's required figure comes from is not
-    // settled by §10.6.2. Collapsing the grid here would make that ruling
-    // silently, so all solved cells survive.
-    const grid = [
-      solvedCell("current", 0.08, "0.14", "0.11"),
-      solvedCell("median", 0.1, "0.16", "0.12"),
-      solvedCell("stress", 0.12, "0.19", "0.14"),
-    ];
-    const result = requiredGrowthCells(grid);
-    expect(result.value).toHaveLength(3);
-    expect(result.value?.map((c) => c.marginLevel)).toEqual(["current", "median", "stress"]);
+describe("required growth, read off M7's one solve (§10.6.2 input B)", () => {
+  // Reviewed evaluator change (AR0-2): the grid's nine cells left open which
+  // one §10.6.2's required figure came from, so every solved cell was kept.
+  // One solve at the D1 rate on the base scenario settles that.
+  it("returns the solve's growth and CAGR, with the rate it was solved at", () => {
+    const result = requiredGrowthCells(solvedSolve("0.09", "0.14", "0.11"));
+    expect(result.value).toHaveLength(1);
+    expect(result.value?.[0].rate.toString()).toBe("0.09");
+    expect(result.value?.[0].tenYearCagr.toString()).toBe("0.11");
   });
 
-  it("yields no input when every cell is suppressed, and says what suppressed them", () => {
-    const grid = [
-      suppressedCell("current", 0.08, "INCOMPLETE", "missing REQUIRED input(s): targetEnterpriseValue"),
-      suppressedCell("median", 0.1, "INCOMPLETE", "missing REQUIRED input(s): targetEnterpriseValue"),
-    ];
-    const result = requiredGrowthCells(grid);
+  it("yields no input when the solve is suppressed, and says what suppressed it", () => {
+    const result = requiredGrowthCells(suppressedSolve("0.09", "INCOMPLETE", "missing REQUIRED input(s): targetEnterpriseValue"));
     expect(result.value).toBeNull();
     expect(result.blockedBy[0]).toContain("targetEnterpriseValue");
-  });
-
-  it("keeps the solved cells when only some are suppressed", () => {
-    const grid = [
-      solvedCell("current", 0.08, "0.14", "0.11"),
-      suppressedCell("stress", 0.12, "NOT COMPUTABLE", "RONIC not meaningful"),
-    ];
-    const result = requiredGrowthCells(grid);
-    expect(result.value).toHaveLength(1);
-    expect(result.blockedBy).toEqual([]);
   });
 });
 
@@ -213,7 +187,7 @@ describe("the gap, and what counts as a usable observation", () => {
     // calibration observation. A set counted on "at least one input" would
     // overstate how much evidence a threshold rests on.
     const achieved = achievedRevenueCagr(tenPercentSeries(), 10, current(2025));
-    const required = requiredGrowthCells([solvedCell("current", 0.08, "0.14", "0.11")]);
+    const required = requiredGrowthCells(solvedSolve("0.09", "0.14", "0.11"));
     const location = priceLocationWithinRange({
       scenarioValues: { bear: new Decimal(100), base: new Decimal(150), bull: new Decimal(200) },
       currentPrice: new Decimal(150),
@@ -225,7 +199,7 @@ describe("the gap, and what counts as a usable observation", () => {
     const noLocation = priceLocationWithinRange({ scenarioValues: null, currentPrice: null, rangeSuppressedBy: "LEVERAGE UNSUPPORTED IN v1" });
     expect(isUsable({ ticker: "T", shape: "s", priceLocation: noLocation, achievedTenYear: achieved, achievedFiveYear: achieved, required })).toBe(false);
 
-    const noRequired = requiredGrowthCells([suppressedCell("current", 0.08, "INCOMPLETE", "missing")]);
+    const noRequired = requiredGrowthCells(suppressedSolve("0.09", "INCOMPLETE", "missing"));
     expect(isUsable({ ticker: "T", shape: "s", priceLocation: location, achievedTenYear: achieved, achievedFiveYear: achieved, required: noRequired })).toBe(false);
   });
 });

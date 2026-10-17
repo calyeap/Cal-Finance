@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from "vitest";
 import Decimal from "decimal.js";
 import { buildAcquiredRun } from "./acquiredRun";
 import { assembleAnalysisResult } from "./assemble";
+import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 import { __resetAcquisitionCache } from "./acquisition/provider";
 
 // ---------------------------------------------------------------------------
@@ -97,7 +98,10 @@ describe("§6.5 leverage on an acquired MSFT run", () => {
       profileHumanConfirmed: true,
     });
 
-    const result = assembleAnalysisResult(run.fixture);
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — MSFT's recorded sheet is pending
+    // adoption under D2, which would itself remove the range; STATED D2 test
+    // inputs keep this test about leverage alone.
+    const result = assembleAnalysisResult({ ...withStatedD2Inputs(run.fixture), scenarioValues: null, scenarioValuesAreFixtureCarried: false });
 
     expect(result.gates.gate0.result).toBe("PASS");
     expect(result.gates.leverage.result).toBe("PASS");

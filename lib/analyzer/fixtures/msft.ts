@@ -243,8 +243,6 @@ export const MSFT_FIXTURE: CompanyFixture = {
   shapeMismatch: { guidedNearTermGrowth: null, impliedConstantGrowth: null },
 
   rateSensitivityCells: null,
-  terminalValuePv: null,
-  impliedExitMultipleMetric: { value: sourced(new Decimal(140)), metricName: "FY36 EBIT" },
 
   scenarios: {
     bear: {

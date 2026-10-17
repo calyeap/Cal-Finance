@@ -50,7 +50,12 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     await getPool().end();
   });
 
-  it("produces one complete DEEP analysis, and a real, reasoned SELL verdict under the live Methodology's already-approved Verdict synthesis policy v1", async () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change: the
+  // SELL these pinned was off the superseded Stage-2 Base (product-decisions
+  // item 27, D2). MSFT's sheet carries no D2 input, so the snapshot holds an
+  // explicit INCOMPLETE that names why — still a reasoned verdict, never a
+  // manufactured one — and the dated rate the run used.
+  it("produces one complete DEEP analysis, and an explicit, reasoned verdict — INCOMPLETE while MSFT's sheet is pending adoption", async () => {
     const runId = await completeMsftRun();
 
     const snapshot = await createDeepSnapshot(runId, null);
@@ -63,15 +68,11 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     // for that reason. Trust reads PARTIAL (a genuinely unrelated gap: no
     // revaluation-at-other-discount-rates was ever supplied) and the range
     // is a real computed one.
-    expect(snapshot.result.trust.status).toBe("PARTIAL");
-    expect(snapshot.result.fairValueRange.kind).toBe("range");
-    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — the verdict boundary still
-    // does not manufacture BUY/HOLD/SELL from a single diagnostic
-    // (verdict.test.ts): this SELL is the live Methodology's "Verdict
-    // synthesis policy v1" (two independent, already-approved facts — the
-    // real price and the real recomputed Base value — not the range alone).
-    expect(snapshot.verdict.status).toBe("SELL");
-    expect(snapshot.verdict.reason).toContain("Verdict synthesis policy v1");
+    expect(snapshot.result.trust.status).toBe("UNUSABLE");
+    expect(snapshot.result.fairValueRange.kind).toBe("suppressed");
+    expect(snapshot.verdict.status).toBe("INCOMPLETE");
+    expect(snapshot.verdict.reason).toMatch(/Pending adoption|scenario dollar values/);
+    expect(snapshot.result.valuationBasis?.discountRate.effectiveFrom).toBe("2026-10-17");
   });
 
   it("reopens the exact stored snapshot without recomputing — it survives the run's own decisions being deleted", async () => {
@@ -95,18 +96,14 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     const saved = await createDeepSnapshot(runId, null);
 
     const reopened = await reopenDeepSnapshot(runId, saved.version);
-    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) — MSFT's range is now a
-    // real, computed one (see the first test in this file), so this proof
-    // uses its own bear/bull Decimals directly, not only `result.price.
-    // value` as a stand-in.
-    expect(reopened!.result.fairValueRange.kind).toBe("range");
-    if (reopened!.result.fairValueRange.kind === "range" && saved.result.fairValueRange.kind === "range") {
-      const bear = reopened!.result.fairValueRange.bear;
-      expect(bear).toBeInstanceOf(Decimal);
-      expect(bear.toString()).toBe(saved.result.fairValueRange.bear.toString());
-      // A Decimal survives arithmetic, not just a string that looks like one.
-      expect(bear.plus(1).minus(1).toString()).toBe(bear.toString());
-    }
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — MSFT's range is suppressed while
+    // its sheet is pending adoption, so this proof uses the dated D1 rate the
+    // run was valued at, a Decimal every run now carries.
+    const rate = reopened!.result.valuationBasis!.discountRate.rate;
+    expect(rate).toBeInstanceOf(Decimal);
+    expect(rate.toString()).toBe(saved.result.valuationBasis!.discountRate.rate.toString());
+    // A Decimal survives arithmetic, not just a string that looks like one.
+    expect(rate.plus(1).minus(1).toString()).toBe(rate.toString());
 
     const price = reopened!.result.price.value;
     expect(price).toBeInstanceOf(Decimal);
@@ -158,10 +155,12 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
 
     const snapshot = await createDeepSnapshot(runId, null);
 
-    expect(snapshot.result.trust.status).toBe("PARTIAL");
-    expect(snapshot.result.fairValueRange.kind).toBe("range");
-    expect(snapshot.verdict.status).toBe("SELL");
-    expect(snapshot.verdict.reason).toContain("Verdict synthesis policy v1");
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — pending adoption (D2), see the
+    // first test in this file.
+    expect(snapshot.result.trust.status).toBe("UNUSABLE");
+    expect(snapshot.result.fairValueRange.kind).toBe("suppressed");
+    expect(snapshot.verdict.status).toBe("INCOMPLETE");
+    expect(snapshot.verdict.reason).toMatch(/Pending adoption|scenario dollar values/);
     expect(snapshot.verdict.reason).not.toBe("");
   });
 

@@ -5,6 +5,7 @@ import { formatUsd } from "../factDisplay";
 import { ALL_SUPPRESSING_STATES } from "../stateCatalogue";
 import { MSFT_FIXTURE } from "../fixtures/msft";
 import { OKLO_FIXTURE } from "../fixtures/oklo";
+import { withStatedD2Inputs } from "../fixtures/statedD2Inputs";
 import { buildSlotCatalogue, buildFactSlotCatalogue } from "./slots";
 
 // The catalogue is the whole of what [C] may reference. Anything absent from
@@ -15,17 +16,14 @@ const msft = assembleAnalysisResult(MSFT_FIXTURE);
 const oklo = assembleAnalysisResult(OKLO_FIXTURE);
 
 describe("buildSlotCatalogue — H4, no uncomputed terminal share reaches [C]", () => {
-  // CB-AUDIT-01 H4: assemble.ts's terminal-diagnostics fallback (fired on
-  // every current run, since no fixture supplies a real terminalValuePv)
-  // built a full TerminalDiagnostics literal — terminalShareOfValue: 0,
-  // terminalFcfConsistencyApplied: true — that looked exactly like a real
-  // computed M8 result. That fabricated 0 then reached [C]'s slot catalogue
-  // as if it were a genuine "share of value sitting in the terminal period".
-  // Neither MSFT nor OKLO has ever computed a real terminal share, so [C]
-  // must never be handed one for either.
-  it("never exposes diagnostics.terminal.terminalShareOfValue to [C], for either fixture, while no real terminal PV is supplied", () => {
-    expect(MSFT_FIXTURE.terminalValuePv).toBeNull();
-    expect(OKLO_FIXTURE.terminalValuePv).toBeNull();
+  // CB-AUDIT-01 H4: assemble.ts used to build a fabricated terminal share of
+  // 0 that reached [C]'s slot catalogue as if it were real. Since AR3 the
+  // share is the base DCF's own; since AR4 a sheet pending adoption (both
+  // fixtures' — neither carries the D2 inputs) has none, and [C] must never
+  // be handed one.
+  it("never exposes diagnostics.terminal.terminalShareOfValue to [C], for either fixture, while neither sheet is adopted", () => {
+    expect(msft.diagnostics.terminal.terminalShareOfValue.isNaN()).toBe(true);
+    expect(oklo.diagnostics.terminal.terminalShareOfValue.isNaN()).toBe(true);
     expect(buildSlotCatalogue(msft).has("diagnostics.terminal.terminalShareOfValue")).toBe(false);
     expect(buildSlotCatalogue(oklo).has("diagnostics.terminal.terminalShareOfValue")).toBe(false);
   });
@@ -131,28 +129,26 @@ describe("buildSlotCatalogue", () => {
     }
   });
 
-  it("holds each reverse-DCF cell's implied growth, keyed by its margin level and rate", () => {
-    const catalogue = buildSlotCatalogue(msft);
-
-    for (const cell of msft.priceImplied.reverseDcfGrid) {
-      expect(catalogue.has(`priceImplied.reverseDcf.${cell.marginLevel}@${cell.rate}.tenYearCagr`)).toBe(true);
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — M7 is one solve (AR0-2), so its
+  // slots are no longer keyed by margin level and rate.
+  it("holds the reverse DCF's implied growth, CAGR and year-10 revenue, and the dated rate in use", () => {
+    const adopted = assembleAnalysisResult(withStatedD2Inputs(MSFT_FIXTURE));
+    const catalogue = buildSlotCatalogue(adopted);
+    for (const metric of ["fiveYearGrowth", "tenYearCagr", "year10Revenue"]) {
+      expect(catalogue.get(`priceImplied.reverseDcf.${metric}`)?.suppressed).toBe(false);
     }
+    expect(catalogue.get("valuationBasis.discountRate")?.formatted).toMatch(/^9(\.0+)?%$/);
+    expect(catalogue.has("valuationBasis.discountRate.effectiveFrom")).toBe(true);
   });
 
   it("renders a suppressed figure as its state, carrying no number for [C] to describe (§8.3 limit 5)", () => {
+    // MSFT_FIXTURE's sheet is pending adoption, so its reverse DCF returns a state.
     const catalogue = buildSlotCatalogue(msft);
-    const suppressedCell = msft.priceImplied.reverseDcfGrid.find((c) => c.fiveYearGrowth.suppressed);
-
-    // MSFT is the case the design was drawn around — four of nine cells
-    // return a state rather than a number (design §11).
-    expect(suppressedCell).toBeDefined();
-    const slot = catalogue.get(
-      `priceImplied.reverseDcf.${suppressedCell!.marginLevel}@${suppressedCell!.rate}.fiveYearGrowth`
-    );
+    const solve = msft.priceImplied.reverseDcf;
+    expect(solve.fiveYearGrowth.suppressed).toBe(true);
+    const slot = catalogue.get("priceImplied.reverseDcf.fiveYearGrowth");
     expect(slot?.suppressed).toBe(true);
-    expect(slot?.formatted).toBe(
-      suppressedCell!.fiveYearGrowth.suppressed ? suppressedCell!.fiveYearGrowth.state : ""
-    );
+    expect(slot?.formatted).toBe(solve.fiveYearGrowth.suppressed ? solve.fiveYearGrowth.state : "");
     expect(slot?.formatted).not.toMatch(/\d/);
   });
 

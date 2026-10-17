@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 import { combineProvenance } from "../provenance";
 import { computedValue, suppressedValue } from "../figures";
-import type { EnterpriseValueBridge, SourcedValue } from "../types";
+import type { BridgeClaim, BridgeFlags, EnterpriseValueBridge, SourcedValue } from "../types";
 
 // M1 — enterprise value and equity bridge (§2.1, §3.5, §7.2). Single
 // definition, applied identically to every company (§9 mistake 18): no
@@ -32,6 +32,32 @@ export interface EnterpriseValueInput {
   totalDebtAsOfDate?: string | null;
   financeLeaseLiabilitiesAsOfDate?: string | null;
   cashAndMarketableDebtSecuritiesAsOfDate?: string | null;
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 (R5) — the Methodology's
+  // common-equity completeness rule: senior or non-common claims are either
+  // in the bridge or flagged. Optional so a caller that never acquired them
+  // (every pre-AR4 input) reads as "not tagged" — flagged, never zero.
+  // Minority interests and preferred stock, where tagged, are claims ahead
+  // of common equity and are added to enterprise value like debt.
+  minorityInterest?: SourcedValue<Decimal> | null;
+  preferredStock?: SourcedValue<Decimal> | null;
+  // Convertible notes are inside the us-gaap debt totals the total-debt
+  // mapping reads, so a tagged figure is shown, never added a second time.
+  convertibleDebt?: SourcedValue<Decimal> | null;
+  // The as-of date each claim above resolved to. A claim dated other than
+  // total debt is not part of this balance sheet: flagged NOT CURRENT and
+  // not added — the same-date discipline CALVIN RULING A applies above.
+  seniorClaimAsOfDates?: { minorityInterest?: string | null; preferredStock?: string | null; convertibleDebt?: string | null };
+  // A disclosed fair value for the strategic stakes carried at book above —
+  // shown beside the book figure, never substituted for it.
+  nonOperatingEquityInvestmentsFairValue?: SourcedValue<Decimal> | null;
+  // Contingent items (unrecognised tax benefits such as an IRS dispute,
+  // guarantees) — listed with the bridge, never deducted.
+  contingentItems?: { item: string; amount: SourcedValue<Decimal> }[];
+  // A cited issuer disclosure that this filer's finance leases sit inside
+  // its total-debt figure (tagMap.ts FINANCE_LEASES_INSIDE_TOTAL_DEBT). The
+  // leases are then counted once — inside total debt — and the separate
+  // finance-lease term is neither required nor added (closed issue #311).
+  financeLeasesInsideTotalDebt?: { source: string } | null;
 }
 
 const REQUIRED_FIELD_NAMES = [
@@ -50,7 +76,10 @@ const REQUIRED_FIELD_NAMES = [
 // securities) resolving to different as-of dates. Both return INCOMPLETE;
 // neither computes a value on partial or incoherent data.
 export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseValueBridge {
-  const missing = REQUIRED_FIELD_NAMES.filter((name) => input[name] === null);
+  const leasesInsideDebt = input.financeLeasesInsideTotalDebt ?? null;
+  const missing = REQUIRED_FIELD_NAMES.filter(
+    (name) => input[name] === null && !(name === "financeLeaseLiabilities" && leasesInsideDebt !== null)
+  );
   if (missing.length > 0) {
     return suppressedValue("INCOMPLETE", `missing REQUIRED input(s): ${missing.join(", ")}`);
   }
@@ -69,9 +98,13 @@ export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseV
   // (undefined/null) for one or more of the three — that is a caller which
   // never carried this plumbing (every pre-#309 EnterpriseValueInput
   // caller), not a bridge the ruling has grounds to refuse.
+  // A filer whose leases are inside total debt contributes no lease term,
+  // so only the two terms the bridge actually adds are compared.
   const bridgeDates: { factId: string; asOfDate: string | null | undefined }[] = [
     { factId: "total-debt", asOfDate: input.totalDebtAsOfDate },
-    { factId: "finance-lease-liabilities", asOfDate: input.financeLeaseLiabilitiesAsOfDate },
+    ...(leasesInsideDebt === null
+      ? [{ factId: "finance-lease-liabilities", asOfDate: input.financeLeaseLiabilitiesAsOfDate }]
+      : []),
     { factId: "cash-and-marketable-debt-securities", asOfDate: input.cashAndMarketableDebtSecuritiesAsOfDate },
   ];
   if (bridgeDates.every((d) => d.asOfDate != null)) {
@@ -90,7 +123,12 @@ export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseV
   const treasuryMethodDilution = input.treasuryMethodDilution as SourcedValue<Decimal>;
   const price = input.price as SourcedValue<Decimal>;
   const totalDebt = input.totalDebt as SourcedValue<Decimal>;
-  const financeLeaseLiabilities = input.financeLeaseLiabilities as SourcedValue<Decimal>;
+  // Counted once: a filer whose leases are inside total debt adds nothing
+  // here, whether or not a separate lease figure was also tagged.
+  const financeLeaseLiabilities: SourcedValue<Decimal> =
+    leasesInsideDebt !== null
+      ? { value: new Decimal(0), provenance: totalDebtProvenanceOf(input) }
+      : (input.financeLeaseLiabilities as SourcedValue<Decimal>);
   const cashAndMarketableDebtSecurities = input.cashAndMarketableDebtSecurities as SourcedValue<Decimal>;
   const nonOperatingEquityInvestmentsAtBook = input.nonOperatingEquityInvestmentsAtBook as SourcedValue<Decimal>;
 
@@ -99,9 +137,17 @@ export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseV
   const dilutedShares = sharesOutstanding.value.plus(treasuryMethodDilution.value);
   const marketCap = dilutedShares.mul(price.value);
 
+  const current = (value: SourcedValue<Decimal> | null | undefined, asOf: string | null | undefined) =>
+    value != null && !(asOf != null && input.totalDebtAsOfDate != null && asOf !== input.totalDebtAsOfDate) ? value : null;
+  const dates = input.seniorClaimAsOfDates ?? {};
+  const minorityInterest = current(input.minorityInterest, dates.minorityInterest);
+  const preferredStock = current(input.preferredStock, dates.preferredStock);
+
   const enterpriseValue = marketCap
     .plus(totalDebt.value)
     .plus(financeLeaseLiabilities.value)
+    .plus(minorityInterest?.value ?? 0)
+    .plus(preferredStock?.value ?? 0)
     .minus(cashAndMarketableDebtSecurities.value)
     .minus(nonOperatingEquityInvestmentsAtBook.value);
 
@@ -112,7 +158,8 @@ export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseV
     totalDebt.provenance,
     financeLeaseLiabilities.provenance,
     cashAndMarketableDebtSecurities.provenance,
-    nonOperatingEquityInvestmentsAtBook.provenance
+    nonOperatingEquityInvestmentsAtBook.provenance,
+    ...[minorityInterest, preferredStock].filter((v): v is SourcedValue<Decimal> => v !== null).map((v) => v.provenance)
   );
 
   return computedValue(
@@ -124,9 +171,79 @@ export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseV
       nonOperatingEquityInvestmentsAtBook: nonOperatingEquityInvestmentsAtBook.value,
       nonOperatingInvestmentsErrorDirection: input.nonOperatingInvestmentsErrorDirection,
       enterpriseValue,
+      bridgeFlags: buildBridgeFlags(input, nonOperatingEquityInvestmentsAtBook.value, leasesInsideDebt),
     },
     provenance
   );
+}
+
+function totalDebtProvenanceOf(input: EnterpriseValueInput) {
+  return (input.totalDebt as SourcedValue<Decimal>).provenance;
+}
+
+const NOT_TAGGED_NOTE = "not found in this filer's structured data — a missing tag is not zero, so this claim is unverified";
+
+function seniorClaim(
+  claim: BridgeClaim["claim"],
+  value: SourcedValue<Decimal> | null | undefined,
+  asOf: string | null | undefined,
+  bridgeDate: string | null | undefined
+): BridgeClaim {
+  if (value == null) return { claim, status: "NOT TAGGED", amount: null, note: NOT_TAGGED_NOTE };
+  if (asOf != null && bridgeDate != null && asOf !== bridgeDate) {
+    return {
+      claim,
+      status: "NOT CURRENT",
+      amount: value.value,
+      note: `tagged as of ${asOf}, not at the bridge's ${bridgeDate} balance sheet — unverified for today, so not added`,
+    };
+  }
+  return { claim, status: "IN BRIDGE", amount: value.value, note: "a claim ahead of common equity — added to enterprise value like debt" };
+}
+
+// R5 — reported beside the bridge so the reader sees each claim's treatment.
+function buildBridgeFlags(
+  input: EnterpriseValueInput,
+  stakesAtBook: Decimal,
+  leasesInsideDebt: { source: string } | null
+): BridgeFlags {
+  const convertible = input.convertibleDebt ?? null;
+  const fairValue = input.nonOperatingEquityInvestmentsFairValue ?? null;
+  const dates = input.seniorClaimAsOfDates ?? {};
+  return {
+    claims: [
+      seniorClaim("minority interests", input.minorityInterest, dates.minorityInterest, input.totalDebtAsOfDate),
+      seniorClaim("preferred stock", input.preferredStock, dates.preferredStock, input.totalDebtAsOfDate),
+      convertible === null
+        ? { claim: "convertible debt", status: "NOT TAGGED", amount: null, note: NOT_TAGGED_NOTE }
+        : {
+            claim: "convertible debt",
+            status: "IN TOTAL DEBT",
+            amount: convertible.value,
+            note: "inside the total-debt figure at carrying value, not added again; dilution on conversion is not modelled",
+          },
+    ],
+    strategicStakes: {
+      atBook: stakesAtBook,
+      disclosedFairValue: fairValue?.value ?? null,
+      note:
+        fairValue === null
+          ? "carried at book; no disclosed fair value was tagged"
+          : "carried at book in the bridge; the disclosed fair value is shown alongside, not substituted",
+    },
+    contingentItems: (input.contingentItems ?? []).map(({ item, amount }) => ({
+      item,
+      amount: amount.value,
+      note: "listed, not deducted — a contingent item, not balance-sheet debt",
+    })),
+    financeLeases:
+      leasesInsideDebt === null
+        ? { treatment: "ADDED SEPARATELY", note: "finance leases added to total debt as their own term" }
+        : {
+            treatment: "INCLUDED IN TOTAL DEBT",
+            note: `counted once, inside total debt (${leasesInsideDebt.source}); no separate lease term is added`,
+          },
+  };
 }
 
 // "The equity bridge reverses this exactly" (§3.5) — used by later modules

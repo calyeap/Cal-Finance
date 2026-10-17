@@ -1,5 +1,5 @@
 import type Decimal from "decimal.js";
-import type { DiscountRate, Figure, GrowthLicenceResult, RonicLadderState } from "./types";
+import type { Figure, GrowthLicenceResult, RonicLadderCell, RonicLadderState } from "./types";
 
 // ---------------------------------------------------------------------------
 // CF-M8-VERDICT-ENGINEERING-UNBLOCK-01 — §10.6.2 Step 2 ("growth licence"),
@@ -10,28 +10,24 @@ import type { DiscountRate, Figure, GrowthLicenceResult, RonicLadderState } from
 //   value may count. If NO, use a conservative / no-growth value. If
 //   UNKNOWN, compute both."
 //
-// This reads only two already-approved, already-computed facts: the RONIC
-// ladder M5 already classifies per rate-grid cell
-// (`reinvestmentRonic.ts:computeRonicLadder`) and the rate grid itself
-// (`POLICY.rateGrid`, §7.1, not PROVISIONAL). It introduces no new threshold,
-// band or cell choice of its own — §11 item 4 of the reconciliation doc
-// (which single cell, or combination, governs Step 2) stays open, and this
-// function deliberately never answers it: it reports YES/NO only where
-// EVERY cell in the already-approved grid agrees, so the answer does not
-// depend on which cell item 4 eventually rules should govern. Where the
-// cells disagree (RONIC straddles the grid) or the ladder cannot be read at
-// all (RONIC NOT MEANINGFUL, or the ladder's own REQUIRED inputs are
-// missing), this returns UNKNOWN with the precise cause — never a default
-// NO and never an invented tie-break.
+// This reads only the RONIC ladder M5 already classifies
+// (`reinvestmentRonic.ts:computeRonicLadder`). Since
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 retired the 8/10/12% grid (frozen spec
+// §14.9 AR0-2), the ladder has one cell, at the run's D1 rate, so the open
+// question of which grid cell governs Step 2 (§11 item 4 of the
+// reconciliation doc) no longer arises. It introduces no threshold of its
+// own: YES/NO only where every ladder cell agrees, UNKNOWN with the precise
+// cause where the ladder cannot be read (RONIC NOT MEANINGFUL, or its own
+// REQUIRED inputs missing) — never a default NO.
 // ---------------------------------------------------------------------------
 
-type RonicCell = { rate: DiscountRate; state: RonicLadderState; value: Decimal | null };
+type RonicCell = RonicLadderCell;
 
 const LICENSED_STATES: RonicLadderState[] = ["CLEAN", "RONIC CAPPED AT 200%"];
 const UNLICENSED_STATES: RonicLadderState[] = ["LOW RONIC — VALUE-DESTROYING GROWTH"];
 
-function formatRate(rate: DiscountRate): string {
-  return `${(rate * 100).toFixed(0)}%`;
+function formatRate(rate: Decimal): string {
+  return `${rate.mul(100).toFixed(1)}%`;
 }
 
 function formatPercent(value: Decimal | null): string {
@@ -48,12 +44,12 @@ export function evaluateGrowthLicence(ronic: Figure<{ cells: RonicCell[] }>): Gr
   }
 
   const cells = ronic.value.cells;
-  const rateGridText = cells.map((c) => formatRate(c.rate)).join("/");
+  const ratesText = cells.map((c) => formatRate(c.rate)).join(", ");
 
   if (cells.length === 0) {
     return {
       status: "UNKNOWN",
-      reason: "Step 2 (§10.6.2) cannot read a growth licence — the RONIC ladder has no rate-grid cells.",
+      reason: "Step 2 (§10.6.2) cannot read a growth licence — the RONIC ladder has no cell.",
     };
   }
 
@@ -61,11 +57,10 @@ export function evaluateGrowthLicence(ronic: Figure<{ cells: RonicCell[] }>): Gr
     return {
       status: "UNKNOWN",
       reason:
-        "Step 2 (§10.6.2) reads RONIC NOT MEANINGFUL on every cell of the approved rate grid (§7.2 M5 ladder) — " +
-        "the trailing five-year return on new capital cannot be computed at all, so no rate-grid comparison is " +
-        "possible. Whether an uncomputable ladder counts as Step 2 UNKNOWN or should instead fail Step 1 is an " +
-        "open house-policy decision (§11 item 2, docs/verdict-methodology-reconciliation.md); this function takes " +
-        "neither side and reports UNKNOWN either way.",
+        "Step 2 (§10.6.2) reads RONIC NOT MEANINGFUL (§7.2 M5 ladder) — the trailing five-year return on new " +
+        "capital cannot be computed at all, so no comparison with the rate is possible. Whether an uncomputable " +
+        "ladder counts as Step 2 UNKNOWN or should instead fail Step 1 is an open house-policy decision (§11 item 2, " +
+        "docs/verdict-methodology-reconciliation.md); this function takes neither side and reports UNKNOWN either way.",
     };
   }
 
@@ -74,9 +69,8 @@ export function evaluateGrowthLicence(ronic: Figure<{ cells: RonicCell[] }>): Gr
     return {
       status: "YES",
       reason:
-        `Step 2 (§10.6.2): RONIC (${formatPercent(sample)}) exceeds every rate in the approved §7.1 rate grid ` +
-        `(${rateGridText}) — all ${cells.length} cells agree, so the growth-inclusive value may be underwritten ` +
-        "at Step 3.",
+        `Step 2 (§10.6.2): RONIC (${formatPercent(sample)}) exceeds the D1 rate in use (${ratesText}), so the ` +
+        "growth-inclusive value may be underwritten at Step 3.",
     };
   }
 
@@ -85,18 +79,15 @@ export function evaluateGrowthLicence(ronic: Figure<{ cells: RonicCell[] }>): Gr
     return {
       status: "NO",
       reason:
-        `Step 2 (§10.6.2): RONIC (${formatPercent(sample)}) is below every rate in the approved §7.1 rate grid ` +
-        `(${rateGridText}) — all ${cells.length} cells agree, so growth is not licensed; only the conservative / ` +
-        "no-growth value may be underwritten at Step 3.",
+        `Step 2 (§10.6.2): RONIC (${formatPercent(sample)}) is below the D1 rate in use (${ratesText}), so growth ` +
+        "is not licensed; only the conservative / no-growth value may be underwritten at Step 3.",
     };
   }
 
   return {
     status: "UNKNOWN",
     reason:
-      `Step 2 (§10.6.2): the rate-grid cells (${rateGridText}) disagree — RONIC straddles the approved grid or ` +
-      "mixes ladder states, so no single reading is unequivocal across every cell. Choosing one governing cell " +
-      "(or a combination) is an open house-policy decision (§11 item 4, docs/verdict-methodology-reconciliation.md); " +
-      "this function does not pick one and reports UNKNOWN.",
+      `Step 2 (§10.6.2): the ladder (${ratesText}) mixes states, so no single reading is unequivocal; this ` +
+      "function does not pick one and reports UNKNOWN.",
   };
 }

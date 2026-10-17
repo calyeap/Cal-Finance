@@ -1,8 +1,8 @@
 import type Decimal from "decimal.js";
-import type { FairValueRange, LeverageResult, TrustStatus } from "./types";
+import type { FairValueRange, LeverageResult, RateBand, TrustStatus, ValuationBasis } from "./types";
+import { formatRate } from "./discountRate";
 import { verdictUnavailableLine } from "./overviewCopy";
 import type { VerdictStatus } from "./verdict";
-import { POLICY } from "./policy";
 
 // ---------------------------------------------------------------------------
 // The page-one trust sentences, DERIVED from the computed status.
@@ -257,25 +257,24 @@ export function completedVerdictExplanation({
 }
 
 // ---------------------------------------------------------------------------
-// CF-AR1-QUICK-READ-OVERVIEW-01 — product-decisions.md item 26 (Analyzer
-// Reset D1): Calvin approved a market-anchored, two-band discount-rate
-// convention, reset yearly, growth alone never raising it. AR4 is where the
-// engine itself switches to that convention (frozen spec §14.9, AR0-1); this
-// outcome changes no rate, no formula and no policy constant — it only
-// states, beside whatever rate-derived figure the verdict slot already
-// shows outside Evidence, that the figure still prices off the fixed policy
-// rate below, not the approved convention, so nobody reads a pre-AR4 verdict
-// as final. The rate itself is read from the same `POLICY.rateGrid[1]` every
-// scenario valuation already discounts at (assemble.ts's `dynamicScenarioValue`
-// and `computeSteadyStateEvPvgo` call) — not a second, independently-chosen
-// figure.
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — product-decisions.md item 26 ("the
+// product shows the dated rate in use"), frozen spec §14.9 AR0-1. Replaces
+// the AR1 caveat that said the engine still priced off the retired fixed
+// rate. Read from the run's own `valuationBasis`, the rate every valuation
+// in it used — not a second figure. A snapshot stored before AR4 carries no
+// basis and gets no line.
 // ---------------------------------------------------------------------------
 
-/** The verdict slot's rate-convention caveat, until AR4 lands. */
-export function rateConventionCaveat(): string {
-  const ratePct = POLICY.rateGrid[1].mul(100).toFixed(0);
-  return (
-    `Rate convention under review — this reading still prices off the fixed ${ratePct}% discount rate; ` +
-    "the Analyzer Reset's market-anchored rate (D1) lands in AR4. See the Valuation tab's sensitivity for how it moves with the rate."
-  );
+const BAND_PHRASE: Record<RateBand, string> = {
+  stable: "the market's expected return, for a stable business",
+  cyclical: "the market's expected return plus 2pp, for a cyclical business",
+  "pre-revenue": "the market's expected return plus 2pp, for a pre-revenue company",
+};
+
+/** "Valued at 9.0% — …" — the dated discount rate in use, in plain words. */
+export function rateInUseLine(basis: ValuationBasis | undefined): string | null {
+  if (basis === undefined) return null;
+  const r = basis.discountRate;
+  const domain = r.withinValidatedDomain ? "" : " Outside its validated domain: net debt is not below 10% of enterprise value.";
+  return `Valued at ${formatRate(r.rate)} — ${BAND_PHRASE[r.band]} (rate dated ${r.effectiveFrom}).${domain}`;
 }

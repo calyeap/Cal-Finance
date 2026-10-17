@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { assembleAnalysisResult } from "../assemble";
 import { MSFT_FIXTURE } from "../fixtures/msft";
+import { withStatedD2Inputs } from "../fixtures/statedD2Inputs";
 import { OKLO_FIXTURE } from "../fixtures/oklo";
 import type { AnalystCall, AnalystCallRequest } from "./analystCall";
 import { runInterpretation, INTERPRETATION_RESPONSIBILITIES } from "./interpretation";
@@ -9,13 +10,15 @@ import { UntraceableFigureError } from "./traceability";
 import { ProhibitedCopyError } from "./prohibitions";
 import { PageOneVocabularyError } from "./pageOneVocabulary";
 
-const msft = assembleAnalysisResult(MSFT_FIXTURE);
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — M7 is one solve (AR0-2). The
+// clean figure comes from MSFT with STATED D2 test inputs (an adopted sheet);
+// the suppressed one from MSFT_FIXTURE as committed, whose sheet is pending
+// adoption, so its solve returns a state.
+const msft = assembleAnalysisResult(withStatedD2Inputs(MSFT_FIXTURE));
+const pendingMsft = assembleAnalysisResult(MSFT_FIXTURE);
 
-// A cell MSFT resolves cleanly, and one it suppresses — the design was drawn
-// around four of nine cells returning a state (design §11), so both exist.
-const CLEAN_CAGR_SLOT = "priceImplied.reverseDcf.current@0.08.tenYearCagr";
-const suppressedCell = msft.priceImplied.reverseDcfGrid.find((c) => c.fiveYearGrowth.suppressed)!;
-const SUPPRESSED_SLOT = `priceImplied.reverseDcf.${suppressedCell.marginLevel}@${suppressedCell.rate}.fiveYearGrowth`;
+const CLEAN_CAGR_SLOT = "priceImplied.reverseDcf.tenYearCagr";
+const SUPPRESSED_SLOT = "priceImplied.reverseDcf.fiveYearGrowth";
 
 function fakeCall(response: unknown, seen?: AnalystCallRequest[]): AnalystCall {
   return async (request) => {
@@ -79,7 +82,7 @@ describe("runInterpretation", () => {
 
     const interpretation = await runInterpretation(msft, call);
 
-    const cagr = msft.priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08)!.tenYearCagr;
+    const cagr = msft.priceImplied.reverseDcf.tenYearCagr;
     expect(cagr.suppressed).toBe(false);
     expect(interpretation.statements[0].statement).toContain(
       `${(cagr as { value: { mul: (n: number) => { toFixed: (d: number) => string } } }).value.mul(100).toFixed(1)}%`
@@ -113,12 +116,12 @@ describe("runInterpretation", () => {
   });
 
   it("prints a suppressed figure as its state, so [C] cannot describe a number that was never produced (§8.3 limit 5)", async () => {
-    const call = fakeCall(statementsOf([`The stress cell returns {{${SUPPRESSED_SLOT}}}.`]));
+    const call = fakeCall(statementsOf([`The reverse DCF returns {{${SUPPRESSED_SLOT}}}.`]));
 
-    const interpretation = await runInterpretation(msft, call);
+    const interpretation = await runInterpretation(pendingMsft, call);
 
     expect(interpretation.statements[0].statement).toContain(
-      suppressedCell.fiveYearGrowth.suppressed ? suppressedCell.fiveYearGrowth.state : ""
+      pendingMsft.priceImplied.reverseDcf.fiveYearGrowth.suppressed ? pendingMsft.priceImplied.reverseDcf.fiveYearGrowth.state : ""
     );
     expect(interpretation.statements[0].statement).not.toMatch(/\d/);
   });
@@ -147,27 +150,27 @@ describe("runInterpretation", () => {
   });
 
   it("REFUSES a [C] output that describes a suppressed number (§8.3 limit 5)", async () => {
-    // The stress cell produced no number at all. A sentence that says what it
+    // The reverse DCF produced no number at all. A sentence that says what it
     // "would have been" is the failure limit 5 names — reasoning around a
     // state, estimating past it, describing the number it did not produce.
     const call = fakeCall(
-      statementsOf([`The stress cell returns {{${SUPPRESSED_SLOT}}}, but the implied growth would be about 18%.`])
+      statementsOf([`The reverse DCF returns {{${SUPPRESSED_SLOT}}}, but the implied growth would be about 18%.`])
     );
 
-    await expect(runInterpretation(msft, call)).rejects.toThrow(UntraceableFigureError);
-    await expect(runInterpretation(msft, call)).rejects.toThrow(/NUMERAL FROM MODEL/);
+    await expect(runInterpretation(pendingMsft, call)).rejects.toThrow(UntraceableFigureError);
+    await expect(runInterpretation(pendingMsft, call)).rejects.toThrow(/NUMERAL FROM MODEL/);
   });
 
   it("REFUSES the same description spelled out in words", async () => {
     const call = fakeCall(
-      statementsOf([`The stress cell returns {{${SUPPRESSED_SLOT}}}; the answer would have been near eighteen percent.`])
+      statementsOf([`The reverse DCF returns {{${SUPPRESSED_SLOT}}}; the answer would have been near eighteen percent.`])
     );
 
-    await expect(runInterpretation(msft, call)).rejects.toThrow(/SPELLED-OUT QUANTITY/);
+    await expect(runInterpretation(pendingMsft, call)).rejects.toThrow(/SPELLED-OUT QUANTITY/);
   });
 
   it("REFUSES a slot the Analysis Result does not hold", async () => {
-    const call = fakeCall(statementsOf(["Implied growth is {{priceImplied.reverseDcf.invented@0.09.tenYearCagr}}."]));
+    const call = fakeCall(statementsOf(["Implied growth is {{priceImplied.reverseDcf.invented.tenYearCagr}}."]));
 
     await expect(runInterpretation(msft, call)).rejects.toThrow(/UNKNOWN SLOT/);
   });
@@ -187,15 +190,17 @@ describe("runInterpretation", () => {
   // to the real slot (so a regeneration is well-informed), and the system
   // prompt itself now warns against building a slot id by combining a
   // policy rate slot with a metric name, with this exact slot as the
-  // worked example.
-  it("REFUSES the exact observed chimera (policy rate slot grafted onto a reverseDcf metric), with the real slot suggested", async () => {
-    const call = fakeCall(statementsOf(["Returns on new capital at the lowest rate are {{policy.reverseDcf.current@0.08.ronic}}."]));
+  // worked example. CF-AR4-RATE-REINVESTMENT-TERMINAL-01: the grid's
+  // margin@rate slot ids are gone (one solve, AR0-2), so the same chimera
+  // class is exercised on the one-solve slot family.
+  it("REFUSES the policy-slot chimera grafted onto a reverseDcf metric, with the real slot suggested", async () => {
+    const call = fakeCall(statementsOf(["Ten-year growth at the rate in use is {{policy.reverseDcf.tenYearCagr}}."]));
 
     const refusal = await runInterpretation(msft, call).catch((err) => err);
     expect(refusal).toBeInstanceOf(UntraceableFigureError);
     expect((refusal as UntraceableFigureError).diagnostic).toContain("UNKNOWN SLOT");
     expect((refusal as UntraceableFigureError).diagnostic).toContain(
-      "did you mean priceImplied.reverseDcf.current@0.08.ronic?"
+      "did you mean priceImplied.reverseDcf.tenYearCagr?"
     );
   });
 
@@ -204,7 +209,7 @@ describe("runInterpretation", () => {
     await runInterpretation(msft, fakeCall(statementsOf(["Nothing numeric here."]), seen));
 
     expect(seen[0].system).toContain("A VALUE COMPUTED AT A RATE IS A DIFFERENT SLOT FROM THE RATE ITSELF");
-    expect(seen[0].system).toContain("priceImplied.reverseDcf.current@0.08.ronic");
+    expect(seen[0].system).toContain("priceImplied.reverseDcf.tenYearCagr");
   });
 
   it("REFUSES a [C]-authored position (§8.3 limit 1)", async () => {
@@ -342,8 +347,8 @@ describe("runInterpretation — page one carries no technical vocabulary (CF-ANA
   it("REFUSES a page-one sentence that cites a suppressed slot — it would render as a state name on the Overview", async () => {
     const call = fakeCall(withPageOne(`The check that would size it returns {{${SUPPRESSED_SLOT}}}.`));
 
-    await expect(runInterpretation(msft, call)).rejects.toThrow(PageOneVocabularyError);
-    await expect(runInterpretation(msft, call)).rejects.toThrow(/technical reference/);
+    await expect(runInterpretation(pendingMsft, call)).rejects.toThrow(PageOneVocabularyError);
+    await expect(runInterpretation(pendingMsft, call)).rejects.toThrow(/technical reference/);
   });
 
   it("REFUSES a state name written into page one as prose", async () => {
@@ -367,7 +372,7 @@ describe("runInterpretation — page one carries no technical vocabulary (CF-ANA
         : withPageOne("The check that would size it is not computed for this run.");
     };
 
-    const interpretation = await runInterpretation(msft, badThenClean);
+    const interpretation = await runInterpretation(pendingMsft, badThenClean);
 
     expect(seen).toHaveLength(2);
     expect(seen[1].user).toContain("SUPPRESSED SLOT ON PAGE ONE");
@@ -377,9 +382,9 @@ describe("runInterpretation — page one carries no technical vocabulary (CF-ANA
   });
 
   it("still lets a Section I statement cite the same suppressed slot", async () => {
-    const call = fakeCall(statementsOf([`The stress cell returns {{${SUPPRESSED_SLOT}}}.`]));
+    const call = fakeCall(statementsOf([`The reverse DCF returns {{${SUPPRESSED_SLOT}}}.`]));
 
-    const interpretation = await runInterpretation(msft, call);
+    const interpretation = await runInterpretation(pendingMsft, call);
 
     expect(interpretation.statements[0].referencesValueIds).toEqual([SUPPRESSED_SLOT]);
   });

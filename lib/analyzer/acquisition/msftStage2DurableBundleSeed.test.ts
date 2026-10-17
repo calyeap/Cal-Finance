@@ -6,7 +6,6 @@ import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } 
 import { computeAnalysisForRun, loadGateState } from "../gate";
 import { recordedAnalystInputBundle } from "./recordedBundles";
 import { analystInputsFor } from "./analystInputs";
-import { endOfYearScenarioPerShare } from "../golden/endOfYearEquivalent";
 
 // ---------------------------------------------------------------------------
 // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) — proves migration
@@ -81,7 +80,7 @@ describe("CF-MSFT-STAGE2-DURABLE-SEED-01 — migration 010's durably recorded MS
     await expect(applySeedMigration()).rejects.toThrow(/does not match the Calvin-approved Stage-2 snapshot/i);
   });
 
-  it("round-trips the exact approved classification, all three scenarios' drivers/terminalRoic/shareCount, and the approved snapshot values", async () => {
+  it("round-trips the exact approved classification, all three scenarios' drivers/shareCount, and the approved snapshot values", async () => {
     await applySeedMigration();
     const stored = await recordedAnalystInputBundle("MSFT");
     expect(stored).not.toBeNull();
@@ -113,9 +112,15 @@ describe("CF-MSFT-STAGE2-DURABLE-SEED-01 — migration 010's durably recorded MS
     expect(bear.reinvestmentCapitalIntensity?.toString()).toBe("0.07");
     expect(base.reinvestmentCapitalIntensity?.toString()).toBe("0.2");
     expect(bull.reinvestmentCapitalIntensity?.toString()).toBe("0.26");
-    expect(bear.terminalRoic?.toString()).toBe("0.1");
-    expect(base.terminalRoic?.toString()).toBe("0.11");
-    expect(bull.terminalRoic?.toString()).toBe("0.125");
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the seed's per-scenario
+    // `terminalRoic` keys stay in the stored JSON (migrations are never
+    // rewritten) but are no longer read: D2 sets the terminal return from
+    // the moat class. The seed carries neither D2 input, so it is a sheet
+    // pending adoption (product-decisions item 27: MSFT re-adopts once).
+    expect(bear.returnOnNewInvestment).toBeNull();
+    expect(base.returnOnNewInvestment).toBeNull();
+    expect(bull.returnOnNewInvestment).toBeNull();
+    expect(inputs.moatClass).toBeNull();
     // The reviewed §4.4 bridge's diluted share count, carried verbatim —
     // never a hardcoded constant reused silently from somewhere else.
     expect(bear.shareCount.toString()).toBe("7449545491");
@@ -150,7 +155,13 @@ describe("CF-MSFT-STAGE2-DURABLE-SEED-01 — migration 010's durably recorded MS
     expect(viaResolver?.inputs.scenarioValues?.bear.toString()).toBe("214.26");
   });
 
-  it("the real production pathway recomputes dynamically from these drivers and reproduces the approved $214.26/$283.31/$402.73 to the cent", async () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change. This
+  // pinned the 16 Oct 2026 Stage-2 path's $214.26/$283.31/$402.73 (10% rate,
+  // capital-intensity reinvestment, per-scenario terminal ROIC), which
+  // product-decisions item 27 (D2) supersedes. The seeded sheet now runs as
+  // what it is: pending adoption — no D2 value from the engine, and its typed
+  // pre-D2 snapshot never shown in its place.
+  it("the real production pathway reads the seeded sheet as pending adoption — no value from the engine, and the superseded snapshot never shown in its place", async () => {
     await applySeedMigration();
 
     const runId = await createRun("MSFT", "Microsoft Corporation");
@@ -165,41 +176,29 @@ describe("CF-MSFT-STAGE2-DURABLE-SEED-01 — migration 010's durably recorded MS
     await recordProfileDecision(runId, "CONFIRMED", state.fixture.profile.recommended, null);
 
     const result = await computeAnalysisForRun(runId);
-    expect(result.fairValueRange.kind).toBe("range");
-    if (result.fairValueRange.kind !== "range") return;
+    expect(result.valuationBasis?.d2.status).toBe("PENDING ADOPTION");
+    expect(result.valuationBasis?.discountRate.rate.toString()).toBe("0.09");
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    if (result.fairValueRange.kind === "suppressed") expect(result.fairValueRange.cause).toMatch(/^Pending adoption/);
+    for (const key of ["bear", "base", "bull"] as const) {
+      expect(result.scenarioOutputs.values[key].isNaN()).toBe(true);
+    }
 
-    // Reproduces the Calvin-approved snapshot from the durable record ALONE
-    // (no recordAnalystBundle call anywhere in this file) — proving the
-    // migration-seeded row, not a test-local write, is what makes this
-    // reproducible. Matches lib/analyzer/acquisition/
-    // msftStage2ValuationProof.test.ts's own independently-recomputed
-    // figures, which is the dynamic-recomputation proof for this exact
-    // candidate; this test proves the SEEDED path reaches the same place.
-    // CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2's timing (mid-year,
-    // terminal at 9.5 years, valued at the price date) moves these approved
-    // end-of-year figures by one common factor; with that factor removed
-    // (golden/endOfYearEquivalent.ts) they are still reproduced to the cent.
-    expect(endOfYearScenarioPerShare(result, "bear").toFixed(2)).toBe("214.26");
-    expect(endOfYearScenarioPerShare(result, "base").toFixed(2)).toBe("283.31");
-    expect(endOfYearScenarioPerShare(result, "bull").toFixed(2)).toBe("402.73");
-
-    // This run's own real acquired base-year revenue — confirms the real
-    // production pathway (fact acquisition, gating, EV bridge), never a
-    // stand-in, produced this figure (proof doc's own independent-oracle
-    // cross-check reproduces the same fact from the same raw capture).
+    // This run's own real acquired base-year revenue — the real production
+    // pathway (fact acquisition, gating, EV bridge) still runs in full.
     const baseRevenue = state.fixture.reverseDcf.baseYearRevenue;
     expect(baseRevenue?.value.toString()).toBe("331839000000");
+    expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
   });
 
-  it("no regression to NVDA or legacy (no-terminalRoic) behaviour, and MSFT still falls back to the committed fixture once the recorded row is removed", async () => {
+  it("no regression to NVDA, and MSFT still falls back to the committed fixture once the recorded row is removed", async () => {
     await applySeedMigration();
 
     // NVDA's own migration-008 seed is untouched by this migration — still
-    // resolvable, still carrying no terminalRoic anywhere (the pre-existing
-    // default behaviour every other bundle in this codebase relies on).
+    // resolvable, and like MSFT's carrying no D2 input.
     const nvda = await recordedAnalystInputBundle("NVDA");
     expect(nvda).not.toBeNull();
-    expect(nvda?.inputs.scenarios.bear.terminalRoic).toBeNull();
+    expect(nvda?.inputs.scenarios.bear.returnOnNewInvestment).toBeNull();
     expect(nvda?.inputs.scenarioValues?.bear.toString()).toBe("28.08");
 
     // Removing the recorded MSFT row (simulating "nothing recorded yet")

@@ -8,7 +8,7 @@ import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
 import { AnalyzerOverview } from "./AnalyzerOverview";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
-import { priceVsRangeHeadline } from "@/lib/analyzer/trustCopy";
+import { incompleteVerdictExplanation } from "@/lib/analyzer/trustCopy";
 
 // ---------------------------------------------------------------------------
 // CF-S44-RECORD-01 — the rendering half of MSFT's recorded §4.4 ruling: the
@@ -102,11 +102,17 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
   // test actually guards — the hero never renders the literal word
   // "INCOMPLETE", and never leaks verdict.reason verbatim — is unaffected
   // either way, so it is re-asserted against the real SELL verdict.
-  it("the shared hero states the real price-vs-scenarios headline, never the literal word INCOMPLETE or verdict.reason, outside Evidence", async () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change: the
+  // range and SELL this pinned were the superseded Stage-2 sheet's
+  // (product-decisions item 27, D2). The §4.4 ruling still clears EV and
+  // leverage; with no D2 input on the sheet there is no range, and the hero
+  // says why in plain words.
+  it("the shared hero states the plain-English reason there is no verdict yet, never the literal word INCOMPLETE or verdict.reason, outside Evidence", async () => {
     const { result } = await openMsftRunWithRuling();
     const verdict = deriveVerdict(result);
-    expect(verdict.status).toBe("SELL");
-    expect(result.fairValueRange.kind).toBe("range");
+    expect(verdict.status).toBe("INCOMPLETE");
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    expect(result.gates.leverage.result).toBe("PASS");
 
     const { container } = render(
       <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="overview">
@@ -114,43 +120,16 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
       </AnalyzerReportFrame>
     );
     const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
-    // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
-    // COMPLETE RM-BRIEF PROOF (PR #399, comment 5952716764), REMOVE/BYPASS
-    // item 1: the hero must not reduce to the literal word "INCOMPLETE" —
-    // trustCopy.ts's own plain-English explanation takes over instead
-    // (DominantVerdictSlot.tsx).
     expect(hero.textContent).not.toContain("INCOMPLETE");
-    // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399): outside
-    // Evidence the hero never leaks verdict.reason verbatim — see
-    // DominantVerdictSlot.tsx and the design contract's §4 V1 narrowing.
     expect(hero.textContent).not.toContain(verdict.reason);
-    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: a completed verdict (SELL) takes
-    // DominantVerdictSlot's completed-verdict path, not the INCOMPLETE
-    // priceVsRangeHeadline fallback path — the hero states the verdict word
-    // itself and a plain-English rationale built from the same price/Base
-    // figures (trustCopy.ts's `completedVerdictExplanation`), never the raw
-    // reason.
-    expect(hero.textContent).toContain("SELL");
     expect(hero.textContent).toContain(
-      "above the SELL level under every uncertainty bucket in the approved verdict policy"
-    );
-
-    // priceVsRangeHeadline itself is unaffected by the verdict change — it
-    // is computed purely from the range/price/trust facts deriveVerdict
-    // never touches — re-asserted here as a regression guard on that
-    // independent fact, even though the completed-verdict hero does not
-    // render it.
-    const headline = priceVsRangeHeadline({
-      fairValueRange: result.fairValueRange,
-      priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
-      trustStatus: result.trust.status,
-      profileNotConfirmed: false,
-    });
-    // The committed offline capture's own $499.70 close sits above all
-    // three approved scenario values (docs/proof/
-    // cf-msft-stage2-real-valuation-proof-01.md §3).
-    expect(headline).toBe(
-      "Trading at or above the bull case modeled for this company — the current price is already at or beyond the most optimistic scenario in the range below."
+      incompleteVerdictExplanation({
+        trustStatus: result.trust.status,
+        fairValueRange: result.fairValueRange,
+        leverage: result.gates.leverage,
+        profileNotConfirmed: false,
+      })
     );
   });
+;
 });

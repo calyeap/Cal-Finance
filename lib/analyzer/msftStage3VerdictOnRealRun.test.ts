@@ -5,7 +5,8 @@ import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
 import { deriveVerdict } from "./verdict";
-import { endOfYearScenarioPerShare } from "./golden/endOfYearEquivalent";
+import { assembleAnalysisResult } from "./assemble";
+import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — the real production-path proof this
@@ -65,7 +66,7 @@ async function openMsftRunWithRuling() {
   return computeAnalysisForRun(runId);
 }
 
-describe("CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — MSFT's real run reaches a defensible verdict", () => {
+describe("CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — MSFT's real run reaches a defensible verdict, or says why not", () => {
   beforeEach(async () => {
     await getPool().query("TRUNCATE analyzer_run_fact_decisions, analyzer_run_judgments, analyzer_runs CASCADE");
     await applySeedMigration();
@@ -78,33 +79,52 @@ describe("CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — MSFT's real run reaches a def
     await getPool().end();
   });
 
-  it("is SELL — real price $499.70 against the real recomputed Base (now about 1.65× under D2 timing; 1.7638× end-of-year) clears the strictest uncertainty-bucket SELL threshold, invariant to the one still-open house-policy item (the bucket formula)", async () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change. This
+  // pinned SELL off the 16 Oct 2026 Stage-2 Base ($283.31 end-of-year, 10%
+  // rate, capital-intensity reinvestment), which product-decisions item 27
+  // (D2) supersedes. Migration 010's sheet carries no D2 input, so it is
+  // pending adoption: the verdict is INCOMPLETE and says why — never a
+  // manufactured HOLD (Methodology, verdict semantics), never the superseded
+  // SELL. The verdict rule itself is unchanged (AR5 owns it): once the sheet
+  // carries the D2 inputs — STATED TEST INPUTS here, never recorded — the
+  // same rule reads price against the D2 Base at the D1 rate.
+  it("is INCOMPLETE while MSFT's recorded sheet is pending adoption — no value, so no verdict, and the reason says so", async () => {
     const result = await openMsftRunWithRuling();
 
-    // The same real, Calvin-approved figures msftStage2DurableBundleSeed.test.ts
-    // proves at the valuation layer — re-asserted here so this file does not
-    // silently drift from that proof if either changes.
-    expect(result.trust.status).toBe("PARTIAL");
-    expect(result.fairValueRange.kind).toBe("range");
-    if (result.fairValueRange.kind !== "range") return;
-    // CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2's timing (mid-year,
-    // terminal at 9.5 years, valued at the price date) moves these approved
-    // end-of-year figures by one common factor; with that factor removed
-    // (golden/endOfYearEquivalent.ts) they are still reproduced to the cent.
-    expect(endOfYearScenarioPerShare(result, "bear").toFixed(2)).toBe("214.26");
-    expect(endOfYearScenarioPerShare(result, "bull").toFixed(2)).toBe("402.73");
-    expect(endOfYearScenarioPerShare(result, "base").toFixed(2)).toBe("283.31");
+    expect(result.valuationBasis?.d2.status).toBe("PENDING ADOPTION");
+    expect(result.fairValueRange.kind).toBe("suppressed");
     expect(result.price.value.toFixed(2)).toBe("499.70");
-    expect(result.price.timestamp).not.toBe("");
 
     const verdict = deriveVerdict(result);
+    expect(verdict.status).toBe("INCOMPLETE");
+    expect(verdict.reason).toMatch(/Pending adoption/);
+  });
 
-    expect(verdict.status).toBe("SELL");
+  it("with the D2 inputs on the sheet, the unchanged V1 rule reads price against the D2 Base at the D1 rate", async () => {
+    const runId = await createRun("MSFT", "Microsoft Corporation");
+    await recordJudgment(
+      runId,
+      "NON-OPERATING INVESTMENTS",
+      "us-gaap:LongTermInvestments",
+      "Calvin's §4.4 ruling, 2026-09-21T08:19:14Z, issue #188."
+    );
+    await completeSpotCheck(runId);
+    const state = await loadGateState(runId);
+    await recordProfileDecision(runId, "CONFIRMED", state.fixture.profile.recommended, null);
+    const decided = await loadGateState(runId);
+
+    const result = assembleAnalysisResult(withStatedD2Inputs(decided.fixture));
+    expect(result.valuationBasis?.discountRate.rate.toString()).toBe("0.09");
+    expect(result.fairValueRange.kind).toBe("range");
+
+    // At these stated inputs price sits just under the High-bucket SELL
+    // line, so which band applies depends on the uncertainty bucket — the
+    // rule says so rather than picking one (Methodology v2.1 D3's "one
+    // question" case, which AR5 builds). The rule is read, not changed.
+    const verdict = deriveVerdict(result);
     expect(verdict.reason).toContain("Verdict synthesis policy v1");
-    // The ratio the reason states is price ÷ this run's own Base, to 4 dp.
+    expect(verdict.reason).not.toMatch(/Pending adoption/);
+    // The ratio the reason states is price ÷ this run's own D2 Base, to 4 dp.
     expect(verdict.reason).toContain(result.price.value.dividedBy(result.scenarioOutputs.values.base).toFixed(4));
-    // Above the strictest SELL threshold (High, 1.45×), so every bucket agrees.
-    expect(result.price.value.dividedBy(result.scenarioOutputs.values.base).greaterThan("1.45")).toBe(true);
-    expect(verdict.reason).toContain("all three uncertainty buckets");
   });
 });

@@ -85,7 +85,16 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     await getPool().end();
   });
 
-  it("real MSFT — version 1 reopens byte-for-byte after version 2 exists; profile confirmation's own effect is observable again now that A4 no longer suppresses the range", async () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change. With
+  // migration 010's Stage-2 sheet superseded by D2 (product-decisions item
+  // 27) and carrying no D2 input, MSFT's range is suppressed as pending
+  // adoption — which, like A4 before it, is read before the profile-
+  // confirmation branch (trust's §9.6 first match; verdict.ts's UNUSABLE-
+  // first check). So profile confirmation's own effect is masked again, and
+  // the comparison honestly reports no material change between versions.
+  // What this test stands on is unchanged: version 1 reopens byte-for-byte
+  // after version 2 exists, and the comparison is deterministic.
+  it("real MSFT — version 1 reopens byte-for-byte after version 2 exists; with the sheet pending adoption, profile confirmation changes nothing material", async () => {
     const runId = await createRun("MSFT", "Microsoft Corporation");
     await completeSpotCheck(runId);
 
@@ -110,9 +119,9 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     const v1 = await createDeepSnapshot(runId, null);
     expect(v1.version).toBe(1);
     expect(v1.result.gates.leverage.result).toBe("PASS");
-    expect(v1.result.trust.status).toBe("PARTIAL");
-    expect(v1.result.fairValueRange.kind).toBe("range");
-    expect(v1.verdict.reason).toContain("PROFILE NOT CONFIRMED");
+    expect(v1.result.trust.status).toBe("UNUSABLE");
+    expect(v1.result.fairValueRange.kind).toBe("suppressed");
+    expect(v1.verdict.status).toBe("INCOMPLETE");
 
     // Confirm the profile, then refresh: version 2. Nothing about the §4.4
     // judgment changes here — the durable override is untouched by a
@@ -122,15 +131,10 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     const v2 = await createDeepSnapshot(runId, null);
     expect(v2.version).toBe(2);
     expect(v2.result.gates.leverage.result).toBe("PASS");
-    expect(v2.result.trust.status).toBe("PARTIAL");
-    expect(v2.result.fairValueRange.kind).toBe("range");
-    // Confirming the profile removed the PROFILE NOT CONFIRMED cause —
-    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: the verdict now reaches a real
-    // SELL under the live Methodology's Verdict synthesis policy v1 instead.
-    expect(v2.verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
-    expect(v2.verdict.reason).toContain("Verdict synthesis policy v1");
-    expect(v2.verdict.status).toBe("SELL");
-    expect(v2.verdict.reason).not.toBe(v1.verdict.reason);
+    expect(v2.result.trust.status).toBe("UNUSABLE");
+    expect(v2.result.fairValueRange.kind).toBe("suppressed");
+    expect(v2.verdict.status).toBe("INCOMPLETE");
+    expect(v2.verdict.reason).toMatch(/Pending adoption/);
 
     // Version 1 is byte-for-byte reopenable exactly as it was, after version
     // 2 exists and after the run's own decisions changed underneath it —
@@ -138,8 +142,8 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     const reopenedV1 = await reopenDeepSnapshot(runId, 1);
     expect(reopenedV1).not.toBeNull();
     expect(reopenedV1!.result.gates.leverage.result).toBe("PASS");
-    expect(reopenedV1!.result.trust.status).toBe("PARTIAL");
-    expect(reopenedV1!.result.fairValueRange.kind).toBe("range");
+    expect(reopenedV1!.result.trust.status).toBe("UNUSABLE");
+    expect(reopenedV1!.result.fairValueRange.kind).toBe("suppressed");
     expect(reopenedV1!.verdict).toEqual(v1.verdict);
     // Every field this outcome's comparison reads is unchanged on reopen —
     // the immutability property CF-V2-PROOF-01 already proved, restated
@@ -155,23 +159,9 @@ describe("CF-LOOP-UPDATE-01 — the comparison on real MSFT and OKLO runs", () =
     expect(comparison!.from).toBe(1);
     expect(comparison!.to).toBe(2);
 
-    // Profile confirmation's real effect surfaces on exactly the fields it
-    // actually touches — trust.determinedBy (the PROFILE NOT CONFIRMED
-    // qualifying flag clearing) and, downstream of that, verdict itself:
-    // v1's PROFILE NOT CONFIRMED gate kept deriveVerdict from ever reaching
-    // synthesis (INCOMPLETE), while v2's cleared gate lets it fall through
-    // to the live Methodology's Verdict synthesis policy v1 (SELL) —
-    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01. So verdict.status now changes
-    // too, alongside verdict.reason; the range itself, its scenario
-    // outputs, leverage and trust.status remain unaffected by a profile
-    // confirmation that changes no fact, gate or driver.
-    expect(v1.verdict.status).toBe("INCOMPLETE");
-    expect(v2.verdict.status).toBe("SELL");
-    expect(comparison!.changed.map((c) => c.field).sort()).toEqual([
-      "trust.determinedBy",
-      "verdict.reason",
-      "verdict.status",
-    ]);
+    // Masked by the pending-adoption suppression (see above): nothing the
+    // comparison reads changes between the two versions.
+    expect(comparison!.changed).toEqual([]);
     expect(comparison!.unchanged).toContain("price.value");
     expect(comparison!.unchanged).toContain("gates.leverage");
     expect(comparison!.unchanged).toContain("trust.status");

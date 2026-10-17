@@ -4,7 +4,9 @@ import { assembleAnalysisResult } from "./assemble";
 import { MSFT_FIXTURE } from "./fixtures/msft";
 import { OKLO_FIXTURE } from "./fixtures/oklo";
 import { computeUnitExitBreakEvenPrice } from "./modules/preRevenue";
-import { computeScenarioEnterpriseValue } from "./modules/scenarioOutputs";
+import { computeScenarioEnterpriseValue, computeScenarioValuation } from "./modules/scenarioOutputs";
+import { terminalReturnOnNewCapital } from "./discountRate";
+import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 import { buildFixedShapeGrowthPath } from "./growthPath";
 import { projectReverseDcfValue } from "./modules/reverseDcf";
 import { POLICY } from "./policy";
@@ -34,14 +36,28 @@ function closeTo(actual: Decimal, expected: number, tolerance = 0.002) {
 // ---------------------------------------------------------------------------
 
 describe("assembleAnalysisResult — the rate at which the base case equals the price (G)", () => {
-  it("binds INCOMPLETE, naming the missing revaluation, when no revaluation function was supplied — never 'no solution'", () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change: the
+  // engine now revalues the base case itself (the expected return at today's
+  // price), so the absence of a revaluation is no longer "none was
+  // supplied" but the reason the base case has no engine value — here, a
+  // sheet pending adoption.
+  it("binds INCOMPLETE, naming why there is no base case to revalue, when there is none — never 'no solution'", () => {
     expect(MSFT_FIXTURE.revalueBaseCaseAtRate).toBeNull();
     const result = assembleAnalysisResult(MSFT_FIXTURE);
 
     expect(result.scenarioOutputs.rateAtWhichBaseEqualsPrice).toBeNull();
     const bound = boundState(result.states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice);
     expect(bound?.state).toBe("INCOMPLETE");
-    expect(bound?.cause).toMatch(/revaluation of the base case/);
+    expect(bound?.cause).toMatch(/^Pending adoption/);
+  });
+
+  it("solves the expected return from the engine's own base case once the sheet is adopted — about 7% for MSFT's stated inputs", () => {
+    const result = assembleAnalysisResult({ ...withStatedD2Inputs(MSFT_FIXTURE), scenarioValues: null });
+    const irr = result.scenarioOutputs.rateAtWhichBaseEqualsPrice;
+    expect(irr).not.toBeNull();
+    expect(boundState(result.states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice)).toBeNull();
+    // At its own expected return the engine's base case is worth the price.
+    expect(irr!.greaterThan(POLICY.terminalGrowth)).toBe(true);
   });
 
   it("binds NO SOLUTION IN RANGE, with the bracket searched, when a solver ran and found no root — distinguishable from not computed", () => {
@@ -213,37 +229,29 @@ describe("assembleAnalysisResult — MSFT fixture", () => {
     closeTo(diagnostic.value.value, 0.209, 0.001);
   });
 
-  // CF-AR3-REPRODUCIBLE-RUNS-01 — this pinned the frozen v1.0.1 grid (4 of 9
-  // DEGENERATE; 18.5% / 13.7% at current margin, 8%), which was calibrated to
-  // end-of-year discounting. Methodology v2.1 D2's mid-year timing moves every
-  // solved figure (now 17.6% / 13.1%) and lifts one cell out of DEGENERATE,
-  // so the pin is replaced by what the grid must satisfy under any timing:
-  // each solved cell reproduces the target EV, a higher rate needs more
-  // growth, and every suppressed cell names a real state.
-  it("M7 reverse-DCF grid: nine cells; every solved current-margin cell round-trips to the target EV, and implied growth rises with the rate", () => {
-    const cells = result.priceImplied.reverseDcfGrid;
-    expect(cells).toHaveLength(9);
-    for (const c of cells.filter((c) => c.fiveYearGrowth.suppressed)) {
-      if (!c.fiveYearGrowth.suppressed) continue;
-      expect(["DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE", "INCOMPLETE"]).toContain(c.fiveYearGrowth.state);
-    }
-    expect(cells.some((c) => !c.fiveYearGrowth.suppressed)).toBe(true);
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — M7 is one solve on the main
+  // engine (AR0-2). MSFT_FIXTURE's sheet carries no D2 inputs, so it is
+  // pending adoption and the solve says so; with STATED D2 test inputs it
+  // solves, and the solved growth reproduces the target EV on the engine.
+  it("M7 reverse DCF: one solve — INCOMPLETE (pending adoption) on the committed sheet, and round-tripping to the target EV once adopted", () => {
+    const pending = result.priceImplied.reverseDcf;
+    expect(pending.fiveYearGrowth.suppressed && pending.fiveYearGrowth.state).toBe("INCOMPLETE");
+    expect(pending.fiveYearGrowth.suppressed && pending.fiveYearGrowth.cause).toMatch(/^Pending adoption/);
 
+    const adopted = assembleAnalysisResult(withStatedD2Inputs(MSFT_FIXTURE)).priceImplied.reverseDcf;
+    expect(adopted.fiveYearGrowth.suppressed).toBe(false);
+    if (adopted.fiveYearGrowth.suppressed || adopted.heldAt === null) return;
     const target = MSFT_FIXTURE.reverseDcf.targetEnterpriseValue!.value;
-    const margin = MSFT_FIXTURE.reverseDcf.currentMargin!.value;
-    const base = MSFT_FIXTURE.reverseDcf.baseYearRevenue!.value;
-    const tax = MSFT_FIXTURE.configuredConstants.nopatTaxRate!;
-    const solved = cells
-      .filter((c) => c.marginLevel === "current" && !c.fiveYearGrowth.suppressed && !c.ronic.suppressed)
-      .sort((a, b) => a.rate - b.rate);
-    expect(solved.length).toBeGreaterThan(0);
-    for (const c of solved) {
-      if (c.fiveYearGrowth.suppressed || c.ronic.suppressed) continue;
-      const ev = projectReverseDcfValue(c.fiveYearGrowth.value, margin, c.ronic.value, new Decimal(c.rate), base, tax).ev;
-      expect(ev.minus(target).abs().dividedBy(target).toNumber()).toBeLessThan(1e-9);
-    }
-    const growths = solved.map((c) => (c.fiveYearGrowth.suppressed ? NaN : c.fiveYearGrowth.value.toNumber()));
-    for (let i = 1; i < growths.length; i++) expect(growths[i]).toBeGreaterThan(growths[i - 1]);
+    const ev = projectReverseDcfValue(
+      adopted.fiveYearGrowth.value,
+      adopted.heldAt.operatingMargin,
+      adopted.heldAt.returnOnNewInvestment,
+      adopted.heldAt.terminalReturnOnNewCapital,
+      adopted.rate,
+      MSFT_FIXTURE.reverseDcf.baseYearRevenue!.value,
+      MSFT_FIXTURE.configuredConstants.nopatTaxRate!
+    ).ev;
+    expect(ev.minus(target).abs().dividedBy(target).toNumber()).toBeLessThan(1e-9);
   });
 
   it("M11 FCF yield + growth: PRECONDITION FAILED, matching the mock", () => {
@@ -331,10 +339,9 @@ describe("assembleAnalysisResult — OKLO fixture", () => {
     if (diagnostic.value.suppressed) expect(diagnostic.value.state).toBe("INCOMPLETE");
   });
 
-  it("the reverse-DCF grid is not run for this profile — all nine cells INCOMPLETE", () => {
-    const cells = result.priceImplied.reverseDcfGrid;
-    expect(cells).toHaveLength(9);
-    expect(cells.every((c) => c.fiveYearGrowth.suppressed && c.fiveYearGrowth.state === "INCOMPLETE")).toBe(true);
+  it("the reverse DCF is not run for this profile — INCOMPLETE", () => {
+    const solve = result.priceImplied.reverseDcf;
+    expect(solve.fiveYearGrowth.suppressed && solve.fiveYearGrowth.state).toBe("INCOMPLETE");
   });
 
   it("preRevenue is populated, with all four funding-stack lines present on both ramps", () => {
@@ -551,13 +558,13 @@ describe("assembleAnalysisResult — rateAtWhichBaseEqualsPrice no longer solves
   });
 
   it("REGRESSION — a run with no revaluation function supplied keeps its existing cause, unaffected by price", () => {
-    // MSFT_FIXTURE.revalueBaseCaseAtRate is null; its cause must stay "no
-    // revaluation function supplied", never flip to "no price", even though
-    // MSFT does have one — the price check is reached only after the
-    // revaluation-function check, so this run's own cause is unchanged.
+    // MSFT_FIXTURE has no base case to revalue (its sheet is pending
+    // adoption — AR4); its cause must name that, never flip to "no price",
+    // even though MSFT does have one — the price check is reached only after
+    // the revaluation check, so this run's own cause is unchanged by price.
     const withMsft = assembleAnalysisResult(MSFT_FIXTURE);
     const bound = boundState(withMsft.states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice);
-    expect(bound?.cause).toMatch(/none was supplied for this run/);
+    expect(bound?.cause).toMatch(/^Pending adoption/);
   });
 });
 
@@ -839,8 +846,11 @@ describe("assembleAnalysisResult — H3 acquired-run cash basis", () => {
 // hand-derived DCF this test would have to get right independently.
 // ---------------------------------------------------------------------------
 describe("assembleAnalysisResult — dynamic scenario values (null fixture.scenarioValues)", () => {
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the engine is Methodology v2.1
+  // D2's, which needs the sheet's return on new investment and moat class;
+  // this runs on STATED D2 test inputs (withStatedD2Inputs) at the D1 rate.
   it("derives bear/base/bull per-share values through computeScenarioEnterpriseValue + the EV bridge's own net debt term, when every REQUIRED input is present", () => {
-    const fixture = { ...MSFT_FIXTURE, scenarioValues: null };
+    const fixture = { ...withStatedD2Inputs(MSFT_FIXTURE), scenarioValues: null };
     const result = assembleAnalysisResult(fixture);
 
     // The EV bridge's own net debt/cash/non-operating-investments term —
@@ -859,12 +869,14 @@ describe("assembleAnalysisResult — dynamic scenario values (null fixture.scena
 
     for (const key of ["bear", "base", "bull"] as const) {
       const driver = fixture.scenarios[key];
+      const rate = result.valuationBasis!.discountRate.rate;
       const expectedEv = computeScenarioEnterpriseValue(
         fixture.reverseDcf.baseYearRevenue!.value,
         buildFixedShapeGrowthPath(driver.revenueGrowthOrPath as Decimal),
         driver.operatingMargin!,
-        driver.reinvestmentCapitalIntensity!,
-        POLICY.rateGrid[1],
+        driver.returnOnNewInvestment!,
+        terminalReturnOnNewCapital(rate, "narrow", key),
+        rate,
         fixture.configuredConstants.nopatTaxRate!
       );
       const expectedPerShare = expectedEv.minus(netDebtBridge).dividedBy(driver.shareCount);
@@ -974,47 +986,43 @@ describe("assembleAnalysisResult — M2 multiples read M1's own enterprise value
 
 // ---------------------------------------------------------------------------
 // A3 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — the implied exit-multiple
-// numerator. assemble.ts passed `currentEnterpriseValue` (TODAY's EV) to
-// computeImpliedExitMultiple, whose first parameter is named `terminalValue`
-// — a future-year DCF terminal valuation, never today's EV. The genuinely
-// corresponding figure is `fixture.terminalValuePv`, which is null on every
-// acquired run today (no acquisition-time terminal-value path exists yet —
-// see CompanyFixture.terminalValuePv's own doc comment) and null on both
-// hand-authored fixtures (MSFT_FIXTURE.terminalValuePv, OKLO_FIXTURE.
-// terminalValuePv) — so the honest state is NOT COMPUTED, not a same-period
-// approximation.
+// numerator is a DCF terminal value, never today's EV. It used to read a
+// fixture-supplied `terminalValuePv` placeholder that nothing supplied;
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 deleted that placeholder (AR3 computes
+// the real base DCF), so M9 is the base scenario's own terminal value over
+// its own year-10 operating income — and NOT COMPUTED wherever that DCF is.
 // ---------------------------------------------------------------------------
 describe("assembleAnalysisResult — implied exit multiple divides terminal value, never today's EV (A3)", () => {
-  it("is suppressed INCOMPLETE on MSFT_FIXTURE — terminalValuePv is null, exactly as currentEnterpriseValue being real must not paper over", () => {
-    expect(MSFT_FIXTURE.terminalValuePv).toBeNull();
+  it("is suppressed INCOMPLETE on a sheet pending adoption — no base DCF, so no terminal value — however real today's EV is", () => {
     const result = assembleAnalysisResult(MSFT_FIXTURE);
-
+    expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
     expect(result.diagnostics.impliedExitMultiple.value.suppressed).toBe(true);
     if (result.diagnostics.impliedExitMultiple.value.suppressed) {
       expect(result.diagnostics.impliedExitMultiple.value.cause).toContain("terminalValue");
     }
   });
 
-  it("computes only from a real terminalValuePv, at the fixture's own current EV-derived enterprise value never substituted in", () => {
-    const terminalValuePv = new Decimal("5000");
-    const fixture = { ...MSFT_FIXTURE, terminalValuePv };
+  it("computes from the base DCF's own terminal value over its own year-10 operating income — today's EV never substituted in", () => {
+    const fixture = withStatedD2Inputs(MSFT_FIXTURE);
     const result = assembleAnalysisResult(fixture);
-    const withoutTerminal = assembleAnalysisResult(MSFT_FIXTURE);
-
-    expect(result.diagnostics.impliedExitMultiple.value.suppressed).toBe(false);
-    if (!result.diagnostics.impliedExitMultiple.value.suppressed) {
-      const metric = MSFT_FIXTURE.impliedExitMultipleMetric.value!.value;
-      expect(result.diagnostics.impliedExitMultiple.value.value.toString()).toBe(
-        terminalValuePv.dividedBy(metric).toString()
-      );
-      // Genuinely different from what the old (wrong) current-EV numerator
-      // would have produced — proving this is really terminalValuePv in the
-      // numerator, not currentEnterpriseValue relabelled.
-      if (!withoutTerminal.diagnostics.impliedExitMultiple.value.suppressed) {
-        expect(result.diagnostics.impliedExitMultiple.value.value.toString()).not.toBe(
-          withoutTerminal.diagnostics.impliedExitMultiple.value.value.toString()
-        );
-      }
-    }
+    const rate = result.valuationBasis!.discountRate.rate;
+    const base = fixture.scenarios.base;
+    const valuation = computeScenarioValuation(
+      fixture.reverseDcf.baseYearRevenue!.value,
+      buildFixedShapeGrowthPath(base.revenueGrowthOrPath as Decimal),
+      base.operatingMargin!,
+      base.returnOnNewInvestment!,
+      terminalReturnOnNewCapital(rate, "narrow", "base"),
+      rate,
+      fixture.configuredConstants.nopatTaxRate!
+    );
+    const m9 = result.diagnostics.impliedExitMultiple;
+    expect(m9.dividesMetric).toBe("year-10 operating income (EBIT), base scenario");
+    expect(m9.value.suppressed).toBe(false);
+    if (m9.value.suppressed || result.diagnostics.enterpriseValue.suppressed) return;
+    expect(m9.value.value.toString()).toBe(valuation.terminalValue.dividedBy(valuation.year10OperatingIncome).toString());
+    expect(m9.value.value.toString()).not.toBe(
+      result.diagnostics.enterpriseValue.value.enterpriseValue.dividedBy(valuation.year10OperatingIncome).toString()
+    );
   });
 });

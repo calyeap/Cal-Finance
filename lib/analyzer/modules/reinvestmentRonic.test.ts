@@ -25,6 +25,9 @@ function reinvestmentInput(overrides: Partial<ReinvestmentInput> = {}): Reinvest
   };
 }
 
+// The D1 stable rate (Methodology v2.1) — the one rate the ladder reads.
+const RATE = new Decimal("0.09");
+
 function ronicInput(overrides: Partial<RonicInput> = {}): RonicInput {
   return {
     fiveYearDeltaNopat: sourced(9),
@@ -36,7 +39,7 @@ function ronicInput(overrides: Partial<RonicInput> = {}): RonicInput {
 
 describe("computeReinvestmentRonic — reinvestment", () => {
   it("computes reinvestment = capex + acquisitions + lease ROU additions - D&A + deltaNWC", () => {
-    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput());
+    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput(), RATE);
     expect(result.reinvestment.suppressed).toBe(false);
     if (!result.reinvestment.suppressed) {
       // 40 + 5 + 24.6 - 20 + 5 = 54.6
@@ -45,36 +48,43 @@ describe("computeReinvestmentRonic — reinvestment", () => {
   });
 
   it("returns INCOMPLETE when a reinvestment input is missing", () => {
-    const result = computeReinvestmentRonic(reinvestmentInput({ capex: null }), ronicInput());
+    const result = computeReinvestmentRonic(reinvestmentInput({ capex: null }), ronicInput(), RATE);
     expect(result.reinvestment.suppressed).toBe(true);
   });
 
   it("a missing reinvestment input never blocks RONIC, and vice versa", () => {
-    const result = computeReinvestmentRonic(reinvestmentInput({ capex: null }), ronicInput());
+    const result = computeReinvestmentRonic(reinvestmentInput({ capex: null }), ronicInput(), RATE);
     expect(result.ronic.suppressed).toBe(false);
   });
 });
 
 describe("computeReinvestmentRonic — RONIC ladder", () => {
-  it("classifies a 9% RONIC as CLEAN at 8% and LOW RONIC at 10% and 12% — the spec's own worked example (§7.2 M5)", () => {
-    const result = computeReinvestmentRonic(
-      reinvestmentInput(),
-      ronicInput({ fiveYearDeltaNopat: sourced(9), fiveYearDeltaInvestedCapital: sourced(100) })
-    );
-    expect(result.ronic.suppressed).toBe(false);
-    if (!result.ronic.suppressed) {
-      const byRate = Object.fromEntries(result.ronic.value.cells.map((c) => [c.rate, c.state]));
-      expect(byRate[0.08]).toBe("CLEAN");
-      expect(byRate[0.1]).toBe("LOW RONIC — VALUE-DESTROYING GROWTH");
-      expect(byRate[0.12]).toBe("LOW RONIC — VALUE-DESTROYING GROWTH");
-    }
+  // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change: §12.2
+  // B5's per-grid-cell check is replaced (frozen spec §14.9 AR0-2: "with one
+  // solve the ladder is evaluated against the D1 rate; AR4 replaces this
+  // check"). The spec's worked example — a 9% RONIC is clean against a rate
+  // it meets and LOW RONIC against one above it — is kept, against the one
+  // rate the ladder is handed.
+  it("evaluates the ladder against the one rate it is handed — a 9% RONIC is CLEAN at 9% and LOW RONIC at 11% (§7.2 M5 worked example, AR0-2)", () => {
+    const at = (rate: string) => {
+      const result = computeReinvestmentRonic(
+        reinvestmentInput(),
+        ronicInput({ fiveYearDeltaNopat: sourced(9), fiveYearDeltaInvestedCapital: sourced(100) }),
+        new Decimal(rate)
+      );
+      if (result.ronic.suppressed) throw new Error("ladder unexpectedly suppressed");
+      expect(result.ronic.value.cells).toHaveLength(1);
+      expect(result.ronic.value.cells[0].rate.toString()).toBe(rate);
+      return result.ronic.value.cells[0].state;
+    };
+    expect(at("0.09")).toBe("CLEAN");
+    expect(at("0.11")).toBe("LOW RONIC — VALUE-DESTROYING GROWTH");
   });
 
   it("returns RONIC NOT MEANINGFUL on every cell when invested capital did not grow", () => {
     const result = computeReinvestmentRonic(
       reinvestmentInput(),
-      ronicInput({ fiveYearDeltaInvestedCapital: sourced(-10) })
-    );
+      ronicInput({ fiveYearDeltaInvestedCapital: sourced(-10) }), RATE);
     expect(result.ronic.suppressed).toBe(false);
     if (!result.ronic.suppressed) {
       for (const cell of result.ronic.value.cells) {
@@ -85,7 +95,7 @@ describe("computeReinvestmentRonic — RONIC ladder", () => {
   });
 
   it("returns RONIC NOT MEANINGFUL on every cell when NOPAT did not grow", () => {
-    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput({ fiveYearDeltaNopat: sourced(-5) }));
+    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput({ fiveYearDeltaNopat: sourced(-5) }), RATE);
     expect(result.ronic.suppressed).toBe(false);
     if (!result.ronic.suppressed) {
       expect(result.ronic.value.cells.every((c) => c.state === "RONIC NOT MEANINGFUL")).toBe(true);
@@ -95,8 +105,7 @@ describe("computeReinvestmentRonic — RONIC ladder", () => {
   it("caps RONIC at 200% and labels it, on every cell, when the computed value exceeds the cap", () => {
     const result = computeReinvestmentRonic(
       reinvestmentInput(),
-      ronicInput({ fiveYearDeltaNopat: sourced(250), fiveYearDeltaInvestedCapital: sourced(100) })
-    );
+      ronicInput({ fiveYearDeltaNopat: sourced(250), fiveYearDeltaInvestedCapital: sourced(100) }), RATE);
     expect(result.ronic.suppressed).toBe(false);
     if (!result.ronic.suppressed) {
       for (const cell of result.ronic.value.cells) {
@@ -107,7 +116,7 @@ describe("computeReinvestmentRonic — RONIC ladder", () => {
   });
 
   it("returns INCOMPLETE for the whole ladder when a RONIC input is missing", () => {
-    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput({ fiveYearDeltaNopat: null }));
+    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput({ fiveYearDeltaNopat: null }), RATE);
     expect(result.ronic.suppressed).toBe(true);
     if (result.ronic.suppressed) {
       expect(result.ronic.state).toBe("INCOMPLETE");
@@ -115,7 +124,7 @@ describe("computeReinvestmentRonic — RONIC ladder", () => {
   });
 
   it("carries the lag-bias direction through unchanged (I13)", () => {
-    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput({ lagBiasDirection: "generous" }));
+    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput({ lagBiasDirection: "generous" }), RATE);
     expect(result.lagBiasDirection).toBe("generous");
   });
 });
@@ -124,14 +133,13 @@ describe("computeReinvestmentRonic — CAPITAL-LIGHT", () => {
   it("fires CAPITAL-LIGHT and expresses working-capital intensity when RONIC exceeds 60%", () => {
     const result = computeReinvestmentRonic(
       reinvestmentInput({ deltaNwc: sourced(2), deltaRevenue: sourced(20) }),
-      ronicInput({ fiveYearDeltaNopat: sourced(65), fiveYearDeltaInvestedCapital: sourced(100) })
-    );
+      ronicInput({ fiveYearDeltaNopat: sourced(65), fiveYearDeltaInvestedCapital: sourced(100) }), RATE);
     expect(result.capitalLight).toBe(true);
     expect(result.workingCapitalIntensity?.toString()).toBe("0.1");
   });
 
   it("does not fire CAPITAL-LIGHT for an ordinary sub-60% RONIC", () => {
-    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput());
+    const result = computeReinvestmentRonic(reinvestmentInput(), ronicInput(), RATE);
     expect(result.capitalLight).toBe(false);
     expect(result.workingCapitalIntensity).toBeNull();
   });
@@ -139,8 +147,7 @@ describe("computeReinvestmentRonic — CAPITAL-LIGHT", () => {
   it("fires CAPITAL-LIGHT even when RONIC is also capped at 200% — independent of the ladder", () => {
     const result = computeReinvestmentRonic(
       reinvestmentInput(),
-      ronicInput({ fiveYearDeltaNopat: sourced(250), fiveYearDeltaInvestedCapital: sourced(100) })
-    );
+      ronicInput({ fiveYearDeltaNopat: sourced(250), fiveYearDeltaInvestedCapital: sourced(100) }), RATE);
     expect(result.capitalLight).toBe(true);
   });
 });

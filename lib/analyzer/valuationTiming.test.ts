@@ -6,6 +6,7 @@ import { computeScenarioValuation } from "./modules/scenarioOutputs";
 import { buildFixedShapeGrowthPath } from "./growthPath";
 import { assembleAnalysisResult } from "./assemble";
 import { MSFT_FIXTURE } from "./fixtures/msft";
+import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 
 // CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2 timing: mid-year cash
 // flows, terminal at 9.5 years, valued at the price date on a TTM base. The
@@ -39,15 +40,15 @@ describe("INVARIANT — valued at the price date: a stub of s years multiplies e
   const rollForward = D(1).plus(RATE).pow(stub);
 
   it("diagnostic reverse DCF (M7)", () => {
-    const atBase = projectReverseDcfValue(D("0.08"), D("0.4"), D("0.3"), RATE, D(1000), D("0.2")).ev;
-    const atPrice = projectReverseDcfValue(D("0.08"), D("0.4"), D("0.3"), RATE, D(1000), D("0.2"), undefined, stub).ev;
+    const atBase = projectReverseDcfValue(D("0.08"), D("0.4"), D("0.3"), D("0.11"), RATE, D(1000), D("0.2")).ev;
+    const atPrice = projectReverseDcfValue(D("0.08"), D("0.4"), D("0.3"), D("0.11"), RATE, D(1000), D("0.2"), undefined, stub).ev;
     expect(atPrice.minus(atBase.mul(rollForward)).abs().toNumber()).toBeLessThan(1e-6);
   });
 
   it("scenario DCF (M15), both parts: explicit-period PV and terminal PV", () => {
-    const args = [D(1000), buildFixedShapeGrowthPath(D("0.08")), D("0.4"), D("0.05"), RATE, D("0.2")] as const;
+    const args = [D(1000), buildFixedShapeGrowthPath(D("0.08")), D("0.4"), D("0.3"), D("0.11"), RATE, D("0.2")] as const;
     const atBase = computeScenarioValuation(...args);
-    const atPrice = computeScenarioValuation(...args, undefined, null, stub);
+    const atPrice = computeScenarioValuation(...args, undefined, stub);
     expect(atPrice.explicitPeriodPv.minus(atBase.explicitPeriodPv.mul(rollForward)).abs().toNumber()).toBeLessThan(1e-6);
     expect(atPrice.terminalValuePv.minus(atBase.terminalValuePv.mul(rollForward)).abs().toNumber()).toBeLessThan(1e-6);
   });
@@ -55,8 +56,12 @@ describe("INVARIANT — valued at the price date: a stub of s years multiplies e
 
 describe("assembly — the run is dated by its TTM base and its price", () => {
   it("records the valuation date, base period and stub, and terminal share does not move with the stub (both parts roll forward together)", () => {
-    const undated = assembleAnalysisResult(MSFT_FIXTURE);
-    const dated = assembleAnalysisResult({ ...MSFT_FIXTURE, valuationBase: { periodEnd: "2026-06-30", kind: "TTM" } });
+    // STATED D2 test inputs (AR4): without them the sheet is pending adoption
+    // and there is no terminal share to compare.
+    const adopted = withStatedD2Inputs(MSFT_FIXTURE);
+    const undated = assembleAnalysisResult(adopted);
+    const dated = assembleAnalysisResult({ ...adopted, valuationBase: { periodEnd: "2026-06-30", kind: "TTM" } });
+    expect(undated.diagnostics.terminal.terminalShareOfValue.isFinite()).toBe(true);
 
     expect(dated.runIdentity?.valuationTiming).toEqual({
       convention: "MID-YEAR",

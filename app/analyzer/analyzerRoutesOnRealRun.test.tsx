@@ -141,19 +141,13 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
       // reasons.
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
       if (ticker === "MSFT") {
-        // CF-ANALYZER-STAGE3-VERDICT-FINISH-01: with a real, defensible
-        // range, deriveVerdict now reaches a completed SELL under the live
-        // Methodology's Verdict synthesis policy v1 — DominantVerdictSlot's
-        // completed-verdict path takes over the hero (the verdict word
-        // plus a plain-English rationale built from the same price/Base
-        // figures, trustCopy.ts's `completedVerdictExplanation`), not the
-        // price-vs-range headline that only applies to an INCOMPLETE
-        // verdict.
+        // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change:
+        // that range and SELL were the superseded Stage-2 sheet's (product-
+        // decisions item 27, D2). With no D2 input on MSFT's sheet, the hero
+        // states plainly that it is pending adoption — never raw INCOMPLETE.
         expect(hero.textContent).not.toContain("INCOMPLETE");
-        expect(hero.textContent).toContain("SELL");
-        expect(hero.textContent).toContain(
-          "above the SELL level under every uncertainty bucket in the approved verdict policy"
-        );
+        expect(hero.textContent).not.toContain("SELL");
+        expect(hero.textContent).toMatch(/^No valuation verdict for this company yet — its assumption sheet is pending adoption/);
       } else {
         // CF-ANALYZER-V1-SETTLE-01 (Calvin's 7 Oct 2026 decision on #399,
         // Option 1): no defensible range, so the hero states why in plain

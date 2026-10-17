@@ -4,6 +4,7 @@ import { render, cleanup } from "@testing-library/react";
 import { ValuationSections } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
+import { withStatedD2Inputs } from "@/lib/analyzer/fixtures/statedD2Inputs";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 
 afterEach(cleanup);
@@ -19,7 +20,9 @@ function rowText(container: HTMLElement, heading: string): string | null {
 }
 
 describe("Section G — terminal share and valuation dates", () => {
-  const dated = assembleAnalysisResult({ ...MSFT_FIXTURE, valuationBase: { periodEnd: "2026-06-30", kind: "TTM" } });
+  // STATED D2 test inputs (CF-AR4-RATE-REINVESTMENT-TERMINAL-01): the base
+  // DCF the terminal share comes from needs an adopted sheet.
+  const dated = assembleAnalysisResult({ ...withStatedD2Inputs(MSFT_FIXTURE), valuationBase: { periodEnd: "2026-06-30", kind: "TTM" } });
 
   it("shows the computed terminal share as a percentage", () => {
     const { container } = render(<ValuationSections result={dated} />);

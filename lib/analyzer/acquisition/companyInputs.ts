@@ -1,6 +1,6 @@
 import Decimal from "decimal.js";
 import { CLEAN_PROVENANCE, MARKET_DATA_PROVENANCE, combineProvenance } from "../provenance";
-import { TAG_MAP } from "./tagMap";
+import { FINANCE_LEASES_INSIDE_TOTAL_DEBT, TAG_MAP } from "./tagMap";
 import {
   annualSeries,
   instantAnnualSeries,
@@ -85,6 +85,9 @@ export interface AnalystInputs {
   /** Step 7. Not facts, not acquired. */
   scenarios: CompanyFixture["scenarios"];
   scenarioValues: CompanyFixture["scenarioValues"];
+  /** Methodology v2.1 D2's moat class — Calvin's judgement on the sheet.
+   * Absent or null: the sheet is pending adoption. */
+  moatClass?: CompanyFixture["moatClass"];
   /** A4 — see `CompanyFixture.scenarioValuesAreFixtureCarried`'s own doc comment. */
   scenarioValuesAreFixtureCarried: boolean;
   /** CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 — see
@@ -380,7 +383,10 @@ export function buildCompanyInputs(
     gate1: { filedYearsCount: filedAnnualYearsCount(companyFacts) },
     leverage: {
       totalDebt: raw("total-debt"),
-      financeLeaseLiabilities: raw("finance-lease-liabilities"),
+      // Counted once (R5, closed issue #311): a filer whose leases are inside
+      // total debt adds no separate lease term here either.
+      financeLeaseLiabilities:
+        FINANCE_LEASES_INSIDE_TOTAL_DEBT[acquisition.cik] !== undefined ? new Decimal(0) : raw("finance-lease-liabilities"),
       cashAndMarketableDebtSecurities: raw("cash-and-marketable-debt-securities"),
       // Filled by assemble from M1's own output; null here means M1 was
       // INCOMPLETE, which fails the leverage test closed (§5.3, §6.5).
@@ -422,6 +428,24 @@ export function buildCompanyInputs(
         nonOpSourced
       ),
       nonOperatingInvestmentsErrorDirection: nonOp?.errorDirection ?? null,
+      // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 (R5) — the bridge flags. Each is
+      // optional to the bridge: absent, it is flagged, never read as zero.
+      minorityInterest: get("minority-interest"),
+      preferredStock: get("preferred-stock"),
+      convertibleDebt: get("convertible-debt"),
+      seniorClaimAsOfDates: {
+        minorityInterest: byId.get("minority-interest")?.asOfDate ?? null,
+        preferredStock: byId.get("preferred-stock")?.asOfDate ?? null,
+        convertibleDebt: byId.get("convertible-debt")?.asOfDate ?? null,
+      },
+      nonOperatingEquityInvestmentsFairValue: get("equity-method-investments-fair-value"),
+      contingentItems: (
+        [
+          ["unrecognized tax benefits (open tax positions, e.g. an IRS dispute)", get("unrecognized-tax-benefits")],
+          ["guarantee obligations — maximum exposure", get("guarantee-maximum-exposure")],
+        ] as const
+      ).flatMap(([item, amount]) => (amount === null ? [] : [{ item, amount }])),
+      financeLeasesInsideTotalDebt: FINANCE_LEASES_INSIDE_TOTAL_DEBT[acquisition.cik] ?? null,
     },
 
     multiplesInput: {
@@ -624,11 +648,10 @@ export function buildCompanyInputs(
 
     shapeMismatch: { guidedNearTermGrowth: null, impliedConstantGrowth: null },
     rateSensitivityCells: null,
-    terminalValuePv: null,
-    impliedExitMultipleMetric: { value: null, metricName: "EV/EBIT (operating income)" },
 
     scenarios: analyst.scenarios,
     scenarioValues: analyst.scenarioValues,
+    moatClass: analyst.moatClass ?? null,
     scenarioValuesAreFixtureCarried: analyst.scenarioValuesAreFixtureCarried,
     recordedScenarioValuesComputeFromDrivers: analyst.recordedScenarioValuesComputeFromDrivers,
     revalueBaseCaseAtRate: analyst.revalueBaseCaseAtRate,

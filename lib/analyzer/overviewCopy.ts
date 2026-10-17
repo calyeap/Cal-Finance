@@ -117,6 +117,11 @@ export function plainReason(state: SuppressingState, cause: string, leverage?: L
     case "PRICE NOT JUSTIFIABLE BY THIS OUTCOME":
       return "the success scenario does not justify today's price";
     case "INCOMPLETE": {
+      // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — a sheet without the D2 inputs
+      // (assemble.ts resolveD2Inputs), said plainly.
+      if (/^Pending adoption/.test(cause)) {
+        return "its assumption sheet is pending adoption: Calvin has not yet set its return on new investment and moat class, which the approved valuation rules need";
+      }
       if (/enterprise value is INCOMPLETE/.test(cause)) {
         return "it depends on the company's enterprise value, which is not computed yet";
       }

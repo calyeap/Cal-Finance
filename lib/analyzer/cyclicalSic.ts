@@ -1,11 +1,9 @@
 // CF-AR2-GOLDEN-HARNESS-01, DO item 5 — a SIC-prefix → classification table.
 //
-// HARNESS-ONLY. This module is deliberately NOT wired into
-// `lib/analyzer/modules/*`, `assemble.ts`, or any discount-rate selection —
-// production SIC-based cyclical classification (frozen spec §14.9 AR0-1 /
-// Cal Finance Methodology v2.1 D1) is explicitly AR4's job. Importing this
-// file from anywhere under `lib/analyzer/modules` or from `assemble.ts`
-// would be an engine change this outcome's DO NOT forbids.
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 moved this table out of the golden
+// harness and wired it into D1 rate selection (discountRate.ts, frozen spec
+// §14.9 AR0-1). The list itself is unchanged; the harness still validates it
+// (golden/goldenFacts.test.ts).
 //
 // SCOPE — the full D1 list, fixed here as an AI DEFAULT.
 //

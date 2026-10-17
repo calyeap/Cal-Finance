@@ -66,59 +66,71 @@ describe("DominantVerdictSlot — completed path", () => {
   });
 });
 
-// CF-AR1-QUICK-READ-OVERVIEW-01 — DO item 2: until AR5 lands, the verdict
-// slot carries a "rate convention under review" caveat beside any
-// rate-derived reading outside Evidence, naming the fixed policy rate the
-// code still uses (trustCopy.ts's `rateConventionCaveat` reads
-// `POLICY.rateGrid[1]`, currently 10%). RED on the base: this caveat did
-// not exist anywhere in this component.
-describe("DominantVerdictSlot — rate-convention caveat (CF-AR1-QUICK-READ-OVERVIEW-01)", () => {
-  it("a completed verdict outside Evidence carries the caveat, naming the fixed rate", () => {
+describe("DominantVerdictSlot — the dated rate in use (CF-AR4-RATE-REINVESTMENT-TERMINAL-01)", () => {
+  // Replaces CF-AR1-QUICK-READ-OVERVIEW-01's "rate convention under review"
+  // caveat, which said the engine still priced off the retired fixed rate:
+  // AR4 moved the engine to the dated D1 rate, and the slot now names it
+  // (product-decisions item 26 — "the product shows the dated rate in use").
+  const RATE_LINE = "Valued at 9.0% — the market's expected return, for a stable business (rate dated 2026-10-17).";
+
+  it("a completed verdict outside Evidence states the dated rate it was valued at", () => {
     const { container } = render(
       <DominantVerdictSlot
         verdict={{ status: "SELL", reason: "The evidence supports it." }}
         trustStatus="PARTIAL"
         completedExplanation="Price $510.12 is above Base."
+        rateInUse={RATE_LINE}
       />
     );
     expect(screen.getByText("SELL")).not.toBeNull();
-    expect(container.textContent).toContain("Rate convention under review");
-    expect(container.textContent).toContain("10%");
+    expect(container.textContent).toContain(RATE_LINE);
+    expect(container.textContent).not.toContain("Rate convention under review");
   });
 
-  it("the same completed verdict on the Evidence tab carries no caveat — Evidence's content is unchanged by this outcome", () => {
+  it("the same completed verdict on the Evidence tab carries no rate line — Evidence's content is unchanged", () => {
     const { container } = render(
       <DominantVerdictSlot
         verdict={{ status: "SELL", reason: "The evidence supports it." }}
         trustStatus="PARTIAL"
         isEvidenceTab
+        rateInUse={RATE_LINE}
       />
     );
-    expect(container.textContent).not.toContain("Rate convention under review");
+    expect(container.textContent).not.toContain(RATE_LINE);
   });
 
-  it("the INCOMPLETE price-vs-range headline outside Evidence also carries the caveat (it is rate-derived too)", () => {
+  it("the INCOMPLETE price-vs-range headline outside Evidence also states it (it is rate-derived too)", () => {
     const { container } = render(
       <DominantVerdictSlot
         verdict={{ status: "INCOMPLETE", reason: "No comparator yet." }}
         trustStatus="PARTIAL"
         priceVsRangeHeadline="Trading 64% of the way from the bear case to the bull case modeled for this company."
+        rateInUse={RATE_LINE}
       />
     );
-    expect(container.textContent).toContain("Rate convention under review");
+    expect(container.textContent).toContain(RATE_LINE);
   });
 
-  it("an INCOMPLETE verdict with no defensible range (no rate-derived figure shown) carries no caveat", () => {
+  it("an INCOMPLETE verdict with no defensible range (no rate-derived figure shown) carries no rate line", () => {
     const { container } = render(
       <DominantVerdictSlot
         verdict={{ status: "INCOMPLETE", reason: "No range." }}
         trustStatus="UNUSABLE"
         incompleteExplanation="This run's underlying data isn't reliable enough yet to support a verdict."
+        rateInUse={RATE_LINE}
       />
     );
-    expect(container.textContent).not.toContain("Rate convention under review");
+    expect(container.textContent).not.toContain(RATE_LINE);
+  });
+
+  it("a snapshot stored before AR4 carries no basis, and so no line", () => {
+    const { container } = render(
+      <DominantVerdictSlot verdict={{ status: "SELL", reason: "x" }} trustStatus="PARTIAL" completedExplanation="x" />
+    );
+    expect(container.querySelector(".caveat")).toBeNull();
   });
 });
+
 
 // M9-CONFIDENCE-LABEL-01 (issue #201) — the ConfidenceIndicator label is a
 // pure mapping from AnalysisResult.trust.status, exercised for all three

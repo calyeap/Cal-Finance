@@ -17,6 +17,8 @@ import { advanceRunAutomatically } from "./autoRun";
 import { automaticDecisionsFor } from "./autoVerify";
 import { deriveVerdict } from "./verdict";
 import type { AnalysisResult } from "./types";
+import { assembleAnalysisResult } from "./assemble";
+import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-AUTORUN-01 — `ticker → analyze → report`, proved on real MSFT
@@ -237,14 +239,17 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
         // durably recorded Calvin's approved MSFT Stage-2 bundle — a real,
         // driver-authored analyst bundle, never fixture-carried — so A4
         // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses MSFT's
-        // range. Both paths now read PARTIAL (the real, unrelated
-        // rate-sensitivity gap every MSFT run carries) and a computed
-        // range — the two paths' own genuine difference is in the
-        // verdict's own reason text, not trust.status or the range's kind.
-        expect(automatic.trust.status).toBe("PARTIAL");
+        // range.
+        //
+        // CF-AR4-RATE-REINVESTMENT-TERMINAL-01: that Stage-2 sheet is
+        // superseded by D2 (product-decisions item 27) and carries no D2
+        // input, so both paths read the same pending-adoption suppression and
+        // UNUSABLE trust; the automatic path still never carries PROFILE NOT
+        // CONFIRMED.
+        expect(automatic.trust.status).toBe("UNUSABLE");
+        expect(byHand.trust.status).toBe("UNUSABLE");
+        expect(automatic.fairValueRange.kind).toBe("suppressed");
         expect(deriveVerdict(automatic).reason).not.toContain("PROFILE NOT CONFIRMED");
-        expect(byHand.trust.status).toBe("PARTIAL");
-        expect(deriveVerdict(byHand).reason).toContain("PROFILE NOT CONFIRMED");
       } else {
         // OKLO's range is already suppressed for an unrelated reason
         // (LEVERAGE UNSUPPORTED IN v1), so trust/verdict are unaffected and
@@ -253,7 +258,7 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       }
     });
 
-    it("MSFT now reaches a real SELL under the live Methodology's Verdict synthesis policy v1; OKLO still reads INCOMPLETE, for the upstream reason it reads INCOMPLETE for", async () => {
+    it("MSFT reads INCOMPLETE while its sheet is pending adoption (D2); OKLO still reads INCOMPLETE, for the upstream reason it reads INCOMPLETE for", async () => {
       const { result } = await analyzeAutomatically(ticker, companyName);
       const verdict = deriveVerdict(result);
 
@@ -279,13 +284,18 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
         // the old permanent M8-comparator INCOMPLETE — real price $499.70
         // against the real recomputed Base $283.31 (1.7638×) clears the
         // strictest uncertainty-bucket SELL threshold invariantly.
+        //
+        // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change:
+        // that SELL was off the superseded Stage-2 Base (product-decisions
+        // item 27). With no D2 input on MSFT's sheet the verdict is
+        // INCOMPLETE and says why — never a manufactured HOLD.
         expect(result.gates.leverage.result).toBe("PASS");
-        expect(result.trust.status).toBe("PARTIAL");
-        expect(result.fairValueRange.kind).toBe("range");
-        expect(verdict.status).toBe("SELL");
+        expect(result.trust.status).toBe("UNUSABLE");
+        expect(result.fairValueRange.kind).toBe("suppressed");
+        expect(verdict.status).toBe("INCOMPLETE");
         expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
         expect(verdict.reason).not.toContain("PROFILE NOT CONFIRMED");
-        expect(verdict.reason).toContain("Verdict synthesis policy v1");
+        expect(verdict.reason).toMatch(/Pending adoption|scenario dollar values/);
       } else {
         // 22 Sep 02:24:07Z (B) — OKLO's verdict stays honestly INCOMPLETE,
         // blocked upstream of any synthesis by the leverage precondition.
@@ -333,7 +343,7 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
   // is MSFT's alone: the §4.4 ruling's recorded state is still reachable, and
   // still the same state, on top of an automatically analyzed run.
   // -------------------------------------------------------------------------
-  it("MSFT's recorded §4.4 state (CF-S44-RECORD-01) is unchanged — recording the ruling on the detail route still reaches PASS leverage, and the EV bridge is unsuppressed, with a real computed range (issue #442)", async () => {
+  it("MSFT's recorded §4.4 state (CF-S44-RECORD-01) is unchanged — recording the ruling on the detail route still reaches PASS leverage, and the EV bridge is unsuppressed", async () => {
     const runId = await createRun("MSFT", "Microsoft Corporation");
     await advanceRunAutomatically(runId);
 
@@ -348,10 +358,10 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
 
     const result = await computeAnalysisForRun(runId);
     expect(result.gates.leverage.result).toBe("PASS");
-    // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) — see the shared block's
-    // identical assertion above.
-    expect(result.trust.status).toBe("PARTIAL");
-    expect(result.fairValueRange.kind).toBe("range");
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — see the shared block's
+    // identical assertion above: the sheet is pending adoption.
+    expect(result.trust.status).toBe("UNUSABLE");
+    expect(result.fairValueRange.kind).toBe("suppressed");
 
     const ev = result.diagnostics.enterpriseValue;
     expect(ev.suppressed).toBe(false);
@@ -362,11 +372,10 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
     }
 
     const verdict = deriveVerdict(result);
-    // CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — same real SELL as the shared
-    // block above; this test exercises the detail-route judgment path
-    // rather than the automatic pass, but reaches the identical financial
-    // state, so the same verdict follows.
-    expect(verdict.status).toBe("SELL");
+    // Same state as the shared block above; this test exercises the
+    // detail-route judgment path rather than the automatic pass, but reaches
+    // the identical financial state, so the same verdict follows.
+    expect(verdict.status).toBe("INCOMPLETE");
     expect(verdict.reason).not.toContain("LEVERAGE UNSUPPORTED IN v1");
   });
 
@@ -434,7 +443,12 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
 
     it("names the reason at the affected field, and says the software recorded it", async () => {
       const { runId } = await runWithFailedCrossCheckOnPrice();
-      const result = await computeAnalysisForRun(runId);
+      // CF-AR4-RATE-REINVESTMENT-TERMINAL-01: MSFT's recorded sheet is
+      // pending adoption, which would make trust UNUSABLE before rule 2 ever
+      // reads the facts; STATED D2 test inputs (never recorded) keep this
+      // test about the fact.
+      const state = await loadGateState(runId);
+      const result = assembleAnalysisResult({ ...withStatedD2Inputs(state.fixture), scenarioValues: null, scenarioValuesAreFixtureCarried: false });
 
       const price = result.facts.find((f) => f.id === "price")!;
       expect(price.verificationState).toBe("NOT CONFIRMED");

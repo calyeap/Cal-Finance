@@ -101,8 +101,11 @@ describe("Quick Read on the Overview tab (CF-AR1-QUICK-READ-OVERVIEW-01)", () =>
   });
 
   it("the Evidence tab's own QuickRead keeps its verbatim raw state codes and Section cross-references — unchanged by this outcome", () => {
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01: MSFT_FIXTURE's reverse DCF is now
+    // one solve that returns INCOMPLETE (its sheet is pending adoption), not
+    // four DEGENERATE grid cells — so the verbatim raw code checked is that.
     const { container } = render(<QuickRead result={result} />);
-    expect(container.textContent).toContain("DEGENERATE");
+    expect(container.textContent).toContain("INCOMPLETE");
     expect(container.querySelector("a[href='#E']")).not.toBeNull();
   });
 

@@ -225,7 +225,7 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
     expect(result.facts.filter((f) => f.verificationState === "NOT CONFIRMED")).toHaveLength(0);
   });
 
-  it("NVDA (§4.4 unmade) — option A's raw scenario dispersion is the transcribed bundle's own values; option B carries CAPITAL-LIGHT, not SHORT HISTORY, and not one of the three ProvenanceQualifier flags", async () => {
+  it("NVDA (§4.4 unmade) — option A's raw scenario dispersion is not surfaced while the sheet is pending adoption; option B carries CAPITAL-LIGHT, not SHORT HISTORY, and not one of the three ProvenanceQualifier flags", async () => {
     const result = await openNvdaObservationRun();
 
     expect(result.gates.gate1.state).toBeNull();
@@ -234,10 +234,15 @@ describe("CF-STEP4-SIGNAL-OBSERVE-01 — option A and option B signals on the th
     if (result.fairValueRange.kind === "suppressed") {
       expect(result.fairValueRange.state).toBe("LEVERAGE UNSUPPORTED IN v1");
     }
-    expect(result.scenarioOutputs.values.bear.toFixed(2)).toBe("28.08");
-    expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("102.38");
-    expect(result.scenarioOutputs.values.bull.toFixed(2)).toBe("296.44");
-    expect(result.scenarioOutputs.weightedDistribution.toFixed(2)).toBe("142.30");
+    // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change: the
+    // transcribed bundle's typed $28.08/$102.38/$296.44 were entered under the
+    // superseded rate and reinvestment conventions; NVDA's recorded sheet has
+    // no D2 input, so it is pending adoption and they are no longer surfaced
+    // as option A's raw dispersion — NaN, with the reason bound.
+    expect(result.scenarioOutputs.values.bear.isNaN()).toBe(true);
+    expect(result.scenarioOutputs.values.base.isNaN()).toBe(true);
+    expect(result.scenarioOutputs.values.bull.isNaN()).toBe(true);
+    expect(result.valuationBasis?.d2.status).toBe("PENDING ADOPTION");
 
     expect(result.states.qualifying.map((q) => q.flag)).toEqual(["CAPITAL-LIGHT"]);
     expect(provenanceQualifierFlagsPresent(result.states.qualifying)).toEqual([]);

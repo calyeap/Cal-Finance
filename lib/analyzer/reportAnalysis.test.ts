@@ -62,7 +62,7 @@ describe("analysisForReport", () => {
     const report = await analysisForReport(runId, null);
 
     expect(report.aiLayer.status).toBe("NOT CONFIGURED");
-    expect(report.result.priceImplied.reverseDcfGrid).toHaveLength(9);
+    expect(report.result.priceImplied.reverseDcf.rate.isFinite()).toBe(true);
     expect(report.result.interpretation.statements).toEqual([]);
     expect(report.result.interpretation.pageOne).toBeNull();
     expect(report.result.challenger).toBeNull();
@@ -120,7 +120,7 @@ describe("analysisForReport", () => {
     expect(report.aiLayer.detail).toContain("unreachable");
     expect(report.result.interpretation.statements).toEqual([]);
     expect(report.result.challenger).toBeNull();
-    expect(report.result.priceImplied.reverseDcfGrid).toHaveLength(9);
+    expect(report.result.priceImplied.reverseDcf.rate.isFinite()).toBe(true);
   });
 
   it("keeps the analysis when [C] returns a figure that does not trace, and refuses the prose entirely", async () => {

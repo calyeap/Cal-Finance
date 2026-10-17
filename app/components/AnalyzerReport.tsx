@@ -14,7 +14,9 @@ import type {
   LeverageResult,
   Profile,
   ProvenanceTokens,
-  ReverseDcfCell,
+  BridgeFlags,
+  ReverseDcfSolve,
+  ValuationBasis,
   SuccessDefinitionRow,
   SuppressedValue,
 } from "@/lib/analyzer/types";
@@ -355,49 +357,115 @@ export function FigureValue({ figure, format }: { figure: Figure<Decimal>; forma
   );
 }
 
-function ReverseDcfCellView({
-  cell,
-  ariaRowIndex,
-  ariaColIndex,
-}: {
-  cell: ReverseDcfCell;
-  ariaRowIndex: number;
-  ariaColIndex: number;
-}) {
-  if (cell.fiveYearGrowth.suppressed) {
-    return (
-      <div className="cell suppressed" role="cell" aria-rowindex={ariaRowIndex} aria-colindex={ariaColIndex}>
-        <span className="name">{cell.fiveYearGrowth.state}</span>
-        <span className="cause">{humanizeCause(cell.fiveYearGrowth.cause)}</span>
-      </div>
-    );
-  }
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 (R5) — what the enterprise-value
+// bridge did with each claim the Methodology's common-equity completeness
+// rule names, and the contingent items it lists but never deducts.
+function BridgeFlagsRow({ flags }: { flags: BridgeFlags }) {
   return (
-    <div className="cell" role="cell" aria-rowindex={ariaRowIndex} aria-colindex={ariaColIndex}>
-      <div className="line">
-        <span className="lbl">yrs 1-5 growth</span>
-        <b>{pct(cell.fiveYearGrowth.value)}</b>
-      </div>
-      {!cell.tenYearCagr.suppressed && (
-        <div className="line">
-          <span className="lbl">10-yr CAGR</span>
-          <b>{pct(cell.tenYearCagr.value)}</b>
+    <tr>
+      <th scope="row">Enterprise-value bridge — claims and contingencies</th>
+      <td>
+        {flags.claims.map((c) => (
+          <div key={c.claim}>
+            <span className="v">
+              {c.claim}: {c.status === "NOT TAGGED" ? "not tagged" : c.status.toLowerCase()}
+              {c.amount !== null && ` ($${formatCompactUsd(c.amount)})`}
+            </span>
+            <div className="sub">{c.note}</div>
+          </div>
+        ))}
+        <div>
+          <span className="v">finance leases: {flags.financeLeases.treatment.toLowerCase()}</span>
+          <div className="sub">{flags.financeLeases.note}</div>
         </div>
-      )}
-      {!cell.year10Revenue.suppressed && (
-        <div className="line">
-          <span className="lbl">yr-10 revenue</span>
-          <b>${formatCompactUsd(cell.year10Revenue.value)}</b>
+        <div>
+          <span className="v">
+            strategic stakes at book ${formatCompactUsd(flags.strategicStakes.atBook)}
+            {flags.strategicStakes.disclosedFairValue !== null &&
+              ` · disclosed fair value $${formatCompactUsd(flags.strategicStakes.disclosedFairValue)}`}
+          </span>
+          <div className="sub">{flags.strategicStakes.note}</div>
         </div>
-      )}
-      {!cell.ronic.suppressed && (
-        <div className="line">
-          <span className="lbl">RONIC</span>
-          <b>{pct(cell.ronic.value)}</b>
-        </div>
-      )}
-      <Flags flags={cell.ronic.suppressed ? [] : cell.ronic.qualification.analyticFlags} />
-    </div>
+        {flags.contingentItems.length === 0 ? (
+          <div className="sub">No contingent item (unrecognised tax benefits, guarantees) is tagged.</div>
+        ) : (
+          flags.contingentItems.map((c) => (
+            <div key={c.item}>
+              <span className="v">
+                {c.item}: ${formatCompactUsd(c.amount)}
+              </span>
+              <div className="sub">{c.note}</div>
+            </div>
+          ))
+        )}
+      </td>
+    </tr>
+  );
+}
+
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — M7's one solve (frozen spec §14.9
+// AR0-2), in the table shape Section E's other figures use.
+function ReverseDcfSolveView({ solve }: { solve: ReverseDcfSolve }) {
+  return (
+    <table className="t" aria-label="Reverse DCF — one solve at the rate in use">
+      <tbody>
+        <tr>
+          <th scope="row">Implied growth, yrs 1-5 at r = {pct(solve.rate)}</th>
+          <td>
+            <FigureValue figure={solve.fiveYearGrowth} format={pct} />
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Equivalent ten-year CAGR</th>
+          <td>
+            <FigureValue figure={solve.tenYearCagr} format={pct} />
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">Implied year-10 revenue</th>
+          <td>
+            <FigureValue figure={solve.year10Revenue} format={(v) => `$${formatCompactUsd(v)}`} />
+          </td>
+        </tr>
+        {solve.heldAt !== null && (
+          <tr>
+            <th scope="row">Held at the base scenario</th>
+            <td>
+              margin {pct(solve.heldAt.operatingMargin)} · return on new investment{" "}
+              {pct(solve.heldAt.returnOnNewInvestment)} · terminal return {pct(solve.heldAt.terminalReturnOnNewCapital)}
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  );
+}
+
+// The dated D1 rate and the D2 inputs every valuation on this page used
+// (product-decisions items 26–27: "the product shows the dated rate in use").
+function ValuationBasisView({ basis }: { basis: ValuationBasis }) {
+  const r = basis.discountRate;
+  return (
+    <table className="t" aria-label="Rate and returns in use">
+      <tbody>
+        <tr>
+          <th scope="row">Discount rate in use</th>
+          <td>
+            <b>{pct(r.rate)}</b> — {r.basis}. Dated {r.effectiveFrom}; checked at {pct(r.checkRates.lower)} and{" "}
+            {pct(r.checkRates.upper)}.
+            {!r.withinValidatedDomain && " Outside its validated domain: net debt is not below 10% of enterprise value."}
+          </td>
+        </tr>
+        <tr>
+          <th scope="row">How the rate is measured</th>
+          <td>{r.provenance.measurementConvention}</td>
+        </tr>
+        <tr>
+          <th scope="row">Reinvestment and terminal returns</th>
+          <td>{basis.d2.statement}</td>
+        </tr>
+      </tbody>
+    </table>
   );
 }
 
@@ -435,12 +503,6 @@ function buildProvisionalRegister(result: AnalysisResult): ProvisionalRow[] {
       detail: stripInternalCitations(policy.provisionalLabels.preRevenueConstructionLeadYears ?? ""),
     });
   } else {
-    rows.push({
-      key: "terminalRoicPremium",
-      label: `Terminal ROIC = r + ${points(c.terminalRoicPremium)} percentage points — PROVISIONAL`,
-      impact: "assumed for every company",
-      detail: stripInternalCitations(policy.provisionalLabels.terminalRoicPremium ?? ""),
-    });
     rows.push({
       key: "gate0InterestIncomeOverRevenueThreshold",
       label: `Gate 0 interest-income test > ${pct(c.gate0InterestIncomeOverRevenueThreshold, 0)} of revenue — PROVISIONAL`,
@@ -690,6 +752,9 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
               </tr>
             </thead>
             <tbody>
+              {!diagnostics.enterpriseValue.suppressed && diagnostics.enterpriseValue.value.bridgeFlags !== undefined && (
+                <BridgeFlagsRow flags={diagnostics.enterpriseValue.value.bridgeFlags} />
+              )}
               <tr>
                 <th scope="row">Reinvestment, RONIC (5yr)</th>
                 <td>
@@ -697,9 +762,9 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                     <StateBlock figure={diagnostics.reinvestmentRonic.ronic} />
                   ) : (
                     diagnostics.reinvestmentRonic.ronic.value.cells.map((c) => (
-                      <div key={c.rate}>
+                      <div key={c.rate.toString()}>
                         <span className="v">
-                          r={pct(new Decimal(c.rate), 0)}:{" "}
+                          r={pct(c.rate)}:{" "}
                           {/* CF-ANALYZER-USER-READY-01 correction — same
                               defect class as StateBlock above. The other
                               ladder labels (CLEAN, LOW RONIC — VALUE-
@@ -1025,7 +1090,8 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
   // placeholder 0, so neither row renders for it.
   const terminalShareState = boundState(states, NOT_COMPUTED_BINDING.terminalShareOfValue);
   const valuationTiming = result.runIdentity?.valuationTiming;
-  const baseRateCell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
+  // Absent on a snapshot stored before AR4.
+  const baseRateCell = priceImplied.reverseDcf as ReverseDcfSolve | undefined;
   // `fairValueRange.kind === "range"` does not by itself imply a real price:
   // `assemble.ts`'s leverage precondition uses `fixture.leverage.
   // enterpriseValue` when a fixture states one directly, so a priceless run
@@ -1054,16 +1120,15 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
         <section id="E">
           <div className="sechead">
             <h2>E — Price-implied diagnostics</h2>
-            <span className="k">Diagnostic reverse DCF · 3 margin levels x 3 rates</span>
+            <span className="k">Reverse DCF · one solve at the rate in use</span>
           </div>
           <hr />
-          <Disclosure label="What is a reverse DCF, and why nine cells?">
+          <Disclosure label="What is a reverse DCF?">
             A normal discounted-cash-flow model takes your growth assumption and produces a value. A reverse DCF
             takes the market&apos;s value — the price — and produces the growth assumption it implies. It removes
-            the step where the analyst&apos;s own optimism enters the arithmetic. Nine cells because two things must
-            be varied that materially change the answer: the discount rate (8%, 10%, 12%) and the profit margin
-            being projected (current, ten-year median, a stress level). One cell would hide how sensitive the answer
-            is to both.
+            the step where the analyst&apos;s own optimism enters the arithmetic. It runs once, on the same model as
+            the scenarios: the rate in use, and the base scenario&apos;s own margin and returns on new investment.
+            How the answer moves with the rate, margin, growth, returns and moat is in the sensitivity table.
           </Disclosure>
           <Disclosure label="See calculation — PVGO">
             Steady-state EV = median-margin NOPAT ÷ discount rate. PVGO = current EV − steady-state EV, EV to EV. The
@@ -1078,60 +1143,9 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
             is not a warning by itself; it means the valuation is more sensitive to whether growth and returns on
             new investment hold up.
           </Disclosure>
-          {/* M9-ACCESSIBILITY-01 — §16 requires this grid to announce both
-              its rate (column) and margin (row) header for any given cell.
-              ARIA's table/row/cell roles require a row as their owning
-              context, so each row (header row included) is grouped in a
-              div carrying role="row". display: contents on those wrapper
-              divs keeps the grid-template-columns four-column auto-flow —
-              the .grid/.colhead/.rowhead/.cell rules PR #165/#167/#169
-              shipped are descendant selectors, so the extra wrapper level
-              changes no shipped rule. aria-rowindex/aria-colindex stay on
-              the cells as position hints; with real rows present they are
-              redundant but harmless. */}
-          {/* CF-ANALYZER-USER-READY-01 correction — Calvin's authorised
-              mobile layout resume: at 390px this grid's four fixed columns
-              (120px row-header + three cells) do not fit, and grid items'
-              default min-width: auto refuses to shrink a cell below its
-              content, so the grid pushed the whole page 517px wide instead
-              of staying inside the viewport. The established fix for
-              exactly this shape elsewhere in this file is a scroll
-              container around the content, not a change to the content
-              itself — the seven-tab rail (.az-tabs) and the Holdings/
-              Dashboard editor tables (.editor-table) both already scroll
-              inside their own box this same way. Same instrument, applied
-              here: the grid's own four columns, every cell, every figure
-              and the labelled aria-label stay exactly as they were: only
-              this wrapper is new, and it is invisible wherever the grid
-              already fit (desktop, and the two wider columns' content). */}
-          <div className="gridscroll">
-            <div className="grid" role="table" aria-label="Reverse DCF grid — margin level by discount rate">
-              <div role="row" style={{ display: "contents" }}>
-                <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={1}></div>
-                <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={2}>
-                  r = 8%
-                </div>
-                <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={3}>
-                  r = 10%
-                </div>
-                <div className="colhead" role="columnheader" aria-rowindex={1} aria-colindex={4}>
-                  r = 12%
-                </div>
-              </div>
-              {(["current", "median", "stress"] as const).map((level, li) => (
-                <div key={level} role="row" style={{ display: "contents" }}>
-                  <div className="rowhead" role="rowheader" aria-rowindex={li + 2} aria-colindex={1}>
-                    {level}
-                  </div>
-                  {priceImplied.reverseDcfGrid
-                    .filter((c) => c.marginLevel === level)
-                    .map((c, ci) => (
-                      <ReverseDcfCellView cell={c} key={`${level}-${c.rate}`} ariaRowIndex={li + 2} ariaColIndex={ci + 2} />
-                    ))}
-                </div>
-              ))}
-            </div>
-          </div>
+          {result.valuationBasis !== undefined && <ValuationBasisView basis={result.valuationBasis} />}
+          {/* A snapshot stored before AR4 carries the retired grid instead. */}
+          {priceImplied.reverseDcf !== undefined && <ReverseDcfSolveView solve={priceImplied.reverseDcf} />}
           <table className="t" style={{ marginTop: "20px" }}>
             <tbody>
               <tr>
@@ -1478,7 +1492,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                 {baseRateCell && (
                   <>
                     <div className="pi">
-                      <span className="lbl">Implied growth, yrs 1-5 at r = 8%</span>
+                      <span className="lbl">Implied growth, yrs 1-5 at r = {pct(baseRateCell.rate)}</span>
                       {/* CF-ANALYZER-USER-READY-01 correction — same defect
                           class as StateBlock: the bare state name used to be
                           the primary reading text here. */}
@@ -1526,11 +1540,8 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                   <FigureValue figure={diagnostics.impliedReturnOnNewCapital.value} format={pct} />
                 </div>
                 <div className="pi" style={{ borderBottom: 0 }}>
-                  <span className="lbl">Reverse-DCF cells returning a state</span>
-                  <b>
-                    {priceImplied.reverseDcfGrid.filter((c) => c.fiveYearGrowth.suppressed).length} of{" "}
-                    {priceImplied.reverseDcfGrid.length}
-                  </b>
+                  <span className="lbl">Reverse DCF</span>
+                  <b>{baseRateCell === undefined ? "not recorded" : baseRateCell.fiveYearGrowth.suppressed ? "returns a state" : "solved"}</b>
                 </div>
                 <p className="note" style={{ marginTop: "14px" }}>
                   The range says what you assume; the diagnostics say what the market assumes. Neither is shown
@@ -1903,13 +1914,15 @@ export function HeaderAndStatesSection({ result }: { result: AnalysisResult }) {
           this file's own top-of-file note). Its text is fully generic
           policy configuration, not company-specific, so it is placed
           here at the end of Section A rather than skipped — the
-          concept it explains (the fixed 8/10/12% rate grid) is read by
-          Section D's RONIC ladder and Section E's grid alike. */}
+          concept it explains (the dated policy rate) is read by Section
+          D's RONIC ladder and Section E's reverse DCF alike. */}
       <Disclosure label="What is a discount rate?">
         The rate used to convert future cash into today&apos;s money. A higher rate means future cash is worth
-        less today, so it produces a lower valuation and demands more growth to justify a given price. Calboard
-        runs every company at 8%, 10% and 12% from policy configuration — the rate is never chosen per company
-        and never chosen by the interpretation layer.
+        less today, so it produces a lower valuation and demands more growth to justify a given price. Cal Finance
+        uses the market&apos;s expected return for a stable business and two points more for a cyclical or
+        pre-revenue one, from a dated policy value reset yearly — growth alone never raises it, the rate is never
+        chosen per company, and never by the interpretation layer. Every reading is also checked half a point either
+        side.
       </Disclosure>
     </section>
   );

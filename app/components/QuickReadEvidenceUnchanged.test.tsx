@@ -16,6 +16,14 @@ afterEach(cleanup);
 // is a real fixture run or a minimal mutation of one, so each of
 // buildQuickRead's four early returns and the mature-company reading is
 // covered, not only the paths MSFT's own fixture happens to reach.
+//
+// CF-AR4-RATE-REINVESTMENT-TERMINAL-01 regenerated the five MSFT snapshots
+// (a reviewed evaluator change): AR0-2 replaces the reverse-DCF grid this
+// content described with one solve, and MSFT_FIXTURE's sheet is pending
+// adoption under D2, so the grid wording and its DEGENERATE cells go. The
+// three OKLO snapshots are unchanged. "DEGENERATE cell" in the first case's
+// name is the historical label of the branch, kept so the snapshot key
+// stays stable.
 const msft = assembleAnalysisResult(MSFT_FIXTURE);
 const oklo = assembleAnalysisResult(OKLO_FIXTURE);
 
