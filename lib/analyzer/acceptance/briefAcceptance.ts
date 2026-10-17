@@ -2,7 +2,7 @@ import Decimal from "decimal.js";
 import type { AnalysisResult, Figure, InterpretationStatement } from "../types";
 import type { ReportAnalysis } from "../reportAnalysis";
 import { largestSwingDriver, type TornadoRowResult } from "../modules/sensitivity";
-import { priceVsRangeHeadline, incompleteVerdictExplanation } from "../trustCopy";
+import { priceVsRangeHeadline, incompleteVerdictExplanation, verdictExplanation } from "../trustCopy";
 import { deriveVerdict } from "../verdict";
 import { profileNotConfirmedFor } from "../trust";
 import {
@@ -188,7 +188,16 @@ export function checkBriefAcceptance({ ticker, policy, report, overviewText }: B
     // every real run until this outcome, so the completed branch below was
     // never exercised against real fixture data before.
     const verdict = deriveVerdict(result);
-    if (verdict.status !== "INCOMPLETE") {
+    if (verdict.status === "PENDING") {
+      // CF-AR5-VERDICT-CONSOLIDATION-01 — a pending-judgement state renders
+      // its own plain line in the verdict slot, never a verdict word.
+      const line = verdictExplanation(verdict, result.price.value, scenarioOutputs.values.base);
+      items.push(
+        line === null
+          ? { status: "MISSING", detail: `the ${verdict.state} state has no plain-English line` }
+          : explainedItem("Bottom line", line, overviewText, `no plain-English line for the ${verdict.state} state`)
+      );
+    } else if (verdict.status !== "INCOMPLETE") {
       items.push(
         overviewText.includes(verdict.status)
           ? { status: "CONTENT", detail: `Bottom line: ${verdict.status} verdict rendered` }

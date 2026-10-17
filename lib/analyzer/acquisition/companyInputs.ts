@@ -652,6 +652,17 @@ export function buildCompanyInputs(
     scenarios: analyst.scenarios,
     scenarioValues: analyst.scenarioValues,
     moatClass: analyst.moatClass ?? null,
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — D4's computed floor, from the same
+    // operating-income series, configured NOPAT tax rate and financing-side
+    // invested capital (goodwill included) RONIC already reads.
+    roicHistory: roicHistoryFrom(
+      operatingIncomeAnnualSeries,
+      analyst.configuredConstants.nopatTaxRate,
+      totalEquityAnnualSeries,
+      totalDebtAnnualSeries,
+      financeLeaseLiabilitiesAnnualSeries,
+      cashAndMarketableDebtSecuritiesAnnualSeries
+    ),
     scenarioValuesAreFixtureCarried: analyst.scenarioValuesAreFixtureCarried,
     recordedScenarioValuesComputeFromDrivers: analyst.recordedScenarioValuesComputeFromDrivers,
     revalueBaseCaseAtRate: analyst.revalueBaseCaseAtRate,
@@ -777,6 +788,39 @@ function fiveYearInvestedCapitalDelta(
   if (toCapital === null || fromCapital === null) return null;
 
   return { value: toCapital.minus(fromCapital), provenance: investedCapitalProvenance };
+}
+
+/**
+ * CF-AR5-VERDICT-CONSOLIDATION-01 — Methodology v2.1 D4 item 2's inputs: for
+ * each of the latest five fiscal years, NOPAT (`nopatFrom`'s derivation on
+ * that year's operating income) and year-end invested capital
+ * (`investedCapitalAt`). Null in a year where an input is missing — the floor
+ * then reports which (roicFloor.ts). `filedHistoryYears` is how many fiscal
+ * years of annual operating results the filer has reported.
+ */
+function roicHistoryFrom(
+  operatingIncomeSeries: AnnualSeries | null,
+  nopatTaxRate: Decimal | null,
+  equitySeries: AnnualSeries | null,
+  debtSeries: AnnualSeries | null,
+  leaseSeries: AnnualSeries | null,
+  cashSeries: AnnualSeries | null
+): CompanyFixture["roicHistory"] {
+  if (operatingIncomeSeries === null) return null;
+  const observations = operatingIncomeSeries.observations;
+  const latest = observations[observations.length - 1];
+  if (latest === undefined) return null;
+  const filedHistoryYears = new Set(observations.map((o) => o.fiscalYear)).size;
+  const years = [0, 1, 2, 3, 4].map((back) => {
+    const fiscalYear = latest.fiscalYear - back;
+    const income = observations.find((o) => o.fiscalYear === fiscalYear);
+    return {
+      fiscalYear,
+      nopat: income === undefined || nopatTaxRate === null ? null : new Decimal(income.value).mul(new Decimal(1).minus(nopatTaxRate)),
+      investedCapital: investedCapitalAt(fiscalYear, equitySeries, debtSeries, leaseSeries, cashSeries),
+    };
+  });
+  return { years, filedHistoryYears };
 }
 
 function medianOf(values: Decimal[]): SourcedValue<Decimal> | null {

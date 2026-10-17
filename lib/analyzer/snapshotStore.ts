@@ -4,7 +4,7 @@ import type { CompanyFixture } from "./assemble";
 import type { MarketSnapshot } from "./gate";
 import type { RecordedJudgementState } from "./runStore";
 import type { AiLayerReport } from "./reportAnalysis";
-import type { VerdictResult } from "./verdict";
+import type { StoredVerdict, VerdictState, VerdictStatus } from "./verdict";
 import { toStorable, fromStorable } from "./storable";
 
 // Moved to storable.ts (CF-AR3-REPRODUCIBLE-RUNS-01) so pure code — the run
@@ -28,7 +28,7 @@ export interface StoredSnapshot {
   version: number;
   result: AnalysisResult;
   aiLayer: AiLayerReport;
-  verdict: VerdictResult;
+  verdict: StoredVerdict;
   createdAt: string;
 }
 
@@ -41,7 +41,7 @@ export async function createSnapshot(
   runId: string,
   result: AnalysisResult,
   aiLayer: AiLayerReport,
-  verdict: VerdictResult,
+  verdict: StoredVerdict,
   // CF-AR3-REPRODUCIBLE-RUNS-01 — the tuple the saved result was computed
   // from (migration 011's columns). Omitted, they stay null.
   snapshot?: RunOutputSnapshot
@@ -63,8 +63,8 @@ export async function createSnapshot(
           ai_layer_status, ai_layer_model, ai_layer_detail,
           verdict_status, verdict_reason,
           fact_snapshot, price_snapshot, sheet_version, policy_version,
-          code_version, judgement_snapshot, inputs_fingerprint)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
+          code_version, judgement_snapshot, inputs_fingerprint, verdict_state)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17)`,
       [
         runId,
         version,
@@ -73,7 +73,9 @@ export async function createSnapshot(
         aiLayer.status,
         aiLayer.model,
         aiLayer.detail,
-        verdict.status,
+        // A pending-judgement state is not a verdict (frozen spec §14.9
+        // AR0-4): it is stored as INCOMPLETE, with verdict_state naming it.
+        verdict.status === "PENDING" ? "INCOMPLETE" : verdict.status,
         verdict.reason,
         snapshot === undefined ? null : JSON.stringify(toStorable(snapshot.factSnapshot)),
         snapshot === undefined ? null : JSON.stringify(toStorable(snapshot.priceSnapshot)),
@@ -82,6 +84,7 @@ export async function createSnapshot(
         snapshot?.codeVersion ?? null,
         snapshot === undefined ? null : JSON.stringify(toStorable(snapshot.judgementSnapshot)),
         snapshot?.inputsFingerprint ?? null,
+        verdict.state,
       ]
     );
 
@@ -107,7 +110,7 @@ export async function getSnapshot(runId: string, version?: number): Promise<Stor
     version === undefined
       ? await getPool().query(
           `SELECT version, analysis_result, ai_layer_status, ai_layer_model, ai_layer_detail,
-                  verdict_status, verdict_reason, created_at
+                  verdict_status, verdict_reason, verdict_state, created_at
              FROM analyzer_run_snapshots
             WHERE run_id = $1
             ORDER BY version DESC
@@ -116,7 +119,7 @@ export async function getSnapshot(runId: string, version?: number): Promise<Stor
         )
       : await getPool().query(
           `SELECT version, analysis_result, ai_layer_status, ai_layer_model, ai_layer_detail,
-                  verdict_status, verdict_reason, created_at
+                  verdict_status, verdict_reason, verdict_state, created_at
              FROM analyzer_run_snapshots
             WHERE run_id = $1 AND version = $2`,
           [runId, version]
@@ -130,9 +133,17 @@ export async function getSnapshot(runId: string, version?: number): Promise<Stor
     version: r.version,
     result: fromStorable(r.analysis_result) as AnalysisResult,
     aiLayer: { status: r.ai_layer_status, model: r.ai_layer_model, detail: r.ai_layer_detail },
-    verdict: { status: r.verdict_status, reason: r.verdict_reason },
+    verdict: storedVerdictOf(r.verdict_status, r.verdict_state, r.verdict_reason),
     createdAt: r.created_at,
   };
+}
+
+const PENDING_STATES: VerdictState[] = ["PENDING ADOPTION", "UNCERTAINTY QUESTION", "CLOSE CALL", "BUY CANDIDATE"];
+
+/** A saved verdict as read back. Rows saved before migration 013 carry no state; it follows from the status. */
+function storedVerdictOf(status: Exclude<VerdictStatus, "PENDING">, state: VerdictState | null, reason: string): StoredVerdict {
+  if (state !== null && PENDING_STATES.includes(state)) return { status: "PENDING", state, reason };
+  return { status, state: state ?? (status === "INCOMPLETE" ? "INCOMPLETE" : "ISSUED"), reason };
 }
 
 // ---------------------------------------------------------------------------

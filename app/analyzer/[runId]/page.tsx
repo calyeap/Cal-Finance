@@ -24,6 +24,8 @@ import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate"
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import { analysisForReport, currentRunOutput, type AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
+import { uncertaintyProposalForRun } from "@/lib/analyzer/uncertaintyProposalStore";
+import { analystCallIfConfigured, ANALYST_MODEL } from "@/lib/analyzer/ai/anthropicCall";
 import { profileNotConfirmedFor } from "@/lib/analyzer/trust";
 import type { AnalysisResult } from "@/lib/analyzer/types";
 
@@ -133,6 +135,12 @@ export default async function ReportPage({
   // exactly the failure mode trust.ts's own header comment warns against.
   const profileNotConfirmed = profileNotConfirmedFor(report.result);
   const verdict = deriveVerdict(report.result);
+  // CF-AR5-VERDICT-CONSOLIDATION-01 — only while the verdict asks the one
+  // uncertainty question does the AI propose a level (Methodology v2.1 D3).
+  const uncertaintyProposal =
+    verdict.state === "UNCERTAINTY QUESTION"
+      ? await uncertaintyProposalForRun(runId, report.result, analystCallIfConfigured(), ANALYST_MODEL)
+      : null;
 
   return (
     <AnalyzerShell>
@@ -143,6 +151,7 @@ export default async function ReportPage({
         verdict={verdict}
         profileNotConfirmed={profileNotConfirmed}
         activeTab={activeTab}
+        uncertaintyProposal={uncertaintyProposal}
       >
         <TabBody
           tab={activeTab}

@@ -202,9 +202,15 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     // branch), and the rendered hero state this cause drives
     // (`DominantVerdictSlot.tsx:41-48`, keyed only on `verdict.status` /
     // `verdict.reason`, not on which company — confirmed by direct read).
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: the
+    // un-adopted sheet is the pending-adoption state, not INCOMPLETE.
+    // Which cause applies depends on whether MSFT's recorded sheet is
+    // present when this file runs (other files remove it): pending adoption
+    // where it is, A4's fixture-carried values (can't bound value) where not.
     const verdict = deriveVerdict(result);
-    expect(verdict.status).toBe("INCOMPLETE");
     expect(verdict.reason).toMatch(NO_MSFT_VALUATION);
+    expect(verdict.state).toBe(/Pending adoption/.test(verdict.reason) ? "PENDING ADOPTION" : "CANNOT BOUND VALUE");
+    expect(verdict.status).not.toMatch(/^(BUY|HOLD|SELL)$/);
   });
 
   it("OKLO — trust, EV bridge, leverage, suppressed range, price, tornado unavailable, verdict", async () => {

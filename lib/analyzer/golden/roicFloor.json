@@ -1,0 +1,3879 @@
+{
+  "purpose": "Methodology v2.1 D4 computed floor \u2014 5-yr average ROIC including goodwill \u2014 independently captured inputs",
+  "provenance": {
+    "source": "SEC EDGAR XBRL companyfacts API (https://data.sec.gov/api/xbrl/companyfacts/CIK##########.json), us-gaap taxonomy, USD units",
+    "capturedAt": "2026-10-17",
+    "method": "Annual facts from form 10-K (10-K/A allowed) only. Duration facts restricted to 350-380 day periods ending on the fiscal year end; instant facts at fiscal year end. Where several 10-Ks report the same period, the value from the latest-filed 10-K is used (captures restatements/recasts). Where alternative concepts exist for the same line, the latest-filed fact among them is used. Summed fields list their component concepts. Captured independently of lib/analyzer/acquisition tag maps."
+  },
+  "companies": {
+    "MSFT": {
+      "cik": "0000789019",
+      "fiscalYearEndNote": "Fiscal year ends June 30.",
+      "years": [
+        {
+          "fiscalYear": 2026,
+          "periodEnd": "2026-06-30",
+          "operatingIncome": {
+            "value": 155237000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodStart": "2025-07-01",
+            "periodEnd": "2026-06-30",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 32185000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodStart": "2025-07-01",
+            "periodEnd": "2026-06-30",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 165934000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodStart": "2025-07-01",
+            "periodEnd": "2026-06-30",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 442387000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodEnd": "2026-06-30",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 40294000000,
+            "concepts": [
+              "us-gaap:LongTermDebt"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodEnd": "2026-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 40294000000,
+                "sign": 1,
+                "accession": "0001193125-26-323660"
+              }
+            ],
+            "note": "Not tagged at this date (treated as 0): CommercialPaper/ShortTermBorrowings."
+          },
+          "financeLeaseLiabilities": {
+            "value": 66594000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiability"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodEnd": "2026-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiability",
+                "value": 66594000000,
+                "sign": 1,
+                "accession": "0001193125-26-323660"
+              }
+            ],
+            "note": null
+          },
+          "cashAndMarketableSecurities": {
+            "value": 76843000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodEnd": "2026-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 20935000000,
+                "sign": 1,
+                "accession": "0001193125-26-323660"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 55908000000,
+                "sign": 1,
+                "accession": "0001193125-26-323660"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2025,
+          "periodEnd": "2025-06-30",
+          "operatingIncome": {
+            "value": 128528000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodStart": "2024-07-01",
+            "periodEnd": "2025-06-30",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 21795000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodStart": "2024-07-01",
+            "periodEnd": "2025-06-30",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 123627000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodStart": "2024-07-01",
+            "periodEnd": "2025-06-30",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 343479000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodEnd": "2025-06-30",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 43151000000,
+            "concepts": [
+              "us-gaap:LongTermDebt",
+              "us-gaap:CommercialPaper"
+            ],
+            "accession": [
+              "0000950170-25-100235",
+              "0001193125-26-323660"
+            ],
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodEnd": "2025-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 43151000000,
+                "sign": 1,
+                "accession": "0001193125-26-323660"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 0,
+                "sign": 1,
+                "accession": "0000950170-25-100235"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": {
+            "value": 46172000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiability"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodEnd": "2025-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiability",
+                "value": 46172000000,
+                "sign": 1,
+                "accession": "0001193125-26-323660"
+              }
+            ],
+            "note": null
+          },
+          "cashAndMarketableSecurities": {
+            "value": 94565000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodEnd": "2025-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 30242000000,
+                "sign": 1,
+                "accession": "0001193125-26-323660"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 64323000000,
+                "sign": 1,
+                "accession": "0001193125-26-323660"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2024,
+          "periodEnd": "2024-06-30",
+          "operatingIncome": {
+            "value": 109433000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodStart": "2023-07-01",
+            "periodEnd": "2024-06-30",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 19651000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodStart": "2023-07-01",
+            "periodEnd": "2024-06-30",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 107787000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodStart": "2023-07-01",
+            "periodEnd": "2024-06-30",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 268477000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001193125-26-323660",
+            "form": "10-K",
+            "filed": "2026-07-29",
+            "periodEnd": "2024-06-30",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 51630000000,
+            "concepts": [
+              "us-gaap:LongTermDebt",
+              "us-gaap:CommercialPaper"
+            ],
+            "accession": "0000950170-25-100235",
+            "form": "10-K",
+            "filed": "2025-07-30",
+            "periodEnd": "2024-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 44937000000,
+                "sign": 1,
+                "accession": "0000950170-25-100235"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 6693000000,
+                "sign": 1,
+                "accession": "0000950170-25-100235"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": {
+            "value": 27145000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiability"
+            ],
+            "accession": "0000950170-25-100235",
+            "form": "10-K",
+            "filed": "2025-07-30",
+            "periodEnd": "2024-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiability",
+                "value": 27145000000,
+                "sign": 1,
+                "accession": "0000950170-25-100235"
+              }
+            ],
+            "note": null
+          },
+          "cashAndMarketableSecurities": {
+            "value": 75543000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000950170-25-100235",
+            "form": "10-K",
+            "filed": "2025-07-30",
+            "periodEnd": "2024-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 18315000000,
+                "sign": 1,
+                "accession": "0000950170-25-100235"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 57228000000,
+                "sign": 1,
+                "accession": "0000950170-25-100235"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2023,
+          "periodEnd": "2023-06-30",
+          "operatingIncome": {
+            "value": 88523000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0000950170-25-100235",
+            "form": "10-K",
+            "filed": "2025-07-30",
+            "periodStart": "2022-07-01",
+            "periodEnd": "2023-06-30",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 16950000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000950170-25-100235",
+            "form": "10-K",
+            "filed": "2025-07-30",
+            "periodStart": "2022-07-01",
+            "periodEnd": "2023-06-30",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 89311000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000950170-25-100235",
+            "form": "10-K",
+            "filed": "2025-07-30",
+            "periodStart": "2022-07-01",
+            "periodEnd": "2023-06-30",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 206223000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000950170-25-100235",
+            "form": "10-K",
+            "filed": "2025-07-30",
+            "periodEnd": "2023-06-30",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 47237000000,
+            "concepts": [
+              "us-gaap:LongTermDebt",
+              "us-gaap:CommercialPaper"
+            ],
+            "accession": "0000950170-24-087843",
+            "form": "10-K",
+            "filed": "2024-07-30",
+            "periodEnd": "2023-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 47237000000,
+                "sign": 1,
+                "accession": "0000950170-24-087843"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 0,
+                "sign": 1,
+                "accession": "0000950170-24-087843"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": {
+            "value": 17067000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiability"
+            ],
+            "accession": "0000950170-24-087843",
+            "form": "10-K",
+            "filed": "2024-07-30",
+            "periodEnd": "2023-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiability",
+                "value": 17067000000,
+                "sign": 1,
+                "accession": "0000950170-24-087843"
+              }
+            ],
+            "note": null
+          },
+          "cashAndMarketableSecurities": {
+            "value": 111262000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000950170-24-087843",
+            "form": "10-K",
+            "filed": "2024-07-30",
+            "periodEnd": "2023-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 34704000000,
+                "sign": 1,
+                "accession": "0000950170-24-087843"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 76558000000,
+                "sign": 1,
+                "accession": "0000950170-24-087843"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2022,
+          "periodEnd": "2022-06-30",
+          "operatingIncome": {
+            "value": 83383000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0000950170-24-087843",
+            "form": "10-K",
+            "filed": "2024-07-30",
+            "periodStart": "2021-07-01",
+            "periodEnd": "2022-06-30",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 10978000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000950170-24-087843",
+            "form": "10-K",
+            "filed": "2024-07-30",
+            "periodStart": "2021-07-01",
+            "periodEnd": "2022-06-30",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 83716000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000950170-24-087843",
+            "form": "10-K",
+            "filed": "2024-07-30",
+            "periodStart": "2021-07-01",
+            "periodEnd": "2022-06-30",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 166542000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000950170-24-087843",
+            "form": "10-K",
+            "filed": "2024-07-30",
+            "periodEnd": "2022-06-30",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 49781000000,
+            "concepts": [
+              "us-gaap:LongTermDebt"
+            ],
+            "accession": "0000950170-23-035122",
+            "form": "10-K",
+            "filed": "2023-07-27",
+            "periodEnd": "2022-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 49781000000,
+                "sign": 1,
+                "accession": "0000950170-23-035122"
+              }
+            ],
+            "note": "Not tagged at this date (treated as 0): CommercialPaper/ShortTermBorrowings."
+          },
+          "financeLeaseLiabilities": {
+            "value": 14902000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiability"
+            ],
+            "accession": "0000950170-23-035122",
+            "form": "10-K",
+            "filed": "2023-07-27",
+            "periodEnd": "2022-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiability",
+                "value": 14902000000,
+                "sign": 1,
+                "accession": "0000950170-23-035122"
+              }
+            ],
+            "note": null
+          },
+          "cashAndMarketableSecurities": {
+            "value": 104757000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000950170-23-035122",
+            "form": "10-K",
+            "filed": "2023-07-27",
+            "periodEnd": "2022-06-30",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 13931000000,
+                "sign": 1,
+                "accession": "0000950170-23-035122"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 90826000000,
+                "sign": 1,
+                "accession": "0000950170-23-035122"
+              }
+            ],
+            "note": null
+          }
+        }
+      ],
+      "notes": [
+        "totalDebt = us-gaap:LongTermDebt (carrying value incl. current portion; equals LongTermDebtNoncurrent + LongTermDebtCurrent) + us-gaap:CommercialPaper where tagged (FY2024 short-term debt 6,693M; 0 or untagged other years).",
+        "financeLeaseLiabilities = us-gaap:FinanceLeaseLiability; MSFT reports finance leases in other current/long-term liabilities, not in debt, so it is separate.",
+        "cashAndMarketableSecurities = CashAndCashEquivalentsAtCarryingValue + ShortTermInvestments (equals CashCashEquivalentsAndShortTermInvestments). Long-term equity/other investments excluded."
+      ]
+    },
+    "COST": {
+      "cik": "0000909832",
+      "fiscalYearEndNote": "52/53-week fiscal year ending Sunday nearest Aug 31 (FY2023 was 53 weeks).",
+      "years": [
+        {
+          "fiscalYear": 2026,
+          "periodEnd": "2026-08-30",
+          "operatingIncome": {
+            "value": 11685000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodStart": "2025-09-01",
+            "periodEnd": "2026-08-30",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 3025000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodStart": "2025-09-01",
+            "periodEnd": "2026-08-30",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 12251000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodStart": "2025-09-01",
+            "periodEnd": "2026-08-30",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 35803000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2026-08-30",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 6162000000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:LongTermDebtCurrent"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2026-08-30",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 3914000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtCurrent",
+                "value": 2248000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              }
+            ],
+            "note": "Not tagged at this date (treated as 0): ShortTermBorrowings/OtherShortTermBorrowings/CommercialPaper."
+          },
+          "financeLeaseLiabilities": {
+            "value": 1413000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiabilityNoncurrent",
+              "us-gaap:FinanceLeaseLiabilityCurrent"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2026-08-30",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityNoncurrent",
+                "value": 1319000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              },
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityCurrent",
+                "value": 94000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              }
+            ],
+            "note": null
+          },
+          "cashAndMarketableSecurities": {
+            "value": 21301000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2026-08-30",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 20207000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 1094000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2025,
+          "periodEnd": "2025-08-31",
+          "operatingIncome": {
+            "value": 10383000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodStart": "2024-09-02",
+            "periodEnd": "2025-08-31",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 2719000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodStart": "2024-09-02",
+            "periodEnd": "2025-08-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 10818000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodStart": "2024-09-02",
+            "periodEnd": "2025-08-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 29164000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2025-08-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 5788000000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:LongTermDebtCurrent"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2025-08-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 5713000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtCurrent",
+                "value": 75000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              }
+            ],
+            "note": "Not tagged at this date (treated as 0): ShortTermBorrowings/OtherShortTermBorrowings/CommercialPaper."
+          },
+          "financeLeaseLiabilities": {
+            "value": 1479000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiabilityNoncurrent",
+              "us-gaap:FinanceLeaseLiabilityCurrent"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2025-08-31",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityNoncurrent",
+                "value": 1401000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              },
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityCurrent",
+                "value": 78000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              }
+            ],
+            "note": null
+          },
+          "cashAndMarketableSecurities": {
+            "value": 15284000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2025-08-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 14161000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 1123000000,
+                "sign": 1,
+                "accession": "0000909832-26-000093"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2024,
+          "periodEnd": "2024-09-01",
+          "operatingIncome": {
+            "value": 9285000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodStart": "2023-09-04",
+            "periodEnd": "2024-09-01",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 2373000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodStart": "2023-09-04",
+            "periodEnd": "2024-09-01",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 9740000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodStart": "2023-09-04",
+            "periodEnd": "2024-09-01",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 23622000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2024-09-01",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 5897000000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:LongTermDebtCurrent"
+            ],
+            "accession": "0000909832-25-000101",
+            "form": "10-K",
+            "filed": "2025-10-08",
+            "periodEnd": "2024-09-01",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 5794000000,
+                "sign": 1,
+                "accession": "0000909832-25-000101"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtCurrent",
+                "value": 103000000,
+                "sign": 1,
+                "accession": "0000909832-25-000101"
+              }
+            ],
+            "note": "Not tagged at this date (treated as 0): ShortTermBorrowings/OtherShortTermBorrowings/CommercialPaper."
+          },
+          "financeLeaseLiabilities": {
+            "value": 1498000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiabilityNoncurrent",
+              "us-gaap:FinanceLeaseLiabilityCurrent"
+            ],
+            "accession": "0000909832-25-000101",
+            "form": "10-K",
+            "filed": "2025-10-08",
+            "periodEnd": "2024-09-01",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityNoncurrent",
+                "value": 1351000000,
+                "sign": 1,
+                "accession": "0000909832-25-000101"
+              },
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityCurrent",
+                "value": 147000000,
+                "sign": 1,
+                "accession": "0000909832-25-000101"
+              }
+            ],
+            "note": null
+          },
+          "cashAndMarketableSecurities": {
+            "value": 11144000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000909832-25-000101",
+            "form": "10-K",
+            "filed": "2025-10-08",
+            "periodEnd": "2024-09-01",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 9906000000,
+                "sign": 1,
+                "accession": "0000909832-25-000101"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 1238000000,
+                "sign": 1,
+                "accession": "0000909832-25-000101"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2023,
+          "periodEnd": "2023-09-03",
+          "operatingIncome": {
+            "value": 8114000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0000909832-25-000101",
+            "form": "10-K",
+            "filed": "2025-10-08",
+            "periodStart": "2022-08-29",
+            "periodEnd": "2023-09-03",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 2195000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000909832-25-000101",
+            "form": "10-K",
+            "filed": "2025-10-08",
+            "periodStart": "2022-08-29",
+            "periodEnd": "2023-09-03",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 8487000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000909832-25-000101",
+            "form": "10-K",
+            "filed": "2025-10-08",
+            "periodStart": "2022-08-29",
+            "periodEnd": "2023-09-03",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 25058000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000909832-26-000093",
+            "form": "10-K",
+            "filed": "2026-10-07",
+            "periodEnd": "2023-09-03",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 6458000000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:LongTermDebtCurrent"
+            ],
+            "accession": "0000909832-24-000049",
+            "form": "10-K",
+            "filed": "2024-10-09",
+            "periodEnd": "2023-09-03",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 5377000000,
+                "sign": 1,
+                "accession": "0000909832-24-000049"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtCurrent",
+                "value": 1081000000,
+                "sign": 1,
+                "accession": "0000909832-24-000049"
+              }
+            ],
+            "note": "Not tagged at this date (treated as 0): ShortTermBorrowings/OtherShortTermBorrowings/CommercialPaper."
+          },
+          "financeLeaseLiabilities": {
+            "value": 1432000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiabilityPaymentsDue",
+              "-us-gaap:FinanceLeaseLiabilityUndiscountedExcessAmount"
+            ],
+            "accession": "0000909832-23-000042",
+            "form": "10-K",
+            "filed": "2023-10-11",
+            "periodEnd": "2023-09-03",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityPaymentsDue",
+                "value": 2217000000,
+                "sign": 1,
+                "accession": "0000909832-23-000042"
+              },
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityUndiscountedExcessAmount",
+                "value": 785000000,
+                "sign": -1,
+                "accession": "0000909832-23-000042"
+              }
+            ],
+            "note": "DERIVED: present value = FinanceLeaseLiabilityPaymentsDue - FinanceLeaseLiabilityUndiscountedExcessAmount (liability balance itself not tagged)."
+          },
+          "cashAndMarketableSecurities": {
+            "value": 15234000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000909832-24-000049",
+            "form": "10-K",
+            "filed": "2024-10-09",
+            "periodEnd": "2023-09-03",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 13700000000,
+                "sign": 1,
+                "accession": "0000909832-24-000049"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 1534000000,
+                "sign": 1,
+                "accession": "0000909832-24-000049"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2022,
+          "periodEnd": "2022-08-28",
+          "operatingIncome": {
+            "value": 7793000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0000909832-24-000049",
+            "form": "10-K",
+            "filed": "2024-10-09",
+            "periodStart": "2021-08-30",
+            "periodEnd": "2022-08-28",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 1925000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000909832-24-000049",
+            "form": "10-K",
+            "filed": "2024-10-09",
+            "periodStart": "2021-08-30",
+            "periodEnd": "2022-08-28",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 7840000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000909832-24-000049",
+            "form": "10-K",
+            "filed": "2024-10-09",
+            "periodStart": "2021-08-30",
+            "periodEnd": "2022-08-28",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 20642000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000909832-23-000042",
+            "form": "10-K",
+            "filed": "2023-10-11",
+            "periodEnd": "2022-08-28",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 6645000000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:LongTermDebtCurrent",
+              "us-gaap:OtherShortTermBorrowings"
+            ],
+            "accession": [
+              "0000909832-22-000021",
+              "0000909832-23-000042"
+            ],
+            "form": "10-K",
+            "filed": "2023-10-11",
+            "periodEnd": "2022-08-28",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 6484000000,
+                "sign": 1,
+                "accession": "0000909832-23-000042"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtCurrent",
+                "value": 73000000,
+                "sign": 1,
+                "accession": "0000909832-23-000042"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermBorrowings",
+                "value": 88000000,
+                "sign": 1,
+                "accession": "0000909832-22-000021"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": {
+            "value": 1628000000,
+            "concepts": [
+              "us-gaap:FinanceLeaseLiabilityPaymentsDue",
+              "-us-gaap:FinanceLeaseLiabilityUndiscountedExcessAmount"
+            ],
+            "accession": "0000909832-22-000021",
+            "form": "10-K",
+            "filed": "2022-10-05",
+            "periodEnd": "2022-08-28",
+            "components": [
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityPaymentsDue",
+                "value": 2219000000,
+                "sign": 1,
+                "accession": "0000909832-22-000021"
+              },
+              {
+                "concept": "us-gaap:FinanceLeaseLiabilityUndiscountedExcessAmount",
+                "value": 591000000,
+                "sign": -1,
+                "accession": "0000909832-22-000021"
+              }
+            ],
+            "note": "DERIVED: present value = FinanceLeaseLiabilityPaymentsDue - FinanceLeaseLiabilityUndiscountedExcessAmount (liability balance itself not tagged)."
+          },
+          "cashAndMarketableSecurities": {
+            "value": 11049000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000909832-23-000042",
+            "form": "10-K",
+            "filed": "2023-10-11",
+            "periodEnd": "2022-08-28",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 10203000000,
+                "sign": 1,
+                "accession": "0000909832-23-000042"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 846000000,
+                "sign": 1,
+                "accession": "0000909832-23-000042"
+              }
+            ],
+            "note": null
+          }
+        }
+      ],
+      "notes": [
+        "totalEquity = us-gaap:StockholdersEquity (Costco stockholders, excludes noncontrolling interest).",
+        "totalDebt = LongTermDebtNoncurrent + LongTermDebtCurrent; no short-term borrowings tagged at these year-ends.",
+        "financeLeaseLiabilities: FY2024-FY2026 = FinanceLeaseLiabilityNoncurrent + FinanceLeaseLiabilityCurrent (or FinanceLeaseLiability). FY2022/FY2023 balances are not tagged as a liability amount; derived as FinanceLeaseLiabilityPaymentsDue - FinanceLeaseLiabilityUndiscountedExcessAmount (present value from the maturity table). Finance leases sit in other liabilities, not in debt.",
+        "cashAndMarketableSecurities = CashAndCashEquivalentsAtCarryingValue + ShortTermInvestments."
+      ]
+    },
+    "NVDA": {
+      "cik": "0001045810",
+      "fiscalYearEndNote": "52/53-week fiscal year ending last Sunday of January; fiscalYear = calendar year of period end (NVIDIA convention).",
+      "years": [
+        {
+          "fiscalYear": 2026,
+          "periodEnd": "2026-01-25",
+          "operatingIncome": {
+            "value": 130387000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2025-01-27",
+            "periodEnd": "2026-01-25",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 21383000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2025-01-27",
+            "periodEnd": "2026-01-25",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 141450000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2025-01-27",
+            "periodEnd": "2026-01-25",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 157293000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2026-01-25",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 8468000000,
+            "concepts": [
+              "us-gaap:LongTermDebt"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2026-01-25",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 8468000000,
+                "sign": 1,
+                "accession": "0001045810-26-000021"
+              }
+            ],
+            "note": "Not tagged at this date (treated as 0): CommercialPaper/ShortTermBorrowings."
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 41840000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "-us-gaap:CashEquivalentsAtCarryingValue",
+              "us-gaap:AvailableForSaleSecuritiesDebtSecurities"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2026-01-25",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 10605000000,
+                "sign": 1,
+                "accession": "0001045810-26-000021"
+              },
+              {
+                "concept": "us-gaap:CashEquivalentsAtCarryingValue",
+                "value": 8285000000,
+                "sign": -1,
+                "accession": "0001045810-26-000021"
+              },
+              {
+                "concept": "us-gaap:AvailableForSaleSecuritiesDebtSecurities",
+                "value": 39520000000,
+                "sign": 1,
+                "accession": "0001045810-26-000021"
+              }
+            ],
+            "note": "DERIVED: marketable securities not tagged with a standard element in this 10-K; = Cash&CE - CashEquivalents + AvailableForSaleSecuritiesDebtSecurities (AFS total includes AFS cash equivalents)."
+          }
+        },
+        {
+          "fiscalYear": 2025,
+          "periodEnd": "2025-01-26",
+          "operatingIncome": {
+            "value": 81453000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2024-01-29",
+            "periodEnd": "2025-01-26",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 11146000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2024-01-29",
+            "periodEnd": "2025-01-26",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 84026000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2024-01-29",
+            "periodEnd": "2025-01-26",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 79327000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2025-01-26",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 8463000000,
+            "concepts": [
+              "us-gaap:LongTermDebt",
+              "us-gaap:CommercialPaper"
+            ],
+            "accession": [
+              "0001045810-25-000023",
+              "0001045810-26-000021"
+            ],
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2025-01-26",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 8463000000,
+                "sign": 1,
+                "accession": "0001045810-26-000021"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 0,
+                "sign": 1,
+                "accession": "0001045810-25-000023"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 43210000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:MarketableSecuritiesCurrent"
+            ],
+            "accession": [
+              "0001045810-25-000023",
+              "0001045810-26-000021"
+            ],
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2025-01-26",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 8589000000,
+                "sign": 1,
+                "accession": "0001045810-26-000021"
+              },
+              {
+                "concept": "us-gaap:MarketableSecuritiesCurrent",
+                "value": 34621000000,
+                "sign": 1,
+                "accession": "0001045810-25-000023"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2024,
+          "periodEnd": "2024-01-28",
+          "operatingIncome": {
+            "value": 32972000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2023-01-30",
+            "periodEnd": "2024-01-28",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 4058000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2023-01-30",
+            "periodEnd": "2024-01-28",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 33818000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2023-01-30",
+            "periodEnd": "2024-01-28",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 42978000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2024-01-28",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 9709000000,
+            "concepts": [
+              "us-gaap:LongTermDebt",
+              "us-gaap:CommercialPaper"
+            ],
+            "accession": [
+              "0001045810-24-000029",
+              "0001045810-25-000023"
+            ],
+            "form": "10-K",
+            "filed": "2025-02-26",
+            "periodEnd": "2024-01-28",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 9709000000,
+                "sign": 1,
+                "accession": "0001045810-25-000023"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 0,
+                "sign": 1,
+                "accession": "0001045810-24-000029"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 25984000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:MarketableSecuritiesCurrent"
+            ],
+            "accession": "0001045810-25-000023",
+            "form": "10-K",
+            "filed": "2025-02-26",
+            "periodEnd": "2024-01-28",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 7280000000,
+                "sign": 1,
+                "accession": "0001045810-25-000023"
+              },
+              {
+                "concept": "us-gaap:MarketableSecuritiesCurrent",
+                "value": 18704000000,
+                "sign": 1,
+                "accession": "0001045810-25-000023"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2023,
+          "periodEnd": "2023-01-29",
+          "operatingIncome": {
+            "value": 4224000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001045810-25-000023",
+            "form": "10-K",
+            "filed": "2025-02-26",
+            "periodStart": "2022-01-31",
+            "periodEnd": "2023-01-29",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": -187000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001045810-25-000023",
+            "form": "10-K",
+            "filed": "2025-02-26",
+            "periodStart": "2022-01-31",
+            "periodEnd": "2023-01-29",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 4181000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001045810-25-000023",
+            "form": "10-K",
+            "filed": "2025-02-26",
+            "periodStart": "2022-01-31",
+            "periodEnd": "2023-01-29",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 22101000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001045810-26-000021",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2023-01-29",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 10953000000,
+            "concepts": [
+              "us-gaap:LongTermDebt",
+              "us-gaap:CommercialPaper"
+            ],
+            "accession": [
+              "0001045810-23-000017",
+              "0001045810-24-000029"
+            ],
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodEnd": "2023-01-29",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 10953000000,
+                "sign": 1,
+                "accession": "0001045810-24-000029"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 0,
+                "sign": 1,
+                "accession": "0001045810-23-000017"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 13296000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:MarketableSecuritiesCurrent"
+            ],
+            "accession": "0001045810-24-000029",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodEnd": "2023-01-29",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 3389000000,
+                "sign": 1,
+                "accession": "0001045810-24-000029"
+              },
+              {
+                "concept": "us-gaap:MarketableSecuritiesCurrent",
+                "value": 9907000000,
+                "sign": 1,
+                "accession": "0001045810-24-000029"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2022,
+          "periodEnd": "2022-01-30",
+          "operatingIncome": {
+            "value": 10041000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001045810-24-000029",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodStart": "2021-02-01",
+            "periodEnd": "2022-01-30",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 189000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001045810-24-000029",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodStart": "2021-02-01",
+            "periodEnd": "2022-01-30",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 9941000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001045810-24-000029",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodStart": "2021-02-01",
+            "periodEnd": "2022-01-30",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 26612000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001045810-25-000023",
+            "form": "10-K",
+            "filed": "2025-02-26",
+            "periodEnd": "2022-01-30",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 10946000000,
+            "concepts": [
+              "us-gaap:LongTermDebt",
+              "us-gaap:CommercialPaper"
+            ],
+            "accession": [
+              "0001045810-22-000036",
+              "0001045810-23-000017"
+            ],
+            "form": "10-K",
+            "filed": "2023-02-24",
+            "periodEnd": "2022-01-30",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebt",
+                "value": 10946000000,
+                "sign": 1,
+                "accession": "0001045810-23-000017"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 0,
+                "sign": 1,
+                "accession": "0001045810-22-000036"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 21208000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:MarketableSecuritiesCurrent"
+            ],
+            "accession": "0001045810-23-000017",
+            "form": "10-K",
+            "filed": "2023-02-24",
+            "periodEnd": "2022-01-30",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 1990000000,
+                "sign": 1,
+                "accession": "0001045810-23-000017"
+              },
+              {
+                "concept": "us-gaap:MarketableSecuritiesCurrent",
+                "value": 19218000000,
+                "sign": 1,
+                "accession": "0001045810-23-000017"
+              }
+            ],
+            "note": null
+          }
+        }
+      ],
+      "notes": [
+        "totalDebt = us-gaap:LongTermDebt (incl. current portion; equals LongTermDebtNoncurrent + LongTermDebtCurrent). CommercialPaper tagged 0 where present.",
+        "financeLeaseLiabilities: no FinanceLeaseLiability tag in any year captured; null.",
+        "FY2023 incomeTaxExpense is a benefit (negative).",
+        "cashAndMarketableSecurities FY2022-FY2025 = CashAndCashEquivalentsAtCarryingValue + MarketableSecuritiesCurrent. FY2026 10-K does not tag marketable securities with a standard us-gaap element (likely a company extension, absent from companyfacts); FY2026 value is DERIVED as CashAndCashEquivalentsAtCarryingValue - CashEquivalentsAtCarryingValue + AvailableForSaleSecuritiesDebtSecurities (assumes all cash equivalents are AFS debt securities included in the AFS total). Same formula on FY2025 gives 42,829M vs the actual 43,210M (-0.9%)."
+      ]
+    },
+    "NUE": {
+      "cik": "0000073309",
+      "fiscalYearEndNote": "Fiscal year ends Dec 31.",
+      "years": [
+        {
+          "fiscalYear": 2025,
+          "periodEnd": "2025-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 170000000,
+            "concepts": [
+              "us-gaap:InterestExpense"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 530000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 2568000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 20936000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 7121000000,
+            "concepts": [
+              "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+              "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+              "us-gaap:ShortTermBorrowings"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2025-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+                "value": 6909000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+                "value": 90000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              },
+              {
+                "concept": "us-gaap:ShortTermBorrowings",
+                "value": 122000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 2699000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2025-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 2260000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 439000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2024,
+          "periodEnd": "2024-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 228000000,
+            "concepts": [
+              "us-gaap:InterestExpense"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 583000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 2902000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 20294000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 6950000000,
+            "concepts": [
+              "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+              "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+              "us-gaap:ShortTermBorrowings"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2024-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+                "value": 5683000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+                "value": 1042000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              },
+              {
+                "concept": "us-gaap:ShortTermBorrowings",
+                "value": 225000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 4139000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodEnd": "2024-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 3558000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 581000000,
+                "sign": 1,
+                "accession": "0001193125-26-071575"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2023,
+          "periodEnd": "2023-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 246000000,
+            "concepts": [
+              "us-gaap:InterestExpense"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 1360000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 6273000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001193125-26-071575",
+            "form": "10-K",
+            "filed": "2026-02-25",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 20940000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000950170-25-028427",
+            "form": "10-K",
+            "filed": "2025-02-27",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 6842000000,
+            "concepts": [
+              "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+              "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+              "us-gaap:ShortTermBorrowings"
+            ],
+            "accession": "0000950170-25-028427",
+            "form": "10-K",
+            "filed": "2025-02-27",
+            "periodEnd": "2023-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+                "value": 6649000000,
+                "sign": 1,
+                "accession": "0000950170-25-028427"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+                "value": 74000000,
+                "sign": 1,
+                "accession": "0000950170-25-028427"
+              },
+              {
+                "concept": "us-gaap:ShortTermBorrowings",
+                "value": 119000000,
+                "sign": 1,
+                "accession": "0000950170-25-028427"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 7130000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000950170-25-028427",
+            "form": "10-K",
+            "filed": "2025-02-27",
+            "periodEnd": "2023-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 6383000000,
+                "sign": 1,
+                "accession": "0000950170-25-028427"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 747000000,
+                "sign": 1,
+                "accession": "0000950170-25-028427"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2022,
+          "periodEnd": "2022-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 219000000,
+            "concepts": [
+              "us-gaap:InterestExpense"
+            ],
+            "accession": "0000950170-25-028427",
+            "form": "10-K",
+            "filed": "2025-02-27",
+            "periodStart": "2022-01-01",
+            "periodEnd": "2022-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 2166000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000950170-25-028427",
+            "form": "10-K",
+            "filed": "2025-02-27",
+            "periodStart": "2022-01-01",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 10245000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000950170-25-028427",
+            "form": "10-K",
+            "filed": "2025-02-27",
+            "periodStart": "2022-01-01",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 18414694000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000950170-24-021195",
+            "form": "10-K",
+            "filed": "2024-02-27",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 6691350000,
+            "concepts": [
+              "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+              "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+              "us-gaap:ShortTermBorrowings"
+            ],
+            "accession": "0000950170-24-021195",
+            "form": "10-K",
+            "filed": "2024-02-27",
+            "periodEnd": "2022-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+                "value": 6613687000,
+                "sign": 1,
+                "accession": "0000950170-24-021195"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+                "value": 28582000,
+                "sign": 1,
+                "accession": "0000950170-24-021195"
+              },
+              {
+                "concept": "us-gaap:ShortTermBorrowings",
+                "value": 49081000,
+                "sign": 1,
+                "accession": "0000950170-24-021195"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 4857798000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000950170-24-021195",
+            "form": "10-K",
+            "filed": "2024-02-27",
+            "periodEnd": "2022-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 4280852000,
+                "sign": 1,
+                "accession": "0000950170-24-021195"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 576946000,
+                "sign": 1,
+                "accession": "0000950170-24-021195"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2021,
+          "periodEnd": "2021-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 163121000,
+            "concepts": [
+              "us-gaap:InterestExpense"
+            ],
+            "accession": "0000950170-24-021195",
+            "form": "10-K",
+            "filed": "2024-02-27",
+            "periodStart": "2021-01-01",
+            "periodEnd": "2021-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 2078488000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000950170-24-021195",
+            "form": "10-K",
+            "filed": "2024-02-27",
+            "periodStart": "2021-01-01",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 9200858000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000950170-24-021195",
+            "form": "10-K",
+            "filed": "2024-02-27",
+            "periodStart": "2021-01-01",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 14016389000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001564590-23-002793",
+            "form": "10-K",
+            "filed": "2023-03-01",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 5684811000,
+            "concepts": [
+              "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+              "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+              "us-gaap:ShortTermBorrowings"
+            ],
+            "accession": "0001564590-23-002793",
+            "form": "10-K",
+            "filed": "2023-03-01",
+            "periodEnd": "2021-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+                "value": 4961410000,
+                "sign": 1,
+                "accession": "0001564590-23-002793"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+                "value": 615678000,
+                "sign": 1,
+                "accession": "0001564590-23-002793"
+              },
+              {
+                "concept": "us-gaap:ShortTermBorrowings",
+                "value": 107723000,
+                "sign": 1,
+                "accession": "0001564590-23-002793"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 2617863000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0001564590-23-002793",
+            "form": "10-K",
+            "filed": "2023-03-01",
+            "periodEnd": "2021-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 2364858000,
+                "sign": 1,
+                "accession": "0001564590-23-002793"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 253005000,
+                "sign": 1,
+                "accession": "0001564590-23-002793"
+              }
+            ],
+            "note": null
+          }
+        }
+      ],
+      "notes": [
+        "No us-gaap:OperatingIncomeLoss tagged. EBIT substitute inputs captured: incomeBeforeTax + interestExpense (us-gaap:InterestExpense, gross; interest income tagged separately as InvestmentIncomeInterest). operatingIncome is null.",
+        "totalEquity = us-gaap:StockholdersEquity (Nucor stockholders, excludes noncontrolling interests).",
+        "totalDebt = LongTermDebtAndCapitalLeaseObligations (noncurrent) + LongTermDebtAndCapitalLeaseObligationsCurrent + ShortTermBorrowings. These lines include finance lease obligations, so financeLeaseLiabilities is null (already in debt; FinanceLeaseLiability is tagged separately, e.g. 258M at FY2025, and must not be added again).",
+        "cashAndMarketableSecurities = CashAndCashEquivalentsAtCarryingValue + ShortTermInvestments."
+      ]
+    },
+    "KO": {
+      "cik": "0000021344",
+      "fiscalYearEndNote": "Fiscal year ends Dec 31.",
+      "years": [
+        {
+          "fiscalYear": 2025,
+          "periodEnd": "2025-12-31",
+          "operatingIncome": {
+            "value": 13762000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 2861000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 15998000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 32169000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 45492000000,
+            "concepts": [
+              "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+              "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+              "us-gaap:CommercialPaper",
+              "us-gaap:OtherShortTermBorrowings"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodEnd": "2025-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+                "value": 42119000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+                "value": 1822000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 1495000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermBorrowings",
+                "value": 56000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 15806000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:OtherShortTermInvestments",
+              "us-gaap:MarketableSecurities"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodEnd": "2025-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 10270000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermInvestments",
+                "value": 3602000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:MarketableSecurities",
+                "value": 1934000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2024,
+          "periodEnd": "2024-12-31",
+          "operatingIncome": {
+            "value": 9992000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 2437000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 13086000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 24856000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 44522000000,
+            "concepts": [
+              "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+              "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+              "us-gaap:CommercialPaper",
+              "us-gaap:OtherShortTermBorrowings"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodEnd": "2024-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+                "value": 42375000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+                "value": 648000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 1139000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermBorrowings",
+                "value": 360000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 14571000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:OtherShortTermInvestments",
+              "us-gaap:MarketableSecurities"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodEnd": "2024-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 10828000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermInvestments",
+                "value": 2020000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:MarketableSecurities",
+                "value": 1723000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2023,
+          "periodEnd": "2023-12-31",
+          "operatingIncome": {
+            "value": 11311000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 2249000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 12952000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001628280-26-010047",
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 25941000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000021344-25-000011",
+            "form": "10-K",
+            "filed": "2025-02-20",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 42064000000,
+            "concepts": [
+              "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+              "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+              "us-gaap:CommercialPaper",
+              "us-gaap:OtherShortTermBorrowings"
+            ],
+            "accession": "0000021344-25-000011",
+            "form": "10-K",
+            "filed": "2025-02-20",
+            "periodEnd": "2023-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligations",
+                "value": 35547000000,
+                "sign": 1,
+                "accession": "0000021344-25-000011"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent",
+                "value": 1960000000,
+                "sign": 1,
+                "accession": "0000021344-25-000011"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 4209000000,
+                "sign": 1,
+                "accession": "0000021344-25-000011"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermBorrowings",
+                "value": 348000000,
+                "sign": 1,
+                "accession": "0000021344-25-000011"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 13663000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:OtherShortTermInvestments",
+              "us-gaap:MarketableSecurities"
+            ],
+            "accession": [
+              "0000021344-25-000011",
+              "0001628280-26-010047"
+            ],
+            "form": "10-K",
+            "filed": "2026-02-20",
+            "periodEnd": "2023-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 9366000000,
+                "sign": 1,
+                "accession": "0001628280-26-010047"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermInvestments",
+                "value": 2997000000,
+                "sign": 1,
+                "accession": "0000021344-25-000011"
+              },
+              {
+                "concept": "us-gaap:MarketableSecurities",
+                "value": 1300000000,
+                "sign": 1,
+                "accession": "0000021344-25-000011"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2022,
+          "periodEnd": "2022-12-31",
+          "operatingIncome": {
+            "value": 10909000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0000021344-25-000011",
+            "form": "10-K",
+            "filed": "2025-02-20",
+            "periodStart": "2022-01-01",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 2115000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000021344-25-000011",
+            "form": "10-K",
+            "filed": "2025-02-20",
+            "periodStart": "2022-01-01",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 11686000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000021344-25-000011",
+            "form": "10-K",
+            "filed": "2025-02-20",
+            "periodStart": "2022-01-01",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 24105000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000021344-24-000009",
+            "form": "10-K",
+            "filed": "2024-02-20",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 39149000000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:LongTermDebtCurrent",
+              "us-gaap:CommercialPaper",
+              "us-gaap:OtherShortTermBorrowings"
+            ],
+            "accession": "0000021344-24-000009",
+            "form": "10-K",
+            "filed": "2024-02-20",
+            "periodEnd": "2022-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 36377000000,
+                "sign": 1,
+                "accession": "0000021344-24-000009"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtCurrent",
+                "value": 399000000,
+                "sign": 1,
+                "accession": "0000021344-24-000009"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 2146000000,
+                "sign": 1,
+                "accession": "0000021344-24-000009"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermBorrowings",
+                "value": 227000000,
+                "sign": 1,
+                "accession": "0000021344-24-000009"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 11631000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:OtherShortTermInvestments",
+              "us-gaap:MarketableSecurities"
+            ],
+            "accession": [
+              "0000021344-24-000009",
+              "0000021344-25-000011"
+            ],
+            "form": "10-K",
+            "filed": "2025-02-20",
+            "periodEnd": "2022-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 9519000000,
+                "sign": 1,
+                "accession": "0000021344-25-000011"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermInvestments",
+                "value": 1043000000,
+                "sign": 1,
+                "accession": "0000021344-24-000009"
+              },
+              {
+                "concept": "us-gaap:MarketableSecurities",
+                "value": 1069000000,
+                "sign": 1,
+                "accession": "0000021344-24-000009"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2021,
+          "periodEnd": "2021-12-31",
+          "operatingIncome": {
+            "value": 10308000000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0000021344-24-000009",
+            "form": "10-K",
+            "filed": "2024-02-20",
+            "periodStart": "2021-01-01",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 2621000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000021344-24-000009",
+            "form": "10-K",
+            "filed": "2024-02-20",
+            "periodStart": "2021-01-01",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 12425000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000021344-24-000009",
+            "form": "10-K",
+            "filed": "2024-02-20",
+            "periodStart": "2021-01-01",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 22999000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000021344-23-000011",
+            "form": "10-K",
+            "filed": "2023-02-21",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 42761000000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:LongTermDebtCurrent",
+              "us-gaap:CommercialPaper",
+              "us-gaap:OtherShortTermBorrowings"
+            ],
+            "accession": "0000021344-23-000011",
+            "form": "10-K",
+            "filed": "2023-02-21",
+            "periodEnd": "2021-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 38116000000,
+                "sign": 1,
+                "accession": "0000021344-23-000011"
+              },
+              {
+                "concept": "us-gaap:LongTermDebtCurrent",
+                "value": 1338000000,
+                "sign": 1,
+                "accession": "0000021344-23-000011"
+              },
+              {
+                "concept": "us-gaap:CommercialPaper",
+                "value": 2462000000,
+                "sign": 1,
+                "accession": "0000021344-23-000011"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermBorrowings",
+                "value": 845000000,
+                "sign": 1,
+                "accession": "0000021344-23-000011"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 12625000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:OtherShortTermInvestments",
+              "us-gaap:MarketableSecurities"
+            ],
+            "accession": [
+              "0000021344-23-000011",
+              "0000021344-24-000009"
+            ],
+            "form": "10-K",
+            "filed": "2024-02-20",
+            "periodEnd": "2021-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 9684000000,
+                "sign": 1,
+                "accession": "0000021344-24-000009"
+              },
+              {
+                "concept": "us-gaap:OtherShortTermInvestments",
+                "value": 1242000000,
+                "sign": 1,
+                "accession": "0000021344-23-000011"
+              },
+              {
+                "concept": "us-gaap:MarketableSecurities",
+                "value": 1699000000,
+                "sign": 1,
+                "accession": "0000021344-23-000011"
+              }
+            ],
+            "note": null
+          }
+        }
+      ],
+      "notes": [
+        "totalEquity = us-gaap:StockholdersEquity (equity attributable to shareowners of The Coca-Cola Company).",
+        "totalDebt = long-term debt noncurrent (LongTermDebtNoncurrent through FY2022 filings; LongTermDebtAndCapitalLeaseObligations from FY2024 10-K onward) + current maturities (LongTermDebtCurrent / LongTermDebtAndCapitalLeaseObligationsCurrent) + CommercialPaper + OtherShortTermBorrowings (= \"loans and notes payable\"). Finance leases are within long-term debt; financeLeaseLiabilities null.",
+        "cashAndMarketableSecurities = CashAndCashEquivalentsAtCarryingValue + OtherShortTermInvestments (balance-sheet \"short-term investments\") + MarketableSecurities (current \"marketable securities\")."
+      ]
+    },
+    "LLY": {
+      "cik": "0000059478",
+      "fiscalYearEndNote": "Fiscal year ends Dec 31.",
+      "years": [
+        {
+          "fiscalYear": 2025,
+          "periodEnd": "2025-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 895000000,
+            "concepts": [
+              "us-gaap:InterestExpenseNonoperating"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 5091000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 25731000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 26535000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 42503000000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:DebtCurrent"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodEnd": "2025-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 40868000000,
+                "sign": 1,
+                "accession": "0000059478-26-000013"
+              },
+              {
+                "concept": "us-gaap:DebtCurrent",
+                "value": 1635000000,
+                "sign": 1,
+                "accession": "0000059478-26-000013"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 7268000000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodEnd": "2025-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 7268000000,
+                "sign": 1,
+                "accession": "0000059478-26-000013"
+              }
+            ],
+            "note": "Not tagged at this date (treated as 0): ShortTermInvestments."
+          }
+        },
+        {
+          "fiscalYear": 2024,
+          "periodEnd": "2024-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 781000000,
+            "concepts": [
+              "us-gaap:InterestExpenseNonoperating"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 2090000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 12680000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 14272000000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 33644000000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:DebtCurrent"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodEnd": "2024-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 28527000000,
+                "sign": 1,
+                "accession": "0000059478-26-000013"
+              },
+              {
+                "concept": "us-gaap:DebtCurrent",
+                "value": 5117000000,
+                "sign": 1,
+                "accession": "0000059478-26-000013"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 3422800000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": [
+              "0000059478-25-000067",
+              "0000059478-26-000013"
+            ],
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodEnd": "2024-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 3268000000,
+                "sign": 1,
+                "accession": "0000059478-26-000013"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 154800000,
+                "sign": 1,
+                "accession": "0000059478-25-000067"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2023,
+          "periodEnd": "2023-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 486000000,
+            "concepts": [
+              "us-gaap:InterestExpenseNonoperating"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 1314000000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 6554000000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000059478-26-000013",
+            "form": "10-K",
+            "filed": "2026-02-12",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 10771900000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000059478-25-000067",
+            "form": "10-K",
+            "filed": "2025-02-19",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 25225300000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:DebtCurrent"
+            ],
+            "accession": "0000059478-25-000067",
+            "form": "10-K",
+            "filed": "2025-02-19",
+            "periodEnd": "2023-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 18320800000,
+                "sign": 1,
+                "accession": "0000059478-25-000067"
+              },
+              {
+                "concept": "us-gaap:DebtCurrent",
+                "value": 6904500000,
+                "sign": 1,
+                "accession": "0000059478-25-000067"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 2927700000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000059478-25-000067",
+            "form": "10-K",
+            "filed": "2025-02-19",
+            "periodEnd": "2023-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 2818600000,
+                "sign": 1,
+                "accession": "0000059478-25-000067"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 109100000,
+                "sign": 1,
+                "accession": "0000059478-25-000067"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2022,
+          "periodEnd": "2022-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 331600000,
+            "concepts": [
+              "us-gaap:InterestExpenseNonoperating"
+            ],
+            "accession": "0000059478-25-000067",
+            "form": "10-K",
+            "filed": "2025-02-19",
+            "periodStart": "2022-01-01",
+            "periodEnd": "2022-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 561600000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000059478-25-000067",
+            "form": "10-K",
+            "filed": "2025-02-19",
+            "periodStart": "2022-01-01",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 6806400000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000059478-25-000067",
+            "form": "10-K",
+            "filed": "2025-02-19",
+            "periodStart": "2022-01-01",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 10649800000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000059478-24-000065",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodEnd": "2022-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 16238600000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:DebtCurrent"
+            ],
+            "accession": "0000059478-24-000065",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodEnd": "2022-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 14737500000,
+                "sign": 1,
+                "accession": "0000059478-24-000065"
+              },
+              {
+                "concept": "us-gaap:DebtCurrent",
+                "value": 1501100000,
+                "sign": 1,
+                "accession": "0000059478-24-000065"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 2211800000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000059478-24-000065",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodEnd": "2022-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 2067000000,
+                "sign": 1,
+                "accession": "0000059478-24-000065"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 144800000,
+                "sign": 1,
+                "accession": "0000059478-24-000065"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2021,
+          "periodEnd": "2021-12-31",
+          "operatingIncome": null,
+          "interestExpense": {
+            "value": 339800000,
+            "concepts": [
+              "us-gaap:InterestExpense"
+            ],
+            "accession": "0000059478-24-000065",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodStart": "2021-01-01",
+            "periodEnd": "2021-12-31",
+            "note": "Captured for EBIT substitute (incomeBeforeTax + interestExpense); filer does not tag OperatingIncomeLoss."
+          },
+          "incomeTaxExpense": {
+            "value": 573800000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0000059478-24-000065",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodStart": "2021-01-01",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": 6155500000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0000059478-24-000065",
+            "form": "10-K",
+            "filed": "2024-02-21",
+            "periodStart": "2021-01-01",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 8979200000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0000059478-23-000082",
+            "form": "10-K",
+            "filed": "2023-02-22",
+            "periodEnd": "2021-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 16884700000,
+            "concepts": [
+              "us-gaap:LongTermDebtNoncurrent",
+              "us-gaap:DebtCurrent"
+            ],
+            "accession": "0000059478-23-000082",
+            "form": "10-K",
+            "filed": "2023-02-22",
+            "periodEnd": "2021-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:LongTermDebtNoncurrent",
+                "value": 15346400000,
+                "sign": 1,
+                "accession": "0000059478-23-000082"
+              },
+              {
+                "concept": "us-gaap:DebtCurrent",
+                "value": 1538300000,
+                "sign": 1,
+                "accession": "0000059478-23-000082"
+              }
+            ],
+            "note": null
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 3908600000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:ShortTermInvestments"
+            ],
+            "accession": "0000059478-23-000082",
+            "form": "10-K",
+            "filed": "2023-02-22",
+            "periodEnd": "2021-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 3818500000,
+                "sign": 1,
+                "accession": "0000059478-23-000082"
+              },
+              {
+                "concept": "us-gaap:ShortTermInvestments",
+                "value": 90100000,
+                "sign": 1,
+                "accession": "0000059478-23-000082"
+              }
+            ],
+            "note": null
+          }
+        }
+      ],
+      "notes": [
+        "No us-gaap:OperatingIncomeLoss tagged. EBIT substitute inputs captured: incomeBeforeTax + interestExpense (InterestExpenseNonoperating where the latest 10-K uses it, else InterestExpense). operatingIncome is null.",
+        "totalDebt = LongTermDebtNoncurrent + DebtCurrent (short-term borrowings and current maturities incl. commercial paper); equals DebtLongtermAndShorttermCombinedAmount (+/-1M rounding).",
+        "financeLeaseLiabilities: not separately tagged; null.",
+        "cashAndMarketableSecurities = CashAndCashEquivalentsAtCarryingValue + ShortTermInvestments; ShortTermInvestments is not tagged at FY2025 year-end (treated as 0)."
+      ]
+    },
+    "OKLO": {
+      "cik": "0001849056",
+      "fiscalYearEndNote": "Fiscal year ends Dec 31.",
+      "years": [
+        {
+          "fiscalYear": 2025,
+          "periodEnd": "2025-12-31",
+          "operatingIncome": {
+            "value": -139294000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": -4529000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": -110192000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodStart": "2025-01-01",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 1476210000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodEnd": "2025-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 0,
+            "concepts": [],
+            "accession": null,
+            "form": "10-K",
+            "periodEnd": "2025-12-31",
+            "note": "No interest-bearing debt tagged or reported; genuine zero."
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 1227971000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodEnd": "2025-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 788445000,
+                "sign": 1,
+                "accession": "0001628280-26-018698"
+              },
+              {
+                "concept": "us-gaap:DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent",
+                "value": 439526000,
+                "sign": 1,
+                "accession": "0001628280-26-018698"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2024,
+          "periodEnd": "2024-12-31",
+          "operatingIncome": {
+            "value": -52801000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 683000,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": -72933000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodStart": "2024-01-01",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": 250857000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodEnd": "2024-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 0,
+            "concepts": [],
+            "accession": null,
+            "form": "10-K",
+            "periodEnd": "2024-12-31",
+            "note": "No interest-bearing debt tagged or reported; genuine zero."
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 227814000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodEnd": "2024-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 97132000,
+                "sign": 1,
+                "accession": "0001628280-26-018698"
+              },
+              {
+                "concept": "us-gaap:DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent",
+                "value": 130682000,
+                "sign": 1,
+                "accession": "0001628280-26-018698"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2023,
+          "periodEnd": "2023-12-31",
+          "operatingIncome": {
+            "value": -18636000,
+            "concepts": [
+              "us-gaap:OperatingIncomeLoss"
+            ],
+            "accession": "0001628280-25-014490",
+            "form": "10-K",
+            "filed": "2025-03-24",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "incomeTaxExpense": {
+            "value": 0,
+            "concepts": [
+              "us-gaap:IncomeTaxExpenseBenefit"
+            ],
+            "accession": "0001628280-25-014490",
+            "form": "10-K",
+            "filed": "2025-03-24",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "incomeBeforeTax": {
+            "value": -32173000,
+            "concepts": [
+              "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+            ],
+            "accession": "0001628280-25-014490",
+            "form": "10-K",
+            "filed": "2025-03-24",
+            "periodStart": "2023-01-01",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "totalEquity": {
+            "value": -34361000,
+            "concepts": [
+              "us-gaap:StockholdersEquity"
+            ],
+            "accession": "0001628280-26-018698",
+            "form": "10-K",
+            "filed": "2026-03-17",
+            "periodEnd": "2023-12-31",
+            "note": null
+          },
+          "totalDebt": {
+            "value": 0,
+            "concepts": [],
+            "accession": null,
+            "form": "10-K",
+            "periodEnd": "2023-12-31",
+            "note": "No interest-bearing debt tagged or reported; genuine zero."
+          },
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": {
+            "value": 9868000,
+            "concepts": [
+              "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+              "us-gaap:DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent"
+            ],
+            "accession": "0001628280-25-014490",
+            "form": "10-K",
+            "filed": "2025-03-24",
+            "periodEnd": "2023-12-31",
+            "components": [
+              {
+                "concept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+                "value": 9868000,
+                "sign": 1,
+                "accession": "0001628280-25-014490"
+              },
+              {
+                "concept": "us-gaap:DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent",
+                "value": 0,
+                "sign": 1,
+                "accession": "0001628280-25-014490"
+              }
+            ],
+            "note": null
+          }
+        },
+        {
+          "fiscalYear": 2022,
+          "periodEnd": "2022-12-31",
+          "operatingIncome": null,
+          "incomeTaxExpense": null,
+          "incomeBeforeTax": null,
+          "totalEquity": null,
+          "totalDebt": null,
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": null,
+          "note": "Not available: pre-merger; only AltC Acquisition Corp (SPAC) figures exist under this CIK for this year."
+        },
+        {
+          "fiscalYear": 2021,
+          "periodEnd": "2021-12-31",
+          "operatingIncome": null,
+          "incomeTaxExpense": null,
+          "incomeBeforeTax": null,
+          "totalEquity": null,
+          "totalDebt": null,
+          "financeLeaseLiabilities": null,
+          "cashAndMarketableSecurities": null,
+          "note": "Not available: pre-merger; only AltC Acquisition Corp (SPAC) figures exist under this CIK for this year."
+        }
+      ],
+      "notes": [
+        "CIK 0001849056 was AltC Acquisition Corp (SPAC) until the May 2024 merger with Oklo Inc. (reverse recapitalization). 10-K facts for FY2021/FY2022 in companyfacts are AltC SPAC figures, not Oklo operating-company figures, and are excluded; FY2022/FY2021 entries are therefore null. Only three Oklo fiscal years (FY2023-FY2025) are available from Oklo 10-Ks (FY2023 as comparative in the FY2024 10-K).",
+        "totalDebt = 0: no interest-bearing debt tagged in any captured year. FY2023 liabilities include ~46M of SAFE-type instruments (SharesSubjectToMandatoryRedemptionSettlementTermsAmountNoncurrent), not interest-bearing debt, excluded.",
+        "financeLeaseLiabilities: FinanceLeaseLiability tagged 0 at FY2023/FY2024; null (immaterial / none).",
+        "cashAndMarketableSecurities = CashAndCashEquivalentsAtCarryingValue + DebtSecuritiesAvailableForSaleExcludingAccruedInterestCurrent (current AFS). Noncurrent AFS (47M FY2024, 185M FY2025) excluded.",
+        "Operating income, pre-tax income are losses every year; incomeTaxExpense FY2025 is a benefit."
+      ]
+    }
+  }
+}

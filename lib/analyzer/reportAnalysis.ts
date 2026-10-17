@@ -91,6 +91,11 @@ async function storedRunOutput(runId: string): Promise<{ result: AnalysisResult;
 
   const pinnedMarket = await getRunMarketSnapshot(runId);
   const computed = await computeRunOutput(runId, pinnedMarket === null ? {} : { market: pinnedMarket });
+  // CF-AR5-VERDICT-CONSOLIDATION-01 — the verdict judgements this output is
+  // stored under travel with it, so the verdict (verdict.ts, a pure function
+  // of the stored result) is the one these recorded answers give (AR0-5).
+  computed.fixture.verdictJudgements = state.verdictJudgements;
+  computed.result.verdictJudgements = state.verdictJudgements;
   const identity = computed.result.runIdentity!;
   await saveRunOutput(runId, judgementsFingerprint, computed.result, computed.fixture, {
     factSnapshot: computed.fixture.facts,

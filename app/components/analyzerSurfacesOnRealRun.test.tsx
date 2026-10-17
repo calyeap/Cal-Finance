@@ -14,7 +14,7 @@ import type { AnalysisResult } from "@/lib/analyzer/types";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { formatCompactUsd } from "@/lib/formatUsd";
 import { notComputedLine } from "@/lib/analyzer/overviewCopy";
-import { incompleteVerdictExplanation, priceVsRangeHeadline } from "@/lib/analyzer/trustCopy";
+import { incompleteVerdictExplanation, verdictExplanation } from "@/lib/analyzer/trustCopy";
 
 // ---------------------------------------------------------------------------
 // #118 runway item 10 — real-company validation, MSFT and OKLO.
@@ -172,7 +172,13 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       // completed SELL was off MSFT's superseded Stage-2 Base (product-
       // decisions item 27, D2); with no D2 input on its sheet MSFT is now
       // INCOMPLETE like OKLO, and takes the same honest-cause path below.
-      expect(verdict.status).toBe("INCOMPLETE");
+      // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: MSFT's
+      // sheet is not adopted, so it is in the pending-adoption state, which
+      // the hero names in plain words (Calvin, Option A on #447). OKLO's
+      // leverage gate is a blocker adoption would not clear, so it is
+      // reported first: can't bound value.
+      if (ticker === "MSFT") expect(["PENDING ADOPTION", "CANNOT BOUND VALUE"]).toContain(verdict.state);
+      else expect(verdict.state).toBe("CANNOT BOUND VALUE");
 
       const { container } = render(
         <AnalyzerReportFrame runId="x" result={result} verdict={verdict} profileNotConfirmed={false} activeTab="overview">
@@ -187,30 +193,12 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       // ACCEPTANCE GATE forbids that outside Evidence).
       expect(hero.textContent).not.toContain(verdict.reason);
 
-      const headline = priceVsRangeHeadline({
-        fairValueRange: result.fairValueRange,
-        priceLocationWithinRange: result.scenarioOutputs.priceLocationWithinRange,
-        trustStatus: result.trust.status,
-        profileNotConfirmed: false,
-      });
-      if (headline !== null) {
-        // CALVIN RULING — REJECT CURRENT PRODUCT SURFACE; BUILD ONE SIMPLE
-        // COMPLETE RM-BRIEF PROOF (PR #399, comment 5952716764),
-        // REMOVE/BYPASS item 1: a defensible "range"-kind fair value means
-        // the literal word "INCOMPLETE" must not dominate the hero — the
-        // price-vs-range headline takes over, with the qualitative
-        // evidence-status label beside it.
-        expect(hero.textContent).not.toContain("INCOMPLETE");
-        expect(hero.textContent).toContain(headline);
-        expect(hero.querySelector(".confidence")).not.toBeNull();
+      expect(hero.textContent).not.toContain("INCOMPLETE");
+      expect(hero.textContent).not.toMatch(/\b(BUY|HOLD|SELL)\b/);
+      if (verdict.state === "PENDING ADOPTION") {
+        expect(hero.textContent).toContain("Pending adoption");
+        expect(hero.textContent).toContain(verdictExplanation(verdict)!);
       } else {
-        // OKLO's pre-revenue-distribution range has no bear-to-bull
-        // position to state — the honest structural cause still names the
-        // actual missing condition in plain English. CF-ANALYZER-V1-SETTLE-01,
-        // Calvin's 7 Oct 2026 decision on #399 (Option 1): outside Evidence
-        // that sentence stands alone, without the raw INCOMPLETE state name
-        // (which the Evidence-tab test below still finds).
-        expect(hero.textContent).not.toContain("INCOMPLETE");
         expect(hero.textContent).toContain(
           incompleteVerdictExplanation({
             trustStatus: result.trust.status,
@@ -219,9 +207,9 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
             profileNotConfirmed: false,
           })
         );
-        // §2.1 slot 2 — confidence only when the analysis is not INCOMPLETE.
-        expect(hero.querySelector(".confidence")).toBeNull();
       }
+      // Not a verdict, so no evidence-status label beside it.
+      expect(hero.querySelector(".confidence")).toBeNull();
     });
 
     it("the shared hero renders verdict.reason verbatim on the Evidence tab only", async () => {
@@ -236,8 +224,10 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
       // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — MSFT is INCOMPLETE while its
       // sheet is pending adoption (D2), the same path as OKLO.
-      expect(verdict.status).toBe("INCOMPLETE");
-      expect(hero.textContent).toContain("INCOMPLETE");
+      // CF-AR5-VERDICT-CONSOLIDATION-01 — MSFT: pending adoption, its own
+      // state; OKLO: INCOMPLETE (can't bound value), as before.
+      if (ticker !== "MSFT") expect(verdict.state).toBe("CANNOT BOUND VALUE");
+      expect(hero.textContent).toContain(verdict.state === "PENDING ADOPTION" ? "Pending adoption" : "INCOMPLETE");
       expect(hero.textContent).toContain(verdict.reason);
     });
 

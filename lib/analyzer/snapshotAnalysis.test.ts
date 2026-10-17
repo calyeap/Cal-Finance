@@ -70,8 +70,12 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     // is a real computed one.
     expect(snapshot.result.trust.status).toBe("UNUSABLE");
     expect(snapshot.result.fairValueRange.kind).toBe("suppressed");
-    expect(snapshot.verdict.status).toBe("INCOMPLETE");
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: the
+    // un-adopted sheet is the pending-adoption state, saved as such
+    // (migration 013's verdict_state) — not a verdict.
+    expect(snapshot.verdict.status).not.toMatch(/^(BUY|HOLD|SELL)$/);
     expect(snapshot.verdict.reason).toMatch(/Pending adoption|scenario dollar values/);
+    expect(snapshot.verdict.state).toBe(/Pending adoption/.test(snapshot.verdict.reason) ? "PENDING ADOPTION" : "CANNOT BOUND VALUE");
     expect(snapshot.result.valuationBasis?.discountRate.effectiveFrom).toBe("2026-10-17");
   });
 
@@ -159,8 +163,12 @@ describe("CF-V2-PROOF-01 — the DEEP + versioned-snapshot boundary", () => {
     // first test in this file.
     expect(snapshot.result.trust.status).toBe("UNUSABLE");
     expect(snapshot.result.fairValueRange.kind).toBe("suppressed");
-    expect(snapshot.verdict.status).toBe("INCOMPLETE");
+    // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: the
+    // un-adopted sheet is the pending-adoption state, saved as such
+    // (migration 013's verdict_state) — not a verdict.
+    expect(snapshot.verdict.status).not.toMatch(/^(BUY|HOLD|SELL)$/);
     expect(snapshot.verdict.reason).toMatch(/Pending adoption|scenario dollar values/);
+    expect(snapshot.verdict.state).toBe(/Pending adoption/.test(snapshot.verdict.reason) ? "PENDING ADOPTION" : "CANNOT BOUND VALUE");
     expect(snapshot.verdict.reason).not.toBe("");
   });
 

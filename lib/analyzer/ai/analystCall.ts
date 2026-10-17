@@ -28,7 +28,7 @@
 
 export interface AnalystCallRequest {
   /** Which call this is. Carried for logging and for the tests. */
-  label: "interpretation" | "challenger" | "scenarioProposal";
+  label: "interpretation" | "challenger" | "scenarioProposal" | "uncertaintyProposal";
   system: string;
   user: string;
   /** JSON Schema the response must satisfy. */

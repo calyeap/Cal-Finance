@@ -21,7 +21,9 @@ export interface ScreenCandidateWithVerdict extends ScreenCandidate {
 }
 
 function verdictStatusText(verdict: ScreenVerdictDisplay): string {
-  return verdict.kind === "gate-incomplete" ? "INCOMPLETE" : verdict.status;
+  if (verdict.kind === "gate-incomplete") return "INCOMPLETE";
+  // A pending-judgement state is not a verdict: its own name, never "PENDING" alone.
+  return verdict.status === "PENDING" ? verdict.state : verdict.status;
 }
 
 function verdictReasonText(verdict: ScreenVerdictDisplay): string {

@@ -1,5 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { getPool } from "../db";
+import { getVerdictJudgements } from "./verdictJudgementStore";
+import type { VerdictJudgements } from "./verdictJudgements";
 
 // ---------------------------------------------------------------------------
 // R7 — run persistence. Server-side, runId in the URL, no index, no history
@@ -321,10 +323,11 @@ export async function getCompanyJudgmentOverride(
  * unchanged run never recomputes, and recording a decision or judgement is
  * what produces a new output.
  *
- * The four AR5 judgement slots (frozen spec §14.9 AR0-5: uncertainty answer,
- * moat class, management rating, thesis state) are present and null: nothing
- * records them yet, and they are named here so the stored snapshot has a
- * place for them the day AR5 does.
+ * CF-AR5-VERDICT-CONSOLIDATION-01 fills the AR0-5 judgement slots AR3 left
+ * null: Calvin's recorded verdict judgements for this company (migration 013,
+ * verdictJudgementStore.ts) — uncertainty answer, close calls, thesis state,
+ * management rating, moat mechanism and process items. The moat class itself
+ * is the assumption sheet's (D2), already covered by `recordedSheetUpdatedAt`.
  */
 export interface RecordedJudgementState {
   factDecisions: StoredFactDecision[];
@@ -338,16 +341,13 @@ export interface RecordedJudgementState {
   companyOverrides: { nonOperatingInvestments: string | null };
   /** When this ticker's recorded assumption sheet was last written; null if none is recorded. */
   recordedSheetUpdatedAt: string | null;
-  uncertainty: null;
-  moatClass: null;
-  managementRating: null;
-  thesisState: null;
+  verdictJudgements: VerdictJudgements;
 }
 
 export async function getRecordedJudgementState(runId: string): Promise<RecordedJudgementState | null> {
   const run = await getRun(runId);
   if (run === null) return null;
-  const [decisions, judgments, override, sheet] = await Promise.all([
+  const [decisions, judgments, override, sheet, verdictJudgements] = await Promise.all([
     getFactDecisions(runId),
     getJudgments(runId),
     getCompanyJudgmentOverride(run.ticker, "NON-OPERATING INVESTMENTS"),
@@ -355,6 +355,7 @@ export async function getRecordedJudgementState(runId: string): Promise<Recorded
       `SELECT updated_at FROM analyzer_recorded_analyst_bundles WHERE ticker = $1`,
       [run.ticker]
     ),
+    getVerdictJudgements(run.ticker),
   ]);
   return {
     // Ordered by fact id, not decision time: the state is what was decided,
@@ -371,10 +372,7 @@ export async function getRecordedJudgementState(runId: string): Promise<Recorded
     },
     companyOverrides: { nonOperatingInvestments: override?.selection ?? null },
     recordedSheetUpdatedAt: sheet.rows.length === 0 ? null : new Date(sheet.rows[0].updated_at).toISOString(),
-    uncertainty: null,
-    moatClass: null,
-    managementRating: null,
-    thesisState: null,
+    verdictJudgements,
   };
 }
 

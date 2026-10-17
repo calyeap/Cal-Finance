@@ -11,8 +11,8 @@ import {
   type RonicInput,
   type ImpliedReturnOnNewCapitalInput,
 } from "./modules/reinvestmentRonic";
-import { evaluateGrowthLicence } from "./growthLicence";
-import { evaluateVerdictBlockers } from "./verdictBlockers";
+import { evaluateRoicFloor, type RoicYearInput } from "./roicFloor";
+import type { VerdictJudgements } from "./verdictJudgements";
 import { computeSteadyStateEvPvgo } from "./modules/steadyStateEvPvgo";
 import { solveReverseDcf, type ReverseDcfFacts } from "./modules/reverseDcf";
 import { selectDiscountRate, terminalReturnOnNewCapital } from "./discountRate";
@@ -178,6 +178,16 @@ export interface CompanyFixture {
   // return on new capital is the rate plus its credit. Absent or null means
   // the sheet is pending adoption (resolveD2Inputs).
   moatClass?: MoatClass | null;
+  // CF-AR5-VERDICT-CONSOLIDATION-01 — Methodology v2.1 D4 item 2's inputs:
+  // NOPAT and year-end invested capital (goodwill included) for each fiscal
+  // year, and how many fiscal years of annual results the company has filed.
+  // Absent or null: the floor is unavailable on this run.
+  roicHistory?: { years: RoicYearInput[]; filedHistoryYears: number } | null;
+  // CF-AR5-VERDICT-CONSOLIDATION-01 — Calvin's recorded verdict judgements,
+  // carried onto the result for verdict.ts (frozen spec §14.9 AR0-5). Not an
+  // engine input: no figure reads them, and they are left out of
+  // `inputsFingerprint`, which a close-call answer is bound to.
+  verdictJudgements?: VerdictJudgements;
   // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (issue #399). null only for
   // a bundle with no analyst-authored dollar values (an AI-proposed bundle —
   // acquisition/analystInputs.ts's aiProposedAnalystInputBundle): assembly
@@ -848,6 +858,34 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       ? POLICY.terminalGrowth.plus(EXPECTED_RETURN_SEARCH_FLOOR_ABOVE_TERMINAL_GROWTH)
       : undefined;
 
+  // CF-AR5-VERDICT-CONSOLIDATION-01 — the Base at the D1 rate's ±0.5pp check
+  // points (Methodology v2.1 D1/D3). The terminal return moves with the rate
+  // as D2 defines it (rate + moat credit), exactly as M14's rate row above
+  // revalues it. Only where the Base shown is the engine's own: a typed
+  // figure cannot be revalued, and the check never mixes the two.
+  const baseAtCheckRates: { baseAtCheckRates: { lower: Decimal; rate: Decimal; upper: Decimal } | null; baseAtCheckRatesCause: string | null } =
+    (() => {
+      if (dynamicScenarioValues === null || dynamicScenarioValues.base.isNaN()) {
+        return {
+          baseAtCheckRates: null,
+          baseAtCheckRatesCause:
+            scenarioValuesMissing ?? "the Base shown is a typed scenario value, which the engine cannot revalue at another rate",
+        };
+      }
+      if (d2.terminal === null) return { baseAtCheckRates: null, baseAtCheckRatesCause: d2.statement };
+      const terminalCredit = d2.terminal.base.minus(rate);
+      const at = (r: Decimal): Decimal => {
+        const run = valueScenario("base", { rate: r, terminalRoic: r.plus(terminalCredit) });
+        return run.valuation === null
+          ? new Decimal(NaN)
+          : ((perShare(run.valuation.enterpriseValue, fixture.scenarios.base.shareCount) as Decimal | null) ?? new Decimal(NaN));
+      };
+      return {
+        baseAtCheckRates: { lower: at(discountRate.checkRates.lower), rate: dynamicScenarioValues.base, upper: at(discountRate.checkRates.upper) },
+        baseAtCheckRatesCause: null,
+      };
+    })();
+
   // A recorded sheet (recordedBundles.ts sets the flag either way) pending
   // adoption never falls back to its typed dollar figures either: they were
   // entered under the superseded rate and reinvestment conventions. A
@@ -1308,9 +1346,6 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     sensitivity,
   };
 
-  // Named rather than inlined into the return, same reason `diagnostics` is
-  // above: `verdictBlockers` below reads this same computed value rather
-  // than re-deriving §9.6 rule 1 a second time.
   const trust = computeTrustStatus({
     fairValueRange,
     states: { suppressing, qualifying },
@@ -1370,8 +1405,6 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     // §10.3 is what keeps the status and the refusal one fact.
     trust,
     achievedRevenueCagr: fixture.achievedRevenueCagr,
-    growthLicence: evaluateGrowthLicence(reinvestmentRonic.ronic),
-    verdictBlockers: evaluateVerdictBlockers({ trust, undefinedConstants: fixture.configuredConstants }),
     preRevenue,
     // Both members are the AI layer's, and the AI layer runs AFTER this
     // function: §8.1 puts calculation on one side of the boundary and
@@ -1402,7 +1435,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       // The run id names the run, not its inputs, and a fact's retrieval
       // timestamp says when it was fetched, not what it is: two runs on
       // identical inputs share these fingerprints.
-      inputsFingerprint: fingerprint("inputs", { ...fixture, runId: null, facts: factsForIdentity }),
+      inputsFingerprint: fingerprint("inputs", { ...fixture, runId: null, facts: factsForIdentity, verdictJudgements: undefined }),
       factSnapshot: fingerprint("facts", factsForIdentity),
       sheetVersion: fingerprint("sheet", {
         scenarios: fixture.scenarios,
@@ -1420,6 +1453,14 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       },
     },
     valuationBasis: { discountRate, d2: d2.public },
+    ...(fixture.verdictJudgements === undefined ? {} : { verdictJudgements: fixture.verdictJudgements }),
+    verdictInputs: {
+      ...baseAtCheckRates,
+      roicFloor:
+        fixture.roicHistory == null
+          ? { status: "UNAVAILABLE", average: null, years: [], rate, reason: "no return-on-capital history was acquired for this run" }
+          : evaluateRoicFloor({ ...fixture.roicHistory, rate }),
+    },
   };
 }
 

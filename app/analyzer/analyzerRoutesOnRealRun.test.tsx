@@ -140,20 +140,28 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
       // "no valuation verdict" hero for their own, independently real
       // reasons.
       const hero = container.querySelector(".az-hero-verdict") as HTMLElement;
+      expect(hero.textContent).not.toMatch(/\b(BUY|HOLD|SELL)\b/);
       if (ticker === "MSFT") {
+        // CF-AR5-VERDICT-CONSOLIDATION-01 — reviewed evaluator change: MSFT's
+        // sheet is not adopted (no D2 input recorded), so the hero shows the
+        // pending-adoption state (Calvin, Option A on #447: "pending
+        // adoption" instead of a verdict).
+        expect(hero.querySelector(".verdictslot")?.getAttribute("data-state")).toBe("PENDING ADOPTION");
+        expect(hero.textContent).toMatch(/^Pending adoptionNo verdict until you adopt this company's assumption sheet/);
         // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — reviewed evaluator change:
         // that range and SELL were the superseded Stage-2 sheet's (product-
         // decisions item 27, D2). With no D2 input on MSFT's sheet, the hero
         // states plainly that it is pending adoption — never raw INCOMPLETE.
         expect(hero.textContent).not.toContain("INCOMPLETE");
         expect(hero.textContent).not.toContain("SELL");
-        expect(hero.textContent).toMatch(/^No valuation verdict for this company yet — its assumption sheet is pending adoption/);
       } else {
         // CF-ANALYZER-V1-SETTLE-01 (Calvin's 7 Oct 2026 decision on #399,
         // Option 1): no defensible range, so the hero states why in plain
         // English — never the raw INCOMPLETE state name or "see Evidence".
         expect(hero.textContent).not.toContain("INCOMPLETE");
         expect(hero.textContent).not.toMatch(/see Evidence/i);
+        // A blocker adoption would not clear (the leverage gate) is reported
+        // ahead of the sheet's adoption state.
         expect(hero.textContent).toMatch(/^No valuation verdict for this company yet — /);
       }
       // Quick Read plus all eight Overview tab slots (5-11 plus the new

@@ -2,7 +2,9 @@ import type Decimal from "decimal.js";
 import type { FairValueRange, LeverageResult, RateBand, TrustStatus, ValuationBasis } from "./types";
 import { formatRate } from "./discountRate";
 import { verdictUnavailableLine } from "./overviewCopy";
-import type { VerdictStatus } from "./verdict";
+import type { VerdictResult } from "./verdict";
+import { CHECK_RATES, UNCERTAINTY_LEVELS, type UncertaintyLevel } from "./verdictSynthesisV1";
+import { NOT_SURE, type VerdictJudgements } from "./verdictJudgements";
 
 // ---------------------------------------------------------------------------
 // The page-one trust sentences, DERIVED from the computed status.
@@ -81,28 +83,38 @@ export function evidenceStatusLabel(status: TrustStatus): string {
 }
 
 // ---------------------------------------------------------------------------
-// CF-DESIGN-AUTHORITY-CUTOVER-01 (docs/design/analyzer-v2-design-authority.md
-// §"Compact report header") — Analyzer V2's verdict-row and compact-header
-// uncertainty badge use the words "Low / Medium / High uncertainty", never
-// "confidence". This is a second pure copy mapping onto the same already-
-// computed TrustStatus evidenceStatusLabel reads from — no new computation,
-// threshold or company-quality claim; UNUSABLE remains a statement about
-// this run, not the company (§9.6), same as every other TrustStatus copy in
-// this file.
+// CF-AR5-VERDICT-CONSOLIDATION-01 — the hero's "Uncertainty" badge
+// (docs/design/analyzer-v2-design-authority.md §"Compact report header":
+// "Low / Medium / High uncertainty", never "confidence").
+//
+// It used to relabel the run's evidence completeness (TrustStatus) as an
+// uncertainty level — a different fact. Uncertainty is the D3 level: how
+// reliably value can be bounded, which only Calvin sets (Methodology v2.1
+// D3, no mechanical checklist). So the badge shows his recorded answer, and
+// otherwise says whether the level matters to this verdict at all. Evidence
+// completeness keeps its own label beside the verdict (evidenceStatusLabel).
 // ---------------------------------------------------------------------------
 
-export type UncertaintyLevel = "Low" | "Medium" | "High";
+export type { UncertaintyLevel };
 
-/** The Low / Medium / High uncertainty label — a pure mapping, no computation. */
-export function uncertaintyLevel(status: TrustStatus): UncertaintyLevel {
-  switch (status) {
-    case "CLEAN":
-      return "Low";
-    case "PARTIAL":
-      return "Medium";
-    case "UNUSABLE":
-      return "High";
+export interface UncertaintyBadge {
+  /** Calvin's recorded level, or null where none is set. */
+  level: UncertaintyLevel | null;
+  text: string;
+}
+
+export function uncertaintyBadge(verdict: VerdictResult, judgements: VerdictJudgements | undefined): UncertaintyBadge {
+  const answer = judgements?.uncertainty ?? null;
+  if (answer !== null && answer.answer !== NOT_SURE) {
+    return { level: answer.answer, text: `${answer.answer} uncertainty — your answer, ${answer.recordedAt.slice(0, 10)}` };
   }
+  if (verdict.state === "UNCERTAINTY QUESTION") {
+    return { level: null, text: answer !== null ? "Uncertainty — you answered not sure" : "Uncertainty — your call" };
+  }
+  if (verdict.check?.routing.kind === "AUTOMATIC") {
+    return { level: null, text: "Uncertainty — doesn't change this verdict" };
+  }
+  return { level: null, text: "Uncertainty — not set" };
 }
 
 // ---------------------------------------------------------------------------
@@ -156,7 +168,7 @@ export function incompleteVerdictExplanation({
   if (profileNotConfirmed) {
     return "Nobody has confirmed which financial profile fits this company yet, so a verdict can't render until that happens.";
   }
-  return "A fair-value range is available, but a full verdict also requires comparing this company's actual growth against what today's price assumes — that comparison isn't built yet.";
+  return "A fair-value range is available, but the verdict's ±0.5pp rate check could not be completed on this run.";
 }
 
 // ---------------------------------------------------------------------------
@@ -214,45 +226,70 @@ export function priceVsRangeHeadline({
 }
 
 // ---------------------------------------------------------------------------
-// CF-ANALYZER-STAGE3-VERDICT-FINISH-01 — REVIEW `CORRECT:` (comment
-// 6217530392): a completed verdict (BUY/HOLD/SELL) outside Evidence must not
-// fall back to DominantVerdictSlot.tsx's bare REASON_UNAVAILABLE_MARKER,
-// "Unavailable — see Evidence" — that marker is a stand-in for a missing
-// explanation, and a completed verdict has one. This states it in plain
-// English, built only from the same price and Base fair value
-// `deriveVerdict`/`synthesizeVerdictV1` already compared (AnalysisResult's
-// own `price.value` and `scenarioOutputs.values.base`) — no raw trust/gate/
-// state code, no new number and no new policy; it names the same BUY/SELL
-// boundary the approved verdict policy already applies, not a restated
-// threshold figure. `verdict.reason` itself is untouched and still renders
-// verbatim, in full, on Evidence.
+// CF-AR5-VERDICT-CONSOLIDATION-01 — the verdict slot's plain-English line
+// outside Evidence, for an issued verdict and for each pending-judgement
+// state (Methodology v2.1 D3: "why" reasons are built from computed numbers;
+// AI may not argue a position). Every figure is one the verdict itself
+// computed (verdict.check, verdict.rates) and every word is a template:
+// no raw state code, no new number, no new policy. The full `verdict.reason`
+// still renders verbatim on Evidence.
 // ---------------------------------------------------------------------------
 
-/** Plain-English rationale for a completed (BUY/HOLD/SELL) verdict outside Evidence. */
-export function completedVerdictExplanation({
-  status,
-  price,
-  base,
-}: {
-  status: VerdictStatus;
-  price: Decimal;
-  base: Decimal;
-}): string {
-  const ratio = price.dividedBy(base);
-  const priceText = `$${price.toDecimalPlaces(2).toString()}`;
-  const baseText = `$${base.toDecimalPlaces(2).toString()}`;
-  const ratioText = `${ratio.toDecimalPlaces(2).toString()}×`;
-  const lead = `Price ${priceText} is ${ratioText} the Base fair value of ${baseText}, `;
+function money2(value: Decimal): string {
+  return `$${value.toDecimalPlaces(2).toFixed(2)}`;
+}
 
-  switch (status) {
-    case "SELL":
-      return `${lead}above the SELL level under every uncertainty bucket in the approved verdict policy.`;
-    case "BUY":
-      return `${lead}below the BUY level under every uncertainty bucket in the approved verdict policy.`;
-    case "HOLD":
-      return `${lead}between the BUY and SELL levels under every uncertainty bucket in the approved verdict policy.`;
+function ratioSpan(verdict: VerdictResult): string | null {
+  if (verdict.check === null || verdict.rates === null) return null;
+  const ratios = CHECK_RATES.map((r) => verdict.check!.ratios[r]);
+  const lo = ratios.reduce((a, b) => (a.lessThan(b) ? a : b));
+  const hi = ratios.reduce((a, b) => (a.greaterThan(b) ? a : b));
+  const span = lo.toFixed(2) === hi.toFixed(2) ? `${lo.toFixed(2)}×` : `${lo.toFixed(2)}×–${hi.toFixed(2)}×`;
+  return `Price is ${span} the Base fair value across the ${formatRate(verdict.rates.lower)}–${formatRate(verdict.rates.upper)} rate band`;
+}
+
+/** Plain-English line for an issued verdict or a pending-judgement state, or null for INCOMPLETE. */
+export function verdictExplanation(verdict: VerdictResult, price?: Decimal, base?: Decimal): string | null {
+  const span = ratioSpan(verdict);
+  const bar = verdict.qualityBar;
+  switch (verdict.state) {
     case "INCOMPLETE":
-      return `${lead}in a range the approved verdict policy does not yet resolve to BUY, HOLD or SELL.`;
+    case "CANNOT BOUND VALUE":
+      return null;
+    case "PENDING ADOPTION":
+      return "No verdict until you adopt this company's assumption sheet — its moat class and the return on new investment for each scenario.";
+    case "UNCERTAINTY QUESTION": {
+      if (verdict.check === null || verdict.check.routing.kind !== "UNCERTAINTY QUESTION") return null;
+      const byLevel = verdict.check.routing.byLevel;
+      return `How reliably can this company's value be bounded? ${UNCERTAINTY_LEVELS.map((u) => `${u} uncertainty → ${byLevel[u]}`).join(", ")}. ${span}; the rate doesn't change the answer.`;
+    }
+    case "CLOSE CALL": {
+      if (verdict.check === null || verdict.check.routing.kind !== "CLOSE CALL") return null;
+      return `${span ?? "Price against Base"}, and the verdict changes across that band — ${verdict.check.routing.zones.join(" or ")}.`;
+    }
+    case "BUY CANDIDATE":
+      return `${span ?? "Price against Base"}: in the BUY band. Still open: ${bar?.open.join("; ") ?? "the quality bar"}.`;
+    case "ISSUED": {
+      if (verdict.basis === "THESIS BROKEN") return "You recorded the thesis as broken, so the verdict is SELL.";
+      const lead =
+        span ?? (price !== undefined && base !== undefined ? `Price ${money2(price)} against the Base fair value ${money2(base)}` : "Price against Base");
+      // Where the bar was checked, valuation reached the BUY band and the
+      // bar decided between BUY and HOLD.
+      const zone = bar === null ? verdict.status : "in the BUY band";
+      const how =
+        verdict.basis === "YOUR UNCERTAINTY ANSWER"
+          ? `; at the uncertainty level you set, that is ${zone} at every rate`
+          : verdict.basis === "YOUR CLOSE CALL"
+            ? `; the verdict changes across the band and your close call puts it ${bar === null ? `at ${zone}` : zone}`
+            : `: ${zone} at every rate and uncertainty level`;
+      const quality =
+        bar === null
+          ? ""
+          : bar.status === "PASS"
+            ? " The quality bar for BUY passes, so BUY."
+            : ` The quality bar for BUY is not met (${bar.failed.join("; ")}), so HOLD.`;
+      return `${lead}${how}.${quality}`;
+    }
   }
 }
 

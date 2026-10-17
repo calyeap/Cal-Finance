@@ -4,6 +4,7 @@ import { render, cleanup } from "@testing-library/react";
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { AnalyzerReportFrame, ANALYZER_TABS, type AnalyzerTabSlug } from "./AnalyzerReportFrame";
+import { pendingStateName } from "./DominantVerdictSlot";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
@@ -291,8 +292,13 @@ describe("Analyzer V2 acceptance-target drift guard (CF-V2-DRIFT-GUARD-01)", () 
         // the verdict word on every tab, Evidence included, never the
         // price-vs-range headline (that fallback applies only to an
         // INCOMPLETE verdict, per REMOVE/BYPASS item 1).
+        // CF-AR5-VERDICT-CONSOLIDATION-01: a pending-judgement state (this
+        // fixture's sheet is not adopted) shows its own plain name in the
+        // slot, never a verdict word.
         expect(hero.querySelector(".az-hero-verdict")?.textContent).toContain(
-          verdict.status !== "INCOMPLETE"
+          verdict.status === "PENDING"
+            ? pendingStateName(verdict.state)
+            : verdict.status !== "INCOMPLETE"
             ? verdict.status
             : slug === "evidence"
               ? verdict.status

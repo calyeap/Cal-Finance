@@ -2,8 +2,24 @@
 import { describe, it, expect, afterEach } from "vitest";
 import { render, cleanup, screen } from "@testing-library/react";
 import { DominantVerdictSlot } from "./DominantVerdictSlot";
+import type { VerdictResult } from "@/lib/analyzer/verdict";
 
 afterEach(cleanup);
+
+// CF-AR5-VERDICT-CONSOLIDATION-01 — VerdictResult gained the D3/D4 fields;
+// these cases are about rendering only, so they carry none of them.
+function verdictOf(status: "BUY" | "HOLD" | "SELL" | "INCOMPLETE", reason: string): VerdictResult {
+  return {
+    status,
+    state: status === "INCOMPLETE" ? "INCOMPLETE" : "ISSUED",
+    reason,
+    check: null,
+    rates: null,
+    basis: null,
+    qualityBar: null,
+    closeCallBinding: null,
+  };
+}
 
 // M9-DESKTOP-SHELL-01 — the contract's two distinct render paths (§4),
 // exercised directly against VerdictResult literals rather than through
@@ -23,7 +39,7 @@ describe("DominantVerdictSlot — completed path", () => {
   it("renders the verdict word, a confidence indicator carrying the evidence-status label, and the rationale line — never the .state/.name/.cause markup", () => {
     const { container } = render(
       <DominantVerdictSlot
-        verdict={{ status: "BUY", reason: "The evidence supports it." }}
+        verdict={verdictOf("BUY", "The evidence supports it.")}
         trustStatus="CLEAN"
         isEvidenceTab
       />
@@ -39,7 +55,7 @@ describe("DominantVerdictSlot — completed path", () => {
   it("renders HOLD and SELL through the same completed path", () => {
     const hold = render(
       <DominantVerdictSlot
-        verdict={{ status: "HOLD", reason: "Mixed evidence." }}
+        verdict={verdictOf("HOLD", "Mixed evidence.")}
         trustStatus="PARTIAL"
         isEvidenceTab
       />
@@ -48,7 +64,7 @@ describe("DominantVerdictSlot — completed path", () => {
     cleanup();
     const sell = render(
       <DominantVerdictSlot
-        verdict={{ status: "SELL", reason: "The case has weakened." }}
+        verdict={verdictOf("SELL", "The case has weakened.")}
         trustStatus="UNUSABLE"
         isEvidenceTab
       />
@@ -58,7 +74,7 @@ describe("DominantVerdictSlot — completed path", () => {
 
   it("outside the Evidence tab, renders the plain marker instead of the verbatim rationale", () => {
     const { container } = render(
-      <DominantVerdictSlot verdict={{ status: "BUY", reason: "The evidence supports it." }} trustStatus="CLEAN" />
+      <DominantVerdictSlot verdict={verdictOf("BUY", "The evidence supports it.")} trustStatus="CLEAN" />
     );
     expect(screen.getByText("BUY")).not.toBeNull();
     expect(screen.queryByText("The evidence supports it.")).toBeNull();
@@ -76,9 +92,9 @@ describe("DominantVerdictSlot — the dated rate in use (CF-AR4-RATE-REINVESTMEN
   it("a completed verdict outside Evidence states the dated rate it was valued at", () => {
     const { container } = render(
       <DominantVerdictSlot
-        verdict={{ status: "SELL", reason: "The evidence supports it." }}
+        verdict={verdictOf("SELL", "The evidence supports it.")}
         trustStatus="PARTIAL"
-        completedExplanation="Price $510.12 is above Base."
+        explanation="Price $510.12 is above Base."
         rateInUse={RATE_LINE}
       />
     );
@@ -90,7 +106,7 @@ describe("DominantVerdictSlot — the dated rate in use (CF-AR4-RATE-REINVESTMEN
   it("the same completed verdict on the Evidence tab carries no rate line — Evidence's content is unchanged", () => {
     const { container } = render(
       <DominantVerdictSlot
-        verdict={{ status: "SELL", reason: "The evidence supports it." }}
+        verdict={verdictOf("SELL", "The evidence supports it.")}
         trustStatus="PARTIAL"
         isEvidenceTab
         rateInUse={RATE_LINE}
@@ -102,7 +118,7 @@ describe("DominantVerdictSlot — the dated rate in use (CF-AR4-RATE-REINVESTMEN
   it("the INCOMPLETE price-vs-range headline outside Evidence also states it (it is rate-derived too)", () => {
     const { container } = render(
       <DominantVerdictSlot
-        verdict={{ status: "INCOMPLETE", reason: "No comparator yet." }}
+        verdict={verdictOf("INCOMPLETE", "No comparator yet.")}
         trustStatus="PARTIAL"
         priceVsRangeHeadline="Trading 64% of the way from the bear case to the bull case modeled for this company."
         rateInUse={RATE_LINE}
@@ -114,7 +130,7 @@ describe("DominantVerdictSlot — the dated rate in use (CF-AR4-RATE-REINVESTMEN
   it("an INCOMPLETE verdict with no defensible range (no rate-derived figure shown) carries no rate line", () => {
     const { container } = render(
       <DominantVerdictSlot
-        verdict={{ status: "INCOMPLETE", reason: "No range." }}
+        verdict={verdictOf("INCOMPLETE", "No range.")}
         trustStatus="UNUSABLE"
         incompleteExplanation="This run's underlying data isn't reliable enough yet to support a verdict."
         rateInUse={RATE_LINE}
@@ -125,7 +141,7 @@ describe("DominantVerdictSlot — the dated rate in use (CF-AR4-RATE-REINVESTMEN
 
   it("a snapshot stored before AR4 carries no basis, and so no line", () => {
     const { container } = render(
-      <DominantVerdictSlot verdict={{ status: "SELL", reason: "x" }} trustStatus="PARTIAL" completedExplanation="x" />
+      <DominantVerdictSlot verdict={verdictOf("SELL", "x")} trustStatus="PARTIAL" explanation="x" />
     );
     expect(container.querySelector(".caveat")).toBeNull();
   });
@@ -144,7 +160,7 @@ describe("DominantVerdictSlot — evidence-status label (M9-CONFIDENCE-LABEL-01)
     "renders a non-empty evidence-status label for trust status %s",
     (trustStatus) => {
       const { container } = render(
-        <DominantVerdictSlot verdict={{ status: "BUY", reason: "The evidence supports it." }} trustStatus={trustStatus} />
+        <DominantVerdictSlot verdict={verdictOf("BUY", "The evidence supports it.")} trustStatus={trustStatus} />
       );
       const label = container.querySelector(".confidence")?.textContent ?? "";
       expect(label.length).toBeGreaterThan(0);
@@ -155,7 +171,7 @@ describe("DominantVerdictSlot — evidence-status label (M9-CONFIDENCE-LABEL-01)
 
   it("never lets UNUSABLE read as a judgement about the company", () => {
     const { container } = render(
-      <DominantVerdictSlot verdict={{ status: "HOLD", reason: "Mixed evidence." }} trustStatus="UNUSABLE" />
+      <DominantVerdictSlot verdict={verdictOf("HOLD", "Mixed evidence.")} trustStatus="UNUSABLE" />
     );
     const label = container.querySelector(".confidence")?.textContent ?? "";
     expect(label).not.toMatch(/\b(bad|avoid|overvalued|risky|poor)\b/i);
@@ -167,7 +183,7 @@ describe("DominantVerdictSlot — INCOMPLETE path", () => {
   it("renders the state name and cause line through .state/.name/.cause, left-aligned, no confidence indicator", () => {
     const { container } = render(
       <DominantVerdictSlot
-        verdict={{ status: "INCOMPLETE", reason: "Decision-critical analysis is incomplete — the range is not usable." }}
+        verdict={verdictOf("INCOMPLETE", "Decision-critical analysis is incomplete — the range is not usable.")}
         trustStatus="CLEAN"
         isEvidenceTab
       />
@@ -184,7 +200,7 @@ describe("DominantVerdictSlot — INCOMPLETE path", () => {
     const reason =
       "Decision-critical analysis is incomplete — a fair-value range alone cannot determine BUY / HOLD / SELL. " +
       "Recovery: this verdict becomes available once M8 delivers the comparator fact.";
-    render(<DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="PARTIAL" isEvidenceTab />);
+    render(<DominantVerdictSlot verdict={verdictOf("INCOMPLETE", reason)} trustStatus="PARTIAL" isEvidenceTab />);
     expect(screen.getByText(reason)).not.toBeNull();
   });
 
@@ -195,7 +211,7 @@ describe("DominantVerdictSlot — INCOMPLETE path", () => {
     const reason = "Decision-critical analysis is incomplete — LEVERAGE UNSUPPORTED IN v1";
     const explanation = "No valuation verdict for this company yet — its debt load is above the level this version of the model can value.";
     const { container } = render(
-      <DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="PARTIAL" incompleteExplanation={explanation} />
+      <DominantVerdictSlot verdict={verdictOf("INCOMPLETE", reason)} trustStatus="PARTIAL" incompleteExplanation={explanation} />
     );
     expect(screen.queryByText("INCOMPLETE")).toBeNull();
     expect(screen.queryByText(reason)).toBeNull();
@@ -206,7 +222,7 @@ describe("DominantVerdictSlot — INCOMPLETE path", () => {
 
   it("isEvidenceTab defaults to false — omitting the prop still suppresses the raw reason, and an omitted explanation falls back to plain words", () => {
     const reason = "Decision-critical analysis is incomplete — PROFILE NOT CONFIRMED is active.";
-    const { container } = render(<DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason }} trustStatus="CLEAN" />);
+    const { container } = render(<DominantVerdictSlot verdict={verdictOf("INCOMPLETE", reason)} trustStatus="CLEAN" />);
     expect(screen.queryByText(reason)).toBeNull();
     expect(screen.queryByText("INCOMPLETE")).toBeNull();
     expect(container.querySelector(".cause")?.textContent).toBe("No valuation verdict for this company yet.");
@@ -215,7 +231,7 @@ describe("DominantVerdictSlot — INCOMPLETE path", () => {
   it("never renders anything confidence-like on the INCOMPLETE path, whatever the trust status", () => {
     for (const trustStatus of ["CLEAN", "PARTIAL", "UNUSABLE"] as const) {
       const { container } = render(
-        <DominantVerdictSlot verdict={{ status: "INCOMPLETE", reason: "Incomplete." }} trustStatus={trustStatus} />
+        <DominantVerdictSlot verdict={verdictOf("INCOMPLETE", "Incomplete.")} trustStatus={trustStatus} />
       );
       expect(container.querySelector(".confidence")).toBeNull();
       cleanup();
