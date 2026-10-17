@@ -7,7 +7,7 @@
 > **Nothing here authorises starting AR0 — that needs Calvin's explicit go.**
 
 > **Execution record (added 17 Oct 2026):** Calvin gave the explicit AR0 go on 17 Oct 2026. AR0
-> ran as `CF-AR0-RECORD-DECISIONS-01` (#447) and `CF-AR0-SPEC-AMEND-01` (#448). Current execution
+> runs as `CF-AR0-RECORD-DECISIONS-01` (#447) and `CF-AR0-SPEC-AMEND-01` (#448). Current execution
 > state lives in native GitHub (`docs/CURRENT-AUTHORITY.md`), not in this file; §0, §1 and §7
 > describe the state before the go.
 

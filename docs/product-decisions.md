@@ -101,10 +101,9 @@ update, not a semantic conflict.
     go; recorded under `CF-AR0-RECORD-DECISIONS-01`,
     [#447](https://github.com/calyeap/Cal-Finance/issues/447)).
     Market-anchored, two bands, reset yearly; growth alone never raises the
-    rate; every verdict is also checked at ±0.5pp; valid only inside the
-    <10% net-debt gate. The product shows the dated rate in use. Finance
-    semantics (bands, measurement, cyclical classes): Cal Finance
-    Methodology v2.1, D1 — not here.
+    rate. The product shows the dated rate in use. Finance semantics
+    (bands, measurement, verdict check, leverage domain, cyclical classes):
+    Cal Finance Methodology v2.1, D1 — not here.
 27. **Analyzer Reset D2 — reinvestment and terminal returns** (same
     authority as item 26). Supersedes the 16 Oct 2026 MSFT reinvestment
     path (`CALVIN RULING: YES — APPROVED`,
@@ -115,7 +114,7 @@ update, not a semantic conflict.
     Methodology v2.1, D2.
 28. **Analyzer Reset D3 — verdict mechanics** (same authority as item 26).
     V1 (Methodology) is the only verdict rule; CHEAP/FAIR/EXPENSIVE labels
-    are removed from the product (items 22–24 retired). Routing: when all
+    are removed from the product, and items 22–24 are retired. Routing: when all
     nine rate × uncertainty checks agree, the verdict issues automatically;
     when only the uncertainty level matters, Calvin gets one question (AI
     proposes, with evidence); when the rate-band ends disagree, Calvin gets
@@ -124,9 +123,8 @@ update, not a semantic conflict.
     SELL may issue automatically; a BUY also needs item 29's BUY
     confirmation — until then the result reads "BUY candidate — needs your
     quality call". "Why" reasons are templated from computed numbers; AI may
-    not argue a position. Pending-judgement states are not verdicts and
-    never render INCOMPLETE or a manufactured HOLD as one (item 1). The
-    nine-point check itself: Methodology v2.1, D3.
+    not argue a position. The nine-point check itself: Methodology v2.1,
+    D3.
 29. **Analyzer Reset D4 — quality bar for BUY** (Calvin's own policy
     decision, 17 Oct 2026: a BUY requires at least a narrow moat). The bar —
     the five process items, the computed ROIC floor, at least a narrow moat
