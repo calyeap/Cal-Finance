@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 import { POLICY } from "../policy";
 import { buildSensitivityResult } from "./sensitivity";
 import { growthAt } from "../growthPath";
+import { explicitYearDiscountTime, terminalDiscountTime } from "../valuationTiming";
 import type { ScenarioOutputs } from "../types";
 
 // M15 — scenario valuation and outputs (§7.2, §10 F/G).
@@ -14,7 +15,8 @@ import type { ScenarioOutputs } from "../types";
 // inference here. Terminal value construction is the same fixed formula
 // as M7 (terminal FCF = terminal NOPAT × (1 − g ÷ terminal ROIC), terminal
 // ROIC = rate + 3pp) since that is a policy-wide constant, not specific to
-// how the explicit period was reinvested.
+// how the explicit period was reinvested. Discounting follows Methodology
+// v2.1 D2's timing (valuationTiming.ts).
 //
 // margin and capitalIntensity may be a single constant (broadcast across
 // all ten years) or an explicit ten-entry path — the scenario matrix
@@ -40,8 +42,51 @@ export function computeScenarioEnterpriseValue(
   // from the diagnostic reverse DCF's own fixed r+3pp convention below).
   // Absent/null and every existing caller gets EXACTLY the prior hardcoded
   // r+3pp behaviour.
-  terminalRoic?: Decimal | null
+  terminalRoic?: Decimal | null,
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — years from the TTM base period end to the
+  // price date (valuationTiming.ts). Zero values the flows at the base
+  // period end.
+  stubYears: Decimal = new Decimal(0)
 ): Decimal {
+  return computeScenarioValuation(
+    baseRevenue,
+    growthPath,
+    margin,
+    capitalIntensity,
+    rate,
+    nopatTaxRate,
+    terminalGrowth,
+    terminalRoic,
+    stubYears
+  ).enterpriseValue;
+}
+
+export interface ScenarioValuation {
+  enterpriseValue: Decimal;
+  explicitPeriodPv: Decimal;
+  terminalValuePv: Decimal;
+}
+
+/**
+ * The same M15 valuation as computeScenarioEnterpriseValue, with its two
+ * parts kept apart so M8 can report the terminal share of THIS valuation
+ * (CF-AR3-REPRODUCIBLE-RUNS-01) rather than a figure supplied from outside.
+ *
+ * Timing is Methodology v2.1 D2's (valuationTiming.ts): year t's cash flow
+ * discounted from t − 0.5 years, the terminal value from 9.5 years, both
+ * less the stub to the price date.
+ */
+export function computeScenarioValuation(
+  baseRevenue: Decimal,
+  growthPath: Decimal[],
+  margin: Decimal | Decimal[],
+  capitalIntensity: Decimal | Decimal[],
+  rate: Decimal,
+  nopatTaxRate: Decimal,
+  terminalGrowth: Decimal = POLICY.terminalGrowth,
+  terminalRoic?: Decimal | null,
+  stubYears: Decimal = new Decimal(0)
+): ScenarioValuation {
   if (growthPath.length !== 10) {
     throw new Error("growthPath must have exactly ten entries (years 1-10)");
   }
@@ -63,7 +108,7 @@ export function computeScenarioEnterpriseValue(
     const nopat = revenues[t].mul(marginAt(t)).mul(afterTax);
     const reinvestment = revenues[t].mul(intensityAt(t));
     const fcff = nopat.minus(reinvestment);
-    pvSum = pvSum.plus(fcff.dividedBy(discountFactorBase.pow(t)));
+    pvSum = pvSum.plus(fcff.dividedBy(discountFactorBase.pow(explicitYearDiscountTime(t, stubYears))));
   }
 
   const year10Revenue = revenues[10];
@@ -71,10 +116,10 @@ export function computeScenarioEnterpriseValue(
   const terminalNopat = nopat10.mul(new Decimal(1).plus(terminalGrowth));
   const resolvedTerminalRoic = terminalRoic ?? rate.plus(POLICY.terminalRoicPremium);
   const terminalFcf = terminalNopat.mul(new Decimal(1).minus(terminalGrowth.dividedBy(resolvedTerminalRoic)));
-  const terminalValueAtYear10 = terminalFcf.dividedBy(rate.minus(terminalGrowth));
-  const terminalValuePV = terminalValueAtYear10.dividedBy(discountFactorBase.pow(10));
+  const terminalValue = terminalFcf.dividedBy(rate.minus(terminalGrowth));
+  const terminalValuePv = terminalValue.dividedBy(discountFactorBase.pow(terminalDiscountTime(stubYears)));
 
-  return pvSum.plus(terminalValuePV);
+  return { enterpriseValue: pvSum.plus(terminalValuePv), explicitPeriodPv: pvSum, terminalValuePv };
 }
 
 // CALVIN RULING, CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 (2026-10-15):

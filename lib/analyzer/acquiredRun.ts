@@ -10,7 +10,7 @@ import {
   hasInsurancePremiumOrReserveLineItems,
 } from "./acquisition/gate0Inputs";
 import type { CompanyFixture } from "./assemble";
-import type { BusinessSectionContent, MarketContextSectionContent } from "./types";
+import type { BusinessSectionContent, FactRecord, MarketContextSectionContent } from "./types";
 import { activeProvider } from "../marketdata";
 
 // CF-ANALYZER-V1-SETTLE-01 — §4.4's non-operating-investments judgment has
@@ -160,6 +160,14 @@ export interface BuildAcquiredRunOptions {
    * of the analysis can be used.
    */
   profileHumanConfirmed?: boolean;
+  /**
+   * CF-AR3-REPRODUCIBLE-RUNS-01 — this run's verification decisions, applied
+   * to the acquired facts before the calculation inputs are built from them,
+   * so every input carries the state the run gave its fact (gate.ts). The
+   * returned `acquired` stays the acquisition as it came back. Omitted (no
+   * run, or no decisions yet), the inputs carry the acquisition-time states.
+   */
+  decideFacts?: (facts: FactRecord[]) => FactRecord[];
 }
 
 export async function buildAcquiredRun(
@@ -204,8 +212,13 @@ export async function buildAcquiredRun(
   };
   const latestFiling = acquired.latestFiling;
 
+  const acquisitionForInputs =
+    options.decideFacts === undefined
+      ? acquired.acquisition
+      : { ...acquired.acquisition, facts: options.decideFacts(acquired.acquisition.facts) };
+
   const { fixture: fixtureWithoutSourceContent, absentInputs } = buildCompanyInputs(
-    acquired.acquisition,
+    acquisitionForInputs,
     acquired.companyFacts,
     {
       ...bundle.inputs,

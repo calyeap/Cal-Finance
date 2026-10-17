@@ -5,6 +5,8 @@ import { getPool } from "@/lib/db";
 import { createRun } from "@/lib/analyzer/runStore";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
 import { computeAnalysisForRun } from "@/lib/analyzer/gate";
+import { currentRunOutput } from "@/lib/analyzer/reportAnalysis";
+import { endOfYearScenarioPerShare } from "@/lib/analyzer/golden/endOfYearEquivalent";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-V1-SETTLE-01 (issue #392) — the fresh-run MSFT + NVDA proof
@@ -278,8 +280,16 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       const hero = container.querySelector(".scenariorangestrip") as HTMLElement;
       expect(hero).not.toBeNull();
       const text = hero.textContent ?? "";
-      expect(text).toContain("Bear$214");
-      expect(text).toContain("Bull$403");
+      // CF-AR3-REPRODUCIBLE-RUNS-01 — the hero shows the report's stored
+      // output. Methodology v2.1 D2's timing moved the approved $214/$403 by
+      // one common factor; with it removed (golden/endOfYearEquivalent.ts)
+      // they are reproduced to the cent, and the hero shows this run's own.
+      const stored = (await currentRunOutput(runId))!.result;
+      if (stored.fairValueRange.kind !== "range") throw new Error("expected a computed range");
+      expect(endOfYearScenarioPerShare(stored, "bear").toFixed(2)).toBe("214.26");
+      expect(endOfYearScenarioPerShare(stored, "bull").toFixed(2)).toBe("402.73");
+      expect(text).toContain(`Bear$${stored.fairValueRange.bear.toFixed(0)}`);
+      expect(text).toContain(`Bull$${stored.fairValueRange.bull.toFixed(0)}`);
       expect(text).toMatch(/of the way from bear to bull/);
       expect(text).not.toContain("No fair-value range for this company yet");
       expect(text).not.toContain("Valuation position — suppressed");

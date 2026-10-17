@@ -193,11 +193,15 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     expect(growthRow.available).toBe(true);
     expect(marginRow.available).toBe(true);
     if (growthRow.available) {
-      expect(growthRow.fullRangeValueImpact.toString()).toBe("0.48598121081564411663");
+      // CF-AR3-REPRODUCIBLE-RUNS-01 — a ratio of two values from the same M15
+      // model: Methodology v2.1 D2's timing scales both by one common factor, so
+      // it is unchanged; the 1e-15 allowance is decimal.js rounding of the
+      // fractional (1 + r)^0.5 power, at the 20th significant digit.
+      expect(growthRow.fullRangeValueImpact.minus("0.48598121081564411663").abs().lessThan("1e-15")).toBe(true);
       expect(growthRow.displayed).toBe(true);
     }
     if (marginRow.available) {
-      expect(marginRow.fullRangeValueImpact.toString()).toBe("0.23377202026469612084");
+      expect(marginRow.fullRangeValueImpact.minus("0.23377202026469612084").abs().lessThan("1e-15")).toBe(true);
       expect(marginRow.displayed).toBe(true);
     }
     for (const driver of ["discountRate", "terminalGrowth", "ronic"] as const) {
@@ -210,7 +214,7 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     expect(reading.available).toBe(true);
     if (reading.available) {
       expect(reading.selectedDriver).toBe("growth");
-      expect(reading.fullRangeValueImpact.toString()).toBe("0.48598121081564411663");
+      expect(reading.fullRangeValueImpact.minus("0.48598121081564411663").abs().lessThan("1e-15")).toBe(true);
       expect(reading.tier).toBe("HIGH");
     }
 

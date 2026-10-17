@@ -1175,10 +1175,42 @@ export interface AnalysisResult {
   marketContext: MarketContextSectionContent;
   latestFiling: LatestFiling | null;
   policy: {
+    // CF-AR3-REPRODUCIBLE-RUNS-01 — a fingerprint of `constants` below, so a
+    // result names the policy it was computed under (AR0-5).
+    version: string;
     constants: PolicyConstants;
     undefinedConstants: UndefinedPolicyConstants;
     // Every PROVISIONAL threshold in use with what it was calibrated on
     // (§10.0.1 J).
     provisionalLabels: Record<string, string>;
+  };
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — what this result was computed from (frozen
+  // spec §14.9 AR0-5): two results with the same inputsFingerprint and
+  // codeVersion are the same computation. Absent on a snapshot stored before
+  // this field existed.
+  runIdentity?: RunIdentity;
+}
+
+export interface RunIdentity {
+  /** git HEAD of the code that computed this result, "+dirty" if the tree differed; "UNKNOWN" if neither was readable. */
+  codeVersion: string;
+  /** Fingerprint of the complete engine input: facts, price, adopted sheet, recorded judgements as applied. */
+  inputsFingerprint: string;
+  /** Fingerprint of the facts, with the verification state this run gave each. */
+  factSnapshot: string;
+  /** Fingerprint of the adopted assumption sheet: scenarios, any typed scenario values, configured constants. */
+  sheetVersion: string;
+  /** The price this run is valued at, or null on a priceless run. */
+  priceSnapshot: { value: Decimal; timestamp: string } | null;
+  /** Methodology v2.1 D2 timing — every DCF figure on this result is dated by it. */
+  valuationTiming: {
+    convention: "MID-YEAR";
+    /** The price date both DCFs are valued at; null on a priceless run (valued at the base period end). */
+    valuationDate: string | null;
+    /** End of the twelve months the base revenue covers; null where the fixture does not say. */
+    basePeriodEnd: string | null;
+    basePeriodKind: "TTM" | "FISCAL YEAR" | null;
+    /** Years from basePeriodEnd to valuationDate (0 where either is missing). */
+    stubYears: Decimal;
   };
 }

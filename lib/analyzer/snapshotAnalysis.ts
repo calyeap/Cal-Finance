@@ -11,6 +11,9 @@ import type { AnalystCall } from "./ai/analystCall";
 // the exact function the live report page calls — and forks no calculation:
 // the deterministic engine and the AI merge both run exactly as they do for
 // a live view. The only new step is what happens to the result afterward.
+// Since CF-AR3-REPRODUCIBLE-RUNS-01 that live view is the run's stored
+// output, so a saved version is exactly what the report was showing, and it
+// records the snapshot tuple that output was computed from.
 //
 // reopenDeepSnapshot never calls analysisForReport, computeAnalysisForRun or
 // any calculation module. It reads the stored row and nothing else — the
@@ -32,7 +35,7 @@ export async function createDeepSnapshot(
 ): Promise<DeepSnapshotReport> {
   const report = call === undefined ? await analysisForReport(runId) : await analysisForReport(runId, call);
   const verdict = deriveVerdict(report.result);
-  const version = await createSnapshot(runId, report.result, report.aiLayer, verdict);
+  const version = await createSnapshot(runId, report.result, report.aiLayer, verdict, report.snapshot);
 
   return { version, result: report.result, aiLayer: report.aiLayer, verdict };
 }

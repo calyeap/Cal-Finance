@@ -14,7 +14,7 @@ import { computeAcquiredCashBasis, type AcquiredCashBasisResult } from "../modul
 import { achievedRevenueCagr, comparatorRecency, type WindowRecency } from "../calibration/inputs";
 import type { AcquisitionResult } from "./acquire";
 import type { CompanyFactsDocument } from "./secClient";
-import type { CompanyFixture } from "../assemble";
+import type { CompanyFixture, ValuationBase } from "../assemble";
 import type { FactRecord, ProvenanceTokens, SourcedValue } from "../types";
 
 // ---------------------------------------------------------------------------
@@ -211,9 +211,14 @@ export function buildCompanyInputs(
 ): CompanyInputsResult {
   const byId = new Map(acquisition.facts.map((f) => [f.id, f]));
   const get = (id: string) => sourcedFrom(byId.get(id));
+  // Leverage (§6.5) reads bare figures with no provenance to gate on, so a
+  // NOT CONFIRMED fact is withheld here, as deriveH3CashBasis above already
+  // treats one (CF-AR3-REPRODUCIBLE-RUNS-01: contradicted facts block what
+  // depends on them). `get` keeps the fact and its NOT CONFIRMED token: the
+  // module computing from it refuses it itself (figures.ts computedValue).
   const raw = (id: string): Decimal | null => {
     const f = byId.get(id);
-    if (f === undefined || f.value === null) return null;
+    if (f === undefined || f.value === null || f.verificationState === "NOT CONFIRMED") return null;
     return f.value instanceof Decimal ? f.value : new Decimal(String(f.value));
   };
 
@@ -287,6 +292,7 @@ export function buildCompanyInputs(
   // below (`quarterSourced`) read actually-filed discrete quarters only, by
   // design, and are unaffected.
   const quartersWithQ4 = quarterlySeriesWithDerivedQ4(companyFacts, revenueTags);
+  const valuationBase = valuationBaseFrom(byId.get("current-revenue"), quartersWithQ4);
 
   const nonOp = analyst.nonOperatingInvestments;
   const nonOpSourced: SourcedValue<Decimal> | null =
@@ -584,7 +590,7 @@ export function buildCompanyInputs(
     impliedReturnOnNewCapital: null,
 
     reverseDcf: {
-      baseYearRevenue: get("current-revenue"),
+      baseYearRevenue: valuationBase?.revenue ?? null,
       // Filled by assemble from M1's own output; null here means M1 was
       // INCOMPLETE, which fails the reverse-DCF grid closed (§5.4, §6.5's
       // seam, reused).
@@ -629,6 +635,7 @@ export function buildCompanyInputs(
     configuredConstants: analyst.configuredConstants,
     achievedRevenueCagr: achievedRevenueCagrResult,
     preRevenue,
+    valuationBase: valuationBase?.base ?? null,
   };
 
   return { fixture, absentInputs };
@@ -782,6 +789,14 @@ const ADJACENT_TOLERANCE_DAYS = 4;
 function ttmFrom(
   quarters: { periodStart: string; periodEnd: string; value: number }[]
 ): SourcedValue<Decimal> | null {
+  const window = ttmWindowFrom(quarters);
+  return window === null ? null : { value: window.value, provenance: CLEAN_PROVENANCE };
+}
+
+/** The same trailing twelve months as `ttmFrom`, with the date the window ends. */
+function ttmWindowFrom(
+  quarters: { periodStart: string; periodEnd: string; value: number }[]
+): { value: Decimal; periodEnd: string } | null {
   if (quarters.length < 4) return null;
   const last4 = quarters.slice(-4);
 
@@ -796,5 +811,33 @@ function ttmFrom(
   if (spanDays < TTM_SPAN_DAYS.min || spanDays > TTM_SPAN_DAYS.max) return null;
 
   const sum = last4.reduce((acc, q) => acc.plus(q.value), new Decimal(0));
-  return { value: sum, provenance: CLEAN_PROVENANCE };
+  return { value: sum, periodEnd: last4[last4.length - 1].periodEnd };
+}
+
+/**
+ * CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2's TTM base for both DCF
+ * engines: the most recent twelve months of revenue, and the date they end.
+ *
+ * The trailing four quarters where they end after the latest fiscal year;
+ * otherwise the fiscal year itself, which IS the trailing twelve months at its
+ * own year end. Null where the current-revenue fact is absent, so
+ * base-year revenue stays the REQUIRED input it was (§4.2's alias
+ * `base-year-revenue` → `current-revenue`). The TTM carries the
+ * current-revenue fact's own provenance: it is read from the same revenue tag
+ * series, so a fact this run could not confirm takes its TTM down with it.
+ */
+function valuationBaseFrom(
+  currentRevenue: FactRecord | undefined,
+  quarters: { periodStart: string; periodEnd: string; value: number }[]
+): { revenue: SourcedValue<Decimal>; base: ValuationBase } | null {
+  const annual = sourcedFrom(currentRevenue);
+  if (currentRevenue === undefined || annual === null) return null;
+  // A flow fact's asOfDate is its period, "start to end"; the base is dated
+  // by where the period ends.
+  const annualEnd = currentRevenue.asOfDate.split(" to ").pop()!.trim();
+  const ttm = ttmWindowFrom(quarters);
+  if (ttm !== null && Date.parse(ttm.periodEnd) > Date.parse(annualEnd)) {
+    return { revenue: { value: ttm.value, provenance: annual.provenance }, base: { periodEnd: ttm.periodEnd, kind: "TTM" } };
+  }
+  return { revenue: annual, base: { periodEnd: annualEnd, kind: "FISCAL YEAR" } };
 }

@@ -252,7 +252,9 @@ describe("CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 — bounded net-of-D&A / positi
         POLICY.rateGrid[1],
         nopatTaxRate,
         undefined,
-        new Decimal(terminalRoic)
+        new Decimal(terminalRoic),
+        // CF-AR3-REPRODUCIBLE-RUNS-01 — valued at this run's own price date (D2).
+        result.runIdentity!.valuationTiming.stubYears
       )
         .minus(netDebtBridge)
         .dividedBy(new Decimal(dilutedShares))
@@ -275,7 +277,11 @@ describe("CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 — bounded net-of-D&A / positi
       new Decimal("0.4168"),
       new Decimal("0.07"),
       POLICY.rateGrid[1],
-      nopatTaxRate
+      nopatTaxRate,
+      undefined,
+      undefined,
+      // CF-AR3-REPRODUCIBLE-RUNS-01 — valued at this run's own price date (D2).
+      result.runIdentity!.valuationTiming.stubYears
     )
       .minus(netDebtBridge)
       .dividedBy(new Decimal(dilutedShares))
@@ -334,7 +340,9 @@ describe("CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 — bounded net-of-D&A / positi
           POLICY.rateGrid[1],
           nopatTaxRate,
           undefined,
-          new Decimal("0.11") // the candidate's own base terminalRoic
+          new Decimal("0.11"), // the candidate's own base terminalRoic
+          // CF-AR3-REPRODUCIBLE-RUNS-01 — valued at this run's own price date (D2).
+          result.runIdentity!.valuationTiming.stubYears
         ).toString();
         expect(m14Cells[i][j].toString()).toBe(expectedCell);
       }
@@ -384,7 +392,11 @@ describe("CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 — bounded net-of-D&A / positi
       new Decimal("0.4168"),
       new Decimal("0.07"),
       POLICY.rateGrid[1],
-      nopatTaxRate
+      nopatTaxRate,
+      undefined,
+      undefined,
+      // CF-AR3-REPRODUCIBLE-RUNS-01 — valued at this run's own price date (D2).
+      result.runIdentity!.valuationTiming.stubYears
     )
       .minus(netDebtBridge)
       .dividedBy(new Decimal(dilutedShares))
@@ -409,8 +421,12 @@ describe("CF-MSFT-STAGE2-REAL-VALUATION-PROOF-01 — bounded net-of-D&A / positi
           m14Margin[j],
           new Decimal("0.20"), // the candidate's own base reinvestmentCapitalIntensity
           POLICY.rateGrid[1],
-          nopatTaxRate
+          nopatTaxRate,
           // terminalGrowth/terminalRoic omitted — EXACTLY the prior r+3pp behaviour.
+          undefined,
+          undefined,
+          // CF-AR3-REPRODUCIBLE-RUNS-01 — valued at this run's own price date (D2).
+          result.runIdentity!.valuationTiming.stubYears
         ).toString();
         expect(m14Cells[i][j].toString()).toBe(expectedCell);
       }

@@ -55,7 +55,10 @@ interface IndependentProjection {
 // NOPAT_11 = NOPAT_10 * (1 + g_terminal)
 // Terminal FCFF_11 = NOPAT_11 * (1 - g_terminal / terminalROIC)
 // terminalROIC = r + 3pp
-// TV_10 = Terminal FCFF_11 / (r - g_terminal), discounted from year 10 normally
+// TV = Terminal FCFF_11 / (r - g_terminal)
+// Timing (Methodology v2.1 D2, CF-AR3-REPRODUCIBLE-RUNS-01): FCFF_t
+// discounted from t - 0.5 years, TV from 9.5 years — mid-year cash flows,
+// no stub (this fixture carries no base period or price date).
 function independentProject(
   growth: Decimal,
   margin: Decimal,
@@ -78,7 +81,7 @@ function independentProject(
     const nextGrowth = independentGrowthAt(t + 1, growth); // t=10 -> g_11 = terminal growth
     const reinvestment = nopat.mul(nextGrowth).dividedBy(ronic);
     const fcff = nopat.minus(reinvestment);
-    pv = pv.plus(fcff.dividedBy(discountBase.pow(t)));
+    pv = pv.plus(fcff.dividedBy(discountBase.pow(t - 0.5)));
   }
 
   const year10Revenue = revenues[10];
@@ -87,7 +90,7 @@ function independentProject(
   const terminalRoic = rate.plus(TERMINAL_ROIC_PREMIUM);
   const terminalFcff11 = nopat11.mul(new Decimal(1).minus(TERMINAL_GROWTH.dividedBy(terminalRoic)));
   const tv10 = terminalFcff11.dividedBy(rate.minus(TERMINAL_GROWTH));
-  const terminalPv = tv10.dividedBy(discountBase.pow(10));
+  const terminalPv = tv10.dividedBy(discountBase.pow(9.5));
 
   const ev = pv.plus(terminalPv);
   const tenYearCagr = year10Revenue.dividedBy(baseRevenue).pow(new Decimal(1).dividedBy(10)).minus(1);
@@ -173,13 +176,25 @@ function closeTo(actual: Decimal, expected: Decimal, tolerance: number) {
 }
 
 describe("M7 independent implementation-correctness check (not a historical-reproduction check)", () => {
-  const solvableCells: [string, DiscountRate][] = [
-    ["current", 0.08],
-    ["current", 0.1],
-    ["median", 0.08],
-    ["median", 0.1],
-    ["stress", 0.08],
-  ];
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — the split between solved and DEGENERATE
+  // cells used to be listed by hand (five and four, the frozen end-of-year
+  // grid's). It is now decided by the INDEPENDENT solve itself: a cell whose
+  // independently solved growth puts the terminal share over 100% must be
+  // DEGENERATE in production, every other cell must be solved and agree.
+  // Under mid-year timing that is six solved and three DEGENERATE.
+  const allCells: [string, DiscountRate][] = (["current", "median", "stress"] as const).flatMap((m) =>
+    ([0.08, 0.1, 0.12] as DiscountRate[]).map((r): [string, DiscountRate] => [m, r])
+  );
+  const independentlyDegenerate = (marginLevel: string, rate: DiscountRate): boolean =>
+    independentSolve(marginByLevel[marginLevel], ronic, new Decimal(rate), baseRevenue, taxRate, targetEnterpriseValue)
+      .projection.terminalSharePct.greaterThan(100);
+  const solvableCells = allCells.filter(([m, r]) => !independentlyDegenerate(m, r));
+  const degenerateCells = allCells.filter(([m, r]) => independentlyDegenerate(m, r));
+
+  it("the independent solve classifies some cells each way, so both checks below run", () => {
+    expect(solvableCells.length).toBeGreaterThan(0);
+    expect(degenerateCells.length).toBeGreaterThan(0);
+  });
 
   it.each(solvableCells)(
     "%s margin @ r=%s: production's solved growth independently reproduces target EV, CAGR and year-10 revenue",
@@ -225,13 +240,6 @@ describe("M7 independent implementation-correctness check (not a historical-repr
     }
   );
 
-  const degenerateCells: [string, DiscountRate][] = [
-    ["current", 0.12],
-    ["median", 0.12],
-    ["stress", 0.1],
-    ["stress", 0.12],
-  ];
-
   it.each(degenerateCells)(
     "%s margin @ r=%s: production's DEGENERATE suppression is independently justified — solved growth implies terminal share over 100%%",
     (marginLevel, rate) => {
@@ -258,13 +266,11 @@ describe("M7 independent implementation-correctness check (not a historical-repr
     }
   );
 
-  it("confirms the full nine-cell suppression pattern independently: exactly five solved, four degenerate", () => {
-    const solvedCount = solvableCells.filter(([m, r]) => !productionCellFor(m, r).fiveYearGrowth.suppressed).length;
-    const degenerateCount = degenerateCells.filter(([m, r]) => {
+  it("confirms the full nine-cell suppression pattern independently: production solves exactly the independently solvable cells", () => {
+    for (const [m, r] of solvableCells) expect(productionCellFor(m, r).fiveYearGrowth.suppressed).toBe(false);
+    for (const [m, r] of degenerateCells) {
       const cell = productionCellFor(m, r);
-      return cell.fiveYearGrowth.suppressed && cell.fiveYearGrowth.state === "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE";
-    }).length;
-    expect(solvedCount).toBe(5);
-    expect(degenerateCount).toBe(4);
+      expect(cell.fiveYearGrowth.suppressed && cell.fiveYearGrowth.state).toBe("DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE");
+    }
   });
 });

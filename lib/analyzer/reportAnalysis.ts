@@ -1,4 +1,7 @@
-import { computeAnalysisForRun } from "./gate";
+import { computeRunOutput, RunNotFoundError } from "./gate";
+import { getRecordedJudgementState, type RecordedJudgementState } from "./runStore";
+import { getRunOutput, getRunMarketSnapshot, saveRunOutput, type RunOutputSnapshot } from "./snapshotStore";
+import { fingerprint } from "./runIdentity";
 import { getAiOutputs, saveAiOutputs } from "./aiOutputStore";
 import { runAiLayer, mergeAiLayer, type AiLayerOutputs } from "./ai/run";
 import { analystCallIfConfigured, ANALYST_MODEL } from "./ai/anthropicCall";
@@ -40,6 +43,68 @@ export interface AiLayerReport {
 export interface ReportAnalysis {
   result: AnalysisResult;
   aiLayer: AiLayerReport;
+  /** The snapshot tuple the stored output was computed from (CF-AR3-REPRODUCIBLE-RUNS-01). */
+  snapshot?: RunOutputSnapshot;
+}
+
+// ---------------------------------------------------------------------------
+// CF-AR3-REPRODUCIBLE-RUNS-01 — the report reads stored outputs; viewing never
+// recomputes.
+//
+// A run's output is computed once for each state of what has been recorded
+// on it (fact decisions, judgements, profile decision, the recorded
+// assumption sheet: runStore.ts getRecordedJudgementState), stored with the
+// snapshot it was computed from (migration 011, snapshotStore.ts), and read
+// back on every view. Checking whether one exists reads the database only —
+// no filing, no price, no calculation. A new output is computed only when
+// that recorded state has changed, and it is valued on the run's own pinned
+// market data, never a newer price.
+// ---------------------------------------------------------------------------
+
+async function judgementsFingerprintFor(runId: string): Promise<{ fingerprint: string; state: RecordedJudgementState }> {
+  const state = await getRecordedJudgementState(runId);
+  if (state === null) throw new RunNotFoundError(runId);
+  return { fingerprint: fingerprint("judgements", state), state };
+}
+
+/**
+ * The run's stored output for what is recorded on it now, or null where none
+ * has been computed yet. Database reads only — the report route uses it to
+ * decide whether there is anything to compute at all.
+ */
+export async function currentRunOutput(runId: string): Promise<{ result: AnalysisResult; snapshot: RunOutputSnapshot } | null> {
+  const { fingerprint: judgementsFingerprint } = await judgementsFingerprintFor(runId);
+  const stored = await getRunOutput(runId, judgementsFingerprint);
+  return stored === null ? null : { result: stored.result, snapshot: stored.snapshot };
+}
+
+/**
+ * The stored output, computing and storing it first where none exists for
+ * the run's current recorded state. What is returned is always what was
+ * stored — read back after the write — so the first view and every later
+ * one show the same thing.
+ */
+async function storedRunOutput(runId: string): Promise<{ result: AnalysisResult; snapshot: RunOutputSnapshot }> {
+  const { fingerprint: judgementsFingerprint, state } = await judgementsFingerprintFor(runId);
+  const stored = await getRunOutput(runId, judgementsFingerprint);
+  if (stored !== null) return { result: stored.result, snapshot: stored.snapshot };
+
+  const pinnedMarket = await getRunMarketSnapshot(runId);
+  const computed = await computeRunOutput(runId, pinnedMarket === null ? {} : { market: pinnedMarket });
+  const identity = computed.result.runIdentity!;
+  await saveRunOutput(runId, judgementsFingerprint, computed.result, computed.fixture, {
+    factSnapshot: computed.fixture.facts,
+    priceSnapshot: computed.market,
+    sheetVersion: identity.sheetVersion,
+    policyVersion: computed.result.policy.version,
+    codeVersion: identity.codeVersion,
+    inputsFingerprint: identity.inputsFingerprint,
+    judgementSnapshot: state,
+  });
+
+  const saved = await getRunOutput(runId, judgementsFingerprint);
+  if (saved === null) throw new Error(`run output for ${runId} was not stored`);
+  return { result: saved.result, snapshot: saved.snapshot };
 }
 
 function messageOf(err: unknown): string {
@@ -143,9 +208,10 @@ export async function analysisForReport(
   call: AnalystCall | null = analystCallIfConfigured(),
   onStage?: (stage: "compute" | "aiLayer", ms: number) => void
 ): Promise<ReportAnalysis> {
-  // First, and independently of everything below.
+  // First, and independently of everything below. A stored output is read,
+  // not recomputed; "compute" times whichever happened.
   const computeStarted = Date.now();
-  const result = await computeAnalysisForRun(runId);
+  const { result, snapshot } = await storedRunOutput(runId);
   onStage?.("compute", Date.now() - computeStarted);
 
   // Already run for this run. The words a report shows must not change under
@@ -156,6 +222,7 @@ export async function analysisForReport(
     return {
       result: mergeAiLayer(result, { interpretation: stored.interpretation, challenger: stored.challenger }),
       aiLayer: { status: "COMPLETED", model: stored.model, detail: null },
+      snapshot,
     };
   }
 
@@ -170,6 +237,7 @@ export async function analysisForReport(
           "No model credentials are configured, so the interpretation and challenger calls did not run. " +
           "Every computed value on this page is unaffected.",
       },
+      snapshot,
     };
   }
 
@@ -180,6 +248,7 @@ export async function analysisForReport(
     return {
       result: mergeAiLayer(result, outputs),
       aiLayer: { status: "COMPLETED", model: ANALYST_MODEL, detail: null },
+      snapshot,
     };
   } catch (err) {
     onStage?.("aiLayer", Date.now() - aiLayerStarted);
@@ -189,6 +258,7 @@ export async function analysisForReport(
     return {
       result,
       aiLayer: { status: "FAILED", model: null, detail: messageOf(err) },
+      snapshot,
     };
   }
 }

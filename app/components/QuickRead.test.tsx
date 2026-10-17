@@ -255,9 +255,19 @@ describe("QuickRead — MSFT", () => {
     expect(screen.queryByText(/\d+ of \d+/)).toBeNull();
   });
 
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — the figures are read off this result's own
+  // current-margin / 8% reverse-DCF cell (they were the frozen grid's 13.7% /
+  // 18.5% under end-of-year timing; Methodology v2.1 D2's mid-year timing
+  // moves them), so the rule asserted is the restatement itself.
+  const sectionECell = result.priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08)!;
+  const pctOf = (f: typeof sectionECell.tenYearCagr) => {
+    if (f.suppressed) throw new Error("the current-margin / 8% cell is expected to solve");
+    return `${f.value.mul(100).toFixed(1)}%`;
+  };
+
   it("main finding restates the price-implied growth figure already computed in Section E, not a new number", () => {
     render(<QuickRead result={result} />);
-    expect(screen.getAllByText(/13\.7%/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText(new RegExp(pctOf(sectionECell.tenYearCagr).replace(".", "\\."))).length).toBeGreaterThan(0);
   });
 
   it("keeps MARGIN AT HISTORICAL HIGH visible inline, with its section reference, never behind a disclosure", () => {
@@ -281,7 +291,7 @@ describe("QuickRead — MSFT", () => {
     expect(mainFinding!.textContent).not.toBe(priceRequires!.textContent);
     // Mechanics-first framing: leads with the five-year figure, not the
     // ten-year figure the main finding leads with.
-    expect(priceRequires!.querySelector(".t")?.textContent).toMatch(/^18\.5% revenue growth for five years/);
+    expect(priceRequires!.querySelector(".t")?.textContent?.startsWith(`${pctOf(sectionECell.fiveYearGrowth)} revenue growth for five years`)).toBe(true);
   });
 });
 

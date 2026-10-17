@@ -1,8 +1,16 @@
-import Decimal from "decimal.js";
 import { getPool } from "../db";
-import type { AnalysisResult } from "./types";
+import type { AnalysisResult, FactRecord } from "./types";
+import type { CompanyFixture } from "./assemble";
+import type { MarketSnapshot } from "./gate";
+import type { RecordedJudgementState } from "./runStore";
 import type { AiLayerReport } from "./reportAnalysis";
 import type { VerdictResult } from "./verdict";
+import { toStorable, fromStorable } from "./storable";
+
+// Moved to storable.ts (CF-AR3-REPRODUCIBLE-RUNS-01) so pure code — the run
+// identity fingerprints assembly computes — can use the same tagging without
+// importing the database pool. Re-exported for the existing importers.
+export { toStorable, fromStorable };
 
 // ---------------------------------------------------------------------------
 // Persistence for CF-V2-PROOF-01's versioned snapshot (migration 004).
@@ -14,54 +22,6 @@ import type { VerdictResult } from "./verdict";
 // ---------------------------------------------------------------------------
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
-
-const DECIMAL_TAG = "__decimal__";
-
-/**
- * AnalysisResult carries Decimal instances throughout (facts, gates,
- * scenarios, fairValueRange, ...). JSON.stringify would call Decimal's own
- * toJSON() and flatten them to plain strings before any replacer sees them,
- * which is indistinguishable on the way back from a string that was always a
- * string. Tagging first, in a walk that runs before JSON.stringify touches
- * the tree, is what makes the round trip exact rather than merely plausible.
- */
-/**
- * Exported for `acquisition/aiProposedBundleSnapshot.ts` (A5,
- * CF-ANALYZER-INTEGRITY-PHASE-A-01) — the identical round-trip problem
- * (a Decimal-heavy tree that must survive a JSONB column exactly), reusing
- * this one tagging scheme rather than inventing a second.
- */
-export function toStorable(value: unknown): unknown {
-  if (value === null || value === undefined) return null;
-  if (value instanceof Decimal) return { [DECIMAL_TAG]: value.toString() };
-  if (Array.isArray(value)) return value.map(toStorable);
-  if (typeof value === "object") {
-    const out: Record<string, unknown> = {};
-    for (const [key, v] of Object.entries(value as Record<string, unknown>)) {
-      out[key] = toStorable(v);
-    }
-    return out;
-  }
-  return value;
-}
-
-/** Exported alongside `toStorable` — see its own comment. */
-export function fromStorable(value: unknown): unknown {
-  if (value === null || value === undefined) return value;
-  if (Array.isArray(value)) return value.map(fromStorable);
-  if (typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    if (typeof record[DECIMAL_TAG] === "string") {
-      return new Decimal(record[DECIMAL_TAG] as string);
-    }
-    const out: Record<string, unknown> = {};
-    for (const [key, v] of Object.entries(record)) {
-      out[key] = fromStorable(v);
-    }
-    return out;
-  }
-  return value;
-}
 
 export interface StoredSnapshot {
   runId: string;
@@ -81,7 +41,10 @@ export async function createSnapshot(
   runId: string,
   result: AnalysisResult,
   aiLayer: AiLayerReport,
-  verdict: VerdictResult
+  verdict: VerdictResult,
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — the tuple the saved result was computed
+  // from (migration 011's columns). Omitted, they stay null.
+  snapshot?: RunOutputSnapshot
 ): Promise<number> {
   const client = await getPool().connect();
   try {
@@ -98,8 +61,10 @@ export async function createSnapshot(
       `INSERT INTO analyzer_run_snapshots
          (run_id, version, schema_version, analysis_result,
           ai_layer_status, ai_layer_model, ai_layer_detail,
-          verdict_status, verdict_reason)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+          verdict_status, verdict_reason,
+          fact_snapshot, price_snapshot, sheet_version, policy_version,
+          code_version, judgement_snapshot, inputs_fingerprint)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)`,
       [
         runId,
         version,
@@ -110,6 +75,13 @@ export async function createSnapshot(
         aiLayer.detail,
         verdict.status,
         verdict.reason,
+        snapshot === undefined ? null : JSON.stringify(toStorable(snapshot.factSnapshot)),
+        snapshot === undefined ? null : JSON.stringify(toStorable(snapshot.priceSnapshot)),
+        snapshot?.sheetVersion ?? null,
+        snapshot?.policyVersion ?? null,
+        snapshot?.codeVersion ?? null,
+        snapshot === undefined ? null : JSON.stringify(toStorable(snapshot.judgementSnapshot)),
+        snapshot?.inputsFingerprint ?? null,
       ]
     );
 
@@ -161,4 +133,128 @@ export async function getSnapshot(runId: string, version?: number): Promise<Stor
     verdict: { status: r.verdict_status, reason: r.verdict_reason },
     createdAt: r.created_at,
   };
+}
+
+// ---------------------------------------------------------------------------
+// CF-AR3-REPRODUCIBLE-RUNS-01 — stored run outputs (migration 011).
+//
+// The report reads a run's output from here and never recomputes it on view
+// (reportAnalysis.ts). One row per state of the run's recorded judgements,
+// write-once: a row is an immutable record of one computation, with the
+// snapshot tuple it was computed from (frozen spec §14.9 AR0-5). Same R7
+// shape as everything above: every function takes the run_id it reads.
+// ---------------------------------------------------------------------------
+
+/** The AR0-5 tuple one output was computed from. */
+export interface RunOutputSnapshot {
+  factSnapshot: FactRecord[];
+  priceSnapshot: MarketSnapshot;
+  sheetVersion: string;
+  policyVersion: string;
+  codeVersion: string;
+  inputsFingerprint: string;
+  judgementSnapshot: RecordedJudgementState;
+}
+
+export interface StoredRunOutput {
+  runId: string;
+  judgementsFingerprint: string;
+  result: AnalysisResult;
+  /** The CompanyFixture the result was assembled from; re-assembling it reproduces `result`. */
+  engineInput: CompanyFixture;
+  snapshot: RunOutputSnapshot;
+  createdAt: string;
+}
+
+/**
+ * The engine input, as stored. A fixture's `revalueBaseCaseAtRate` is code,
+ * not data, and cannot be stored: it is written as null (every acquired run's
+ * value except a committed validation fixture's own illustrative function).
+ */
+function storableEngineInput(fixture: CompanyFixture): unknown {
+  return toStorable({ ...fixture, revalueBaseCaseAtRate: null });
+}
+
+/**
+ * Stores one output. Write-once: a second write for the same run and
+ * judgement state is a no-op, so two overlapping first views cannot replace
+ * one computation with another.
+ */
+export async function saveRunOutput(
+  runId: string,
+  judgementsFingerprint: string,
+  result: AnalysisResult,
+  engineInput: CompanyFixture,
+  snapshot: RunOutputSnapshot
+): Promise<void> {
+  await getPool().query(
+    `INSERT INTO analyzer_run_outputs
+       (run_id, judgements_fingerprint, schema_version, analysis_result, engine_input,
+        fact_snapshot, price_snapshot, sheet_version, policy_version, code_version,
+        judgement_snapshot, inputs_fingerprint)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+     ON CONFLICT (run_id, judgements_fingerprint) DO NOTHING`,
+    [
+      runId,
+      judgementsFingerprint,
+      result.schemaVersion,
+      JSON.stringify(toStorable(result)),
+      JSON.stringify(storableEngineInput(engineInput)),
+      JSON.stringify(toStorable(snapshot.factSnapshot)),
+      JSON.stringify(toStorable(snapshot.priceSnapshot)),
+      snapshot.sheetVersion,
+      snapshot.policyVersion,
+      snapshot.codeVersion,
+      JSON.stringify(toStorable(snapshot.judgementSnapshot)),
+      snapshot.inputsFingerprint,
+    ]
+  );
+}
+
+/** The run's stored output for this judgement state, exactly as stored — never recomputed. */
+export async function getRunOutput(runId: string, judgementsFingerprint: string): Promise<StoredRunOutput | null> {
+  if (!UUID.test(runId)) return null;
+  const { rows } = await getPool().query(
+    `SELECT analysis_result, engine_input, fact_snapshot, price_snapshot, sheet_version,
+            policy_version, code_version, judgement_snapshot, inputs_fingerprint, created_at
+       FROM analyzer_run_outputs
+      WHERE run_id = $1 AND judgements_fingerprint = $2`,
+    [runId, judgementsFingerprint]
+  );
+  if (rows.length === 0) return null;
+  const r = rows[0];
+  return {
+    runId,
+    judgementsFingerprint,
+    result: fromStorable(r.analysis_result) as AnalysisResult,
+    engineInput: fromStorable(r.engine_input) as CompanyFixture,
+    snapshot: {
+      factSnapshot: fromStorable(r.fact_snapshot) as FactRecord[],
+      priceSnapshot: fromStorable(r.price_snapshot) as MarketSnapshot,
+      sheetVersion: r.sheet_version,
+      policyVersion: r.policy_version,
+      codeVersion: r.code_version,
+      inputsFingerprint: r.inputs_fingerprint,
+      judgementSnapshot: fromStorable(r.judgement_snapshot) as RecordedJudgementState,
+    },
+    createdAt: r.created_at,
+  };
+}
+
+/**
+ * The market data this run is valued on: its FIRST stored output's. Every
+ * later output of the same run reuses it, so recording a judgement never
+ * moves the run to a newer price. Null before the run's first output.
+ */
+export async function getRunMarketSnapshot(runId: string): Promise<MarketSnapshot | null> {
+  if (!UUID.test(runId)) return null;
+  const { rows } = await getPool().query(
+    `SELECT price_snapshot
+       FROM analyzer_run_outputs
+      WHERE run_id = $1
+      ORDER BY created_at ASC
+      LIMIT 1`,
+    [runId]
+  );
+  return rows.length === 0 ? null : (fromStorable(rows[0].price_snapshot) as MarketSnapshot);
 }

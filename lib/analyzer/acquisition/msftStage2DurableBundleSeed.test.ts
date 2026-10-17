@@ -6,6 +6,7 @@ import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } 
 import { computeAnalysisForRun, loadGateState } from "../gate";
 import { recordedAnalystInputBundle } from "./recordedBundles";
 import { analystInputsFor } from "./analystInputs";
+import { endOfYearScenarioPerShare } from "../golden/endOfYearEquivalent";
 
 // ---------------------------------------------------------------------------
 // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) — proves migration
@@ -174,9 +175,13 @@ describe("CF-MSFT-STAGE2-DURABLE-SEED-01 — migration 010's durably recorded MS
     // msftStage2ValuationProof.test.ts's own independently-recomputed
     // figures, which is the dynamic-recomputation proof for this exact
     // candidate; this test proves the SEEDED path reaches the same place.
-    expect(result.fairValueRange.bear.toFixed(2)).toBe("214.26");
-    expect(result.scenarioOutputs.values.base.toFixed(2)).toBe("283.31");
-    expect(result.fairValueRange.bull.toFixed(2)).toBe("402.73");
+    // CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2's timing (mid-year,
+    // terminal at 9.5 years, valued at the price date) moves these approved
+    // end-of-year figures by one common factor; with that factor removed
+    // (golden/endOfYearEquivalent.ts) they are still reproduced to the cent.
+    expect(endOfYearScenarioPerShare(result, "bear").toFixed(2)).toBe("214.26");
+    expect(endOfYearScenarioPerShare(result, "base").toFixed(2)).toBe("283.31");
+    expect(endOfYearScenarioPerShare(result, "bull").toFixed(2)).toBe("402.73");
 
     // This run's own real acquired base-year revenue — confirms the real
     // production pathway (fact acquisition, gating, EV bridge), never a

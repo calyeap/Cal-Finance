@@ -22,7 +22,7 @@ import { QuickRead } from "@/app/components/QuickRead";
 import { SourcesAndDetails } from "@/app/components/SourcesAndDetails";
 import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
-import { analysisForReport, type AiLayerReport } from "@/lib/analyzer/reportAnalysis";
+import { analysisForReport, currentRunOutput, type AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
 import { profileNotConfirmedFor } from "@/lib/analyzer/trust";
 import type { AnalysisResult } from "@/lib/analyzer/types";
@@ -93,9 +93,13 @@ export default async function ReportPage({
   const { tab: tabParam } = await searchParams;
   const activeTab = tabParam !== undefined && isAnalyzerTabSlug(tabParam) ? tabParam : DEFAULT_ANALYZER_TAB;
 
-  let state;
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — the report reads stored outputs; viewing
+  // never recomputes. Where this run already has an output for what is
+  // recorded on it, there is nothing to advance or compute: the automatic
+  // pass below loads the filings and the price, and a run with a stored
+  // output was already past it.
   try {
-    state = await advanceRunAutomatically(runId);
+    if ((await currentRunOutput(runId)) === null) await advanceRunAutomatically(runId);
   } catch (err) {
     if (err instanceof RunNotFoundError) notFound();
     throw err;

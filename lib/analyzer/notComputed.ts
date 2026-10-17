@@ -47,6 +47,9 @@ export const NOT_COMPUTED_BINDING = {
   // (no price) it had no way to say until now.
   priceLocationWithinRange: "the current price's location within the scenario range",
   rateSensitivity: "±1% rate sensitivity",
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — M8's terminal share of the base scenario
+  // DCF, NaN where that DCF cannot be valued on this run.
+  terminalShareOfValue: "the terminal share of value",
   scenarioDrivers: (scenario: ScenarioKey) => `${scenario} scenario drivers`,
   // §7.2 M16 / CalFinance Methodology v2's acquired-run cash basis — see
   // PreRevenueModule in types.ts for what each binds.

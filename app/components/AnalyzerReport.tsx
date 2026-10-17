@@ -1019,6 +1019,12 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
   // this run (includes the fixture-carried-validation case this outcome
   // adds, not only the pre-existing AI-proposed-bundle-missing-inputs case).
   const scenarioValuesState = boundState(states, NOT_COMPUTED_BINDING.scenarioValues);
+  // CF-AR3-REPRODUCIBLE-RUNS-01 — M8's terminal share of the base scenario's
+  // own DCF, and the dates every DCF figure here is valued on. A result
+  // stored before AR3 carries no runIdentity, and its terminal share was a
+  // placeholder 0, so neither row renders for it.
+  const terminalShareState = boundState(states, NOT_COMPUTED_BINDING.terminalShareOfValue);
+  const valuationTiming = result.runIdentity?.valuationTiming;
   const baseRateCell = priceImplied.reverseDcfGrid.find((c) => c.marginLevel === "current" && c.rate === 0.08);
   // `fairValueRange.kind === "range"` does not by itself imply a real price:
   // `assemble.ts`'s leverage precondition uses `fixture.leverage.
@@ -1262,6 +1268,41 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
                   )}
                 </td>
               </tr>
+              {valuationTiming !== undefined && (
+                <tr>
+                  <th scope="row">
+                    Terminal share of value
+                    <div className="sub">the base scenario&apos;s terminal value as a share of its own DCF value</div>
+                  </th>
+                  <td>
+                    {terminalShareState !== null ? (
+                      <BoundStateBlock bound={terminalShareState} />
+                    ) : (
+                      <span className="v">{pct(diagnostics.terminal.terminalShareOfValue, 0)}</span>
+                    )}
+                  </td>
+                </tr>
+              )}
+              {valuationTiming !== undefined && (
+                <tr>
+                  <th scope="row">
+                    Valued at
+                    <div className="sub">mid-year cash flows, terminal value at 9.5 years</div>
+                  </th>
+                  <td>
+                    <span className="v">
+                      {valuationTiming.valuationDate !== null
+                        ? `price date ${valuationTiming.valuationDate.slice(0, 10)}`
+                        : "base period end (no price for this run)"}
+                    </span>
+                    <div className="sub">
+                      {valuationTiming.basePeriodEnd !== null
+                        ? `${valuationTiming.basePeriodKind === "TTM" ? "trailing twelve months" : "fiscal year"} ending ${valuationTiming.basePeriodEnd}`
+                        : "base period end not recorded"}
+                    </div>
+                  </td>
+                </tr>
+              )}
               <tr>
                 <th scope="row">
                   {/* CF-V2-PROOF-01, folding in the CalFinance v2 Product Decision Log

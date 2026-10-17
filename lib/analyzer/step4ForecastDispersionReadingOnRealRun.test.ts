@@ -153,12 +153,16 @@ describe("CF-STEP4-READING-IMPL-01 / CF-STEP4-TIER-BOUNDARY-DEFAULT-01 — the r
     // figure moved from ~48.60% to ~48.85%. The coincidence this test names
     // (A1 == A2, growth's swing exceeds margin's) survives unchanged.
     const a1 = growthRow.fullRangeValueImpact.toString();
-    expect(a1).toBe("0.48846512490800969627");
+    // CF-AR3-REPRODUCIBLE-RUNS-01 — a ratio of two values from the same M15
+    // model: Methodology v2.1 D2's timing scales both by one common factor, so
+    // it is unchanged; the 1e-15 allowance is decimal.js rounding of the
+    // fractional (1 + r)^0.5 power, at the 20th significant digit.
+    expect(growthRow.fullRangeValueImpact.minus("0.48846512490800969627").abs().lessThan("1e-15")).toBe(true);
 
     // A2: this outcome's own selector — the max across available: true rows.
     expect(reading.available).toBe(true);
     if (!reading.available) return;
-    expect(reading.fullRangeValueImpact.toString()).toBe("0.48846512490800969627");
+    expect(reading.fullRangeValueImpact.minus("0.48846512490800969627").abs().lessThan("1e-15")).toBe(true);
     expect(reading.selectedDriver).toBe("growth");
 
     // The coincidence, asserted rather than assumed: A1 and A2 agree exactly

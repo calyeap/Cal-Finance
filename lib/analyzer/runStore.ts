@@ -312,6 +312,72 @@ export async function getCompanyJudgmentOverride(
   };
 }
 
+/**
+ * CF-AR3-REPRODUCIBLE-RUNS-01 — everything a person (or the automatic pass)
+ * has recorded that this run's output depends on, read from the database
+ * alone: no filing, no price, no calculation. The report compares a
+ * fingerprint of this with the one its stored output was computed under
+ * (snapshotStore.ts), and recomputes only when they differ — so viewing an
+ * unchanged run never recomputes, and recording a decision or judgement is
+ * what produces a new output.
+ *
+ * The four AR5 judgement slots (frozen spec §14.9 AR0-5: uncertainty answer,
+ * moat class, management rating, thesis state) are present and null: nothing
+ * records them yet, and they are named here so the stored snapshot has a
+ * place for them the day AR5 does.
+ */
+export interface RecordedJudgementState {
+  factDecisions: StoredFactDecision[];
+  judgments: { judgmentKey: JudgmentKey; selection: string }[];
+  profile: {
+    decision: ProfileDecision | null;
+    profile: string | null;
+    humanConfirmed: boolean;
+    autoResolved: string | null;
+  };
+  companyOverrides: { nonOperatingInvestments: string | null };
+  /** When this ticker's recorded assumption sheet was last written; null if none is recorded. */
+  recordedSheetUpdatedAt: string | null;
+  uncertainty: null;
+  moatClass: null;
+  managementRating: null;
+  thesisState: null;
+}
+
+export async function getRecordedJudgementState(runId: string): Promise<RecordedJudgementState | null> {
+  const run = await getRun(runId);
+  if (run === null) return null;
+  const [decisions, judgments, override, sheet] = await Promise.all([
+    getFactDecisions(runId),
+    getJudgments(runId),
+    getCompanyJudgmentOverride(run.ticker, "NON-OPERATING INVESTMENTS"),
+    getPool().query<{ updated_at: Date }>(
+      `SELECT updated_at FROM analyzer_recorded_analyst_bundles WHERE ticker = $1`,
+      [run.ticker]
+    ),
+  ]);
+  return {
+    // Ordered by fact id, not decision time: the state is what was decided,
+    // not the order it was decided in.
+    factDecisions: [...decisions].sort((a, b) => a.factId.localeCompare(b.factId)),
+    judgments: judgments
+      .map((j) => ({ judgmentKey: j.judgmentKey, selection: j.selection }))
+      .sort((a, b) => a.judgmentKey.localeCompare(b.judgmentKey)),
+    profile: {
+      decision: run.profileDecision,
+      profile: run.profile,
+      humanConfirmed: run.profileHumanConfirmed,
+      autoResolved: run.profileAutoResolved,
+    },
+    companyOverrides: { nonOperatingInvestments: override?.selection ?? null },
+    recordedSheetUpdatedAt: sheet.rows.length === 0 ? null : new Date(sheet.rows[0].updated_at).toISOString(),
+    uncertainty: null,
+    moatClass: null,
+    managementRating: null,
+    thesisState: null,
+  };
+}
+
 export async function recordCompanyJudgmentOverride(
   ticker: string,
   judgmentKey: JudgmentKey,
