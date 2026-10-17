@@ -1,5 +1,14 @@
 # Acceptance Matrix — current outcome → implementation proof → real-company validation → Calvin acceptance
 
+> **Stale for the Analyzer — noted 17 Oct 2026 (Analyzer Reset AR0,
+> `CF-AR0-RECORD-DECISIONS-01`, [#447](https://github.com/calyeap/Cal-Finance/issues/447)).**
+> This matrix was last re-verified at `3728479` (25 Sep 2026) and predates the
+> V1 BUY/HOLD/SELL verdict now on `master` (#399, #445). Do not read its
+> Analyzer rows, or the 26 Sep 2026 Analyzer V2 freeze they cite, as current
+> acceptance: Analyzer acceptance is re-established by Analyzer Reset AR8
+> (`docs/product-decisions.md` items 25 and 31). Rows outside the Analyzer are
+> not re-verified by this note.
+
 **OUTCOME-ID:** `CF-ACCEPTANCE-MATRIX-01`, refreshed by `CF-ACCEPTANCE-MATRIX-REFRESH-01`
 (issue [#314](https://github.com/calyeap/Cal-Finance/issues/314)). Finish-line
 item (1) of Calvin's 21 Sep 2026 plan, per issue
