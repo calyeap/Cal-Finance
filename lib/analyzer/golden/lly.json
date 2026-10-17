@@ -1,0 +1,112 @@
+{
+  "ticker": "LLY",
+  "cik": "0000059478",
+  "entityName": "ELI LILLY AND COMPANY",
+  "sic": "2834",
+  "sicDescription": "Pharmaceutical Preparations",
+  "classification": {
+    "cyclicality": "stable",
+    "preRevenue": false,
+    "refused": false,
+    "reason": "SIC 2834 falls inside the broader chemicals 28xx band in cyclicalSic.ts, but is explicitly carved out of it by the '283' exclusion (pharmaceutical preparations are not classified cyclical, even though chemicals-ex-pharma is a confirmed cyclical class). Expected stable (DO item 1/5)."
+  },
+  "provenance": {
+    "source": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000059478.json, fresh and untrimmed, as supplied to this session by the orchestrating session.",
+    "capturedAt": "2026-10-17",
+    "pageCitationNote": "www.sec.gov is blocked from this sandbox; no page number is obtainable. Substituting accession number + XBRL concept label + exact fiscal period + form type, per the issue's own ESCALATE 'smallest substitute' clause."
+  },
+  "facts": {
+    "revenue": {
+      "conceptLabel": "Revenues",
+      "xbrlConcept": "us-gaap:Revenues",
+      "value": 65179000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0000059478-26-000013",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "LLY has no RevenueFromContractWithCustomerExcludingAssessedTax tag; us-gaap:Revenues is live and current."
+    },
+    "operatingIncome": null,
+    "operatingIncomeNote": "us-gaap:OperatingIncomeLoss is entirely absent from LLY's real captured facts (confirmed by direct inspection) — LLY does not tag a single consolidated operating-income line this way. Not fabricated; omitted and noted. Income-before-tax, tax expense and net income below are present and usable in its place.",
+    "incomeTaxExpense": {
+      "conceptLabel": "Income Tax Expense (Benefit)",
+      "xbrlConcept": "us-gaap:IncomeTaxExpenseBenefit",
+      "value": 5091000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0000059478-26-000013",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "incomeBeforeTax": {
+      "conceptLabel": "Income (Loss) from Continuing Operations before Income Taxes, Noncontrolling Interest",
+      "xbrlConcept": "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+      "value": 25731000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0000059478-26-000013",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "netIncome": {
+      "conceptLabel": "Net Income (Loss) Attributable to Parent",
+      "xbrlConcept": "us-gaap:NetIncomeLoss",
+      "value": 20640000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0000059478-26-000013",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "totalDebt": {
+      "conceptLabel": "Debt, Long-term and Short-term, Combined Amount",
+      "xbrlConcept": "us-gaap:DebtLongtermAndShorttermCombinedAmount",
+      "value": 42503000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0000059478-26-000013",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "A single live tag covering both long-term and short-term debt together — chosen over LLY's us-gaap:LongTermDebtNoncurrent (live, 40868000000) + us-gaap:LongTermDebtCurrent (DEAD since FY2013) because the current-maturities component tag is itself stale for LLY; the combined tag avoids needing it."
+    },
+    "cashAndEquivalents": {
+      "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",
+      "xbrlConcept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+      "value": 7268000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0000059478-26-000013",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "dilutedWeightedAverageShares": {
+      "conceptLabel": "Weighted Average Number of Shares Outstanding, Diluted",
+      "xbrlConcept": "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding",
+      "value": 899300000,
+      "unit": "shares",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0000059478-26-000013",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    }
+  },
+  "price": null,
+  "priceNote": "No live/fresh stock price is obtainable for LLY from this sandbox and no previously-captured LLY price exists in this repo's offline fixtures. Omitted rather than invented.",
+  "notes": [
+    "NESTED FINANCE LEASES — gap, honestly reported. This outcome's brief ties LLY to '#311's double-count case'. docs/ev-lease-nesting-doublecount-reconciliation.md confirms #311 is real, but its own worked numeric example is Union Pacific (UNP), not LLY — the LLY tie-in is this outcome's own framing, not something #311 itself demonstrates. Checked directly against LLY's real captured facts: LLY has NO us-gaap:FinanceLease*-prefixed tag anywhere in its XBRL history (confirmed by exhaustive tag-name search) — only ordinary OPERATING-lease tags (OperatingLeaseLiability, OperatingLeaseRightOfUseAsset, etc.). So no finance-lease-nesting double-count figure is independently derivable for LLY from data.sec.gov at all; either LLY's finance leases are immaterial/undisclosed-separately, or this framing was intended generically (the #311 defect CLASS, not an LLY-specific instance). Not fabricated — flagged as a gap.",
+    "ELANCO RESTATEMENT — genuinely confirmed, with a real figure. docs/superpowers/plans/2026-10-17-analyzer-reset-master-plan.md (line 46) records: 'operating-income falls flagged LLY because of the Elanco divestiture' under an earlier, rejected purely-data-driven cyclicality test. This harness independently confirms the underlying distortion in LLY's own real NetIncomeLoss history: FY2018 net income 3232000000 (10-K accn 0000059478-19-000082) jumps to FY2019 8318400000 (10-K accn 0000059478-20-000057) then falls back to FY2020 6193700000 (10-K accn 0000059478-21-000083) — a jump-then-fall shape consistent with a one-time gain around Elanco Animal Health's September 2019 spin-off distorting the margin/income trend a naive year-over-year cyclicality or margin-decline check would read as a structural decline afterward. This is exactly why D1's chosen classifier is industry-code-based (SIC) rather than purely data-driven (revenue/margin trend) — confirmed by this harness's own cyclicalSic.ts design, not re-derived independently here. LLY has no us-gaap:OperatingIncomeLoss tag at all (see operatingIncomeNote above), so the 'operating-income falls' the master plan describes were read from a margin proxy this harness did not reconstruct; the net-income jump above is the closest real, independently-verified figure this harness could confirm from data.sec.gov."
+  ]
+}

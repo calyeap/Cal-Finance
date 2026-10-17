@@ -1,0 +1,105 @@
+{
+  "ticker": "OKLO",
+  "cik": "0001849056",
+  "entityName": "Oklo Inc.",
+  "sic": "4911",
+  "sicDescription": "Electric Services",
+  "classification": {
+    "cyclicality": "stable",
+    "preRevenue": true,
+    "refused": false,
+    "reason": "classifyCyclicality('4911') returns 'stable' (no confirmed cyclical SIC prefix matches 4911) — that literal table output is NOT the operative classification for OKLO. OKLO's defining golden fact is pre-revenue status, confirmed structurally below, which the frozen spec (§14.9 AR0-1) and this outcome's own brief single out as its own category ('pre-revenue companies at market + 2pp' — a rate adjustment, not a SIC-based cyclical/stable call) and which independently means a standard revenue-driven reverse-DCF or NOPAT projection cannot run at all: the engine (or this harness's own check) must read this as 'can't conclude', not output a number."
+  },
+  "provenance": {
+    "source": "https://data.sec.gov/api/xbrl/companyfacts/CIK0001849056.json, fetched fresh and untrimmed directly from data.sec.gov by this harness (NOT the repo's existing lib/analyzer/acquisition/captures/oklo-companyfacts.json, which is trimmed to tagMap.ts's tag set and this outcome's DO item 1 forbids reading tagMap.ts for golden facts).",
+    "capturedAt": "2026-10-17",
+    "pageCitationNote": "www.sec.gov is blocked from this sandbox; no page number is obtainable. Substituting accession number + XBRL concept label + exact fiscal period + form type, per the issue's own ESCALATE 'smallest substitute' clause."
+  },
+  "facts": {
+    "revenue": null,
+    "revenueNote": "STRUCTURALLY ABSENT FROM THE MOST RECENT 10-K — this is the golden fact that matters most for OKLO (DO item 1). Neither us-gaap:Revenues nor us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax has a single row sourced from a 10-K form anywhere in OKLO's real captured facts (confirmed by direct inspection: 0 of 2 and 0 of 4 total rows respectively are from a 10-K). The ONLY rows either tag has at all are from a single 10-Q (accn 0001628280-26-054571, filed 2026-08-07, FY2026 Q2): $0 for the six months ended 2025-06-30, and $1,210,000 for the six months ended 2026-06-30 — i.e. OKLO's first-ever disclosed revenue ($1.21M) postdates its most recent 10-K (FY2025, filed 2026-03-17) entirely. As of that most recent ANNUAL filing, OKLO is genuinely, structurally pre-revenue. valuationInvariants.test.ts and goldenFacts.test.ts both assert this reads as 'can't conclude', never a number.",
+    "operatingIncome": {
+      "conceptLabel": "Operating Income (Loss)",
+      "xbrlConcept": "us-gaap:OperatingIncomeLoss",
+      "value": -139294000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-018698",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "Negative, consistent with a pre-revenue company whose costs (construction lead, R&D, SG&A) run ahead of any revenue."
+    },
+    "incomeTaxExpense": {
+      "conceptLabel": "Income Tax Expense (Benefit)",
+      "xbrlConcept": "us-gaap:IncomeTaxExpenseBenefit",
+      "value": -4529000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-018698",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "Negative (a tax benefit), consistent with a pre-tax loss."
+    },
+    "incomeBeforeTax": {
+      "conceptLabel": "Income (Loss) from Continuing Operations before Income Taxes, Noncontrolling Interest",
+      "xbrlConcept": "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+      "value": -110192000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-018698",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "netIncome": {
+      "conceptLabel": "Net Income (Loss) Attributable to Parent",
+      "xbrlConcept": "us-gaap:NetIncomeLoss",
+      "value": -105663000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-018698",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "totalDebt": null,
+    "totalDebtNote": "No us-gaap:LongTermDebt*/ShortTermBorrowings/DebtCurrent-family tag has a single real row anywhere in OKLO's captured facts (confirmed by direct inspection — us-gaap:LongTermDebtNoncurrent exists but has 0 rows). Consistent with a pre-revenue company financed through equity rather than debt as of its most recent 10-K; not fabricated as zero, reported as genuinely absent.",
+    "cashAndEquivalents": {
+      "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",
+      "xbrlConcept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+      "value": 788445000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-018698",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "A pre-revenue company's cash balance is its runway, not a netting item against an operating valuation the way it is for a revenue-generating company."
+    },
+    "dilutedWeightedAverageShares": {
+      "conceptLabel": "Weighted Average Number of Shares Outstanding, Diluted",
+      "xbrlConcept": "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding",
+      "value": 146351775,
+      "unit": "shares",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-018698",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    }
+  },
+  "price": {
+    "value": 41.27,
+    "date": "2026-09-04",
+    "source": "Real recorded close, lib/analyzer/acquisition/captures/prices.json (captured 2026-09-08 from the live Yahoo provider during the M8-a acceptance runs; used only in ANALYZER_OFFLINE mode). Reused here because live Yahoo is confirmed blocked from this sandbox; this is a genuine previously-captured price, not invented."
+  },
+  "priceNote": null,
+  "notes": [
+    "A real stock price existing for a pre-revenue company (above) is not a contradiction: the market is pricing OKLO on future prospects, not trailing financials. It is precisely why a revenue/NOPAT-driven reverse DCF cannot run here — there is no base-year revenue to project from — and why the correct engine output is 'can't conclude', not a valuation computed from a $0 or missing base."
+  ]
+}

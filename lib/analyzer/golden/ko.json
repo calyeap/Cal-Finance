@@ -1,0 +1,155 @@
+{
+  "ticker": "KO",
+  "cik": "0000021344",
+  "entityName": "COCA COLA CO",
+  "sic": "2080",
+  "sicDescription": "Beverages",
+  "classification": {
+    "cyclicality": "stable",
+    "preRevenue": false,
+    "refused": false,
+    "reason": "Non-financial consumer-staples company; SIC 2080 does not match any confirmed cyclical class in cyclicalSic.ts (it starts '20', not '28' — not even in the chemicals band this table carves pharma out of). Expected stable (DO item 1/5)."
+  },
+  "provenance": {
+    "source": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000021344.json, fresh and untrimmed, as supplied to this session by the orchestrating session; independently re-verified by this harness against the same raw file (see tagDrift.test.ts, which asserts directly against KO's real row history).",
+    "capturedAt": "2026-10-17",
+    "pageCitationNote": "www.sec.gov is blocked from this sandbox; no page number is obtainable. Substituting accession number + XBRL concept label + exact fiscal period + form type, per the issue's own ESCALATE 'smallest substitute' clause."
+  },
+  "facts": {
+    "revenue": {
+      "conceptLabel": "Revenues",
+      "xbrlConcept": "us-gaap:Revenues",
+      "value": 47941000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "KO has no RevenueFromContractWithCustomerExcludingAssessedTax tag at all; us-gaap:Revenues is live and current for KO (unlike its debt tags — see totalDebt below and DO item 6)."
+    },
+    "operatingIncome": {
+      "conceptLabel": "Operating Income (Loss)",
+      "xbrlConcept": "us-gaap:OperatingIncomeLoss",
+      "value": 13762000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "incomeTaxExpense": {
+      "conceptLabel": "Income Tax Expense (Benefit)",
+      "xbrlConcept": "us-gaap:IncomeTaxExpenseBenefit",
+      "value": 2861000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "incomeBeforeTax": {
+      "conceptLabel": "Income (Loss) from Continuing Operations before Income Taxes, Noncontrolling Interest",
+      "xbrlConcept": "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+      "value": 15998000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "netIncome": {
+      "conceptLabel": "Net Income (Loss) Attributable to Parent",
+      "xbrlConcept": "us-gaap:NetIncomeLoss",
+      "value": 13107000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "totalDebt": {
+      "conceptLabel": "Long-term Debt and Capital Lease Obligations, Including Current Maturities",
+      "xbrlConcept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
+      "value": 43941000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "LIVE TAG DRIFT DECISION — this is DO item 6's worked KO example, and the golden 'total debt' fact genuinely cannot be captured from the tags a pre-reset acquisition would have used. KO's us-gaap:LongTermDebtNoncurrent and us-gaap:LongTermDebt tags are DEAD: their last-ever row is period end 2024-03-29 (filed 2024-05-02, a 10-Q), confirmed directly against the real raw capture and asserted by lib/analyzer/golden/tagDrift.test.ts. The last 10-K-sourced figure under the dead tags was FY2023 (end 2023-12-31, filed 2024-02-20): LongTermDebtNoncurrent 35547000000 + LongTermDebtCurrent 1960000000 = 37507000000 — now roughly two years stale relative to KO's most-recently-filed data (2026-04-30) and NOT used as this golden fact's value. Instead this fact uses KO's live replacement tag, us-gaap:LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities (FY2025, 43941000000) — but that tag is NOT the same SCOPE as the dead one: it bundles finance-lease obligations into the debt figure, so the two numbers are not directly comparable year-over-year. This is the live demonstration DO item 1 asked for of how KO's debt-tag staleness must be decided and documented, not silently papered over.",
+      "staleAlternative": {
+        "conceptLabel": "Long-term Debt, Excluding Current Maturities + Long-term Debt, Current Maturities (DEAD TAGS — not used as the golden value)",
+        "xbrlConcept": "us-gaap:LongTermDebtNoncurrent + us-gaap:LongTermDebtCurrent",
+        "value": 37507000000,
+        "periodEnd": "2023-12-31",
+        "accessionNumber": "0000021344-24-000009",
+        "form": "10-K",
+        "fiscalYear": 2023,
+        "lastRowEverSeen": { "periodEnd": "2024-03-29", "form": "10-Q", "filed": "2024-05-02", "accessionNumber": "0000021344-24-000017" }
+      }
+    },
+    "cashAndEquivalents": {
+      "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",
+      "xbrlConcept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+      "value": 10270000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "KO also reports a broader us-gaap:CashCashEquivalentsRestrictedCashAndRestrictedCashEquivalents figure for the same period (11010000000) — a different scope (includes restricted cash); this fact uses the narrower, directly-comparable carrying-value tag, consistent with every other golden company above."
+    },
+    "dilutedWeightedAverageShares": {
+      "conceptLabel": "Weighted Average Number of Shares Outstanding, Diluted",
+      "xbrlConcept": "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding",
+      "value": 4313000000,
+      "unit": "shares",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "unrecognizedTaxBenefits": {
+      "conceptLabel": "Unrecognized Tax Benefits",
+      "xbrlConcept": "us-gaap:UnrecognizedTaxBenefits",
+      "value": 857000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "THE 'IRS CASE' GOLDEN FACT — not one of this schema's eight baseline facts, added specifically because this outcome's own brief names KO's 'IRS case' alongside its tag drift as a reason it's in the golden set. This is KO's real, live, current balance-sheet contingency for unrecognized tax benefits (857000000, FY2025) — KO's long-running IRS transfer-pricing dispute (over the royalty rates charged to its foreign licensees) is publicly known to be far larger in total disputed liability than this one balance-sheet line; this harness captures only what the real XBRL facts actually carry (this contingency-reserve balance and its related penalties/interest line below), not the full disputed deficiency amount, which is disclosed in filing TEXT this sandbox cannot reach (www.sec.gov blocked) rather than in a structured XBRL tag. Flagged honestly as a partial capture, not the complete picture of the dispute."
+    },
+    "unrecognizedTaxBenefitsPenaltiesAndInterestAccrued": {
+      "conceptLabel": "Unrecognized Tax Benefits, Income Tax Penalties and Interest Accrued",
+      "xbrlConcept": "us-gaap:UnrecognizedTaxBenefitsIncomeTaxPenaltiesAndInterestAccrued",
+      "value": 708000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001628280-26-010047",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "Companion figure to unrecognizedTaxBenefits above — accrued penalties and interest on KO's disputed tax positions, same IRS-case context."
+    }
+  },
+  "price": null,
+  "priceNote": "No live/fresh stock price is obtainable for KO from this sandbox and no previously-captured KO price exists in this repo's offline fixtures. Omitted rather than invented.",
+  "notes": [
+    "KO us-gaap:ShortTermBorrowings also appears dead: its last 10-K-sourced row is FY2022 (end 2022-12-31, filed 2023-02-21, value 2373000000) — a fourth real tag-drift instance, noted here but not separately asserted by tagDrift.test.ts (which covers only the two worked examples DO item 6 named: KO's long-term-debt family and NVDA's MarketableSecuritiesCurrent)."
+  ]
+}

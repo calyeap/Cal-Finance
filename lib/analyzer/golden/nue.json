@@ -1,0 +1,109 @@
+{
+  "ticker": "NUE",
+  "cik": "0000073309",
+  "entityName": "NUCOR CORP",
+  "sic": "3312",
+  "sicDescription": "Steel Works, Blast Furnaces & Rolling Mills (Coke Ovens)",
+  "classification": {
+    "cyclicality": "cyclical",
+    "preRevenue": false,
+    "refused": false,
+    "reason": "SIC 3312 starts with the confirmed cyclical prefix 331 (steel) in cyclicalSic.ts. Expected cyclical (DO item 1/5)."
+  },
+  "provenance": {
+    "source": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000073309.json, fresh and untrimmed, as supplied to this session by the orchestrating session.",
+    "capturedAt": "2026-10-17",
+    "pageCitationNote": "www.sec.gov is blocked from this sandbox; no page number is obtainable. Substituting accession number + XBRL concept label + exact fiscal period + form type, per the issue's own ESCALATE 'smallest substitute' clause."
+  },
+  "facts": {
+    "revenue": {
+      "conceptLabel": "Revenue from Contract with Customer, Excluding Assessed Tax",
+      "xbrlConcept": "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
+      "value": 32494000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001193125-26-071575",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "NUE's legacy us-gaap:Revenues tag is dead (last 10-K row FY2018); RevenueFromContractWithCustomerExcludingAssessedTax is the live tag, and the most recent filed 10-K is FY2025 (filed 2026-02-25)."
+    },
+    "operatingIncome": null,
+    "operatingIncomeNote": "us-gaap:OperatingIncomeLoss is entirely absent from NUE's real captured facts (confirmed by direct inspection, not inferred) — NUE does not tag a single consolidated operating-income line this way; its income statement presentation evidently splits differently. Not fabricated; omitted and noted per the issue's own 'escalate the gap, propose the smallest substitute' instruction. Income-before-tax, tax expense and net income below are all present and usable in its place.",
+    "incomeTaxExpense": {
+      "conceptLabel": "Income Tax Expense (Benefit)",
+      "xbrlConcept": "us-gaap:IncomeTaxExpenseBenefit",
+      "value": 530000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001193125-26-071575",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "incomeBeforeTax": {
+      "conceptLabel": "Income (Loss) from Continuing Operations before Income Taxes, Noncontrolling Interest",
+      "xbrlConcept": "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+      "value": 2568000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001193125-26-071575",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "netIncome": {
+      "conceptLabel": "Net Income (Loss) Attributable to Parent",
+      "xbrlConcept": "us-gaap:NetIncomeLoss",
+      "value": 1744000000,
+      "unit": "USD",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001193125-26-071575",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "totalDebt": {
+      "conceptLabel": "Long-term Debt and Capital Lease Obligations + Long-term Debt and Capital Lease Obligations, Current + Short-term Borrowings",
+      "xbrlConcept": "us-gaap:LongTermDebtAndCapitalLeaseObligations + us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent + us-gaap:ShortTermBorrowings",
+      "value": 7121000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001193125-26-071575",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": "6909000000 + 90000000 + 122000000 = 7121000000. NUE's original us-gaap:LongTermDebtNoncurrent tag is dead (last 10-K row FY2018, 4233276000) and us-gaap:LongTermDebt is dead too (last 10-K row FY2016, 4360600000) — a THIRD real tag-drift instance alongside KO and NVDA, though not one DO item 6's own two named worked examples required this harness to assert against. LongTermDebtAndCapitalLeaseObligations(Current) is NUE's live replacement, but note the SCOPE CHANGE: it bundles finance-lease obligations into the same figure, so this total-debt golden fact is not a like-for-like replacement of the old debt-only tags' scope — documented honestly rather than silently treated as equivalent."
+    },
+    "cashAndEquivalents": {
+      "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",
+      "xbrlConcept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+      "value": 2260000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001193125-26-071575",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    },
+    "dilutedWeightedAverageShares": {
+      "conceptLabel": "Weighted Average Number of Shares Outstanding, Diluted",
+      "xbrlConcept": "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding",
+      "value": 231000000,
+      "unit": "shares",
+      "periodStart": "2025-01-01",
+      "periodEnd": "2025-12-31",
+      "accessionNumber": "0001193125-26-071575",
+      "form": "10-K",
+      "fiscalYear": 2025,
+      "note": null
+    }
+  },
+  "price": null,
+  "priceNote": "No live/fresh stock price is obtainable for NUE from this sandbox and no previously-captured NUE price exists in this repo's offline fixtures. Omitted rather than invented.",
+  "notes": []
+}

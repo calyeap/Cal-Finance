@@ -1,0 +1,125 @@
+{
+  "ticker": "MSFT",
+  "cik": "0000789019",
+  "entityName": "MICROSOFT CORPORATION",
+  "sic": "7372",
+  "sicDescription": "Services-Prepackaged Software",
+  "classification": {
+    "cyclicality": "stable",
+    "preRevenue": false,
+    "refused": false,
+    "reason": "Non-financial, revenue-generating software company; SIC 7372 does not match any confirmed cyclical class in cyclicalSic.ts. Expected stable (DO item 1/5)."
+  },
+  "provenance": {
+    "source": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000789019.json, fetched fresh and untrimmed directly from data.sec.gov by this harness (NOT the repo's existing lib/analyzer/acquisition/captures/msft-companyfacts.json, which is trimmed to tagMap.ts's tag set and this outcome's DO item 1 forbids reading tagMap.ts for golden facts).",
+    "capturedAt": "2026-10-17",
+    "pageCitationNote": "www.sec.gov (the as-filed 10-K document host) is blocked from this sandbox (confirmed by the orchestrating session, re-confirmed by this harness not attempting it). No page number is obtainable here. Substituting, per the issue's own ESCALATE 'smallest substitute' clause: accession number + XBRL concept label + exact fiscal period + form type, carried on every fact below."
+  },
+  "facts": {
+    "revenue": {
+      "conceptLabel": "Revenue from Contract with Customer, Excluding Assessed Tax",
+      "xbrlConcept": "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
+      "value": 331839000000,
+      "unit": "USD",
+      "periodStart": "2025-07-01",
+      "periodEnd": "2026-06-30",
+      "accessionNumber": "0001193125-26-323660",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": "The legacy us-gaap:Revenues tag is dead for MSFT (last 10-K row FY2010); this is the live tag MSFT has reported revenue under since. Matches the repo's existing selectTagged.test.ts pin of 331839000000."
+    },
+    "operatingIncome": {
+      "conceptLabel": "Operating Income (Loss)",
+      "xbrlConcept": "us-gaap:OperatingIncomeLoss",
+      "value": 155237000000,
+      "unit": "USD",
+      "periodStart": "2025-07-01",
+      "periodEnd": "2026-06-30",
+      "accessionNumber": "0001193125-26-323660",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "incomeTaxExpense": {
+      "conceptLabel": "Income Tax Expense (Benefit)",
+      "xbrlConcept": "us-gaap:IncomeTaxExpenseBenefit",
+      "value": 32185000000,
+      "unit": "USD",
+      "periodStart": "2025-07-01",
+      "periodEnd": "2026-06-30",
+      "accessionNumber": "0001193125-26-323660",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "incomeBeforeTax": {
+      "conceptLabel": "Income (Loss) from Continuing Operations before Income Taxes, Noncontrolling Interest",
+      "xbrlConcept": "us-gaap:IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest",
+      "value": 165934000000,
+      "unit": "USD",
+      "periodStart": "2025-07-01",
+      "periodEnd": "2026-06-30",
+      "accessionNumber": "0001193125-26-323660",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "netIncome": {
+      "conceptLabel": "Net Income (Loss) Attributable to Parent",
+      "xbrlConcept": "us-gaap:NetIncomeLoss",
+      "value": 133749000000,
+      "unit": "USD",
+      "periodStart": "2025-07-01",
+      "periodEnd": "2026-06-30",
+      "accessionNumber": "0001193125-26-323660",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "totalDebt": {
+      "conceptLabel": "Long-term Debt, Excluding Current Maturities + Long-term Debt, Current Maturities",
+      "xbrlConcept": "us-gaap:LongTermDebtNoncurrent + us-gaap:LongTermDebtCurrent",
+      "value": 40294000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2026-06-30",
+      "accessionNumber": "0001193125-26-323660",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": "31067000000 (noncurrent) + 9227000000 (current) = 40294000000. Both component tags are live/current for MSFT (no drift). This figure matches the real MSFT debt figure already pinned in lib/analyzer/acquisition/acquire.test.ts (toBe(40294000000)) — an independent cross-check, not re-derived from that test."
+    },
+    "cashAndEquivalents": {
+      "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",
+      "xbrlConcept": "us-gaap:CashAndCashEquivalentsAtCarryingValue",
+      "value": 20935000000,
+      "unit": "USD",
+      "periodStart": null,
+      "periodEnd": "2026-06-30",
+      "accessionNumber": "0001193125-26-323660",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    },
+    "dilutedWeightedAverageShares": {
+      "conceptLabel": "Weighted Average Number of Shares Outstanding, Diluted",
+      "xbrlConcept": "us-gaap:WeightedAverageNumberOfDilutedSharesOutstanding",
+      "value": 7453000000,
+      "unit": "shares",
+      "periodStart": "2025-07-01",
+      "periodEnd": "2026-06-30",
+      "accessionNumber": "0001193125-26-323660",
+      "form": "10-K",
+      "fiscalYear": 2026,
+      "note": null
+    }
+  },
+  "price": {
+    "value": 499.70,
+    "date": "2026-09-04",
+    "source": "Real recorded close, lib/analyzer/acquisition/captures/prices.json (captured 2026-09-08 from the live Yahoo provider during the M8-a acceptance runs; used only in ANALYZER_OFFLINE mode). Reused here because live Yahoo is confirmed blocked from this sandbox; this is a genuine previously-captured price, not invented."
+  },
+  "priceNote": null,
+  "notes": [
+    "FY2026 10-K revenue (331839000000) and tenYearCagr-relevant base revenue differ from the frozen v1.0.1 Microsoft reference grid in reverseDcf.test.ts, which uses a user-supplied $332B figure from an earlier session (see that file's own provenance comment) — this golden fact is independently re-derived from the real FY2026 10-K, not imported from that test fixture, per this outcome's DO NOT clause against importing a planning reference value as an expected value."
+  ]
+}
