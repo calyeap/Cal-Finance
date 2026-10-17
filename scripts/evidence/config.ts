@@ -15,7 +15,7 @@ export const FROZEN_HASHES: Readonly<Record<string, string>> = {
   // No other entry in this table changes: this amendment touches one
   // frozen file.
   "calboard-stock-analyzer-v1-spec.md":
-    "2e75c7d1345d00c0cc532f0577ee0ab4d8a43ae92c745436632b9dcfc9cf8e50",
+    "cc803bffb05b3d323fbb2b859f3ba269502e630b9f19ab098bdb5f6be00de5c6",
   "calboard-stock-analyzer-v1-design.md":
     "7535c6b6551b0ebf27ba10417733e5780a1cdc4634f5a5b7e4b91f121425a774",
   "mock-screen1-entry.html":

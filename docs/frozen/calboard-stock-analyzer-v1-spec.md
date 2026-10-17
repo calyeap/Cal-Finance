@@ -37,12 +37,12 @@ Consequently the red team's third recommended validation run (seasonal retailer)
 
 A single-company equity analysis tool. The analyst supplies a ticker; the software acquires facts, runs gates, computes a fixed set of deterministic diagnostics, accepts three analyst-authored scenarios, and returns a structured report describing **what the current price already assumes** alongside **what the analyst assumes**.
 
-The product issues **no price target and no portfolio action**. It does issue exactly one deterministic, entry-side valuation position — **CHEAP / FAIR / EXPENSIVE** — with the action clause defined in §10.6. Calvin remains the decision-maker on everything the position does not cover, which is everything except whether this is a price to start at.
+The product issues **no price target and no portfolio action**. It does issue exactly one deterministic, entry-side valuation position — **CHEAP / FAIR / EXPENSIVE** — with the action clause defined in §10.6. Calvin remains the decision-maker on everything the position does not cover, which is everything except whether this is a price to start at. *[Amended AR0-4, §14.9: the verdict is the V1 BUY / HOLD / SELL verdict (Methodology v2.1; `docs/product-decisions.md` items 1 and 28); the CHEAP / FAIR / EXPENSIVE position goes in AR5.]*
 
 **This supersedes the former absolute no-verdict boundary, which does not survive alongside it.** The frozen text read *"The product issues no verdict, no price target and no recommendation… This is the §10 Step 5 boundary and it is load-bearing."* Calvin's recorded override of 6 September 2026 reverses that boundary; §14 records the override and the counter-arguments he heard before making it. What remains of the §10 Step 5 boundary is narrower and still load-bearing:
 
 1. **No price target.** The output is a range, never a point (§10.3, §13.2).
-2. **No portfolio action.** Entry-side only — start / do not start / wait for a better price. Never trim, add or sell, because those need position size and cost basis the analyzer does not have and §1.4 forbids it from receiving.
+2. **No portfolio action.** Entry-side only — start / do not start / wait for a better price. Never trim, add or sell, because those need position size and cost basis the analyzer does not have and §1.4 forbids it from receiving. *[AR0-4, §14.9: the V1 BUY / HOLD / SELL verdict is stock-level decision support, not a portfolio action, and is permitted.]*
 3. **Nothing an AI authored.** The position is computed by **[S]** from fields the analyzer already holds (§10.6). The §8.3 limits on **[C]** are unchanged and still forbid [C] from issuing a position, a target or a recommendation of its own.
 
 ### 1.2 Validated scope
@@ -67,14 +67,14 @@ The pre-revenue profile's validated scope is narrower than "pre-revenue". Per I1
 
 ### 1.3 What one analysis produces
 
-One ticker in. One report out, containing: the fact set with provenance; gate results; the deterministic diagnostic set; analyst scenarios and their outputs; the price-implied diagnostics; and a plain-English interpretation layer. Nothing is persisted between analyses in v1 (see §13).
+One ticker in. One report out, containing: the fact set with provenance; gate results; the deterministic diagnostic set; analyst scenarios and their outputs; the price-implied diagnostics; and a plain-English interpretation layer. Nothing is persisted between analyses in v1 (see §13). *[Amended AR0-6 and AR0-7, §14.9: per company, adopted assumption sheets, recorded judgements, saved versions and the recent-analyses list persist.]*
 
 ### 1.4 One company per analysis — a boundary, not a description
 
 Stock Analyzer v1 is **one-company analysis only**. This is a scope boundary with four consequences an engineer must implement, not a statement about typical usage:
 
 1. **No portfolio context enters the analyzer as input.** Not holdings, not weights, not cost basis, not existing exposure. Cost basis in particular has zero bearing on what a share is worth (§9 mistake 15) and must not be accepted even where available.
-2. **No cross-company state persists between analyses.** Each run is independent. Nothing is carried forward, cached against a prior company, or compared to a previous run.
+2. **No cross-company state persists between analyses.** Each run is independent. Nothing is carried forward, cached against a prior company, or compared to a previous run. *[AR0-6 and AR0-7, §14.9: per-company adopted sheets, judgements and saved versions persist and re-runs reuse them; nothing crosses companies.]*
 3. **No output field expresses position sizing, weight, portfolio fit or exposure.** The Analysis Result has no member for it and the renderer has no section for it.
 4. **Cross-company comparison is limited to peer multiples as secondary cross-checks** (§13.3). Peer-set construction is excluded by the methodology.
 
@@ -84,7 +84,7 @@ Portfolio fit and Portfolio Review are out of scope for v1 (§13.1).
 
 Consistent with Calboard generally. No deployment, no multi-user state.
 
-**On advice framing.** The frozen text read *"no advice framing anywhere in the output copy"*, and amendment M7 narrows it rather than leaving it to contradict §10.6. The product is a single-user tool Calvin runs for himself; it is not a service, not a publication, and not advice to anyone else. What the output copy may not do is **frame itself as advice to a reader**: no second person telling someone what to do with their money, no suitability language, no risk-profile language, no wording that would read as a recommendation issued to a third party. The §10.6.4 action clause is a statement about **this price against this company's own record** — the form the amendment authorises, and the only form it authorises.
+**On advice framing.** The frozen text read *"no advice framing anywhere in the output copy"*, and amendment M7 narrows it rather than leaving it to contradict §10.6. The product is a single-user tool Calvin runs for himself; it is not a service, not a publication, and not advice to anyone else. What the output copy may not do is **frame itself as advice to a reader**: no second person telling someone what to do with their money, no suitability language, no risk-profile language, no wording that would read as a recommendation issued to a third party. The §10.6.4 action clause is a statement about **this price against this company's own record** — the form the amendment authorises, and the only form it authorises. *[AR0-4, §14.9: the V1 BUY / HOLD / SELL verdict is also authorised.]*
 
 ---
 
@@ -980,7 +980,7 @@ One status per run, computed by **[S]**, displayed on page one. Three values, al
 | `interpretation` | The §8.2 output, with each statement referencing the values it rests on |
 | `policy` | Every policy constant in force for this run, including the four undefined ones (§7.1), and every PROVISIONAL threshold with what it was calibrated on |
 | `trust` | The §9.6 trust status — CLEAN / PARTIAL / UNUSABLE — with the states and facts that determined it |
-| `position` | The §10.6 valuation position and its action clause, with the price, range location and required-versus-achieved gap they were computed from — or the state that replaced them |
+| `position` | The §10.6 valuation position and its action clause, with the price, range location and required-versus-achieved gap they were computed from — or the state that replaced them *(AR0-4, §14.9: becomes the V1 BUY / HOLD / SELL verdict in AR5)* |
 
 **Twelve members.** `trust` and `position` were added by amendment M7; criterion G1 counts twelve accordingly.
 
@@ -1020,7 +1020,7 @@ The report is ordered so that **what the market assumes** and **what the analyst
 
 **J — Provisional and unmodelled register.** Every PROVISIONAL threshold in use with what it was calibrated on; the four undefined policy constants with their configured values; the named unmodelled risks including debt availability (I10).
 
-**Investment case — at a glance.** The closing restatement approved as CC-1A and CC-1B, renders after J. It restates only members already in the Analysis Result — `scenarios`, `price_implied`, `states`, `challenger`, `facts` — and, per amendment M7, `trust` and `position`. **The §10.6 valuation position and its action clause render here and on page one, and nowhere else.** No new calculation, no new [C] call, no new state and no new figure. Pre-revenue reports omit the bear/base/bull strip and keep the §10.3 distribution summary.
+**Investment case — at a glance.** The closing restatement approved as CC-1A and CC-1B, renders after J. It restates only members already in the Analysis Result — `scenarios`, `price_implied`, `states`, `challenger`, `facts` — and, per amendment M7, `trust` and `position`. **The §10.6 valuation position and its action clause render here and on page one, and nowhere else.** No new calculation, no new [C] call, no new state and no new figure. Pre-revenue reports omit the bear/base/bull strip and keep the §10.3 distribution summary. *[AR0-4, §14.9: the restated position becomes the V1 BUY / HOLD / SELL verdict in AR5.]*
 
 ### 10.3 Fair-value range rules
 
@@ -1046,7 +1046,7 @@ The eight v1 caveats from the register carry display text. Those with fixed word
 - EV/Revenue standalone
 - Any consensus figure derived from the price
 - Any **price target**, and any single-number fair value
-- Any **portfolio action** — trim, add, sell, hold, or any wording implying position size, cost basis or existing exposure
+- Any **portfolio action** — trim, add, sell, hold, or any wording implying position size, cost basis or existing exposure *[AR0-4, §14.9: the V1 BUY / HOLD / SELL verdict is not a portfolio action and is permitted.]*
 - A **[C]-authored position**, or [C] prose that varies, softens, hedges or reasons toward one (§8.3 limit 1)
 - The §10.6 **position or its action clause rendered under suppression** — under any §9.3 state, under UNUSABLE trust, or where the range failed
 - A **number originating from the model** anywhere on page one or in the closing section (§10.7)
@@ -1327,10 +1327,10 @@ Observable conditions. Each is PASS / FAIL, not a judgment.
 
 | # | Criterion |
 |---|---|
-| D1 | No output contains a **price target**, a single-number fair value, or a **portfolio action** (trim / add / sell / hold). The §10.6 position and its entry-side action clause are permitted and are the only exception |
+| D1 | No output contains a **price target**, a single-number fair value, or a **portfolio action** (trim / add / sell / hold). The §10.6 position and its entry-side action clause are permitted and are the only exception *(AR0-4, §14.9: the V1 BUY / HOLD / SELL verdict is also permitted)* |
 | D1a | The §10.6 position is computed by [S] and is reproducible: identical inputs produce an identical position, with no model in the derivation path |
 | D1b | The position and its action clause do **not** render under any §9.3 state, under UNUSABLE trust, or where the range failed — the slot shows the state |
-| D1c | The action clause is entry-side only. No copy string anywhere can produce trim, add, sell or hold |
+| D1c | The action clause is entry-side only. No copy string anywhere can produce trim, add, sell or hold *(AR0-4, §14.9: except the V1 verdict words BUY / HOLD / SELL)* |
 | D2 | [C] cites no base rate absent from the supplied data, and says none is available where that is the case (I18) |
 | D3 | [C] supplies no facts; every figure in [C] output traces to the fact set |
 | D4 | [C] reports suppressing states without reasoning around them or estimating past them |
@@ -1350,7 +1350,7 @@ Observable conditions. Each is PASS / FAIL, not a judgment.
 
 | # | Criterion |
 |---|---|
-| G1 | v1 returns a versioned machine-readable Analysis Result containing all **twelve** §10.0.1 members, `trust` and `position` included |
+| G1 | v1 returns a versioned machine-readable Analysis Result containing all **twelve** §10.0.1 members, `trust` and `position` included *(AR0-4, §14.9: `position` becomes the V1 BUY / HOLD / SELL verdict in AR5)* |
 | G2 | The narrative report is rendered from the result object; no figure appears in the report that is absent from the object |
 | G3 | Every value in the object carries its states and labels in the same object; a value cannot be read without its qualifications |
 | G4 | Suppressed outputs appear as their state, never as null, absent or zero |
@@ -1374,7 +1374,7 @@ Observable conditions. Each is PASS / FAIL, not a judgment.
 | # | Criterion |
 |---|---|
 | J1 | No portfolio context — holdings, weights, cost basis, existing exposure — can be supplied as input; the analyzer has no field to receive it |
-| J2 | No state persists between analyses; two consecutive runs of different companies share nothing |
+| J2 | No state persists between analyses; two consecutive runs of different companies share nothing *(AR0-6 and AR0-7, §14.9: per-company adopted sheets, judgements and saved versions persist; nothing crosses companies)* |
 | J3 | No output field, in the Analysis Result or the rendered report, expresses position sizing, weight, portfolio fit or exposure |
 | J4 | Exactly one output contract exists (§10.0). No second schema, export format or parallel record |
 | J5 | The interpretation and challenger calls exist as specified, with no reusable-layer abstraction built around them |
@@ -1385,7 +1385,7 @@ Observable conditions. Each is PASS / FAIL, not a judgment.
 | # | Criterion |
 |---|---|
 | F1 | V4, V5 and V6 reproduce the states and flags recorded in §11.4–11.6 |
-| F2 | No computed figure differs from the v1.0.1 reruns. v1.0.2 changed no values — only states and gates |
+| F2 | No computed figure differs from the v1.0.1 reruns. v1.0.2 changed no values — only states and gates *(AR0-1 to AR0-3, §14.9: values change by design; AR2's golden harness replaces this check)* |
 
 ---
 
@@ -1419,7 +1419,7 @@ Observable conditions. Each is PASS / FAIL, not a judgment.
 - Saved Analysis *(AR0-7, §14.9: a compact recent-analyses list and "Save this version" — the dated decision record — are allowed)*
 - Fear/greed or contrarian layers
 - Multi-investor or persona voting — including in the §8.5 challenger path, which is one call returning findings, not a panel returning a tally
-- Autonomous trading, and any recommendation beyond the entry-side action clause of §10.6.4
+- Autonomous trading, and any recommendation beyond the entry-side action clause of §10.6.4 *(AR0-4, §14.9: and the V1 BUY / HOLD / SELL verdict)*
 
 ### 13.1.1 Additionally excluded — settled boundaries
 
@@ -1698,18 +1698,20 @@ The other seven frozen artefacts (`calfinance-methodology-v2.md`, `calboard-valu
 |---|---|---|---|---|
 | AR0-1 | **Discount rate.** The §7.1 discount bands are replaced by the Methodology v2.1 D1 rule: stable businesses at the market's expected return; cyclical industries (SEC SIC industry code, or trigger B of §6.4) and pre-revenue companies at market + 2pp; growth alone never raises the rate; every verdict is also checked at ±0.5pp; valid only where §6.5's leverage precondition passes. The rate in use is a dated policy input recorded in every report | D1 | §7.1 | AR4 |
 | AR0-2 | **One reverse-DCF solve.** M7 becomes one solve on the main valuation engine, at the D1 rate and on the same conventions as the scenario DCF, replacing the 8% / 10% / 12% grid × three margin levels and its separate `r + 3pp` terminal ROIC. The §7.1 rate-grid and diagnostic terminal-ROIC rows retire with it. Rate-band ends, growth, margin, return on new investment and moat move to sensitivity. Every reference to the grid, its nine cells or per-cell evaluation reads as that single solve | D1, D2 | §6.4, §7.1, §7.2 M5 and M7, §10.0.1, §10.2 E, §12.2 B5 | AR4 |
-| AR0-3 | **Reinvestment and terminal returns.** Reinvestment is NOPAT × growth ÷ return on new investment, fading to terminal by year 10; mid-year timing, terminal at 9.5 years, valued at the price date on a TTM base. The terminal return on new capital is the rate plus the D2 moat credit (+0 / +1 / +3pp for none / narrow / wide; bear +0; bull = base +1.5pp). M8's terminal FCF identity is unchanged | D2 | §7.1, §7.2 M8 | AR3 (timing), AR4 |
-| AR0-4 | **Verdict.** §10.6's CHEAP / FAIR / EXPENSIVE / INCONCLUSIVE position and its entry-only action clause are superseded as the verdict mechanism: the V1 verdict (Methodology) is the only verdict rule, checked at three rates × three uncertainty levels, with its "why" reasons templated from computed numbers. The required-versus-achieved growth comparison (§10.6.2 Step 7, §10.6.4) stays available as computed content for those reasons. Pending-judgement states (one question, close call, BUY candidate) are not verdicts | D3, D4 | §8.1, §8.3 limit 1, §10.6 | AR5 |
+| AR0-3 | **Reinvestment and terminal returns.** Reinvestment is NOPAT × growth ÷ return on new investment, fading to terminal by year 10; mid-year timing, terminal at 9.5 years, valued at the price date on a TTM base. The terminal return on new capital is the rate plus the D2 moat credit (+0 / +1 / +3pp for none / narrow / wide; bear +0; bull = base +1.5pp). M8's terminal FCF identity is unchanged | D2 | §7.1, §7.2 M8, §12.9 F2 | AR3 (timing), AR4 |
+| AR0-4 | **Verdict.** §10.6's CHEAP / FAIR / EXPENSIVE / INCONCLUSIVE position and its entry-only action clause are superseded as the verdict mechanism: the V1 verdict (Methodology) is the only verdict rule, checked at three rates × three uncertainty levels, with its "why" reasons templated from computed numbers. The required-versus-achieved growth comparison (§10.6.2 Step 7, §10.6.4) stays available as computed content for those reasons. Pending-judgement states (one question, close call, BUY candidate) are not verdicts | D3, D4 | §1.1, §1.5, §8.1, §8.3 limit 1, §10.0.1 `position`, §10.2, §10.5, §10.6, §12.4 D1 and D1c, §12.6 G1, §13.1 | AR5 |
 | AR0-5 | **Judgements as versioned inputs.** §10.6.2's fixed rule 1 reads: the same fact snapshot, adopted assumption sheet, policy version, code version and recorded judgements always produce the same verdict. Calvin's judgements (uncertainty answer, moat class, management rating, thesis state) are dated, versioned inputs — never a per-company override — and "not sure" is recorded as such and never counts as agreement | D3, D4 | §10.6.2 | AR3, AR5 |
-| AR0-6 | **Scenario authorship.** For a new ticker, a separate price-blind drafting call proposes the three scenarios with every driver citing its anchor; the analyst authors them by adopting the draft, adjusting any driver first if wanted. The report, valuation and verdict zone appear automatically; the final verdict waits for adoption; re-runs of an adopted sheet complete automatically. MSFT and NVDA re-adopt once after D2 adds the return-on-new-investment driver. The §8.2 interpretation layer still chooses no assumption | D5 | §2 Step 7, §8.1, §8.2, §8.3 limit 4 | AR6 |
-| AR0-7 | **Recent analyses.** A compact recent-analyses list and "Save this version" (the dated decision record) are no longer excluded. Thesis Tracker / Thesis Record stays excluded | D6 | §13.1 | AR7 |
+| AR0-6 | **Scenario authorship.** For a new ticker, a separate price-blind drafting call proposes the three scenarios with every driver citing its anchor; the analyst authors them by adopting the draft, adjusting any driver first if wanted. The report, valuation and verdict zone appear automatically; the final verdict waits for adoption; re-runs of an adopted sheet complete automatically. MSFT and NVDA re-adopt once after D2 adds the return-on-new-investment driver. The §8.2 interpretation layer still chooses no assumption | D5 | §1.3, §1.4, §2 Step 7, §8.1, §8.2, §8.3 limit 4, §12.8 J2 | AR6 |
+| AR0-7 | **Recent analyses.** A compact recent-analyses list and "Save this version" (the dated decision record) are no longer excluded. Thesis Tracker / Thesis Record stays excluded | D6 | §1.3, §1.4, §12.8 J2, §13.1 | AR7 |
 | AR0-8 | This record, the header line and the in-place markers | — | header, §14.9 | — |
 
 **Reading AR0-a — the 22 September normal-path requirement (§14.8) stands.** Facts, gates and routine verification still need no human after ticker entry, and the report renders without interaction. The judgements AR0-4 to AR0-6 introduce are asked only when the answer changes the final verdict or completes an adoption. Calvin approved D5 as keeping that ruling's intent; `docs/product-decisions.md` item 30 records the narrowing for the final verdict only.
 
+**Reading AR0-c — the two new AI calls.** The price-blind drafting call (AR0-6) and the AI uncertainty proposal (D3) are bound by §8.3 limits 1–3 exactly as the interpretation layer is: neither issues, implies or argues toward a verdict, and both cite base rates only from supplied data. Calvin's answer, not the proposal, sets the uncertainty level.
+
 **Reading AR0-b — amended by marker, not rewritten.** Each touched clause carries a short marker pointing here; the frozen text beside it is otherwise left as written, so the diff stays reviewable. Where a marker and the old text differ, the marker and this record govern.
 
-**Not in this amendment.** No §9.3 or §9.4 vocabulary change — states a milestone adds or retires are recorded with it. No threshold or cut-point (the V1 bands live in the Methodology). M10's ±1% display sensitivity is unchanged; the ±0.5pp verdict check of AR0-1 is separate from it. No design-document or mock change. No methodology-document change — the repo snapshot `calfinance-methodology-v2.md` predates v2.1, as `docs/technical-specs.md` records. No application code.
+**Not in this amendment.** No §9.3 or §9.4 vocabulary change. No change to the V1 bands or cut-points, which live in the Methodology; the rule values AR0-1 and AR0-3 carry are the Methodology's, restated. M9, M10 (its ±1% display sensitivity, separate from AR0-1's ±0.5pp verdict check), M11, M13 and the required-versus-achieved comparator are unchanged and stay. No design-document or mock change. No methodology-document change — the repo snapshot `calfinance-methodology-v2.md` predates v2.1, as `docs/technical-specs.md` records. No application code. A later milestone that needs this spec changed beyond these rows does so by its own amendment, never by reading one into this record.
 
 ---
 ## APPENDIX — TRACEABILITY
