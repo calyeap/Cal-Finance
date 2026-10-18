@@ -3,7 +3,7 @@ import Decimal from "decimal.js";
 import { acquireCompany, __resetAcquisitionCache } from "../acquisition/provider";
 import { draftRate } from "../acquisition/aiProposedBundle";
 import { historyFrom } from "./research";
-import { draftSpread, formatSpreadReport, valueSpread, SPREAD_THRESHOLD } from "./spread";
+import { draftSpread, formatSpreadReport, spreadRunPasses, valueSpread, SPREAD_THRESHOLD, type SpreadReport } from "./spread";
 import { stubDraftCall } from "./testSupport";
 import type { AnalystCall } from "../ai/analystCall";
 
@@ -71,5 +71,15 @@ describe("draftSpread", () => {
     expect(report.drafts.every((d) => d.basePerShare === null && d.cause !== null)).toBe(true);
     expect(report.spread).toBeNull();
     expect(report.withinThreshold).toBeNull();
+    // Nothing measured is a failed run, not a pass (draft-spread.ts exits 1 on it).
+    expect(spreadRunPasses([report])).toBe(false);
+  });
+
+  it("passes a run only when every company was measured inside the bar", () => {
+    const at = (withinThreshold: boolean | null): SpreadReport => ({ ticker: "X", drafts: [], spread: null, withinThreshold });
+    expect(spreadRunPasses([at(true), at(true)])).toBe(true);
+    expect(spreadRunPasses([at(true), at(false)])).toBe(false);
+    expect(spreadRunPasses([at(true), at(null)])).toBe(false);
+    expect(spreadRunPasses([])).toBe(false);
   });
 });

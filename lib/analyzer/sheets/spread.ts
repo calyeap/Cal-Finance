@@ -103,6 +103,15 @@ export async function draftSpread(ticker: string, deps: SpreadDependencies): Pro
   return { ticker, drafts, spread, withinThreshold: spread === null ? null : spread.lessThanOrEqualTo(SPREAD_THRESHOLD) };
 }
 
+/**
+ * Whether a spread run met the bar. Fails closed: a company with no measured
+ * spread (null — fewer than two drafts valued, e.g. every call refused) fails
+ * exactly like one wider than the bar, and so does a run with no companies.
+ */
+export function spreadRunPasses(reports: SpreadReport[]): boolean {
+  return reports.length > 0 && reports.every((r) => r.withinThreshold === true);
+}
+
 export function formatSpreadReport(reports: SpreadReport[]): string {
   const lines = ["| Ticker | Draft | Base growth | Base margin | Base RONIC | Moat | Base $/share | Spread |", "|---|---|---|---|---|---|---|---|"];
   for (const r of reports) {

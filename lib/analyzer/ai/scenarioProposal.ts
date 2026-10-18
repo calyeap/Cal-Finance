@@ -94,41 +94,48 @@ HARD LIMITS.
 7. Revenue growth is one constant annual rate for years 1–5 (software fades it to terminal growth). Reinvestment share is net investment as a share of revenue, anchored to capital expenditure and depreciation (H:capex). Share count is a multiple of today's diluted count (1.0 = unchanged; cite buybacks or dilution if you move it).
 8. The NOPAT tax rate cites a company tax disclosure where one is supplied, else the supplied general statutory rate. The stress margin is a downside operating margin no higher than the current or median margin.
 
-Write plainly. Numbers are decimal text ("0.08" for 8%).`;
+Return each of the fifteen drivers — five per scenario — exactly once in "drivers", tagged with its scenario and driver. Write plainly. Numbers are decimal text ("0.08" for 8%).`;
 
-const DRIVER_SCHEMA = {
+// The wire shape is deliberately flat (REVIEW CORRECT on #466): the API
+// compiles a strict schema into a grammar, and three scenarios × five nested
+// driver objects, each strict, compiled to a grammar the API refused ("The
+// compiled grammar is too large") before generating a token. So the fifteen
+// drivers travel as ONE list of one small object type — the shape the
+// challenger call already sends live — keyed by scenario and driver enums.
+// A list cannot say "each pair exactly once" (the API takes no `minItems`
+// beyond 0 or 1), so interpretDraft refuses a missing, repeated or unknown
+// pair; the anchor and cites stay per driver, as before. scenarioProposal
+// .test.ts pins this shape so it cannot quietly grow back.
+const WIRE_DRIVER_KEYS = ["revenueGrowth", "operatingMargin", "returnOnNewInvestment", "reinvestmentShare", "shareCountMultiple"] as const;
+type WireDriverKey = (typeof WIRE_DRIVER_KEYS)[number];
+
+export const RESPONSE_SCHEMA: Record<string, unknown> = {
   type: "object",
   additionalProperties: false,
-  required: ["value", "anchor", "cites"],
+  required: ["stories", "drivers", "moat", "policyConstants"],
   properties: {
-    value: { type: "string", description: "Decimal text, e.g. \"0.08\"." },
-    anchor: { type: "string", description: "Why this value — one or two sentences." },
-    cites: { type: "array", items: { type: "string" }, description: "Supplied source ids this rests on." },
-  },
-} as const;
-
-const SCENARIO_SCHEMA = {
-  type: "object",
-  additionalProperties: false,
-  required: ["story", "revenueGrowth", "operatingMargin", "returnOnNewInvestment", "reinvestmentShare", "shareCountMultiple"],
-  properties: {
-    story: { type: "string", description: "The scenario in one short paragraph." },
-    revenueGrowth: DRIVER_SCHEMA,
-    operatingMargin: DRIVER_SCHEMA,
-    returnOnNewInvestment: DRIVER_SCHEMA,
-    reinvestmentShare: DRIVER_SCHEMA,
-    shareCountMultiple: DRIVER_SCHEMA,
-  },
-} as const;
-
-const RESPONSE_SCHEMA: Record<string, unknown> = {
-  type: "object",
-  additionalProperties: false,
-  required: ["bear", "base", "bull", "moat", "policyConstants"],
-  properties: {
-    bear: SCENARIO_SCHEMA,
-    base: SCENARIO_SCHEMA,
-    bull: SCENARIO_SCHEMA,
+    stories: {
+      type: "object",
+      additionalProperties: false,
+      required: [...SCENARIO_KEYS],
+      properties: Object.fromEntries(SCENARIO_KEYS.map((k) => [k, { type: "string" }])),
+    },
+    drivers: {
+      type: "array",
+      description: "Fifteen entries: each scenario × each driver exactly once.",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["scenario", "driver", "value", "anchor", "cites"],
+        properties: {
+          scenario: { type: "string", enum: [...SCENARIO_KEYS] },
+          driver: { type: "string", enum: [...WIRE_DRIVER_KEYS] },
+          value: { type: "string" },
+          anchor: { type: "string" },
+          cites: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
     moat: {
       type: "object",
       additionalProperties: false,
@@ -175,21 +182,14 @@ Draft the bear, base and bull scenarios, the moat class and the two policy const
 }
 
 interface RawDriver {
+  scenario: ScenarioKey;
+  driver: WireDriverKey;
   value: string;
   anchor: string;
   cites: string[];
 }
 
-interface RawScenario {
-  story: string;
-  revenueGrowth: RawDriver;
-  operatingMargin: RawDriver;
-  returnOnNewInvestment: RawDriver;
-  reinvestmentShare: RawDriver;
-  shareCountMultiple: RawDriver;
-}
-
-const RAW_TO_DRIVER: Record<Exclude<keyof RawScenario, "story">, DriverKey> = {
+const RAW_TO_DRIVER: Record<WireDriverKey, DriverKey> = {
   revenueGrowth: "revenueGrowthOrPath",
   operatingMargin: "operatingMargin",
   returnOnNewInvestment: "returnOnNewInvestment",
@@ -235,14 +235,30 @@ export function interpretDraft(raw: unknown, facts: DraftFacts): DraftProposal {
   if (value === null || typeof value !== "object") refuse("the response is not an object");
   const known = new Set([...facts.sources.map((s) => s.id), "STATUTORY"]);
 
+  const stories = value!.stories as Partial<Record<ScenarioKey, unknown>> | undefined;
+  if (stories === undefined || stories === null || typeof stories !== "object") refuse("stories is missing");
+  const entries = value!.drivers as Partial<RawDriver>[] | undefined;
+  if (!Array.isArray(entries)) refuse("drivers is not a list");
+  const byPair = new Map<string, Partial<RawDriver>>();
+  for (const e of entries!) {
+    if (e === null || typeof e !== "object") refuse("a drivers entry is not an object");
+    if (!SCENARIO_KEYS.includes(e.scenario as ScenarioKey) || !WIRE_DRIVER_KEYS.includes(e.driver as WireDriverKey)) {
+      refuse(`a drivers entry names an unknown scenario or driver ("${String(e.scenario)}"/"${String(e.driver)}")`);
+    }
+    const pair = `${e.scenario}.${e.driver}`;
+    if (byPair.has(pair)) refuse(`${pair} appears more than once`);
+    byPair.set(pair, e);
+  }
+
   const scenarios = {} as Record<ScenarioKey, DraftScenario>;
   for (const key of SCENARIO_KEYS) {
-    const s = value![key] as Partial<RawScenario> | undefined;
-    if (s === undefined || typeof s !== "object" || typeof s.story !== "string" || s.story.trim() === "") refuse(`"${key}" is missing or has no story`);
-    const out: Partial<DraftScenario> = { story: s!.story!.trim() };
-    for (const [rawKey, driverKey] of Object.entries(RAW_TO_DRIVER) as [Exclude<keyof RawScenario, "story">, DriverKey][]) {
-      const d = s![rawKey] as Partial<RawDriver> | undefined;
-      if (d === undefined || typeof d !== "object") refuse(`${key}.${rawKey} is missing`);
+    const story = stories![key];
+    if (typeof story !== "string" || story.trim() === "") refuse(`"${key}" is missing or has no story`);
+    const out: Partial<DraftScenario> = { story: (story as string).trim() };
+    for (const rawKey of WIRE_DRIVER_KEYS) {
+      const driverKey = RAW_TO_DRIVER[rawKey];
+      const d = byPair.get(`${key}.${rawKey}`);
+      if (d === undefined) refuse(`${key}.${rawKey} is missing`);
       const v = decimalOf(`${key}.${rawKey}`, d!.value);
       const band = BANDS[driverKey];
       if (v.lessThan(band.lo) || v.greaterThan(band.hi)) refuse(`${key}.${rawKey} = ${v.toString()} is outside the plausible band [${band.lo}, ${band.hi}]`);

@@ -10,7 +10,7 @@ import { analystCallIfConfigured } from "../../lib/analyzer/ai/anthropicCall";
 import { latestPrice } from "../../lib/analyzer/gate";
 import { getCompanyJudgmentOverride } from "../../lib/analyzer/runStore";
 import { selectionToNonOperatingInvestments } from "../../lib/analyzer/acquisition/nonOperatingJudgment";
-import { draftSpread, formatSpreadReport, SPREAD_THRESHOLD, type SpreadReport } from "../../lib/analyzer/sheets/spread";
+import { draftSpread, formatSpreadReport, spreadRunPasses, SPREAD_THRESHOLD, type SpreadReport } from "../../lib/analyzer/sheets/spread";
 
 // ---------------------------------------------------------------------------
 // CF-AR6-ANY-TICKER-DRAFTS-01 — the three-draft spread per golden company
@@ -23,7 +23,8 @@ import { draftSpread, formatSpreadReport, SPREAD_THRESHOLD, type SpreadReport } 
 // "none" — the same for all three drafts, so it cannot widen the spread.
 //
 // Output: the table on stdout and <PROOF_OUTPUT_DIR>/draft-spread.{md,json}.
-// Exit 1 when any company's spread is wider than 10%.
+// Exit 1 when any company's spread is wider than 10% or was not measured
+// (spreadRunPasses — fewer than two drafts valued counts as a failure).
 //
 // Run:  npx tsx scripts/analyzer/draft-spread.ts [TICKER ...]
 // Default: the golden companies the engine values — MSFT COST NVDA NUE KO LLY
@@ -61,7 +62,7 @@ async function main(): Promise<void> {
   mkdirSync(outDir, { recursive: true });
   writeFileSync(path.join(outDir, "draft-spread.md"), `${table}\n`);
   writeFileSync(path.join(outDir, "draft-spread.json"), JSON.stringify(reports, null, 2));
-  if (reports.some((r) => r.withinThreshold === false)) process.exitCode = 1;
+  if (!spreadRunPasses(reports)) process.exitCode = 1;
 }
 
 main()

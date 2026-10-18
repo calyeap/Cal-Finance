@@ -40,6 +40,28 @@ export async function bundleInForce(ticker: string) {
 // receives is real and is recorded for assertions (price-blindness).
 // ---------------------------------------------------------------------------
 
+/**
+ * The drafting call's wire shape (scenarioProposal.ts RESPONSE_SCHEMA) from
+ * the readable nested form tests build and tweak — `{ bear: { story,
+ * revenueGrowth: { value, anchor, cites }, … }, …, moat, policyConstants }`.
+ * Scenarios or drivers deleted from the nested form are simply absent.
+ */
+export function toDraftWire(nested: Record<string, any>): Record<string, unknown> {
+  const { moat, policyConstants } = nested;
+  const stories: Record<string, unknown> = {};
+  const drivers: Record<string, unknown>[] = [];
+  for (const scenario of ["bear", "base", "bull"]) {
+    const s = nested[scenario];
+    if (s === undefined) continue;
+    stories[scenario] = s.story;
+    for (const [driver, d] of Object.entries(s)) {
+      if (driver === "story" || d === undefined) continue;
+      drivers.push({ scenario, driver, ...(d as object) });
+    }
+  }
+  return { stories, drivers, moat, policyConstants };
+}
+
 export interface StubDraftCall {
   call: AnalystCall;
   requests: AnalystCallRequest[];
@@ -49,7 +71,7 @@ function d(v: Decimal): string {
   return v.toDecimalPlaces(4).toString();
 }
 
-/** A well-formed draft inside `measures`, valued at `rate` (narrow moat). `tweak` edits the raw response. */
+/** A well-formed draft inside `measures`, valued at `rate` (narrow moat). `tweak` edits the nested form before it is put on the wire (toDraftWire). */
 export function stubDraftCall(measures: HistoryMeasures, rate: Decimal, tweak: (raw: Record<string, any>) => void = () => {}): StubDraftCall {
   const requests: AnalystCallRequest[] = [];
   const cagr = measures.revenueCagr?.value ?? new Decimal("0.05");
@@ -85,7 +107,7 @@ export function stubDraftCall(measures: HistoryMeasures, rate: Decimal, tweak: (
       policyConstants: { nopatTaxRate: "0.21", stressMarginLevel: d(mLow), anchor: "The statutory rate; the filed low margin.", cites: ["STATUTORY", "H:margin"] },
     };
     tweak(raw);
-    return raw;
+    return toDraftWire(raw);
   };
   return { call, requests };
 }
