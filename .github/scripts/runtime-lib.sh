@@ -213,12 +213,17 @@ runtime_parent_terminal_kind() {
 # trade-off Calvin genuinely must decide is a `CALVIN REQUIRED:` decision
 # pack, never a bare ACTIONABLE page. This is the mechanical backstop under
 # that instruction, not a replacement for it:
+#   - `human` first for a strong human-only marker: `refresh <SECRET_NAME>`,
+#     reapplying a wake label, or a credential/security/payment/consent
+#     action. CF-LEG2-PREFLIGHT-01 (issue #475, the #474 regression): a
+#     genuine human gate that merely mentions egress ("egress is not the
+#     cause", "egress-proxy credential") must keep its page;
 #   - `ai` when the line asks for cloud egress / network access, cites a
 #     proxy CONNECT 403, or asks a human to supply/provide/paste/copy source
 #     text (a sentence, caption, quote, excerpt, filing or note text). This
-#     wins over every human marker on the same line — the real Nucor OWNER
-#     line called its egress ask a "human-only permission change";
-#   - `human` for the existing genuine human-only shapes: refreshing a
+#     wins over the weaker `permission`/`policy` markers — the real Nucor
+#     OWNER line called its egress ask a "human-only permission change";
+#   - `human` for the remaining genuine human-only shapes: refreshing a
 #     secret/credential, reapplying a wake label to re-drive (#401/#402),
 #     or a named permission/security/policy/payment/consent/acceptance/
 #     credential action;
@@ -228,7 +233,10 @@ runtime_blocker_owner() {
   local line
   line="$(runtime_terminal_line "$1")"
   case "$line" in "BLOCKED: ACTIONABLE"*) ;; *) echo none; return ;; esac
-  if printf '%s' "$line" | grep -Eiq '\begress\b|CONNECT 403|\b(supply|provide|paste|copy)\b[^.;]{0,80}\b(sentence|caption|quote|excerpt|filing text|note text)\b'; then
+  if printf '%s' "$line" | grep -Eq '\brefresh [A-Z][A-Z0-9_]*\b' \
+    || printf '%s' "$line" | grep -Eiq 'reapply the `[^`]+` label|\b(credential|security|payment|consent)\b'; then
+    echo human
+  elif printf '%s' "$line" | grep -Eiq '\begress\b|CONNECT 403|\b(supply|provide|paste|copy)\b[^.;]{0,80}\b(sentence|caption|quote|excerpt|filing text|note text)\b'; then
     echo ai
   elif printf '%s' "$line" | grep -Eiq '\brefresh [A-Z0-9_]+|reapply the `[^`]+` label|\b(credential|permission|security|policy|payment|consent|acceptance)\b'; then
     echo human

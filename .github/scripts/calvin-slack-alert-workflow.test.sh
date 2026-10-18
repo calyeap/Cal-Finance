@@ -142,6 +142,24 @@ assert_eq "step does not abort for a distinct new blocker" 0 "$rc"
 [ -f "$CURL_MARKER" ] && CALLED=1 || CALLED=0
 assert_eq "a genuinely new gate, opened after a Calvin ruling resolved the prior one, still sends through the live wiring" 1 "$CALLED"
 
+# --- CF-LEG2-PREFLIGHT-01 (issue #475): the live job-level `if:` only
+# admits a `calyeap`-authored comment on an item not labelled `lean-sop`
+# (evaluated on the real expression by workflow-if-eval.js) --------------
+
+slack_ctx() { jq -nc --arg b "$1" --arg u "$2" --arg l "${3:-}" \
+  '{event_name:"issue_comment",event:{comment:{body:$b,user:{login:$u}},sender:{login:$u},issue:{number:5,labels:([$l]|map(select(.!=""))|map({name:.}))}}}'; }
+slack_gate() { node .github/scripts/workflow-if-eval.js "$WORKFLOW" notify-calvin "$1"; }
+assert_eq "calyeap BLOCKED: ACTIONABLE terminal is admitted" true \
+  "$(slack_gate "$(slack_ctx 'BLOCKED: ACTIONABLE — refresh BUILD_FIRE_TOKEN [OWNER_ATTEMPT_ID: O1]' calyeap)")"
+assert_eq "calyeap COMPLETE terminal is admitted" true \
+  "$(slack_gate "$(slack_ctx 'COMPLETE: done [OWNER_ATTEMPT_ID: O1]' calyeap)")"
+assert_eq "a non-calyeap commenter fires nothing" false \
+  "$(slack_gate "$(slack_ctx 'CALVIN REQUIRED: pick one [OWNER_ATTEMPT_ID: O1]' mallory)")"
+assert_eq "a lean-sop item fires nothing" false \
+  "$(slack_gate "$(slack_ctx 'CALVIN REQUIRED: pick one [OWNER_ATTEMPT_ID: O1]' calyeap lean-sop)")"
+assert_eq "a non-terminal calyeap comment still fires nothing (unchanged)" false \
+  "$(slack_gate "$(slack_ctx 'just a note' calyeap)")"
+
 rm -rf "$MARKER_DIR"
 trap - EXIT
 
