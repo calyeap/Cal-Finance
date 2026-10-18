@@ -79,3 +79,14 @@ permission mode auto (`routine:auto-mode-forced`).
 - O5 defect re-verified on master `2d7f38e`: KO golden totalDebt 43,941,000,000
   (LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities); NUE = LTD + current + ShortTermBorrowings;
   LLY = DebtLongtermAndShorttermCombinedAmount.
+- 16:01Z O4 blind audit returned `ACCEPT` (no material finding). Agent: 111,925 tokens, 24 tool uses, 6.5 min.
+  Operator reproduction of its core claim: base gate.ts → new test 1 failed (RunNotFoundError at gate.ts:378) | 1 passed;
+  head → 2 passed. Audit nits (not counted): stale comment aiProposedBundle.ts:193-196; offline not.toHaveBeenCalled trivially true.
+  Harness lesson: `vitest.setup.ts` refuses a DB whose name does not end in `_test`; the auditor created
+  `leg2c_audit_o4_test`. Later workspaces use `*_test` names.
+- Scorecard row 4 appended. Issue body archived as contracts/o4-issue.md; audit as reviews/audit-o4-REVIEW.md.
+
+## O5 CF-LEG2-KO-GOLDEN-DEBT-01 (arm A)
+- Pre-dispatch: 0 runs in_progress/queued; O4 chain closed by COMPLETE; O4 audit back (no stop rule fired).
+- 16:02Z issue #485 posted (contracts.md §O5 verbatim in the o3-issue format; master line 2d7f38e).
+- 16:02:33Z `needs-build-wake` applied (dispatch).
