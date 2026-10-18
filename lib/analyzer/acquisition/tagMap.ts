@@ -62,8 +62,18 @@
  * which candidate any existing entry resolves to, so no previously-acquired
  * fact moves across the §3.8.1 exempt/queued boundary. Plus one cited
  * issuer-disclosure record, FINANCE_LEASES_INSIDE_TOTAL_DEBT, below the map.
+ *
+ * -10-2 (18 October 2026) — CF-AR6-BRIDGE-INPUT-RECOVERY-01 (issue #468).
+ * Two candidates added to `total-debt` (below) and one SELECTION change:
+ * `history.annualFiscalYears` — the source of `latestAnnualFiscalYear`, which
+ * decides what "current" means in `selectTagged.preferCurrent` — no longer
+ * counts a period that ends after the filing carrying it was filed. Review
+ * (docs/tag-mapping-version-review.md §10): across the seven captured
+ * companies, total-debt moves for NUE, KO and LLY only (value, row and
+ * history series); MSFT, COST, NVDA and OKLO resolve byte-identically; NO
+ * fact moves between the §3.8.1 exempt and queued sides.
  */
-export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-1";
+export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-2";
 
 export interface TagRef {
   ns: "us-gaap" | "dei";
@@ -197,13 +207,48 @@ export const TAG_MAP: readonly TagMapEntry[] = [
     // ever reaches. The current half is summed onto it, and where a filer does
     // not tag one (Oklo has no current portion) its absence is RECORDED on the
     // fact rather than read as a zero, per §4.3.
+    //
+    // -10-2 (CF-AR6-BRIDGE-INPUT-RECOVERY-01, issue #468) adds two more.
+    //
+    // Second: DebtCurrent + LongTermDebtNoncurrent. us-gaap:DebtCurrent is the
+    // whole current debt line — current maturities, commercial paper and other
+    // short-term borrowings together — so it takes no further components. It
+    // is the PRIMARY here, not the noncurrent half, so the candidate only ever
+    // resolves for a filer that tags it: led by the noncurrent half it would
+    // resolve for every filer reporting LongTermDebtNoncurrent at all, and
+    // would beat the fourth candidate below with the current portion recorded
+    // absent (Costco's $2.2bn). It sits AHEAD of the combined element on
+    // purpose: Eli Lilly tags the
+    // combined element in its 10-K only, while its quarterly balance sheet
+    // reports these two lines, so the combined figure trails the filer's
+    // latest balance sheet (and its cash) by up to three quarters while still
+    // reading as current by fiscal year. At the 10-K instant the two are the
+    // same quantity — LLY 2025-12-31: 40,868M + 1,635M = 42,503M, exactly the
+    // combined element.
+    //
+    // Last: LongTermDebtAndCapitalLeaseObligations + its current portion +
+    // ShortTermBorrowings, the AR2 golden composition for NUE and KO
+    // (lib/analyzer/golden/{nue,ko}.json), both of which stopped tagging any
+    // debt-only element. These elements INCLUDE capital (finance) lease
+    // obligations by definition, which is why this candidate is ranked last —
+    // a debt-only total wins wherever one is current (docs/lease-once-
+    // measurement.md §6) — and why reaching it never counts the leases once
+    // by itself: that takes a cited issuer disclosure in
+    // FINANCE_LEASES_INSIDE_TOTAL_DEBT below. Without one the separate lease
+    // term stays REQUIRED.
     candidates: [
       withPlus(usGaap("LongTermDebt"), usGaap("CommercialPaper"), usGaap("ShortTermBorrowings")),
+      withPlus(usGaap("DebtCurrent"), usGaap("LongTermDebtNoncurrent")),
       only(usGaap("DebtLongtermAndShorttermCombinedAmount")),
       withPlus(
         usGaap("LongTermDebtNoncurrent"),
         usGaap("LongTermDebtCurrent"),
         usGaap("CommercialPaper"),
+        usGaap("ShortTermBorrowings")
+      ),
+      withPlus(
+        usGaap("LongTermDebtAndCapitalLeaseObligations"),
+        usGaap("LongTermDebtAndCapitalLeaseObligationsCurrent"),
         usGaap("ShortTermBorrowings")
       ),
     ],
