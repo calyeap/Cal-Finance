@@ -65,3 +65,10 @@ permission mode auto (`routine:auto-mode-forced`).
   ("Merge Without Review"); the handoff forbids the operator merging, so O6 keeps Calvin's manual merge.
 - Arm A also pings Calvin once per outcome: OWNER's `COMPLETE:` sends an informational Slack FINISHED (OWNER.md).
   Not a touch (no action), but an attention event.
+- 15:48:57Z REVIEW START (session cse_014WoBQm8wYKsThoA41jGBfV, REVIEW-39142163149-1).
+- 15:52:37Z CI "typecheck and tests" success on exact head `ad9da6b` (run 39142146684).
+- 15:54:38Z REVIEW `ACCEPT:` head ad9da6b, HEAVY, CI green on exact head. REVIEW usage: ctx 82,322, output 7,125, $0.8253.
+- 15:54:41Z #484 merged by the REVIEW routine (as calyeap) → master `2d7f38e`. Elapsed dispatch→merge 14.8 min.
+- 15:54:53Z OWNER START wake=MERGE (session cse_0113EWV4skscRudvwAtPzQuY).
+- ~15:55Z blind audit launched: fresh Opus agent, high effort, workspace built by mkreview-cloud.sh at ad9da6b
+  (contract + diff + RUBRIC; no PR body, no arm label; DB leg2c_audit_o4). O5 waits for this audit (stop rule).
