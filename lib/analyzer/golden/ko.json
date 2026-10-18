@@ -77,16 +77,16 @@
       "note": null
     },
     "totalDebt": {
-      "conceptLabel": "Long-term Debt and Capital Lease Obligations, Including Current Maturities",
-      "xbrlConcept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities",
-      "value": 43941000000,
+      "conceptLabel": "Notes and Loans Payable + Long-term Debt and Lease Obligation, Current + Long-term Debt and Lease Obligation",
+      "xbrlConcept": "us-gaap:NotesAndLoansPayable + us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent + us-gaap:LongTermDebtAndCapitalLeaseObligations",
+      "value": 45492000000,
       "unit": "USD",
       "periodStart": null,
       "periodEnd": "2025-12-31",
       "accessionNumber": "0001628280-26-010047",
       "form": "10-K",
       "fiscalYear": 2025,
-      "note": "LIVE TAG DRIFT DECISION — this is DO item 6's worked KO example, and the golden 'total debt' fact genuinely cannot be captured from the tags a pre-reset acquisition would have used. KO's us-gaap:LongTermDebtNoncurrent and us-gaap:LongTermDebt tags are DEAD: their last-ever row is period end 2024-03-29 (filed 2024-05-02, a 10-Q), confirmed directly against the real raw capture and asserted by lib/analyzer/golden/tagDrift.test.ts. The last 10-K-sourced figure under the dead tags was FY2023 (end 2023-12-31, filed 2024-02-20): LongTermDebtNoncurrent 35547000000 + LongTermDebtCurrent 1960000000 = 37507000000 — now roughly two years stale relative to KO's most-recently-filed data (2026-04-30) and NOT used as this golden fact's value. Instead this fact uses KO's live replacement tag, us-gaap:LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities (FY2025, 43941000000) — but that tag is NOT the same SCOPE as the dead one: it bundles finance-lease obligations into the debt figure, so the two numbers are not directly comparable year-over-year. This is the live demonstration DO item 1 asked for of how KO's debt-tag staleness must be decided and documented, not silently papered over.",
+      "note": "CF-LEG2-KO-GOLDEN-DEBT-01 (issue #485) CORRECTION: 1551000000 (NotesAndLoansPayable — commercial paper 1495000000 + other short-term borrowings 56000000, both tagged at the same instant in the same accession) + 1822000000 (LongTermDebtAndCapitalLeaseObligationsCurrent) + 42119000000 (LongTermDebtAndCapitalLeaseObligations) = 45492000000, the sum of KO's presented debt lines under the README's one total-debt definition (see presentedLines; asserted by debtDefinition.test.ts). This fact previously carried 43941000000 from us-gaap:LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities, which is current maturities + long-term debt only and left out KO's 1551000000 of loans and notes payable, unlike NUE and LLY, whose golden totals include short-term borrowings. Values from SEC companyfacts (data.sec.gov, fetched 2026-10-18) for accession 0001628280-26-010047; line labels are the XBRL concept labels, since www.sec.gov (the filing's HTML balance sheet) is blocked from this sandbox. Both lease-inclusive elements bundle KO's finance-lease obligations into the debt lines; KO tags no separate FinanceLeaseLiability. TAG DRIFT (original decision, unchanged): LIVE TAG DRIFT DECISION — this is DO item 6's worked KO example, and the golden 'total debt' fact genuinely cannot be captured from the tags a pre-reset acquisition would have used. KO's us-gaap:LongTermDebtNoncurrent and us-gaap:LongTermDebt tags are DEAD: their last-ever row is period end 2024-03-29 (filed 2024-05-02, a 10-Q), confirmed directly against the real raw capture and asserted by lib/analyzer/golden/tagDrift.test.ts. The last 10-K-sourced figure under the dead tags was FY2023 (end 2023-12-31, filed 2024-02-20): LongTermDebtNoncurrent 35547000000 + LongTermDebtCurrent 1960000000 = 37507000000 — now roughly two years stale relative to KO's most-recently-filed data (2026-04-30) and NOT used as this golden fact's value. Instead this fact uses KO's live replacement elements, us-gaap:LongTermDebtAndCapitalLeaseObligations(Current) (whose FY2025 sum, 43941000000, KO also tags as LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities) plus its short-term loans and notes — but those lease-inclusive elements are NOT the same SCOPE as the dead ones: they bundle finance-lease obligations into the debt figure, so the two numbers are not directly comparable year-over-year. This is the live demonstration DO item 1 asked for of how KO's debt-tag staleness must be decided and documented, not silently papered over.",
       "staleAlternative": {
         "conceptLabel": "Long-term Debt, Excluding Current Maturities + Long-term Debt, Current Maturities (DEAD TAGS — not used as the golden value)",
         "xbrlConcept": "us-gaap:LongTermDebtNoncurrent + us-gaap:LongTermDebtCurrent",
@@ -96,7 +96,12 @@
         "form": "10-K",
         "fiscalYear": 2023,
         "lastRowEverSeen": { "periodEnd": "2024-03-29", "form": "10-Q", "filed": "2024-05-02", "accessionNumber": "0000021344-24-000017" }
-      }
+      },
+      "presentedLines": [
+        {"covers": ["shortTermBorrowings"], "conceptLabel": "Notes and Loans Payable", "xbrlConcept": "us-gaap:NotesAndLoansPayable", "value": 1551000000},
+        {"covers": ["currentMaturities", "financeLeases"], "conceptLabel": "Long-term Debt and Lease Obligation, Current", "xbrlConcept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent", "value": 1822000000},
+        {"covers": ["longTermDebt", "financeLeases"], "conceptLabel": "Long-term Debt and Lease Obligation", "xbrlConcept": "us-gaap:LongTermDebtAndCapitalLeaseObligations", "value": 42119000000}
+      ]
     },
     "cashAndEquivalents": {
       "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",

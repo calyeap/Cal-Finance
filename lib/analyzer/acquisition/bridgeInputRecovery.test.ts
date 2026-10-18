@@ -224,7 +224,9 @@ describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real 
     // 39,065 + 4,493 = 43,558M — equal to KO's own
     // LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities at
     // 3 Apr 2026 on live companyfacts (an unmapped element, so not in the
-    // trimmed capture), and at FY2025 to the AR2 golden figure (ko.json).
+    // trimmed capture). At FY2025 the same two elements sum to 43,941M, which
+    // leaves out KO's 1,551M of loans and notes payable: the AR2 golden total
+    // (ko.json) is 45,492M (CF-LEG2-KO-GOLDEN-DEBT-01, issue #485).
     expect(b.totalDebt).toEqual({ value: 39_065_000_000 + 4_493_000_000, asOf: "2026-04-03" });
     expect(
       filed("KO", "LongTermDebtAndCapitalLeaseObligations", "2025-12-31") +

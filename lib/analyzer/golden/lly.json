@@ -76,7 +76,14 @@
       "accessionNumber": "0000059478-26-000013",
       "form": "10-K",
       "fiscalYear": 2025,
-      "note": "A single live tag covering both long-term and short-term debt together — chosen over LLY's us-gaap:LongTermDebtNoncurrent (live, 40868000000) + us-gaap:LongTermDebtCurrent (DEAD since FY2013) because the current-maturities component tag is itself stale for LLY; the combined tag avoids needing it."
+      "note": "A single live tag covering both long-term and short-term debt together — chosen over LLY's us-gaap:LongTermDebtNoncurrent (live, 40868000000) + us-gaap:LongTermDebtCurrent (DEAD since FY2013) because the current-maturities component tag is itself stale for LLY; the combined tag avoids needing it.",
+      "presentedLines": [
+        {"covers": ["shortTermBorrowings", "currentMaturities"], "conceptLabel": "Debt, Current", "xbrlConcept": "us-gaap:DebtCurrent", "value": 1635000000},
+        {"covers": ["longTermDebt"], "conceptLabel": "Long-term Debt, Excluding Current Maturities", "xbrlConcept": "us-gaap:LongTermDebtNoncurrent", "value": 40868000000}
+      ],
+      "notPresented": {
+        "financeLeases": "LLY tags no FinanceLeaseLiability at this instant (nor any lease-inclusive debt element); there is no finance-lease debt line to add."
+      }
     },
     "cashAndEquivalents": {
       "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",
