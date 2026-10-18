@@ -522,6 +522,43 @@ runtime_attempt_start_prefix() {
   esac
 }
 
+# runtime_actor_wake_label <actor>
+# The existing deterministic human re-drive label for each actor — the
+# same labels cc-auto-fire.yml's fire jobs already admit on.
+runtime_actor_wake_label() {
+  case "$1" in
+    BUILD) echo needs-build-wake ;;
+    REVIEW) echo needs-cc-rereview ;;
+    OWNER) echo needs-owner-wake ;;
+    *) echo "" ;;
+  esac
+}
+
+# runtime_start_session_url <start_line>
+# The session URL a "<ACTOR> START: ... session <id> (<url>) ..." receipt
+# carries, or empty when it has none (the fire response's own "unknown").
+runtime_start_session_url() {
+  printf '%s' "$1" | sed -nE 's/.*session [^ ]+ \((https?:\/\/[^)]+)\).*/\1/p' | head -n1
+}
+
+# runtime_timeout_line <actor> <attempt_id> <lease_minutes> <session_url>
+#                      <repo> <number>
+# CF-TIMEOUT-ACTIONABLE-01 (issue #401): the one typed terminal-watch posts
+# when a lease expires with no correlated terminal. A lease expiry is an
+# observation deadline, not evidence the worker died (#450: the original
+# BUILD finished after its watch expired), so the line asks a human to
+# verify status first and only conditionally names the actor's existing
+# re-drive label. `ref=<attempt_id>` keys runtime_slack_is_duplicate to
+# this one attempt: a replayed observation dedupes, another attempt's
+# timeout does not.
+runtime_timeout_line() {
+  local actor="$1" attempt_id="$2" lease="$3" session_url="$4" repo="$5" number="$6"
+  local tag label
+  tag="$(runtime_attempt_tag "$actor")"
+  label="$(runtime_actor_wake_label "$actor")"
+  printf '%s' "BLOCKED: ACTIONABLE — ${actor} attempt ${attempt_id} (ref=${attempt_id}) posted no correlated terminal inside its ${lease}-minute lease; this is observation expiry, not confirmed worker death. Session: ${session_url:-not available}. Item: https://github.com/${repo}/issues/${number}. Verify status first: check the worker session and later GitHub receipts on #${number}. If it is still working, do nothing and do not re-drive. If it definitively finished or stopped without a correlated terminal, confirm no worker is active, then reapply the \`${label}\` label to #${number}. If status is unknown, do not blindly re-drive. No automatic re-fire was attempted. [${tag}: ${attempt_id}]"
+}
+
 # runtime_attempt_status <comments_json> <actor> <attempt_id> <started_at>
 # Returns complete|missing. A terminal counts only when it is after the start
 # and carries this exact attempt tag.

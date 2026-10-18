@@ -72,7 +72,7 @@ _terminal_relay_owner_blocked() {
   elif [ "$(fire_transient_status "$code")" = true ]; then
     body="BLOCKED: ACTIONABLE — OWNER relay transport did not recover after 4 attempts (${code}); reapply the \`needs-owner-wake\` label to #${number} to re-drive. No worker started. [OWNER_ATTEMPT_ID: ${attempt_id}]"
   else
-    body="BLOCKED: AI — OWNER relay transport failed (${code}). [OWNER_ATTEMPT_ID: ${attempt_id}]"
+    body="BLOCKED: ACTIONABLE — OWNER relay transport failed (${code}, not retryable); no worker started. Check the OWNER fire endpoint, then reapply the \`needs-owner-wake\` label to #${number} to re-drive. [OWNER_ATTEMPT_ID: ${attempt_id}]"
   fi
   terminal_relay_post_comment "$repo" "$number" "$body"
   calvin_slack_send "$body" "$repo" "https://github.com/${repo}/issues/${number}" || true

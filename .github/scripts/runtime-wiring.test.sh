@@ -171,4 +171,38 @@ forbid "$OWNER" 'currently-open' "OWNER's fence does not require the source issu
 require "$ROUTER" 'CONTRACT_FETCH_FAILED' 'fire-review and fire-owner-on-terminal emit an empty CONTRACT on a failed source-issue fetch, not the PR-body fallback'
 require "$MERGE" 'CONTRACT_FETCH_FAILED' 'merge-path OWNER fire emits an empty CONTRACT on a failed source-issue fetch, not the PR-body fallback'
 
+# CF-TIMEOUT-ACTIONABLE-01 (issue #401): a lease expiry is a monitoring
+# incident — one typed BLOCKED: ACTIONABLE sent straight to Slack from
+# terminal-watch.sh — never an OWNER reconciliation hop, and never a
+# silent BLOCKED: AI. BUILD's lease is 90 minutes (its job timeout leaves
+# room for it); other leases are unchanged.
+forbid "$ROUTER" 'observe-(build|review)-timeout' 'timeout-only OWNER relay hops removed'
+forbid "$ROUTER" 'terminal-watch-blocked-line' 'observe jobs no longer read a timeout line back to relay it'
+require "$ROUTER" "TERMINAL_LEASE_MINUTES: '90'" 'BUILD terminal lease is 90 minutes'
+[ "$(grep -c "TERMINAL_LEASE_MINUTES: '90'" "$ROUTER")" = 1 ] || fail "$ROUTER: only the BUILD lease is 90 minutes"
+[ "$(grep -c "TERMINAL_LEASE_MINUTES: '25'" "$ROUTER")" = 2 ] || fail "$ROUTER: REVIEW/OWNER leases unchanged at 25 minutes"
+awk '/^  observe-build:/{f=1} f&&/timeout-minutes:/{print $2; exit}' "$ROUTER" | grep -Eq '^(9[5-9]|[1-9][0-9]{2})$' \
+  || fail "$ROUTER: observe-build job timeout must exceed the 90-minute lease"
+# Every live observe step (3 in the router, 1 on the merge path) carries the
+# Slack webhook its actionable timeout is sent through.
+for wf in "$ROUTER" "$MERGE"; do
+  watches=$(grep -c 'run: bash .github/scripts/terminal-watch.sh' "$wf")
+  with_slack=$(awk '
+    /^      - name:/ { slack=0 }
+    /SLACK_WEBHOOK_URL: \$\{\{ secrets.CALVIN_SLACK_WEBHOOK_URL \}\}/ { slack=1 }
+    /run: bash .github\/scripts\/terminal-watch.sh/ { if (slack) n++ }
+    END { print n+0 }' "$wf")
+  [ "$watches" -gt 0 ] && [ "$watches" = "$with_slack" ] || fail "$wf: every terminal-watch step must carry SLACK_WEBHOOK_URL ($with_slack/$watches)"
+done
+[ "$(grep -c 'run: bash .github/scripts/terminal-watch.sh' "$ROUTER")" = 3 ] || fail "$ROUTER: expected 3 live observe jobs"
+# A non-retryable fire-transport failure leaves a human re-drive as the only
+# recovery, so it is actionable rather than a silent BLOCKED: AI.
+forbid "$ROUTER" 'BLOCKED: AI — (BUILD|REVIEW|OWNER) transport failed' 'silent non-retryable transport dead end'
+forbid "$MERGE" 'BLOCKED: AI — OWNER transport failed' 'silent non-retryable merge-path transport dead end'
+forbid .github/scripts/terminal-relay.sh 'BLOCKED: AI — OWNER relay transport failed' 'silent non-retryable OWNER-relay transport dead end'
+require "$ROUTER" 'BUILD transport failed \(\$\{CODE\}, not retryable\).*needs-build-wake' 'non-retryable BUILD transport names its re-drive label'
+require "$ROUTER" 'REVIEW transport failed \(\$\{CODE\}, not retryable\).*needs-cc-rereview' 'non-retryable REVIEW transport names its re-drive label'
+require "$ROUTER" 'OWNER transport failed \(\$\{CODE\}, not retryable\).*needs-owner-wake' 'non-retryable OWNER transport names its re-drive label'
+require "$MERGE" 'OWNER transport failed \(\$\{CODE\}, not retryable\).*needs-owner-wake' 'non-retryable merge-path OWNER transport names its re-drive label'
+
 echo "runtime-wiring: PASS"
