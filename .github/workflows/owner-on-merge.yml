@@ -111,7 +111,7 @@ jobs:
             elif [ "$(fire_transient_status "$CODE")" = true ]; then
               LINE="BLOCKED: ACTIONABLE — OWNER transport did not recover after 4 attempts (${CODE}); reapply the \`needs-owner-wake\` label to PR #${NUMBER} to re-drive. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             else
-              LINE="BLOCKED: AI — OWNER transport failed (${CODE}). [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
+              LINE="BLOCKED: ACTIONABLE — OWNER transport failed (${CODE}, not retryable); no worker started. Check the OWNER fire endpoint, then reapply the \`needs-owner-wake\` label to PR #${NUMBER} to re-drive. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             fi
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
             # GH_TOKEN-authored; relay to Slack directly (see
@@ -138,4 +138,5 @@ jobs:
           ACTOR: OWNER
           ATTEMPT_ID: ${{ needs.fire-owner-on-merge.outputs.attempt_id }}
           TERMINAL_LEASE_MINUTES: '25'
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: bash .github/scripts/terminal-watch.sh

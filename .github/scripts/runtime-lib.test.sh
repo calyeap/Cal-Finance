@@ -453,4 +453,25 @@ assert_eq "$(runtime_admission_decision issue 384 '' '' false)" ADMIT "fresh adm
 assert_eq "$(runtime_admission_decision issue 384 '' '' true)" IN_FLIGHT "duplicate suppression stays intact while the stale attempt is still open"
 assert_eq "$(runtime_admission_decision issue 384 '' '30' false)" EXISTING_PR:30 "an already-open PR/branch from before the stale exit is still reused, not duplicated"
 
+# CF-TIMEOUT-ACTIONABLE-01 (issue #401): actor re-drive labels, START session
+# URL extraction and the typed timeout line.
+assert_eq "$(runtime_actor_wake_label BUILD)" needs-build-wake "BUILD re-drive label"
+assert_eq "$(runtime_actor_wake_label REVIEW)" needs-cc-rereview "REVIEW re-drive label"
+assert_eq "$(runtime_actor_wake_label OWNER)" needs-owner-wake "OWNER re-drive label"
+assert_eq "$(runtime_start_session_url 'BUILD START: OUTCOME-ID=X TIER=NORMAL · session cse_1 (https://claude.ai/code/cse_1) [BUILD_ATTEMPT_ID: B1] [CONTRACT: abc]')" "https://claude.ai/code/cse_1" "session URL from a BUILD START receipt"
+assert_eq "$(runtime_start_session_url 'OWNER START: wake=TERMINAL · session unknown (unknown) [OWNER_ATTEMPT_ID: O1]')" "" "an unknown session URL is empty, not the literal 'unknown'"
+for actor in BUILD REVIEW OWNER; do
+  TL="$(runtime_timeout_line "$actor" "${actor}-9-1" 90 "" o/r 5)"
+  assert_eq "$(runtime_slack_kind "$TL")" actionable_blocked "$actor timeout line is one actionable Slack incident"
+  assert_eq "$(runtime_attempt_status "$(jq -n --arg b "$TL" '[{body:$b, created_at:"2026-10-18T01:00:00Z"}]')" "$actor" "${actor}-9-1" "2026-10-18T00:00:00Z")" complete "$actor timeout line still correlates to its own attempt"
+  assert_eq "$(runtime_gate_action_ref "$TL")" "ref=$(printf '%s' "${actor}-9-1" | tr '[:upper:]' '[:lower:]');" "$actor timeout dedupe key is its own attempt"
+  case "$TL" in *"Session: not available"*) ;; *) fail "$actor timeout without a session URL says not available" ;; esac
+done
+for line in \
+  'BLOCKED: ACTIONABLE — BUILD transport failed (404, not retryable); no worker started. Check the BUILD fire endpoint, then reapply the `needs-build-wake` label to #5 to re-drive.' \
+  'BLOCKED: ACTIONABLE — REVIEW transport failed (404, not retryable); no worker started. Check the REVIEW fire endpoint, then reapply the `needs-cc-rereview` label to PR #5 to re-drive.' \
+  'BLOCKED: ACTIONABLE — OWNER transport failed (404, not retryable); no worker started. Check the OWNER fire endpoint, then reapply the `needs-owner-wake` label to #5 to re-drive. [OWNER_ATTEMPT_ID: O1]'; do
+  assert_eq "$(runtime_slack_kind "$line")" actionable_blocked "non-retryable transport failure is actionable, not silent: $line"
+done
+
 echo "runtime-lib: PASS"
