@@ -1,6 +1,6 @@
 import type Decimal from "decimal.js";
-import type { FairValueRange, LeverageResult, RateBand, TrustStatus, ValuationBasis } from "./types";
-import { formatRate } from "./discountRate";
+import type { FairValueRange, LeverageResult, RateBand, RateDomain, TrustStatus, ValuationBasis } from "./types";
+import { formatRate, rateDomainOf } from "./discountRate";
 import { verdictUnavailableLine } from "./overviewCopy";
 import type { VerdictResult } from "./verdict";
 import { CHECK_RATES, UNCERTAINTY_LEVELS, type UncertaintyLevel } from "./verdictSynthesisV1";
@@ -308,10 +308,32 @@ const BAND_PHRASE: Record<RateBand, string> = {
   "pre-revenue": "the market's expected return plus 2pp, for a pre-revenue company",
 };
 
+// CF-LEG2-RATE-DOMAIN-COPY-01 (#479) — one sentence per domain state, each
+// true of the run it is printed on. WITHIN says nothing; OUTSIDE keeps the
+// sentence AR4 shipped; NOT MEASURED says what is actually known: net debt
+// was never measured, so the domain is unknown — never "not below 10%".
+const DOMAIN_SENTENCE: Record<RateDomain, string> = {
+  WITHIN: "",
+  OUTSIDE: "Outside its validated domain: net debt is not below 10% of enterprise value.",
+  "NOT MEASURED":
+    "Net debt could not be measured, so whether this rate is within its validated domain (net debt below 10% of enterprise value) is unknown.",
+};
+
+/**
+ * The rate's domain sentence, or "" where none applies. `leverage` is the
+ * same run's §6.5 result; it resolves a rate stored before this fix (see
+ * discountRate.ts `rateDomainOf`).
+ */
+export function rateDomainSentence(basis: ValuationBasis, leverage: LeverageResult | undefined): string {
+  const domain = rateDomainOf(basis.discountRate, leverage);
+  return domain === null ? "" : DOMAIN_SENTENCE[domain];
+}
+
 /** "Valued at 9.0% — …" — the dated discount rate in use, in plain words. */
-export function rateInUseLine(basis: ValuationBasis | undefined): string | null {
+export function rateInUseLine(basis: ValuationBasis | undefined, leverage?: LeverageResult): string | null {
   if (basis === undefined) return null;
   const r = basis.discountRate;
-  const domain = r.withinValidatedDomain ? "" : " Outside its validated domain: net debt is not below 10% of enterprise value.";
+  const sentence = rateDomainSentence(basis, leverage);
+  const domain = sentence === "" ? "" : ` ${sentence}`;
   return `Valued at ${formatRate(r.rate)} — ${BAND_PHRASE[r.band]} (rate dated ${r.effectiveFrom}).${domain}`;
 }
