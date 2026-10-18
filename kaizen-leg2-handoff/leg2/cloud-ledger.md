@@ -123,3 +123,46 @@ The pre-registered rule is already decided without O6:
 - B elapsed {O2 29.2, O3 38.5, O6 x}: the median of three is ≥ 29.2 for any x, so condition 4 fails whatever O6 does.
 - Calvin touches: A 0 per outcome; B ≥ 2/3 even if O6 had none (it would have one: Calvin merges arm B). Condition 3 fails.
 - So O6 can add evidence about running the lean SOP from the cloud, but cannot change the Leg 2 result.
+
+## O5 blind audit and adjudication (16:25–16:40Z)
+- Audit: fresh Opus, high effort, 129,571 tokens, 24 tool uses, 7.7 min. Verdict `CORRECT`.
+- **F1 (claimed material):** DO 4 not done. The engine's KO total debt omits CommercialPaper, an in-concept tag.
+  Operator reproduction at e8016aa, with the repo's own `resolveEntry` on the six AR6 captures (scratch probe, deleted):
+
+  | Company | as shipped | + CommercialPaper on candidate 5 |
+  |---|---|---|
+  | KO | 43,558M @ 2026-04-03 | **43,808M** (+250M CP) |
+  | NUE | 7,099M | 7,099M (composition records CP absent) |
+  | MSFT / COST / NVDA / LLY | 40,294 / 6,162 / 33,366 / 54,908M | unchanged |
+
+  - `tagMap.ts` total-debt basis: "commercial paper and other short-term borrowings … are added where tagged". CP is
+    already in candidates 1 and 4 but missing from candidate 5, which KO resolves through.
+  - With CP on candidate 5, `bridgeInputRecovery.test.ts` fails at the KO **and NUE** composition assertions (:220, :181).
+    So the auditor's "NUE identical" is true for values, not for the recorded composition.
+  - Arm-A REVIEW's ACCEPT justified stop-and-report only for `OtherShortTermBorrowings`/`NotesAndLoansPayable`
+    (out of family, not captured). It never addressed CommercialPaper (in family, captured).
+  - **Ruling: count F1 as 1 escaped material defect for arm A, contested and low impact.**
+    - Why it counts: it is reproduced; it misses DO 4's in-family branch for CP; the in-arm review's recorded
+      reasoning does not dispose of it.
+    - Why it is contested: the BUILD's literal reading ("the full fix is not one in-family tag") is defensible, and the
+      PR body disclosed it.
+    - Impact: KO's EV is already suppressed (no finance-lease input), so no valuation output moves. The acquired
+      fact is understated by 250M (0.6%).
+    - Cost if wrong: arm A's escaped count drops from 1 to 0. The verdict is unchanged (B still fails 3 and 4).
+  - **Stop rule ("a finance defect merged"): not fired.** The merge introduced no wrong value, and the engine gap
+    predates Leg 2. No experiment outcome remains to run on top of it. Reported to Calvin with a ready follow-up
+    contract (`contracts/followup-ko-engine-cp.md`).
+- **F2 (minor):** reproduced. `lly.json` `notPresented.financeLeases` says there is no finance-lease debt line, while
+  `tagMap.ts:551-556` cites LLY's 10-K: finance leases are inside its debt lines. No value changes. Not counted (nit).
+- Auditor's nits not counted: two capture-check tags can never fire; the line-sum test uses hand-typed values.
+
+## Close-out (16:31Z)
+- Scorecard rows 4 and 5 appended. RESULT.md applies the pre-registered rule: **B not proven → KEEP the existing workflow**
+  (conditions 3 and 4 fail; 1 and 2 hold). CLOUD-SOP.md is the minimal cloud-first way to run it.
+- O6: not released by Calvin; it cannot change the result (median arithmetic in RESULT.md §3). Candidate kept as a draft.
+- Operator session (cloud, Opus 5.5, max effort) through 16:30Z: $15.40, ctx 405k. This covers verification, both
+  dispatches, watching, two blind audits, the reproductions and the write-up. It is measurement overhead, not either
+  arm's per-outcome cost.
+- Nothing left running that touches GitHub: both receipt monitors exited on COMPLETE; no wake label is applied anywhere;
+  0 Actions runs active.
+- Never merge this branch (`claude/optimistic-turing-fkla3u`) or `kaizen/leg2-handoff`: both are evidence only.

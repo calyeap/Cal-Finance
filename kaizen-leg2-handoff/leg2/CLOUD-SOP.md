@@ -1,6 +1,6 @@
 # Cloud-first SOP: one outcome through the existing workflow
 
-**Status:** proposed by KAIZEN Leg 2 (see `RESULT.md`). Proven on O4 and O5 from a Claude Code cloud session: about 14 min from dispatch to merge, 0 Calvin touches, 6 receipts, $2.6–4.2 per outcome. It changes no workflow file; it only moves the operator from Calvin's machine to the cloud.
+**Status:** proposed by KAIZEN Leg 2 (see `RESULT.md`). Demonstrated on O4 and O5 from a Claude Code cloud session: about 14 min from dispatch to merge, 0 Calvin touches, 6 receipts, $2.6–4.2 per outcome. It changes no workflow file; it only moves the operator from Calvin's machine to the cloud.
 
 ```
 Calvin: release an outcome ──► cloud session: contract issue + needs-build-wake
@@ -20,14 +20,16 @@ Calvin: release an outcome ──► cloud session: contract issue + needs-build
 
 1. **Quiet check.** No Actions run is `in_progress` or `queued`, and the last START receipt has its terminal. Otherwise wait: one outcome at a time.
 2. **Contract.** Open an issue whose first lines are `OUTCOME-ID:` and `TIER:`, followed by OUTCOME, Evidence, DO, VERIFY, DO NOT, DONE WHEN (with Recovery) and ESCALATE ONLY IF. Post only what Calvin released.
-3. **Dispatch.** Apply `needs-build-wake`. The GitHub MCP acts as `calyeap`, so the routing allow-list admits it. BUILD START follows within about 12 s.
+3. **Dispatch.** Apply `needs-build-wake`. The GitHub MCP acts as `calyeap`, so the routing allow-list admits it. BUILD START follows within 9–12 s.
 4. **Hands off.** Watch the receipts (BUILD START → DONE → REVIEW START → ACCEPT/CORRECT → OWNER START → COMPLETE). Do not comment, label or merge.
 5. **Report.** PR, merge SHA, elapsed time and cost. Cost is the sum of `get_session` usage over the three routine sessions named in the receipts.
-6. **Optional, for HEAVY finance or golden-data outcomes:** one blind audit by a fresh Opus subagent.
-   - Inputs: exact head, diff and contract only; no PR body.
-   - Database: name it `*_test`, because `vitest.setup.ts` refuses any other name.
-   - Unset `SEC_USER_AGENT`; make no sec.gov request.
-   - Builder: `mkreview-cloud.sh`.
+6. **Recommended for HEAVY finance or golden-data outcomes:** one blind audit after the merge, by a fresh Opus subagent. It takes about 7 min and 110–130k tokens.
+   - **Why:** it is the only check that caught Leg 2's one escaped defect (O5, a contract miss that REVIEW accepted). Leg 1 found the same class (#463).
+   - **Inputs:** exact head, diff and contract only; no PR body.
+   - **Database:** name it `*_test`, because `vitest.setup.ts` refuses any other name.
+   - **SEC:** unset `SEC_USER_AGENT`; make no sec.gov request.
+   - **Builder:** `mkreview-cloud.sh`.
+   - **Before acting:** reproduce a finding yourself. A reproduced material finding becomes a follow-up contract for Calvin's release; never a direct fix.
 
 ## Never
 
