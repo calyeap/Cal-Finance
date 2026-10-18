@@ -456,7 +456,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     sic: fixture.marketContext?.sic ?? null,
     triggerBFired: triggerB.fired,
     profile: fixture.profile.confirmedOrOverridden,
-    leveragePass: leverage.result === "PASS",
+    leverage,
     priceDate,
   });
   const rate = discountRate.rate;

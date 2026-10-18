@@ -600,6 +600,17 @@ export interface ReverseDcfSolve {
 
 export type RateBand = "stable" | "cyclical" | "pre-revenue";
 
+/**
+ * D1 is valid only inside the §6.5 net-debt gate (net debt < 10% of EV).
+ * CF-LEG2-RATE-DOMAIN-COPY-01 (#479): the gate has three states, so the
+ * domain does too —
+ * - "WITHIN": net debt measured, below 10% of EV (leverage PASS);
+ * - "OUTSIDE": net debt measured, at or above 10% of EV;
+ * - "NOT MEASURED": a REQUIRED leverage input was missing, so the ratio was
+ *   never computed and whether the rate is inside its domain is unknown.
+ */
+export type RateDomain = "WITHIN" | "OUTSIDE" | "NOT MEASURED";
+
 /** Methodology v2.1 D1 — the dated rate in use, and why this band. */
 export interface DiscountRateInUse {
   rate: Decimal;
@@ -611,8 +622,13 @@ export interface DiscountRateInUse {
   provenance: DatedDiscountRate["provenance"];
   // D1's ±0.5pp verdict check points — computed here, read by AR5.
   checkRates: { lower: Decimal; upper: Decimal };
-  // D1 is valid only inside the §6.5 net-debt gate (< 10% of EV).
-  withinValidatedDomain: boolean;
+  // D1 is valid only inside the §6.5 net-debt gate (< 10% of EV); see
+  // RateDomain. A result stored before CF-LEG2-RATE-DOMAIN-COPY-01 carries
+  // only the boolean below instead — read it through discountRate.ts
+  // `rateDomainOf`, never directly.
+  validatedDomain: RateDomain;
+  /** Stored before CF-LEG2-RATE-DOMAIN-COPY-01 only: true exactly when leverage was PASS. */
+  withinValidatedDomain?: boolean;
 }
 
 /**

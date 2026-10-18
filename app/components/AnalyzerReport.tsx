@@ -7,6 +7,7 @@ import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 import { boundState, NOT_COMPUTED_BINDING, type BoundState } from "@/lib/analyzer/notComputed";
 import { fairValueRangeUnavailableLine, notComputedLine } from "@/lib/analyzer/overviewCopy";
+import { rateDomainSentence } from "@/lib/analyzer/trustCopy";
 import type {
   AnalysisResult,
   ComputedValue,
@@ -451,8 +452,12 @@ function ReverseDcfSolveView({ solve }: { solve: ReverseDcfSolve }) {
 
 // The dated D1 rate and the D2 inputs every valuation on this page used
 // (product-decisions items 26–27: "the product shows the dated rate in use").
-function ValuationBasisView({ basis }: { basis: ValuationBasis }) {
+// The domain sentence is trustCopy.ts's, one per leverage state
+// (CF-LEG2-RATE-DOMAIN-COPY-01): none at PASS, "not below 10%" only where
+// net debt was measured at or above it, "unknown" where it was never measured.
+function ValuationBasisView({ basis, leverage }: { basis: ValuationBasis; leverage: LeverageResult }) {
   const r = basis.discountRate;
+  const domainSentence = rateDomainSentence(basis, leverage);
   return (
     <table className="t" aria-label="Rate and returns in use">
       <tbody>
@@ -461,7 +466,7 @@ function ValuationBasisView({ basis }: { basis: ValuationBasis }) {
           <td>
             <b>{pct(r.rate)}</b> — {r.basis}. Dated {r.effectiveFrom}; checked at {pct(r.checkRates.lower)} and{" "}
             {pct(r.checkRates.upper)}.
-            {!r.withinValidatedDomain && " Outside its validated domain: net debt is not below 10% of enterprise value."}
+            {domainSentence !== "" && ` ${domainSentence}`}
           </td>
         </tr>
         <tr>
@@ -1151,7 +1156,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
             is not a warning by itself; it means the valuation is more sensitive to whether growth and returns on
             new investment hold up.
           </Disclosure>
-          {result.valuationBasis !== undefined && <ValuationBasisView basis={result.valuationBasis} />}
+          {result.valuationBasis !== undefined && <ValuationBasisView basis={result.valuationBasis} leverage={result.gates.leverage} />}
           {/* A snapshot stored before AR4 carries the retired grid instead. */}
           {priceImplied.reverseDcf !== undefined && <ReverseDcfSolveView solve={priceImplied.reverseDcf} />}
           <table className="t" style={{ marginTop: "20px" }}>

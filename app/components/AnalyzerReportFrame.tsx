@@ -119,7 +119,7 @@ export function AnalyzerReportFrame({
               verdict={verdict}
               trustStatus={trust.status}
               isEvidenceTab={activeTab === "evidence"}
-              rateInUse={rateInUseLine(result.valuationBasis)}
+              rateInUse={rateInUseLine(result.valuationBasis, result.gates.leverage)}
               incompleteExplanation={incompleteVerdictExplanation({
                 trustStatus: trust.status,
                 fairValueRange: result.fairValueRange,

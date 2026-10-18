@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 import { POLICY } from "./policy";
 import { classifyCyclicality, cyclicalSicLabel } from "./cyclicalSic";
-import type { DatedDiscountRate, DiscountRateInUse, MoatClass, Profile } from "./types";
+import type { DatedDiscountRate, DiscountRateInUse, LeverageResult, MoatClass, Profile, RateDomain } from "./types";
 
 // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — Cal Finance Methodology v2.1 D1
 // (frozen spec §14.9 AR0-1): the one discount rate a run is valued at.
@@ -12,7 +12,9 @@ import type { DatedDiscountRate, DiscountRateInUse, MoatClass, Profile } from ".
 // - Growth alone never raises the rate: nothing here reads growth.
 // - Valid only inside the §6.5 net-debt gate; outside it the rate is still
 //   reported, marked outside its validated domain, and the leverage state
-//   already suppresses the values that would use it.
+//   already suppresses the values that would use it. Where net debt was
+//   never measured the domain is marked unknown, not outside
+//   (CF-LEG2-RATE-DOMAIN-COPY-01, #479).
 //
 // D1 is two bands, so a company the SIC route cannot place (no SIC code on
 // the run) reaches the cyclical band only through trigger B or pre-revenue,
@@ -22,7 +24,9 @@ export interface DiscountRateInputs {
   sic: string | null;
   triggerBFired: boolean;
   profile: Profile;
-  leveragePass: boolean;
+  // The run's §6.5 leverage result, read as-is: its PASS/not-PASS result and
+  // whether the net-debt ratio was measured at all. Never recomputed here.
+  leverage: Pick<LeverageResult, "result" | "netDebtRatio">;
   // The run's price date; selects the dated row in force on that date.
   priceDate: string | null;
 }
@@ -67,8 +71,35 @@ export function selectDiscountRate(inputs: DiscountRateInputs): DiscountRateInUs
     effectiveFrom: row.effectiveFrom,
     provenance: row.provenance,
     checkRates: { lower: rate.minus(offset), upper: rate.plus(offset) },
-    withinValidatedDomain: inputs.leveragePass,
+    validatedDomain: rateDomainFromLeverage(inputs.leverage),
   };
+}
+
+/**
+ * The rate's validated domain from the run's §6.5 leverage result: PASS is
+ * WITHIN; a measured ratio that did not pass is OUTSIDE; no ratio at all (a
+ * REQUIRED input missing) is NOT MEASURED.
+ */
+export function rateDomainFromLeverage(leverage: Pick<LeverageResult, "result" | "netDebtRatio">): RateDomain {
+  if (leverage.netDebtRatio === null) return "NOT MEASURED";
+  return leverage.result === "PASS" ? "WITHIN" : "OUTSIDE";
+}
+
+/**
+ * The domain a stored or fresh rate is in. A result stored between AR4 and
+ * CF-LEG2-RATE-DOMAIN-COPY-01 carries only `withinValidatedDomain`, which
+ * was false for both OUTSIDE and NOT MEASURED; it is resolved from the same
+ * run's own leverage result — the value that boolean was set from. Without
+ * that result only the boolean's PASS case can be told apart, and the
+ * ambiguous case returns null (state nothing rather than guess).
+ */
+export function rateDomainOf(
+  rate: DiscountRateInUse,
+  leverage: Pick<LeverageResult, "result" | "netDebtRatio"> | undefined
+): RateDomain | null {
+  if (rate.validatedDomain !== undefined) return rate.validatedDomain;
+  if (leverage !== undefined) return rateDomainFromLeverage(leverage);
+  return rate.withinValidatedDomain === true ? "WITHIN" : null;
 }
 
 /** "9.0%" — one decimal, the precision the dated rate is approved at. */
