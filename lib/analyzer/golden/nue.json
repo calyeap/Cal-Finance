@@ -76,7 +76,12 @@
       "accessionNumber": "0001193125-26-071575",
       "form": "10-K",
       "fiscalYear": 2025,
-      "note": "6909000000 + 90000000 + 122000000 = 7121000000. NUE's original us-gaap:LongTermDebtNoncurrent tag is dead (last 10-K row FY2018, 4233276000) and us-gaap:LongTermDebt is dead too (last 10-K row FY2016, 4360600000) — a THIRD real tag-drift instance alongside KO and NVDA, though not one DO item 6's own two named worked examples required this harness to assert against. LongTermDebtAndCapitalLeaseObligations(Current) is NUE's live replacement, but note the SCOPE CHANGE: it bundles finance-lease obligations into the same figure, so this total-debt golden fact is not a like-for-like replacement of the old debt-only tags' scope — documented honestly rather than silently treated as equivalent."
+      "note": "6909000000 + 90000000 + 122000000 = 7121000000. NUE's original us-gaap:LongTermDebtNoncurrent tag is dead (last 10-K row FY2018, 4233276000) and us-gaap:LongTermDebt is dead too (last 10-K row FY2016, 4360600000) — a THIRD real tag-drift instance alongside KO and NVDA, though not one DO item 6's own two named worked examples required this harness to assert against. LongTermDebtAndCapitalLeaseObligations(Current) is NUE's live replacement, but note the SCOPE CHANGE: it bundles finance-lease obligations into the same figure, so this total-debt golden fact is not a like-for-like replacement of the old debt-only tags' scope — documented honestly rather than silently treated as equivalent.",
+      "presentedLines": [
+        {"covers": ["shortTermBorrowings"], "conceptLabel": "Short-term Debt", "xbrlConcept": "us-gaap:ShortTermBorrowings", "value": 122000000},
+        {"covers": ["currentMaturities", "financeLeases"], "conceptLabel": "Long-term Debt and Lease Obligation, Current", "xbrlConcept": "us-gaap:LongTermDebtAndCapitalLeaseObligationsCurrent", "value": 90000000},
+        {"covers": ["longTermDebt", "financeLeases"], "conceptLabel": "Long-term Debt and Lease Obligation", "xbrlConcept": "us-gaap:LongTermDebtAndCapitalLeaseObligations", "value": 6909000000}
+      ]
     },
     "cashAndEquivalents": {
       "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",

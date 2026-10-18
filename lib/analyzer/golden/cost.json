@@ -86,7 +86,15 @@
       "accessionNumber": "0000909832-26-000093",
       "form": "10-K",
       "fiscalYear": 2026,
-      "note": "3914000000 (noncurrent) + 2248000000 (current) = 6162000000. Both component tags are live/current for COST (no drift)."
+      "note": "3914000000 (noncurrent) + 2248000000 (current) = 6162000000. Both component tags are live/current for COST (no drift).",
+      "presentedLines": [
+        {"covers": ["currentMaturities"], "conceptLabel": "Long-term Debt, Current Maturities", "xbrlConcept": "us-gaap:LongTermDebtCurrent", "value": 2248000000},
+        {"covers": ["longTermDebt"], "conceptLabel": "Long-term Debt, Excluding Current Maturities", "xbrlConcept": "us-gaap:LongTermDebtNoncurrent", "value": 3914000000}
+      ],
+      "notPresented": {
+        "shortTermBorrowings": "COST tags no CommercialPaper, ShortTermBorrowings, OtherShortTermBorrowings, NotesAndLoansPayable or DebtCurrent row at 2026-08-30 in this accession.",
+        "financeLeases": "FinanceLeaseLiability 1413000000 is tagged at this instant as its own element, outside the debt-line elements above; the engine carries it as the separate finance-lease-liabilities bridge input (tagMap.ts), so it is not part of total debt. Whether it is a separate line on the face of the balance sheet was not checked: www.sec.gov is blocked from this sandbox."
+      }
     },
     "cashAndEquivalents": {
       "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",
