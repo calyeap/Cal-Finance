@@ -3,12 +3,14 @@ import Decimal from "decimal.js";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { acquire, type AcquisitionResult } from "./acquire";
+import { buildCompanyInputs, type AnalystInputs } from "./companyInputs";
 import { FINANCE_LEASES_INSIDE_TOTAL_DEBT, TAG_MAPPING_VERSION, tagMapEntry } from "./tagMap";
 import { resolveEntry } from "./selectTagged";
 import type { CompanyFactsDocument } from "./secClient";
 import { computeEnterpriseValue, type EnterpriseValueInput } from "../modules/enterpriseValue";
 import { evaluateLeverage } from "../gates";
 import { CLEAN_PROVENANCE } from "../provenance";
+import { MSFT_FIXTURE } from "../fixtures/msft";
 
 // ---------------------------------------------------------------------------
 // CF-AR6-BRIDGE-INPUT-RECOVERY-01 (issue #468), DO 5 — the deterministic proof,
@@ -173,7 +175,7 @@ describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real 
     );
   });
 
-  it("NUE: total debt is current and same-date with cash; EV stays INCOMPLETE until a cited lease record exists", () => {
+  it("NUE: total debt is current and same-date with cash; leases counted once on the cited record, and EV and the leverage ratio compute", () => {
     const b = bridge("NUE");
     // The AR2 golden composition (nue.json), at NUE's latest balance sheet.
     expect(debtComposition("NUE")).toEqual({
@@ -188,25 +190,26 @@ describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real 
         filed("NUE", "LongTermDebtAndCapitalLeaseObligationsCurrent", "2025-12-31") +
         filed("NUE", "ShortTermBorrowings", "2025-12-31")
     ).toBe(7_121_000_000);
-    // No cited issuer disclosure places NUE's finance leases inside those
-    // lines (DO 3), so the separate lease term stays REQUIRED — and NUE tags
-    // it in its 10-K only. The bridge refuses; nothing is substituted.
-    expect(FINANCE_LEASES_INSIDE_TOTAL_DEBT[COMPANIES.NUE]).toBeUndefined();
-    expect(b.lease).toEqual({ value: 258_000_000, asOf: "2025-12-31" });
-    expect(b.ev.suppressed).toBe(true);
-    expect(b.ev.suppressed && b.ev.cause).toBe(
-      "EV bridge inputs resolve to different as-of dates (CALVIN RULING A, issue #308/#309): " +
-        "total-debt=2026-07-04, finance-lease-liabilities=2025-12-31, cash-and-marketable-debt-securities=2026-07-04"
+    // DO 3: NUE's FY2025 10-K Note 6 classifies its finance leases (24M
+    // current + 234M noncurrent = 258M) inside those two debt lines — the
+    // cited record. The captured amounts tie to that disclosure, and the
+    // current line foots: 66M debt + 24M lease = 90M.
+    expect(FINANCE_LEASES_INSIDE_TOTAL_DEBT[COMPANIES.NUE]?.source).toContain("0001193125-26-071575");
+    expect(filed("NUE", "FinanceLeaseLiabilityCurrent", "2025-12-31") + filed("NUE", "FinanceLeaseLiabilityNoncurrent", "2025-12-31")).toBe(
+      filed("NUE", "FinanceLeaseLiability", "2025-12-31")
     );
-    expect(b.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
-    expect(b.leverage.netDebtRatio).toBeNull();
-  });
-
-  it("NUE: the lease record is the ONLY remaining blocker — with one, EV and the ratio would compute on same-date inputs (hypothetical record, never added here)", () => {
-    const b = bridge("NUE", { ticker: "NUE", source: "HYPOTHETICAL — test only, not a citation" });
+    expect(filed("NUE", "FinanceLeaseLiability", "2025-12-31")).toBe(258_000_000);
+    expect(filed("NUE", "LongTermDebtCurrent", "2025-12-31") + filed("NUE", "FinanceLeaseLiabilityCurrent", "2025-12-31")).toBe(
+      filed("NUE", "LongTermDebtAndCapitalLeaseObligationsCurrent", "2025-12-31")
+    );
+    // The separate lease fact is still acquired (10-K only), but the bridge
+    // counts it once, inside total debt — no date is substituted for it.
+    expect(b.lease).toEqual({ value: 258_000_000, asOf: "2025-12-31" });
     const ev = computed(b);
     expect(ev.totalDebt.toString()).toBe("7099000000");
     expect(ev.financeLeaseLiabilities.toString()).toBe("0");
+    expect(ev.bridgeFlags?.financeLeases.treatment).toBe("INCLUDED IN TOTAL DEBT");
+    expect(b.leverage.netDebtRatio).not.toBeNull();
     expect(b.leverage.netDebtRatio!.toString()).toBe(
       new Decimal(7_099_000_000).minus(2_692_000_000).dividedBy(ev.enterpriseValue).toString()
     );
@@ -261,5 +264,100 @@ describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real 
     expect(computed(b).enterpriseValue.toString()).toBe(ev);
     expect(b.leverage.netDebtRatio!.toString()).toBe(ratio);
     expect(b.leverage.result).toBe("PASS");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// The same counted-once record on the invested-capital side (CALVIN RULING —
+// FINANCING-SIDE INVESTED CAPITAL, issue #298: "lease liabilities not already
+// in debt"). NUE's debt series is now the lease-inclusive golden composition,
+// so adding its separately tagged lease liability again would count it twice.
+//
+// NUE tags no OperatingIncomeLoss, so on the real capture neither the ROIC
+// history nor the RONIC delta reaches invested capital at all. To exercise it
+// the capture gets ONE test-only addition — an operating-income series whose
+// values are irrelevant to invested capital — and nothing else is touched.
+// ---------------------------------------------------------------------------
+
+function withTestOnlyOperatingIncome(doc: CompanyFactsDocument, fiscalYears: number[]): CompanyFactsDocument {
+  const usGaap = doc.facts["us-gaap"] ?? {};
+  return {
+    ...doc,
+    facts: {
+      ...doc.facts,
+      "us-gaap": {
+        ...usGaap,
+        OperatingIncomeLoss: {
+          label: "TEST-ONLY operating income",
+          description: "Injected by bridgeInputRecovery.test.ts; not a filed value.",
+          units: {
+            USD: fiscalYears.map((fy) => ({
+              start: `${fy}-01-01`,
+              end: `${fy}-12-31`,
+              val: 1_000_000_000,
+              accn: `TEST-ONLY-${fy}`,
+              fy,
+              fp: "FY",
+              form: "10-K",
+              filed: `${fy + 1}-02-25`,
+            })),
+          },
+        },
+      },
+    },
+  } as CompanyFactsDocument;
+}
+
+function analystStatedForTest(): AnalystInputs {
+  return {
+    profile: MSFT_FIXTURE.profile,
+    nonOperatingInvestments: null,
+    fiftyTwoWeek: null,
+    epsTrailing: null,
+    epsForward: null,
+    scenarios: MSFT_FIXTURE.scenarios,
+    scenarioValues: MSFT_FIXTURE.scenarioValues,
+    scenarioValuesAreFixtureCarried: false,
+    revalueBaseCaseAtRate: null,
+    configuredConstants: MSFT_FIXTURE.configuredConstants,
+    preRevenue: null,
+    gate0: MSFT_FIXTURE.gate0,
+    trustInputs: MSFT_FIXTURE.trustInputs,
+  };
+}
+
+function investedCapitalByYear(ticker: Ticker, doc: CompanyFactsDocument): Map<number, string | null> {
+  const a = acquire({
+    ticker,
+    cik: COMPANIES[ticker],
+    companyName: ticker,
+    companyFacts: doc,
+    price: { value: STATED_PRICE, timestamp: "2026-10-16T21:00:00Z", source: "stated test input" },
+    acquiredAt: "2026-10-18T00:00:00.000Z",
+  });
+  const { fixture } = buildCompanyInputs(a, doc, analystStatedForTest(), { value: STATED_PRICE, timestamp: "2026-10-16T21:00:00Z" });
+  return new Map((fixture.roicHistory?.years ?? []).map((y) => [y.fiscalYear, y.investedCapital?.toString() ?? null]));
+}
+
+describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — invested capital counts NUE's finance leases once", () => {
+  it("NUE FY2025: equity + lease-inclusive total debt − cash, with no separate lease term on top", () => {
+    const ic = investedCapitalByYear("NUE", withTestOnlyOperatingIncome(capture("NUE"), [2021, 2022, 2023, 2024, 2025]));
+    const equity = filed("NUE", "StockholdersEquity", "2025-12-31");
+    const debt =
+      filed("NUE", "LongTermDebtAndCapitalLeaseObligations", "2025-12-31") +
+      filed("NUE", "LongTermDebtAndCapitalLeaseObligationsCurrent", "2025-12-31") +
+      filed("NUE", "ShortTermBorrowings", "2025-12-31");
+    const cash = filed("NUE", "CashAndCashEquivalentsAtCarryingValue", "2025-12-31") + filed("NUE", "ShortTermInvestments", "2025-12-31");
+    expect(debt).toBe(7_121_000_000);
+    expect(ic.get(2025)).toBe(String(equity + debt - cash));
+    expect(ic.get(2025)).toBe("25358000000");
+    // Not 25,616M — that is the 258M lease counted a second time.
+    expect(ic.get(2025)).not.toBe(String(equity + debt - cash + filed("NUE", "FinanceLeaseLiability", "2025-12-31")));
+  });
+
+  it("MSFT and COST, outside the record, still add their separate lease liability exactly as before", () => {
+    // Pinned on master's code with these same captures.
+    expect(investedCapitalByYear("MSFT", capture("MSFT")).get(2026)).toBe("472432000000");
+    expect(investedCapitalByYear("COST", capture("COST")).get(2026)).toBe("22077000000");
   });
 });

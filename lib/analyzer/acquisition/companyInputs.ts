@@ -257,6 +257,11 @@ export function buildCompanyInputs(
     companyFacts,
     TAG_MAP.find((e) => e.factId === "cash-and-marketable-debt-securities")!.candidates
   );
+  // "Lease liabilities not already in debt" (#298): for a filer whose own
+  // filing places its finance leases inside total debt (R5, closed issue
+  // #311), the separate lease series is not added again.
+  const investedCapitalLeaseSeries =
+    FINANCE_LEASES_INSIDE_TOTAL_DEBT[acquisition.cik] !== undefined ? null : financeLeaseLiabilitiesAnnualSeries;
   // Weakest-input provenance behind the three genuinely REQUIRED terms
   // (§3.3) — null, and so blocking the whole delta, unless all three
   // resolved this fiscal year. Finance-lease liabilities are folded in only
@@ -604,7 +609,7 @@ export function buildCompanyInputs(
           operatingIncomeAnnualSeries,
           totalEquityAnnualSeries,
           totalDebtAnnualSeries,
-          financeLeaseLiabilitiesAnnualSeries,
+          investedCapitalLeaseSeries,
           cashAndMarketableDebtSecuritiesAnnualSeries,
           investedCapitalProvenance
         )
@@ -660,7 +665,7 @@ export function buildCompanyInputs(
       analyst.configuredConstants.nopatTaxRate,
       totalEquityAnnualSeries,
       totalDebtAnnualSeries,
-      financeLeaseLiabilitiesAnnualSeries,
+      investedCapitalLeaseSeries,
       cashAndMarketableDebtSecuritiesAnnualSeries
     ),
     scenarioValuesAreFixtureCarried: analyst.scenarioValuesAreFixtureCarried,

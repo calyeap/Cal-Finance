@@ -555,4 +555,12 @@ export const FINANCE_LEASES_INSIDE_TOTAL_DEBT: Readonly<Record<string, { ticker:
       'borrowings and current maturities of long-term debt, and long-term debt in our consolidated balance sheets" ' +
       "(docs/filing-text-evidence-routes.md)",
   },
+  "0000073309": {
+    ticker: "NUE",
+    source:
+      "Nucor FY2025 Form 10-K (accession 0001193125-26-071575), Note 6 leases, supplemental balance-sheet table: " +
+      'current finance lease liabilities ($24M) classified in "Current portion of long-term debt and finance lease ' +
+      'obligations"; non-current finance lease liabilities ($234M) classified in "Long-term debt and finance lease ' +
+      'obligations due after one year" (docs/evidence/nue-fy2025-finance-lease-classification-capture.md)',
+  },
 };

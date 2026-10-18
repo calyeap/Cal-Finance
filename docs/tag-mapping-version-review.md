@@ -579,27 +579,12 @@ cross-check outcome changed: LLY's `total-debt` footing goes from NOT APPLICABLE
 
 ### 10.4 What this pass did NOT do, and what it leaves open
 
-- **No `FINANCE_LEASES_INSIDE_TOTAL_DEBT` record was added for NUE or KO.** DO 3
-  admits one only on a cited sentence from the filer's own filing. Filing text
-  (`www.sec.gov`, `efts.sec.gov`) is unreachable from the session that made this
-  bump; only `data.sec.gov` is. KO's lease note addresses no finance lease at all
-  (`docs/filing-text-evidence-routes.md` §0), so KO has nothing to cite. NUE's
-  FY2025 10-K (`0001193125-26-071575`, `nue-20251231.htm`) was not read.
-  Consequences, both deliberate:
-  - **NUE** keeps its lease term REQUIRED. `FinanceLeaseLiability` is tagged in
-    the 10-K only (258M @ 2025-12-31) while debt and cash are at 2026-07-04, so
-    the bridge is INCOMPLETE on CALVIN RULING A's same-date test.
-  - **KO** tags no finance-lease liability: INCOMPLETE, `missing REQUIRED
-    input(s): financeLeaseLiabilities`.
-- **Latent, recorded for the reviewer:** at a NUE 10-K instant (next: 2026-12-31)
-  all three bridge inputs will share a date. Without a record the bridge would
-  then add `FinanceLeaseLiability` to a lease-inclusive debt line. Whether that
-  is a double count is exactly what the NUE citation decides. RONIC's invested
-  capital (`companyInputs.investedCapitalAt`) already adds the tagged lease
-  series to the debt series, so NUE's FY2020/FY2025 invested capital includes
-  the 10-K lease figure beside a lease-inclusive debt figure. Neither is fixed
-  here: the issue forbids an element-identity test and RONIC semantics are
-  outside this outcome.
+- **NUE `FINANCE_LEASES_INSIDE_TOTAL_DEBT` record: added in the correction pass
+  (§10.6).** The first pass added none, because NUE's filing text was unreachable
+  from its session. **KO** still has none: its lease note addresses no finance
+  lease at all (`docs/filing-text-evidence-routes.md` §0), so KO has nothing to
+  cite. KO tags no finance-lease liability and stays INCOMPLETE, `missing
+  REQUIRED input(s): financeLeaseLiabilities`.
 - **KO composition against the previous mapping:** the golden composition
   excludes KO's `CommercialPaper` / `NotesAndLoansPayable` (1,495M / 1,551M at
   FY2025), which `LongTermDebt + CommercialPaper` used to add. The candidate
@@ -617,3 +602,44 @@ cross-check outcome changed: LLY's `total-debt` footing goes from NOT APPLICABLE
 - `history.test.ts`, "does not count a period that ends after the filing
   carrying it": the exact live NUE row injected. **RED on master** (`expected
   2027 to be 2025`), GREEN here.
+
+### 10.6 Correction pass — NUE counted once (same PR, after independent REVIEW)
+
+No `TAG_MAP` candidate or selection change, so `TAG_MAPPING_VERSION` stays
+`-10-2` and §10.2/§10.3 are unchanged. Two changes:
+
+1. **NUE record in `FINANCE_LEASES_INSIDE_TOTAL_DEBT`,** in the LLY entry's form.
+   Citation: Nucor FY2025 Form 10-K, accession `0001193125-26-071575`, Note 6
+   supplemental balance-sheet table. Current finance lease liabilities ($24M) are
+   classified in "Current portion of long-term debt and finance lease
+   obligations", and non-current ($234M) in "Long-term debt and finance lease
+   obligations due after one year".
+   - **Source route.** The caption text is the scoped issuer-source capture
+     `docs/evidence/nue-fy2025-finance-lease-classification-capture.md`, committed
+     on this PR. The session that added the record could not read `www.sec.gov`
+     (CONNECT 403) and did **not** independently re-fetch the captions.
+   - **What it checked on `data.sec.gov`.** `FinanceLeaseLiabilityCurrent` 24M +
+     `…Noncurrent` 234M = `FinanceLeaseLiability` 258M at 2025-12-31, from the same
+     accession. The current line foots: `LongTermDebtCurrent` 66M + 24M =
+     `LongTermDebtAndCapitalLeaseObligationsCurrent` 90M. The non-current caption
+     has no debt-only tag to foot against, so it rests on the cited caption alone.
+   - **Effect.** NUE's bridge adds no separate lease term, so the 10-K-only lease
+     date no longer blocks it. EV and the leverage ratio compute on total debt
+     7,099M and cash 2,692M, both at 2026-07-04. CALVIN RULING A's same-date test
+     is unchanged.
+2. **Invested capital counts the record too** (`companyInputs.ts`,
+   `investedCapitalLeaseSeries`). This is #298's "lease liabilities not already
+   in debt", applied with the same record. Without it, NUE's FY2025 invested
+   capital is 20,936 + 7,121 + **258** − 2,699 = 25,616M; with it, 25,358M.
+   - NUE tags no `OperatingIncomeLoss`, so on the real capture neither ROIC
+     history nor RONIC reaches invested capital. The double count was latent,
+     not live. The test injects a test-only operating-income series to exercise it.
+   - LLY tags no finance-lease liability, so LLY is unchanged. Filers outside the
+     record (MSFT, COST, NVDA, KO, OKLO) still add their lease series exactly as
+     before.
+
+**Verification.** `bridgeInputRecovery.test.ts` is now 9 tests. On the
+pre-correction head it is RED with 2 failures: NUE's record is absent, and NUE's
+FY2025 invested capital is `25616000000`, not `25358000000`. After the correction
+it is GREEN, 9/9.
+
