@@ -72,3 +72,10 @@ permission mode auto (`routine:auto-mode-forced`).
 - 15:54:53Z OWNER START wake=MERGE (session cse_0113EWV4skscRudvwAtPzQuY).
 - ~15:55Z blind audit launched: fresh Opus agent, high effort, workspace built by mkreview-cloud.sh at ad9da6b
   (contract + diff + RUBRIC; no PR body, no arm label; DB leg2c_audit_o4). O5 waits for this audit (stop rule).
+- 15:55:40Z OWNER `COMPLETE:` (OWNER usage: ctx 72,173, output 2,561, $0.5096). 15:55:42Z Slack "Notify Calvin" run
+  success (informational FINISHED). Issue #483 closed (completed). No runs active.
+- O4 control-plane comments: 6 (#483: BUILD START, DONE; #484: REVIEW START, ACCEPT, OWNER START, COMPLETE).
+- O4 routine totals: 3 sessions, ctx 249,412, output 23,135, **$2.5770**.
+- O5 defect re-verified on master `2d7f38e`: KO golden totalDebt 43,941,000,000
+  (LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities); NUE = LTD + current + ShortTermBorrowings;
+  LLY = DebtLongtermAndShorttermCombinedAmount.
