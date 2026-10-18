@@ -328,6 +328,13 @@ export function operatingMarginSeries(
  * what counts as a filed year. A second copy of the eligibility rule that
  * drifted from this one would make Gate 1 and the comparator disagree about
  * the same filing.
+ *
+ * A period that ends AFTER the filing carrying it was filed is not a reported
+ * year: it is an assumption about one (-10-2, issue #468). Nucor's FY2010
+ * 10-K tags its ultimate health-care cost-trend rate for calendar 2027 as a
+ * full-year duration, which made 2027 Nucor's "latest reported year" on live
+ * EDGAR — so no candidate of any entry could ever read as current, and
+ * `total-debt` fell back to a 2016 figure.
  */
 function annualFiscalYears(doc: CompanyFactsDocument): Set<number> {
   const years = new Set<number>();
@@ -336,6 +343,7 @@ function annualFiscalYears(doc: CompanyFactsDocument): Set<number> {
       for (const unit of Object.keys(doc.facts[ns][tag].units)) {
         for (const row of doc.facts[ns][tag].units[unit]) {
           if (!ANNUAL_FORMS.has(row.form ?? "")) continue;
+          if (row.filed !== undefined && row.end > row.filed) continue;
           const d = days(row);
           if (d === null || d < ANNUAL_DAYS.min || d > ANNUAL_DAYS.max) continue;
           // The fact's own period, not the filing's (see fiscalYearOf).
