@@ -19,6 +19,7 @@ import { deriveVerdict } from "./verdict";
 import type { AnalysisResult } from "./types";
 import { assembleAnalysisResult } from "./assemble";
 import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
+import { NOT_CONFIRMED_INPUT_CAUSE } from "./figures";
 
 // ---------------------------------------------------------------------------
 // CF-ANALYZER-AUTORUN-01 — `ticker → analyze → report`, proved on real MSFT
@@ -461,16 +462,19 @@ describe("CF-ANALYZER-AUTORUN-01 — a real run reaches a report with no human s
       expect(price.verificationOrigin).toBe("AUTOMATIC");
       expect(price.verificationReasonCode).toBe("CONTRADICTED BY SOURCE");
 
-      // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442, migration 010) durably
-      // recorded Calvin's approved MSFT Stage-2 bundle, so A4
-      // (CF-ANALYZER-INTEGRITY-PHASE-A-01) no longer suppresses MSFT's
-      // range unconditionally — trust.ts's rule 2 now actually inspects
-      // this run's own facts, surfacing this exact "<name> is NOT
-      // CONFIRMED" detail (previously only independently covered with
-      // synthetic inputs in trust.test.ts; now a real claim about this
-      // fact row).
-      expect(result.trust.status).toBe("PARTIAL");
-      expect(result.trust.determinedBy.map((d) => d.detail).join(" ")).toContain("Price is NOT CONFIRMED");
+      // CF-LEG2-DECIDED-FACT-GATING-01 — reviewed evaluator change. This
+      // asserted trust PARTIAL with "Price is NOT CONFIRMED" among rule 2's
+      // details: true only because the contradicted price still fed
+      // enterprise value (companyInputs.ts built it CLEAN whatever the run
+      // decided), so the range rendered. A NOT CONFIRMED price now blocks
+      // enterprise value — the reason named at that field — and, through
+      // it, the range (§5.4 cascade), so trust is UNUSABLE under rule 1.
+      // Rule 2 reading a real run's own NOT CONFIRMED fact stays covered on
+      // the real path by decidedFactGatingOnRealRun.test.ts (the current
+      // operating margin, which blocks no range input).
+      const ev = result.diagnostics.enterpriseValue;
+      expect(ev.suppressed && ev.cause).toBe(NOT_CONFIRMED_INPUT_CAUSE);
+      expect(result.trust.status).toBe("UNUSABLE");
     });
   });
 
