@@ -109,3 +109,17 @@ permission mode auto (`routine:auto-mode-forced`).
 - BUILD usage: ctx 141,514, output 33,846, $2.5014 (worker_epoch 2: the routine's worker restarted once).
 - 16:12:16Z REVIEW START (session cse_017cWwsGqNmXrFkNfNLysBXb, REVIEW-39143924043-1).
 - Audit workspace pre-built at e8016aa (DB leg2c_audit_o5_test).
+- 16:16:16Z CI "typecheck and tests" success on exact head e8016aa.
+- 16:16:44Z REVIEW `ACCEPT:` e8016aa, HEAVY, CI green. REVIEW usage: ctx 96,538, output 10,508, $1.2056.
+- 16:16:48Z #486 merged by the REVIEW routine → master `c2db01a`. Elapsed dispatch→merge 14.3 min.
+- 16:16:58Z OWNER START wake=MERGE (cse_0169hWqKT1RhZveZqzVwg4u7). 16:17:42Z OWNER `COMPLETE:` (no CONTINUE, no new work;
+  engine KO debt gap "recorded, not routed"). OWNER usage: ctx 73,780, output 2,452, $0.5095. Issue #485 closed (completed).
+- O5 control-plane comments: 6. O5 routine totals: 3 sessions, ctx 311,832, output 46,806, **$4.2165**.
+- ~16:17Z O5 blind audit launched (fresh Opus, high effort; SEC_USER_AGENT unset; no sec.gov requests; DB leg2c_audit_o5_test).
+
+## O6 decision analysis (16:18Z)
+The pre-registered rule is already decided without O6:
+- A elapsed {O1 11.4, O4 14.8, O5 14.3} → median 14.3; 1.5× = 21.45.
+- B elapsed {O2 29.2, O3 38.5, O6 x}: the median of three is ≥ 29.2 for any x, so condition 4 fails whatever O6 does.
+- Calvin touches: A 0 per outcome; B ≥ 2/3 even if O6 had none (it would have one: Calvin merges arm B). Condition 3 fails.
+- So O6 can add evidence about running the lean SOP from the cloud, but cannot change the Leg 2 result.
