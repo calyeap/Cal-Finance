@@ -90,3 +90,22 @@ permission mode auto (`routine:auto-mode-forced`).
 - Pre-dispatch: 0 runs in_progress/queued; O4 chain closed by COMPLETE; O4 audit back (no stop rule fired).
 - 16:02Z issue #485 posted (contracts.md §O5 verbatim in the o3-issue format; master line 2d7f38e).
 - 16:02:33Z `needs-build-wake` applied (dispatch).
+
+## Correction: what "sec.gov is blocked" means in this cloud environment (16:13Z)
+- `data.sec.gov`: the proxy allows CONNECT; SEC itself answers HTTP 403 to a User-Agent without a contact email
+  (the experiment's rule forbids an email in any request).
+- `www.sec.gov`: the proxy denies CONNECT (policy; recorded in the proxy's relay failures).
+- `SEC_USER_AGENT` is set at the environment level (value not read). Routines run in the same environment and use the
+  repo's SEC client with it: O5's BUILD fetched live companyfacts. The operator and the blind auditors never use it;
+  audits from O5 on run with it unset and are told to make no sec.gov request. (O4's auditor ran one online-mode scratch
+  test with acquisition forced to the committed capture; it reports no SEC request, and none was intended.)
+
+## O5 receipts
+- 16:02:42Z BUILD START (session cse_01NhoYUtLtkmzuXbiVKLk3YB, BUILD-39143197572-1, CONTRACT 0bae350642b0).
+- 16:11:57Z PR #486 opened (head `e8016aa`, 9 files, +212/−11). 16:12:05Z BUILD DONE → #486.
+  BUILD's DO 4 report: the engine's KO total debt on the pinned capture omits the loans and notes payable
+  (43,558M at 2026-04-03); not fixed here, because the approved short-term-borrowings family recovers only CommercialPaper
+  and the other elements are outside the family and absent from the capture. Golden KO 43,941M → 45,492M (evaluator change, called out).
+- BUILD usage: ctx 141,514, output 33,846, $2.5014 (worker_epoch 2: the routine's worker restarted once).
+- 16:12:16Z REVIEW START (session cse_017cWwsGqNmXrFkNfNLysBXb, REVIEW-39143924043-1).
+- Audit workspace pre-built at e8016aa (DB leg2c_audit_o5_test).
