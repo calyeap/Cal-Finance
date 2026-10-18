@@ -205,4 +205,11 @@ require "$ROUTER" 'REVIEW transport failed \(\$\{CODE\}, not retryable\).*needs-
 require "$ROUTER" 'OWNER transport failed \(\$\{CODE\}, not retryable\).*needs-owner-wake' 'non-retryable OWNER transport names its re-drive label'
 require "$MERGE" 'OWNER transport failed \(\$\{CODE\}, not retryable\).*needs-owner-wake' 'non-retryable merge-path OWNER transport names its re-drive label'
 
+# CF-CONTINUE-SCRIPT-01 (issue #402): CONTINUE's mechanical handoff is code
+# (owner-continue.sh, behaviorally tested in owner-continue.test.sh); OWNER
+# keeps only the semantic readiness judgment and may not hand-author success.
+require "$OWNER" 'owner-continue\.sh' 'OWNER CONTINUE calls the deterministic helper'
+require "$OWNER" 'Never hand-author a .CONTINUE:' 'OWNER prohibits a hand-authored CONTINUE'
+forbid "$OWNER" 'Read back before claiming success' 'the retired prose apply/read-back protocol'
+
 echo "runtime-wiring: PASS"
