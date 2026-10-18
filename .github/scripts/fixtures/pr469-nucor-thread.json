@@ -1,0 +1,57 @@
+[
+  {
+    "body": "REVIEW START: OUTCOME-ID=CF-AR6-BRIDGE-INPUT-RECOVERY-01 TIER=HEAVY · session cse_01QqGUZhWhRh7TqWMc5J2sCA (https://claude.ai/code/cse_01QqGUZhWhRh7TqWMc5J2sCA) [REVIEW_ATTEMPT_ID: REVIEW-39101291997-1] [CONTRACT: 1768e71a97e4] [CAUSE: comment-rereview]",
+    "created_at": "2026-10-18T05:39:32Z",
+    "id": 6246183829
+  },
+  {
+    "body": "BLOCKED: ACTIONABLE — NUE cannot meet DONE WHEN without a cited lease disclosure from its own filing, and no automated session can read filing text. Calvin needs to supply the exact lease-note sentence from Nucor FY2025 10-K `0001193125-26-071575` (`nue-20251231.htm`), meaning the caption or note text saying finance leases sit within `LongTermDebtAndCapitalLeaseObligations`/`…Current`. Alternatively, Calvin can allow `www.sec.gov` egress for the BUILD environment. [REVIEW_ATTEMPT_ID: REVIEW-39101291997-1]",
+    "created_at": "2026-10-18T05:43:38Z",
+    "id": 6246213819
+  },
+  {
+    "body": "OWNER START: wake=TERMINAL · session cse_015wdRBBhwPf7i9paRoHxARu (https://claude.ai/code/cse_015wdRBBhwPf7i9paRoHxARu) [OWNER_ATTEMPT_ID: OWNER-39101540725-1] [CONTRACT: 1768e71a97e4]",
+    "created_at": "2026-10-18T05:43:49Z",
+    "id": 6246215114
+  },
+  {
+    "body": "BLOCKED: ACTIONABLE — CF-AR6-BRIDGE-INPUT-RECOVERY-01 needs one human-only input before BUILD can correct this PR. Provide the exact lease-note sentence from Nucor FY2025 10-K `0001193125-26-071575` (`nue-20251231.htm`) saying finance leases are within `LongTermDebtAndCapitalLeaseObligations`/`…Current`, or allow `www.sec.gov` egress for the BUILD environment. [OWNER_ATTEMPT_ID: OWNER-39101540725-1]",
+    "created_at": "2026-10-18T05:45:07Z",
+    "id": 6246224733
+  },
+  {
+    "body": "SOURCE EVIDENCE — Nucor FY2025 Form 10-K Note 6 (read-only primary-filing retrieval; NOT a financial ruling or a `CORRECT:` terminal)",
+    "created_at": "2026-10-18T05:48:40Z",
+    "id": 6246251592
+  },
+  {
+    "body": "PRODUCT RECOVERY — approved same-PR continuation for CF-AR6-BRIDGE-INPUT-RECOVERY-01",
+    "created_at": "2026-10-18T07:11:26Z",
+    "id": 6246998800
+  },
+  {
+    "body": "BUILD START: OUTCOME-ID=CF-AR6-BRIDGE-INPUT-RECOVERY-01 TIER=HEAVY · session cse_01YYxFFbPWwzfMqmDDLfDfJf (https://claude.ai/code/cse_01YYxFFbPWwzfMqmDDLfDfJf) [BUILD_ATTEMPT_ID: BUILD-39106751129-1] [CONTRACT: 1768e71a97e4] [CAUSE: label-redrive]",
+    "created_at": "2026-10-18T07:11:51Z",
+    "id": 6247003706
+  },
+  {
+    "body": "BLOCKED: ACTIONABLE — I could not independently verify the Nucor Note 6 caption text the [recovery receipt](https://github.com/calyeap/Cal-Finance/pull/469#issuecomment-6246998800) requires, so I failed closed with no code change. Fix: allow `www.sec.gov` egress (or `d18rn0p25nwr6d.cloudfront.net`, the issuer PDF host) for the BUILD environment, then re-wake BUILD on this PR. [BUILD_ATTEMPT_ID: BUILD-39106751129-1]",
+    "created_at": "2026-10-18T07:15:09Z",
+    "id": 6247031466
+  },
+  {
+    "body": "OWNER START: wake=TERMINAL · session cse_01LtDd8t7Apzb9At6NP7M4yM (https://claude.ai/code/cse_01LtDd8t7Apzb9At6NP7M4yM) [OWNER_ATTEMPT_ID: OWNER-39106966389-1] [CONTRACT: 1768e71a97e4]",
+    "created_at": "2026-10-18T07:15:21Z",
+    "id": 6247033164
+  },
+  {
+    "body": "BLOCKED: ACTIONABLE — CF-AR6-BRIDGE-INPUT-RECOVERY-01 needs one human-only permission change: allow `www.sec.gov` egress (or `d18rn0p25nwr6d.cloudfront.net`, the issuer PDF host) for the BUILD environment, then re-wake BUILD on this same PR so it can verify Nucor FY2025 10-K Note 6 itself. [OWNER_ATTEMPT_ID: OWNER-39106966389-1]",
+    "created_at": "2026-10-18T07:16:02Z",
+    "id": 6247039084
+  },
+  {
+    "body": "RECOVERY CLARIFICATION — source-access restriction and provenance boundary (no new wake)",
+    "created_at": "2026-10-18T07:19:21Z",
+    "id": 6247066059
+  }
+]

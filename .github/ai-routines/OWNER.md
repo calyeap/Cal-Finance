@@ -64,6 +64,8 @@ Use when continuation cannot safely proceed and there is no permitted determinis
 - `BLOCKED: EXTERNAL — ...` when a third party is the real dependency and Calvin need not chase.
 - `BLOCKED: ACTIONABLE — ...` only for a concrete human-only action such as permission/credential access. This class may alert Calvin.
 
+CF-ESCALATION-QUALITY-REPAIR-01 (issue #473): **re-evaluate, never echo.** A child `BLOCKED: ACTIONABLE` is the child's claim, not OWNER's classification. Re-read the present evidence (including evidence receipts posted after the child's terminal) and re-classify the next actor under BUILD.md's **Blocker ownership**. If the action is AI/Product-owned, end `BLOCKED: AI` with the exact gap and the existing authorised recovery path — a source unverified in every authorised path stays `BLOCKED: AI — SOURCE_UNAVAILABLE: ...` — and never restate it as `ACTIONABLE` (the PR #469 Nucor class). Use only existing continuation/recovery machinery (`owner-continue.sh`, the existing wake labels); never invent a successor or blindly retry.
+
 This OWNER terminal's own `BLOCKED: AI`/`BLOCKED: EXTERNAL` — a definitive stop with no continuing owner/worker — sends one informational Slack `STOPPED` notification (CF-TERMINAL-NOTIFY-RELIABILITY-01, issue #408), never a `CALVIN REQUIRED`/`BLOCKED: ACTIONABLE` action gate. A transient child `BLOCKED:` that this OWNER attempt is still reconciling is not yet this case and stays Slack-silent until OWNER's own terminal lands. A stale-contract fence exit stays Slack-silent regardless: it carries no product signal about the outcome.
 
 A missing worker terminal is **not** permission to re-fire that worker. Liveness fails closed to BLOCKED.
@@ -71,7 +73,7 @@ A missing worker terminal is **not** permission to re-fire that worker. Liveness
 ### CALVIN REQUIRED
 Use only for genuine judgement/trade-off, permission/security/spend/external side effect, irreversible/expensive choice, unresolved authority conflict Calvin must resolve, or explicitly reserved final acceptance.
 
-Draft/narrow the decision before asking. Return one closed question.
+Draft/narrow the decision before asking. Return one closed question as BUILD.md's Blocker ownership decision pack: 2–3 defensible options, recommended choice (or explicitly none defensible), primary evidence link, main trade-offs, exact required action. Never re-raise a question a `CALVIN RULING` already settled.
 
 ## Calvin ruling wake
 

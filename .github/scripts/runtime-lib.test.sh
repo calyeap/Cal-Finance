@@ -487,4 +487,45 @@ assert_eq "$(runtime_build_wake_consumed "$(jq '[.[] | select(.id == 30 or .id =
 assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 40)" true "newer ADMISSION receipt consumes the wake"
 assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 50)" false "receipts at or before the baseline never prove this wake"
 
+# CF-ESCALATION-QUALITY-REPAIR-01 (issue #473): blocker ownership. Replays
+# the verbatim first lines of PR #469's four real Nucor `BLOCKED:
+# ACTIONABLE` terminals (fixtures/pr469-nucor-thread.json) — REVIEW, OWNER,
+# BUILD, OWNER — each of which asked Calvin to supply public filing text or
+# allow cloud egress after one proxy CONNECT 403. All four are AI-owned.
+NUCOR_THREAD="$(cat "${SCRIPT_DIR}/fixtures/pr469-nucor-thread.json")"
+nucor_line() { jq -r --argjson id "$1" '.[] | select(.id == $id) | .body' <<< "$NUCOR_THREAD"; }
+NUCOR_REVIEW="$(nucor_line 6246213819)"
+NUCOR_OWNER_1="$(nucor_line 6246224733)"
+NUCOR_BUILD="$(nucor_line 6247031466)"
+NUCOR_OWNER_2="$(nucor_line 6247039084)"
+for line in "$NUCOR_REVIEW" "$NUCOR_OWNER_1" "$NUCOR_BUILD" "$NUCOR_OWNER_2"; do
+  case "$line" in "BLOCKED: ACTIONABLE"*) ;; *) fail "Nucor fixture is not the real ACTIONABLE terminal: $line" ;; esac
+  assert_eq "$(runtime_blocker_owner "$line")" ai "Nucor source-access/egress ask is AI-owned: ${line:0:80}"
+done
+assert_eq "$(runtime_slack_kind "$NUCOR_REVIEW")" none "Nucor REVIEW (child) AI-owned blocker never pages Calvin"
+assert_eq "$(runtime_slack_kind "$NUCOR_BUILD")" none "Nucor BUILD (child) AI-owned blocker never pages Calvin"
+assert_eq "$(runtime_is_child_terminal "$NUCOR_REVIEW")" true "a demoted child blocker still wakes OWNER to re-evaluate (no silent stall)"
+assert_eq "$(runtime_is_child_terminal "$NUCOR_BUILD")" true "a demoted BUILD blocker still wakes OWNER to re-evaluate (no silent stall)"
+assert_eq "$(runtime_slack_kind "$NUCOR_OWNER_1")" stopped "OWNER's own AI-owned blocker is one informational STOPPED, never an action gate"
+assert_eq "$(runtime_slack_kind "$NUCOR_OWNER_2")" stopped "OWNER's 'human-only permission change' egress ask is still AI-owned: egress wins over the permission marker"
+assert_eq "$(runtime_blocker_owner 'BLOCKED: ACTIONABLE — Calvin must paste the exact caption from the 10-K note [REVIEW_ATTEMPT_ID: R1]')" ai "asking a human to paste source text is AI-owned retrieval"
+assert_eq "$(runtime_blocker_owner 'BLOCKED: AI — SOURCE_UNAVAILABLE: www.sec.gov CONNECT 403 [BUILD_ATTEMPT_ID: B1]')" none "only BLOCKED: ACTIONABLE has a blocker owner"
+assert_eq "$(runtime_slack_kind 'BLOCKED: AI — SOURCE_UNAVAILABLE: issuer caption unverified in every authorised path; NUE stays INCOMPLETE [BUILD_ATTEMPT_ID: B1]')" none "fail-closed unverified-source BUILD stop stays Slack-silent for OWNER to reconcile"
+
+# Genuine human-only gates keep their one paging alert, including every
+# existing workflow-authored ACTIONABLE shape (#401 timeout, #402 helper,
+# transport failures).
+for line in \
+  'BLOCKED: ACTIONABLE — BUILD transport unavailable (401); refresh CC_BUILD_FIRE_TOKEN. No worker started.' \
+  'BLOCKED: ACTIONABLE — CF-X-01 repair loop exceeded 3 CORRECT cycles without ACCEPT; reapply the `needs-build-wake` label to #9 to deliberately re-drive.' \
+  'BLOCKED: ACTIONABLE — CONTINUE wake mutation to #9 (CF-X-01) could not be verified after 4 attempts; reapply the `needs-build-wake` label to #9 to deterministically re-drive. [OWNER_ATTEMPT_ID: O1]' \
+  "$(runtime_timeout_line BUILD BUILD-1-1 90 https://s o/r 9)" \
+  'BLOCKED: ACTIONABLE — head `8930faa` still has no credential-backed live proof; a human must run one manual dispatch. [REVIEW_ATTEMPT_ID: R1]' \
+  'BLOCKED: ACTIONABLE — the repo security setting blocks the deploy key; an admin must grant it. [BUILD_ATTEMPT_ID: B1]'; do
+  assert_eq "$(runtime_blocker_owner "$line")" human "genuine human-only gate: ${line:0:80}"
+  assert_eq "$(runtime_slack_kind "$line")" actionable_blocked "genuine human-only gate still pages: ${line:0:80}"
+done
+assert_eq "$(runtime_blocker_owner 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at abc1234 (MSFT) — fix only those, then rerun once.')" unknown "unrecognised blocker is unknown"
+assert_eq "$(runtime_slack_kind 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at abc1234 (MSFT) — fix only those, then rerun once.')" actionable_blocked "unknown keeps today's paging: never silently drops a possibly genuine gate"
+
 echo "runtime-lib: PASS"
