@@ -668,3 +668,27 @@ runtime_outcome_attempt_open() {
   status="$(runtime_attempt_status "$comments_json" BUILD "$attempt" "$started")"
   if [ "$status" = complete ]; then echo false; else echo true; fi
 }
+
+# runtime_build_wake_consumed <comments_json> <outcome_id> <baseline_id>
+# CF-CONTINUE-SCRIPT-01 (issue #402): true when a comment newer than
+# <baseline_id> (GitHub comment ids only grow) proves fire-build already
+# consumed a BUILD wake for <outcome_id> — its "BUILD START:" receipt, a
+# "BUILD ADMISSION:" receipt, or a typed BUILD terminal (fire-build's own
+# admission STOP:/BLOCKED:, or the worker's; never a REVIEW/OWNER-tagged
+# line). fire-build clears the needs-build-wake label only after posting
+# one of these, so label-or-receipt never leaves a gap. Comments at or before the baseline are never
+# evidence of the wake being verified.
+runtime_build_wake_consumed() {
+  local comments_json="$1" outcome_id="$2" baseline="$3" body line
+  while IFS= read -r body; do
+    [ -z "$body" ] && continue
+    body="$(jq -r . <<< "$body")"
+    line="$(runtime_terminal_line "$body")"
+    case "$line" in
+      "BUILD START: OUTCOME-ID=${outcome_id} "*|"BUILD ADMISSION:"*) echo true; return ;;
+    esac
+    case "$line" in *"[REVIEW_ATTEMPT_ID:"*|*"[OWNER_ATTEMPT_ID:"*) continue ;; esac
+    if runtime_terminal_is_typed BUILD "$line"; then echo true; return; fi
+  done < <(jq -c --argjson base "$baseline" '[ .[] | select(.id > $base) ] | sort_by(.id) | .[].body' <<< "$comments_json")
+  echo false
+}

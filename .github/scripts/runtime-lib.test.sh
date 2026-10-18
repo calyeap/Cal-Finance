@@ -474,4 +474,17 @@ for line in \
   assert_eq "$(runtime_slack_kind "$line")" actionable_blocked "non-retryable transport failure is actionable, not silent: $line"
 done
 
+# CF-CONTINUE-SCRIPT-01: a BUILD wake is consumed only by a receipt newer
+# than the handoff baseline — START, ADMISSION, or a typed BUILD terminal.
+WAKE_C='[{"id":10,"body":"BUILD START: OUTCOME-ID=CF-W-01 TIER=NORMAL · session s (u) [BUILD_ATTEMPT_ID: B0]"},
+  {"id":20,"body":"STOP: DEAD CONTRACT — CF-W-01 contract closed"},
+  {"id":30,"body":"BUILD START: OUTCOME-ID=CF-W-012 TIER=NORMAL · session s (u) [BUILD_ATTEMPT_ID: B9]"},
+  {"id":40,"body":"BLOCKED: AI — review stopped [REVIEW_ATTEMPT_ID: R1]"},
+  {"id":50,"body":"BUILD ADMISSION: SUPPRESSED — CF-W-01 already active"}]'
+assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 0)" true "newer BUILD START consumes the wake"
+assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 10)" true "fire-build admission terminal consumes the wake"
+assert_eq "$(runtime_build_wake_consumed "$(jq '[.[] | select(.id == 30 or .id == 40)]' <<< "$WAKE_C")" CF-W-01 0)" false "another outcome's START or a REVIEW-tagged BLOCKED is not evidence"
+assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 40)" true "newer ADMISSION receipt consumes the wake"
+assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 50)" false "receipts at or before the baseline never prove this wake"
+
 echo "runtime-lib: PASS"
