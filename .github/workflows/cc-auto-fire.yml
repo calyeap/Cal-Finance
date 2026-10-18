@@ -14,12 +14,22 @@ permissions:
   pull-requests: write
 
 jobs:
+  # CF-LEG2-PREFLIGHT-01 (issue #475): every fire job acts only on a
+  # comment or label from `calyeap` (every legitimate worker, OWNER
+  # re-drive and Calvin wake is authored by that identity; GITHUB_TOKEN-
+  # authored events never trigger this workflow — terminal-relay.sh relays
+  # those in-job) and never on an item labelled `lean-sop`.
+
   # One short repo-wide admission lane. It ends after fire acceptance; liveness
   # observation is a separate job, so admission is never held for minutes.
   fire-build:
     if: >-
-      github.event.label.name == 'needs-build-wake' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'CORRECT'))
+      ((github.event_name == 'issue_comment' && github.event.comment.user.login == 'calyeap') ||
+        (github.event_name != 'issue_comment' && github.event.sender.login == 'calyeap')) &&
+      !contains(github.event.issue.labels.*.name, 'lean-sop') &&
+      !contains(github.event.pull_request.labels.*.name, 'lean-sop') &&
+      (github.event.label.name == 'needs-build-wake' ||
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'CORRECT')))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -275,8 +285,12 @@ jobs:
 
   fire-review:
     if: >-
-      github.event.label.name == 'needs-cc-rereview' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'DONE:'))
+      ((github.event_name == 'issue_comment' && github.event.comment.user.login == 'calyeap') ||
+        (github.event_name != 'issue_comment' && github.event.sender.login == 'calyeap')) &&
+      !contains(github.event.issue.labels.*.name, 'lean-sop') &&
+      !contains(github.event.pull_request.labels.*.name, 'lean-sop') &&
+      (github.event.label.name == 'needs-cc-rereview' ||
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'DONE:')))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -509,13 +523,17 @@ jobs:
 
   fire-owner-on-terminal:
     if: >-
-      github.event.label.name == 'needs-owner-wake' ||
-      (github.event_name == 'issue_comment' &&
-        (contains(github.event.comment.body, 'CALVIN RULING') ||
-         contains(github.event.comment.body, 'DONE: EVIDENCE') ||
-         contains(github.event.comment.body, 'STOP:') ||
-         contains(github.event.comment.body, 'BLOCKED:') ||
-         contains(github.event.comment.body, 'CALVIN REQUIRED:')))
+      ((github.event_name == 'issue_comment' && github.event.comment.user.login == 'calyeap') ||
+        (github.event_name != 'issue_comment' && github.event.sender.login == 'calyeap')) &&
+      !contains(github.event.issue.labels.*.name, 'lean-sop') &&
+      !contains(github.event.pull_request.labels.*.name, 'lean-sop') &&
+      (github.event.label.name == 'needs-owner-wake' ||
+        (github.event_name == 'issue_comment' &&
+          (contains(github.event.comment.body, 'CALVIN RULING') ||
+           contains(github.event.comment.body, 'DONE: EVIDENCE') ||
+           contains(github.event.comment.body, 'STOP:') ||
+           contains(github.event.comment.body, 'BLOCKED:') ||
+           contains(github.event.comment.body, 'CALVIN REQUIRED:'))))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:

@@ -11,7 +11,10 @@ permissions:
 
 jobs:
   fire-owner-on-merge:
-    if: github.event.pull_request.merged == true
+    # CF-LEG2-PREFLIGHT-01 (issue #475): never fire OWNER for a `lean-sop` PR.
+    if: >-
+      github.event.pull_request.merged == true &&
+      !contains(github.event.pull_request.labels.*.name, 'lean-sop')
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:

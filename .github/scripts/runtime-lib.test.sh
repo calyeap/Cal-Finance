@@ -526,6 +526,31 @@ for line in \
   assert_eq "$(runtime_slack_kind "$line")" actionable_blocked "genuine human-only gate still pages: ${line:0:80}"
 done
 assert_eq "$(runtime_blocker_owner 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at abc1234 (MSFT) — fix only those, then rerun once.')" unknown "unrecognised blocker is unknown"
+# CF-LEG2-PREFLIGHT-01 (issue #475, #474 regression): a strong human-only
+# marker — refreshing a named secret, reapplying a wake label, or a
+# credential/security/payment/consent action — wins over a bare mention of
+# "egress", so a genuine human gate that merely names egress keeps its page.
+for line in \
+  'BLOCKED: ACTIONABLE — refresh BUILD_FIRE_TOKEN (401); egress is not the cause. [OWNER_ATTEMPT_ID: OWNER-1-1]' \
+  'BLOCKED: ACTIONABLE — security: rotate the leaked egress-proxy credential before any worker runs. [OWNER_ATTEMPT_ID: OWNER-1-1]' \
+  'BLOCKED: ACTIONABLE — Calvin must decide the spend/consent policy for paid data egress (Morningstar). [OWNER_ATTEMPT_ID: OWNER-1-1]' \
+  'BLOCKED: ACTIONABLE — OWNER transport did not recover after 4 attempts (503); reapply the `needs-owner-wake` label to #12 to re-drive. Egress proxy may be degraded. [OWNER_ATTEMPT_ID: OWNER-1-1]' \
+  'BLOCKED: ACTIONABLE — refresh OWNER_FIRE_TOKEN; the egress allow-list itself is fine. [OWNER_ATTEMPT_ID: OWNER-1-1]'; do
+  assert_eq "$(runtime_blocker_owner "$line")" human "strong human marker beats egress: ${line:0:80}"
+  assert_eq "$(runtime_slack_kind "$line")" actionable_blocked "strong human marker keeps the page: ${line:0:80}"
+done
+# Without a strong marker the three AI-owned shapes stay `ai`, and
+# `permission`/`policy` alone never override them.
+for line in \
+  'BLOCKED: ACTIONABLE — allow `www.sec.gov` egress for the BUILD environment, then re-wake BUILD. [BUILD_ATTEMPT_ID: B1]' \
+  'BLOCKED: ACTIONABLE — www.sec.gov returned CONNECT 403; a human must fetch the note. [BUILD_ATTEMPT_ID: B1]' \
+  'BLOCKED: ACTIONABLE — Calvin must provide the exact note text from the 10-K. [REVIEW_ATTEMPT_ID: R1]' \
+  'BLOCKED: ACTIONABLE — needs a human-only permission change: allow `www.sec.gov` egress. [OWNER_ATTEMPT_ID: O1]' \
+  'BLOCKED: ACTIONABLE — the egress policy must allow `www.sec.gov`. [OWNER_ATTEMPT_ID: O1]'; do
+  assert_eq "$(runtime_blocker_owner "$line")" ai "no strong marker: AI-owned shape stays ai: ${line:0:80}"
+done
+assert_eq "$(runtime_blocker_owner 'BLOCKED: ACTIONABLE — refresh the cached egress allow-list. [BUILD_ATTEMPT_ID: B1]')" ai "a lower-case 'refresh the …' is not a named secret"
+
 assert_eq "$(runtime_slack_kind 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at abc1234 (MSFT) — fix only those, then rerun once.')" actionable_blocked "unknown keeps today's paging: never silently drops a possibly genuine gate"
 
 echo "runtime-lib: PASS"
