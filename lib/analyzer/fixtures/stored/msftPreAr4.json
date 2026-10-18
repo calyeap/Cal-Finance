@@ -1,0 +1,1554 @@
+{
+ "schemaVersion": "v1.0.2",
+ "runId": "fixture-msft-milestone5",
+ "ticker": "MSFT",
+ "companyName": "Microsoft Corporation",
+ "price": {
+  "value": {
+   "__decimal__": "510.12"
+  },
+  "timestamp": "2026-09-04T21:00:00-04:00"
+ },
+ "facts": [
+  {
+   "id": "finance-lease-rou-additions",
+   "name": "Finance-lease ROU assets obtained",
+   "type": "FACT",
+   "value": {
+    "__decimal__": "24.6"
+   },
+   "source": "FY2026 Form 10-K, Note 15",
+   "sourceUrl": null,
+   "sourceClass": "PRIMARY",
+   "extractionType": "AI-EXTRACTED",
+   "verificationState": "SPOT-CHECK PENDING",
+   "asOfDate": "FY2026",
+   "retrievalTimestamp": "2026-09-04T21:04:00-04:00",
+   "supersedesFactId": null,
+   "tagMappingVersion": null,
+   "derivedFrom": null,
+   "verificationOrigin": null,
+   "verificationReasonCode": null
+  },
+  {
+   "id": "finance-lease-liabilities",
+   "name": "Finance lease liabilities",
+   "type": "FACT",
+   "value": {
+    "__decimal__": "66.6"
+   },
+   "source": "XBRL tagged element",
+   "sourceUrl": null,
+   "sourceClass": "PRIMARY",
+   "extractionType": "DETERMINISTIC/STRUCTURED",
+   "verificationState": "SPOT-CHECK PENDING",
+   "asOfDate": "FY2026",
+   "retrievalTimestamp": "2026-09-04T21:04:00-04:00",
+   "supersedesFactId": null,
+   "tagMappingVersion": "us-gaap-2026",
+   "derivedFrom": null,
+   "verificationOrigin": null,
+   "verificationReasonCode": null
+  },
+  {
+   "id": "current-operating-margin",
+   "name": "Current operating margin",
+   "type": "FACT",
+   "value": {
+    "__decimal__": "0.468"
+   },
+   "source": "aggregator fundamentals feed",
+   "sourceUrl": null,
+   "sourceClass": "SECONDARY",
+   "extractionType": "DETERMINISTIC/STRUCTURED",
+   "verificationState": "SPOT-CHECK PENDING",
+   "asOfDate": "FY2026",
+   "retrievalTimestamp": "2026-09-04T21:04:00-04:00",
+   "supersedesFactId": null,
+   "tagMappingVersion": null,
+   "derivedFrom": null,
+   "verificationOrigin": null,
+   "verificationReasonCode": null
+  },
+  {
+   "id": "operating-lease-liabilities",
+   "name": "Operating lease liabilities (memo only)",
+   "type": "FACT",
+   "value": {
+    "__decimal__": "22"
+   },
+   "source": "XBRL tagged element",
+   "sourceUrl": null,
+   "sourceClass": "PRIMARY",
+   "extractionType": "DETERMINISTIC/STRUCTURED",
+   "verificationState": "SPOT-CHECK PENDING",
+   "asOfDate": "FY2026",
+   "retrievalTimestamp": "2026-09-04T21:04:00-04:00",
+   "supersedesFactId": null,
+   "tagMappingVersion": "us-gaap-2026",
+   "derivedFrom": null,
+   "verificationOrigin": null,
+   "verificationReasonCode": null
+  }
+ ],
+ "provenance": [],
+ "gates": {
+  "gate0": {
+   "result": "PASS",
+   "evaluatedTests": {
+    "sectorClassification": "Information Technology",
+    "interestIncomeOverRevenue": {
+     "__decimal__": "0.004"
+    },
+    "hasInsurancePremiumOrReserveLineItems": false,
+    "industryClassification": "Software"
+   },
+   "override": null
+  },
+  "gate1": {
+   "filedYearsCount": 10,
+   "state": null
+  },
+  "leverage": {
+   "netDebtRatio": {
+    "__decimal__": "0.007906813334258746766"
+   },
+   "operatingLeaseInclusiveMemo": {
+    "__decimal__": "0.013705143112715161061"
+   },
+   "result": "PASS",
+   "leveredResidualExceptionApplies": false
+  },
+  "triggerA": {
+   "fired": true,
+   "evidence": "current margin 0.468, window max 0.468, window range 0.214"
+  },
+  "triggerB": {
+   "fired": false,
+   "evidence": "worst single-year decline 0.041"
+  }
+ },
+ "profile": {
+  "recommended": "MATURE_PROFITABLE_STABLE_FCF",
+  "confirmedOrOverridden": "MATURE_PROFITABLE_STABLE_FCF",
+  "override": null,
+  "classificationInputs": {
+   "revenueScale": "large",
+   "fcfCharacter": "positive_stable",
+   "revenueGrowthBand": "10-30%",
+   "capitalIntensity": {
+    "__decimal__": "0.424"
+   },
+   "cyclicality": {
+    "tenYearMarginRange": {
+     "__decimal__": "0.214"
+    },
+    "worstSingleYearChange": {
+     "__decimal__": "0.041"
+    }
+   },
+   "balanceSheetNature": "asset-light"
+  }
+ },
+ "states": {
+  "suppressing": [
+   {
+    "state": "PRECONDITION FAILED",
+    "appliesTo": "FCF yield + growth"
+   },
+   {
+    "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+    "appliesTo": "reverse-DCF cell current/0.12"
+   },
+   {
+    "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+    "appliesTo": "reverse-DCF cell median/0.12"
+   },
+   {
+    "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+    "appliesTo": "reverse-DCF cell stress/0.12"
+   },
+   {
+    "state": "INCOMPLETE",
+    "appliesTo": "±1% rate sensitivity — missing REQUIRED input: the base case revalued at a discount rate one point higher and one point lower — none was supplied for this run"
+   },
+   {
+    "state": "INCOMPLETE",
+    "appliesTo": "the discount rate at which the base case equals the price — missing REQUIRED input: a revaluation of the base case at other discount rates — none was supplied for this run, so no rate was solved for"
+   }
+  ],
+  "qualifying": [
+   {
+    "flag": "MARGIN AT HISTORICAL HIGH",
+    "appliesTo": "operating margin"
+   }
+  ]
+ },
+ "diagnostics": {
+  "enterpriseValue": {
+   "suppressed": false,
+   "value": {
+    "marketCap": {
+     "__decimal__": "3787.89606"
+    },
+    "totalDebt": {
+     "__decimal__": "45"
+    },
+    "financeLeaseLiabilities": {
+     "__decimal__": "66.6"
+    },
+    "cashAndMarketableDebtSecurities": {
+     "__decimal__": "81.6"
+    },
+    "nonOperatingEquityInvestmentsAtBook": {
+     "__decimal__": "23.7"
+    },
+    "nonOperatingInvestmentsErrorDirection": null,
+    "enterpriseValue": {
+     "__decimal__": "3794.19606"
+    }
+   },
+   "qualification": {
+    "provenanceTokens": {
+     "sourceClass": "PRIMARY",
+     "extractionType": "DETERMINISTIC/STRUCTURED",
+     "verificationState": "CONFIRMED"
+    },
+    "analyticFlags": []
+   }
+  },
+  "multiples": {
+   "peTrailing": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "50.011764705882352941"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "DETERMINISTIC/STRUCTURED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "peForward": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "44.747368421052631579"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "DETERMINISTIC/STRUCTURED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "evToEbit": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "27.101400428571428571"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "DETERMINISTIC/STRUCTURED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "evToEbitda": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "23.713725375"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "DETERMINISTIC/STRUCTURED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "fcfYieldOnMarketCap": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "0.018168397155015916672"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "DETERMINISTIC/STRUCTURED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "priceToBook": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "5.668"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "DETERMINISTIC/STRUCTURED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "evToRevenue": {
+    "value": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "11.428301385542168675"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "impliedMarginForNormalMultiple": {
+     "__decimal__": "0.3"
+    }
+   },
+   "peBasis": {
+    "gaapEps": {
+     "__decimal__": "10.2"
+    },
+    "nonOperatingItemAfterTax": null,
+    "nopatBasisShown": false
+   },
+   "ownHistoryPercentile": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "1"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "DETERMINISTIC/STRUCTURED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   }
+  },
+  "marginHistory": {
+   "suppressed": false,
+   "value": {
+    "currentMargin": {
+     "__decimal__": "0.468"
+    },
+    "windowYears": 10,
+    "range": {
+     "__decimal__": "0.214"
+    },
+    "median": {
+     "__decimal__": "0.418"
+    },
+    "worstSingleYearChange": {
+     "__decimal__": "0.041"
+    },
+    "fiftyTwoWeekRange": [
+     {
+      "__decimal__": "410"
+     },
+     {
+      "__decimal__": "560"
+     }
+    ]
+   },
+   "qualification": {
+    "provenanceTokens": {
+     "sourceClass": "PRIMARY",
+     "extractionType": "DETERMINISTIC/STRUCTURED",
+     "verificationState": "CONFIRMED"
+    },
+    "analyticFlags": []
+   }
+  },
+  "fcf": {
+   "cashFcf": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "68.82"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "DETERMINISTIC/STRUCTURED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "fcfAfterLeaseFundedCapacity": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "44.22"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "AI-EXTRACTED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "unleveredFcf": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "17.22"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "AI-EXTRACTED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "sbc": {
+    "__decimal__": "11"
+   },
+   "workingCapitalSwing": {
+    "__decimal__": "0"
+   },
+   "fcfYield": {
+    "cashFcf": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "68.82"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "cashFcfLessSbc": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "57.82"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    }
+   }
+  },
+  "reinvestmentRonic": {
+   "reinvestment": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "105.78"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "AI-EXTRACTED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "ronic": {
+    "suppressed": false,
+    "value": {
+     "cells": [
+      {
+       "rate": 0.08,
+       "state": "CLEAN",
+       "value": {
+        "__decimal__": "0.178"
+       }
+      },
+      {
+       "rate": 0.1,
+       "state": "CLEAN",
+       "value": {
+        "__decimal__": "0.178"
+       }
+      },
+      {
+       "rate": 0.12,
+       "state": "CLEAN",
+       "value": {
+        "__decimal__": "0.178"
+       }
+      }
+     ]
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "DETERMINISTIC/STRUCTURED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "capitalLight": false,
+   "workingCapitalIntensity": null,
+   "lagBiasDirection": "conservative"
+  },
+  "impliedReturnOnNewCapital": {
+   "value": {
+    "suppressed": false,
+    "value": {
+     "__decimal__": "0.209"
+    },
+    "qualification": {
+     "provenanceTokens": {
+      "sourceClass": "PRIMARY",
+      "extractionType": "AI-EXTRACTED",
+      "verificationState": "CONFIRMED"
+     },
+     "analyticFlags": []
+    }
+   },
+   "period": "current fiscal year (year-over-year)"
+  },
+  "terminal": {
+   "terminalShareOfValue": {
+    "__decimal__": "0.63610980677407766247"
+   },
+   "terminalFcfConsistencyApplied": true
+  },
+  "impliedExitMultiple": {
+   "value": {
+    "suppressed": true,
+    "state": "INCOMPLETE",
+    "cause": "missing REQUIRED input(s): terminalValue"
+   },
+   "dividesMetric": "FY36 EBIT"
+  },
+  "rateSensitivity": {
+   "plusOnePoint": {
+    "__decimal__": "NaN"
+   },
+   "minusOnePoint": {
+    "__decimal__": "NaN"
+   },
+   "closeToDeterministicFunctionOfTerminalShare": true
+  },
+  "fcfYieldGrowth": {
+   "precondition": "PRECONDITION FAILED",
+   "output": null
+  },
+  "runRate": {
+   "seasonalityTestResult": "PASS",
+   "ttm": {
+    "__decimal__": "332"
+   },
+   "runRate": {
+    "__decimal__": "380"
+   },
+   "triggeringQuarterGrowth": {
+    "thisYear": {
+     "__decimal__": "0.11764705882352941176"
+    },
+    "priorYear1": {
+     "__decimal__": "0.066666666666666666667"
+    },
+    "priorYear2": {
+     "__decimal__": "0.060606060606060606061"
+    }
+   }
+  },
+  "shapeMismatch": {
+   "fired": false,
+   "gapPoints": null
+  },
+  "sensitivity": {
+   "tornado": [
+    {
+     "driver": "growth",
+     "available": true,
+     "displayed": true,
+     "fullRangeValueImpact": {
+      "__decimal__": "0.4859812108156441166"
+     },
+     "values": [
+      {
+       "__decimal__": "1961.7336091426554432"
+      },
+      {
+       "__decimal__": "2410.1199508392670153"
+      },
+      {
+       "__decimal__": "3133.006621062463101"
+      }
+     ]
+    },
+    {
+     "driver": "operatingMargin",
+     "available": true,
+     "displayed": true,
+     "fullRangeValueImpact": {
+      "__decimal__": "0.23377202026469612087"
+     },
+     "values": [
+      {
+       "__decimal__": "1846.701340851321468"
+      },
+      {
+       "__decimal__": "2089.9957406188434089"
+      },
+      {
+       "__decimal__": "2410.1199508392670153"
+      }
+     ]
+    },
+    {
+     "driver": "discountRate",
+     "available": false,
+     "cause": "missing REQUIRED analyst-supplied range: discountRate"
+    },
+    {
+     "driver": "terminalGrowth",
+     "available": false,
+     "cause": "missing REQUIRED analyst-supplied range: terminalGrowth"
+    },
+    {
+     "driver": "ronic",
+     "available": false,
+     "cause": "missing REQUIRED analyst-supplied range: ronic"
+    }
+   ],
+   "twoWayGrowthMargin": {
+    "available": true,
+    "rowValues": [
+     {
+      "__decimal__": "0.1"
+     },
+     {
+      "__decimal__": "0.137"
+     },
+     {
+      "__decimal__": "0.185"
+     }
+    ],
+    "columnValues": [
+     {
+      "__decimal__": "0.38"
+     },
+     {
+      "__decimal__": "0.418"
+     },
+     {
+      "__decimal__": "0.468"
+     }
+    ],
+    "cells": [
+     [
+      {
+       "__decimal__": "1498.8179922129833949"
+      },
+      {
+       "__decimal__": "1698.7133722507963248"
+      },
+      {
+       "__decimal__": "1961.7336091426554432"
+      }
+     ],
+     [
+      {
+       "__decimal__": "1846.701340851321468"
+      },
+      {
+       "__decimal__": "2089.9957406188434089"
+      },
+      {
+       "__decimal__": "2410.1199508392670153"
+      }
+     ],
+     [
+      {
+       "__decimal__": "2408.5052767034978209"
+      },
+      {
+       "__decimal__": "2721.3581299494146464"
+      },
+      {
+       "__decimal__": "3133.006621062463101"
+      }
+     ]
+    ]
+   },
+   "twoWayRateTerminalGrowth": {
+    "available": false,
+    "cause": "missing REQUIRED analyst-supplied range: discountRate"
+   },
+   "debtShareRemoved": true,
+   "forecastDispersion": {
+    "available": true,
+    "fullRangeValueImpact": {
+     "__decimal__": "0.4859812108156441166"
+    },
+    "selectedDriver": "growth",
+    "tier": "HIGH"
+   }
+  }
+ },
+ "scenarios": {
+  "bear": {
+   "revenueGrowthOrPath": {
+    "__decimal__": "0.1"
+   },
+   "operatingMargin": {
+    "__decimal__": "0.418"
+   },
+   "reinvestmentCapitalIntensity": {
+    "__decimal__": "0.15"
+   },
+   "shareCount": {
+    "__decimal__": "7.4255"
+   },
+   "writtenAnchor": "Margin reverts toward the ten-year median; growth slows but does not turn negative (trigger A fired, trigger B did not)."
+  },
+  "base": {
+   "revenueGrowthOrPath": {
+    "__decimal__": "0.137"
+   },
+   "operatingMargin": {
+    "__decimal__": "0.468"
+   },
+   "reinvestmentCapitalIntensity": {
+    "__decimal__": "0.15"
+   },
+   "shareCount": {
+    "__decimal__": "7.4255"
+   },
+   "writtenAnchor": "Ten-year CAGR consistent with the price-implied path."
+  },
+  "bull": {
+   "revenueGrowthOrPath": {
+    "__decimal__": "0.185"
+   },
+   "operatingMargin": {
+    "__decimal__": "0.468"
+   },
+   "reinvestmentCapitalIntensity": {
+    "__decimal__": "0.15"
+   },
+   "shareCount": {
+    "__decimal__": "7.4255"
+   },
+   "writtenAnchor": "Margin holds at its current level and growth sustains the five-year implied path."
+  }
+ },
+ "scenarioOutputs": {
+  "values": {
+   "bear": {
+    "__decimal__": "265"
+   },
+   "base": {
+    "__decimal__": "510"
+   },
+   "bull": {
+    "__decimal__": "650"
+   }
+  },
+  "weightedDistribution": {
+   "__decimal__": "474.99999999999999999"
+  },
+  "priceLocationWithinRange": {
+   "__decimal__": "0.63667532467532467532"
+  },
+  "rateAtWhichBaseEqualsPrice": null,
+  "sensitivity": {
+   "tornado": [],
+   "twoWayGrowthMargin": [],
+   "twoWayRateTerminalGrowth": [],
+   "debtShareRemoved": true,
+   "forecastDispersion": {
+    "available": false,
+    "cause": "no tornado row is available: true — every analyst-supplied range for this run is missing"
+   }
+  }
+ },
+ "priceImplied": {
+  "steadyStateEv": {
+   "suppressed": false,
+   "value": {
+    "__decimal__": "1110.208"
+   },
+   "qualification": {
+    "provenanceTokens": {
+     "sourceClass": "PRIMARY",
+     "extractionType": "DETERMINISTIC/STRUCTURED",
+     "verificationState": "CONFIRMED"
+    },
+    "analyticFlags": []
+   }
+  },
+  "pvgo": {
+   "suppressed": false,
+   "value": {
+    "__decimal__": "2683.98806"
+   },
+   "qualification": {
+    "provenanceTokens": {
+     "sourceClass": "PRIMARY",
+     "extractionType": "DETERMINISTIC/STRUCTURED",
+     "verificationState": "CONFIRMED"
+    },
+    "analyticFlags": []
+   }
+  },
+  "pvgoShareOfEv": {
+   "suppressed": false,
+   "value": {
+    "__decimal__": "0.70739308605997550901"
+   },
+   "qualification": {
+    "provenanceTokens": {
+     "sourceClass": "PRIMARY",
+     "extractionType": "DETERMINISTIC/STRUCTURED",
+     "verificationState": "CONFIRMED"
+    },
+    "analyticFlags": []
+   }
+  },
+  "nopatGap": {
+   "current": {
+    "__decimal__": "124.3008"
+   },
+   "medianMargin": {
+    "__decimal__": "111.0208"
+   }
+  },
+  "reverseDcfGrid": [
+   {
+    "marginLevel": "current",
+    "rate": 0.08,
+    "fiveYearGrowth": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.17648982060894540515"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "tenYearCagr": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.1312796049418631017"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "year10Revenue": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "1139.8236391896980628"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "ronic": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "lagBiasDirection": "conservative"
+   },
+   {
+    "marginLevel": "current",
+    "rate": 0.1,
+    "fiveYearGrowth": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.27575786947986496741"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "tenYearCagr": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.198625784175452071"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "year10Revenue": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "2032.2364723659049199"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "ronic": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "lagBiasDirection": "conservative"
+   },
+   {
+    "marginLevel": "current",
+    "rate": 0.12,
+    "fiveYearGrowth": {
+     "suppressed": true,
+     "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+     "cause": "terminal share 112%"
+    },
+    "tenYearCagr": {
+     "suppressed": true,
+     "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+     "cause": "terminal share 112%"
+    },
+    "year10Revenue": {
+     "suppressed": true,
+     "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+     "cause": "terminal share 112%"
+    },
+    "ronic": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "lagBiasDirection": "conservative"
+   },
+   {
+    "marginLevel": "median",
+    "rate": 0.08,
+    "fiveYearGrowth": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.20201941274970165425"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "tenYearCagr": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.1486913997763700192"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "year10Revenue": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "1327.9195935004180676"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "ronic": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "lagBiasDirection": "conservative"
+   },
+   {
+    "marginLevel": "median",
+    "rate": 0.1,
+    "fiveYearGrowth": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.30385621269712437987"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "tenYearCagr": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.2175210595950148173"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "year10Revenue": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "2376.3089494349820263"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "ronic": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "lagBiasDirection": "conservative"
+   },
+   {
+    "marginLevel": "median",
+    "rate": 0.12,
+    "fiveYearGrowth": {
+     "suppressed": true,
+     "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+     "cause": "terminal share 117%"
+    },
+    "tenYearCagr": {
+     "suppressed": true,
+     "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+     "cause": "terminal share 117%"
+    },
+    "year10Revenue": {
+     "suppressed": true,
+     "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+     "cause": "terminal share 117%"
+    },
+    "ronic": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "lagBiasDirection": "conservative"
+   },
+   {
+    "marginLevel": "stress",
+    "rate": 0.08,
+    "fiveYearGrowth": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.22341406609244369275"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "tenYearCagr": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.1632330300208841582"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "year10Revenue": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "1505.931919379115499"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "ronic": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "lagBiasDirection": "conservative"
+   },
+   {
+    "marginLevel": "stress",
+    "rate": 0.1,
+    "fiveYearGrowth": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.32736513737102347275"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "tenYearCagr": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.2332766967683529502"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "year10Revenue": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "2702.360833718671178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "ronic": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "lagBiasDirection": "conservative"
+   },
+   {
+    "marginLevel": "stress",
+    "rate": 0.12,
+    "fiveYearGrowth": {
+     "suppressed": true,
+     "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+     "cause": "terminal share 122%"
+    },
+    "tenYearCagr": {
+     "suppressed": true,
+     "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+     "cause": "terminal share 122%"
+    },
+    "year10Revenue": {
+     "suppressed": true,
+     "state": "DEGENERATE — TERMINAL EXCEEDS TOTAL VALUE",
+     "cause": "terminal share 122%"
+    },
+    "ronic": {
+     "suppressed": false,
+     "value": {
+      "__decimal__": "0.178"
+     },
+     "qualification": {
+      "provenanceTokens": {
+       "sourceClass": "PRIMARY",
+       "extractionType": "DETERMINISTIC/STRUCTURED",
+       "verificationState": "CONFIRMED"
+      },
+      "analyticFlags": []
+     }
+    },
+    "lagBiasDirection": "conservative"
+   }
+  ],
+  "impliedExitMultiple": {
+   "value": {
+    "suppressed": true,
+    "state": "INCOMPLETE",
+    "cause": "missing REQUIRED input(s): terminalValue"
+   },
+   "dividesMetric": "FY36 EBIT"
+  }
+ },
+ "fairValueRange": {
+  "kind": "range",
+  "bear": {
+   "__decimal__": "265"
+  },
+  "bull": {
+   "__decimal__": "650"
+  },
+  "weightedValueInside": {
+   "__decimal__": "474.99999999999999999"
+  },
+  "drivingInputs": [
+   "years 1-5 revenue growth",
+   "operating margin path",
+   "reinvestment as % of NOPAT"
+  ],
+  "scenarioLabelsWarning": true
+ },
+ "trust": {
+  "status": "PARTIAL",
+  "determinedBy": [
+   {
+    "kind": "qualifying flag",
+    "detail": "MARGIN AT HISTORICAL HIGH on operating margin"
+   },
+   {
+    "kind": "incomplete input",
+    "detail": "1 diagnostic(s) INCOMPLETE on a missing REQUIRED input"
+   },
+   {
+    "kind": "incomplete input",
+    "detail": "INCOMPLETE on ±1% rate sensitivity — missing REQUIRED input: the base case revalued at a discount rate one point higher and one point lower — none was supplied for this run"
+   },
+   {
+    "kind": "incomplete input",
+    "detail": "INCOMPLETE on the discount rate at which the base case equals the price — missing REQUIRED input: a revaluation of the base case at other discount rates — none was supplied for this run, so no rate was solved for"
+   }
+  ]
+ },
+ "achievedRevenueCagr": {
+  "value": null,
+  "blockedBy": [
+   "no single-tag annual revenue series - this fixture is a synthetic reconstruction of the mock's disclosed outputs and carries no multi-year filing history to compute a CAGR from"
+  ]
+ },
+ "growthLicence": {
+  "status": "YES",
+  "reason": "Step 2 (§10.6.2): RONIC (17.8%) exceeds every rate in the approved §7.1 rate grid (8%/10%/12%) — all 3 cells agree, so the growth-inclusive value may be underwritten at Step 3."
+ },
+ "verdictBlockers": [
+  {
+   "step": "Step 3",
+   "kind": "OPEN POLICY",
+   "cause": "no approved growth-inclusive/conservative value model exists in production — §11 item 3 (fixed floor vs. company-specific no-growth bound, docs/verdict-methodology-reconciliation.md) is unresolved."
+  },
+  {
+   "step": "Step 4/5",
+   "kind": "OPEN POLICY",
+   "cause": "waiting for policy — the ruled forecast-dispersion measure (§11 item 1) cannot be built without at least one company's AnalystSuppliedRange growth/margin (or rate/terminal-growth) capture, and Step 5's numeric band/cut-point (§11 item 5) remains a separate open decision. Disagreement or absence here is never resolved to a default verdict."
+  },
+  {
+   "step": "policy constants",
+   "kind": "DATA",
+   "cause": "preRevenueUnleveredRate, projectDebtCost not configured for this run (§7.1, policy.ts) — no Command Center ruling has landed."
+  }
+ ],
+ "preRevenue": null,
+ "challenger": null,
+ "interpretation": {
+  "statements": [],
+  "pageOne": null
+ },
+ "business": {
+  "narrative": null,
+  "unavailableReason": "Business section content has not been built for this analysis."
+ },
+ "marketContext": {
+  "sic": null,
+  "sicDescription": null
+ },
+ "latestFiling": null,
+ "policy": {
+  "version": "policy-sha256:e7ee08bcea48a8b6",
+  "constants": {
+   "terminalGrowth": {
+    "__decimal__": "0.03"
+   },
+   "terminalRoicPremium": {
+    "__decimal__": "0.03"
+   },
+   "rateGrid": [
+    {
+     "__decimal__": "0.08"
+    },
+    {
+     "__decimal__": "0.1"
+    },
+    {
+     "__decimal__": "0.12"
+    }
+   ],
+   "preRevenueConstructionLeadYears": 2,
+   "leveredCostOfEquityCap": {
+    "__decimal__": "0.3"
+   },
+   "leverageThreshold": {
+    "__decimal__": "0.1"
+   },
+   "gate0InterestIncomeOverRevenueThreshold": {
+    "__decimal__": "0.5"
+   },
+   "gate1HistoryInsufficientYears": 5,
+   "gate1ShortHistoryYears": 9,
+   "triggerAMarginProximityPoints": {
+    "__decimal__": "0.02"
+   },
+   "triggerAWindowRangePoints": {
+    "__decimal__": "0.15"
+   },
+   "triggerBDeclinePoints": {
+    "__decimal__": "0.1"
+   },
+   "historyInsufficientStressMarginRelativeReductions": [
+    {
+     "__decimal__": "0.25"
+    },
+    {
+     "__decimal__": "0.5"
+    }
+   ],
+   "peBasisNonOperatingThresholdOfPretaxIncome": {
+    "__decimal__": "0.05"
+   },
+   "runRateSequentialGrowthTrigger": {
+    "__decimal__": "0.1"
+   },
+   "seasonalityPriorYearThreshold": {
+    "__decimal__": "0.1"
+   },
+   "capitalLightRonicFloor": {
+    "__decimal__": "0.6"
+   },
+   "ronicCap": {
+    "__decimal__": "2"
+   },
+   "shapeMismatchGapPoints": {
+    "__decimal__": "0.15"
+   },
+   "sensitivityDisplayThreshold": {
+    "__decimal__": "0.1"
+   },
+   "step4DispersionTierLowMediumBoundary": {
+    "__decimal__": "0.1"
+   },
+   "step4DispersionTierMediumHighBoundary": {
+    "__decimal__": "0.25"
+   },
+   "fcfYieldGrowthPreconditionBand": [
+    {
+     "__decimal__": "0.8"
+    },
+    {
+     "__decimal__": "1.5"
+    }
+   ],
+   "verdictSynthesisV1Buy": {
+    "low": {
+     "__decimal__": "0.9"
+    },
+    "medium": {
+     "__decimal__": "0.8"
+    },
+    "high": {
+     "__decimal__": "0.7"
+    }
+   },
+   "verdictSynthesisV1Sell": {
+    "low": {
+     "__decimal__": "1.2"
+    },
+    "medium": {
+     "__decimal__": "1.3"
+    },
+    "high": {
+     "__decimal__": "1.45"
+    }
+   }
+  },
+  "undefinedConstants": {
+   "nopatTaxRate": {
+    "__decimal__": "0.2"
+   },
+   "stressMarginLevel": {
+    "__decimal__": "0.38"
+   },
+   "preRevenueUnleveredRate": null,
+   "projectDebtCost": null
+  },
+  "provisionalLabels": {
+   "terminalRoicPremium": "Assumes a permanent 3-point return premium for every company (I16); must carry that label wherever it drives a figure (§7.1, §10.4).",
+   "preRevenueConstructionLeadYears": "First-order estimate; worth $27/share on OKLO's 8 GW case (§7.1).",
+   "leveredCostOfEquityCap": "No observations behind the 30% level itself; capped cells are labelled RATE CAPPED — VALUE IS AN UPPER BOUND (I12, §7.1).",
+   "gate0InterestIncomeOverRevenueThreshold": "No observations behind it (Appendix B); the other three Gate 0 tests are classification lookups, not thresholds (§6.1).",
+   "gate1HistoryInsufficientYears": "Red-team judgment with no observations (Appendix B). Direction of error is suppression, so a wrong threshold shows less rather than something false (§6.2).",
+   "gate1ShortHistoryYears": "Red-team judgment with no observations (Appendix B), same basis as the <5-year threshold (§6.2).",
+   "historyInsufficientStressMarginRelativeReductions": "No observations; substitutes for a median that does not exist under HISTORY INSUFFICIENT (§6.2).",
+   "runRateSequentialGrowthTrigger": "Calibrated on NVIDIA only (Appendix B) (§7.2 M12).",
+   "seasonalityPriorYearThreshold": "Comes from I4 and has no observations behind it (§7.2 M12).",
+   "step4DispersionTierLowMediumBoundary": "AI DEFAULT (CF-STEP4-TIER-BOUNDARY-DEFAULT-01), not a CALVIN RULING. Anchored in the already-approved sensitivityDisplayThreshold (§7.2 M14: a driver whose full plausible range moves value by less than this is not even displayed) — a driver the approved policy will not show cannot honestly be called anything but LOW dispersion, so this imports no new judgement beyond that existing constant. Reversible by Calvin at any time; retired by a fresh Calvin ruling on the LOW/MEDIUM boundary itself.",
+   "step4DispersionTierMediumHighBoundary": "AI DEFAULT (CF-STEP4-TIER-BOUNDARY-DEFAULT-01), not a CALVIN RULING. No approved anchor exists — red-team judgement with no observations behind it. Direction of error: the conservative direction for an uncertainty reading is to over-report rather than under-report dispersion, so the lower of the credible boundaries (0.25, not e.g. 0.50) is chosen deliberately. Consequence: MSFT's real run (fullRangeValueImpact 0.48598121081564411663) reads HIGH under this default and would read MEDIUM under a 0.50 boundary; neither is consumed by anything today, so neither changes a supported result. Retired by capturing a second company's AnalystSuppliedRange to validate the boundary against more than one observation (explicitly not dispatched by this outcome — requires its own Calvin permission)."
+  }
+ },
+ "runIdentity": {
+  "codeVersion": "c963bcd2c35de011cd5bfdd6ea24aae24375b9e5",
+  "inputsFingerprint": "inputs-sha256:e2f74bf5a6c8328a",
+  "factSnapshot": "facts-sha256:cddd7cb2b9d91bcd",
+  "sheetVersion": "sheet-sha256:6a9fb03aff2758ee",
+  "priceSnapshot": {
+   "value": {
+    "__decimal__": "510.12"
+   },
+   "timestamp": "2026-09-04T21:00:00-04:00"
+  },
+  "valuationTiming": {
+   "convention": "MID-YEAR",
+   "valuationDate": "2026-09-04T21:00:00-04:00",
+   "basePeriodEnd": null,
+   "basePeriodKind": null,
+   "stubYears": {
+    "__decimal__": "0"
+   }
+  }
+ }
+}

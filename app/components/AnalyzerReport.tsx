@@ -47,6 +47,14 @@ function pct(value: Decimal, dp = 1): string {
   return `${value.mul(100).toFixed(dp)}%`;
 }
 
+// CF-LEG2-PREAR4-REPORT-CRASH-01 — AR4 made a RONIC ladder cell's rate a
+// Decimal. A result stored before AR4 carried it as a plain number (0.08,
+// 0.10, 0.12 — the retired grid), and fromStorable revives only tagged
+// Decimals, so it comes back a number. Read as the same rate, not a new one.
+function ladderRate(rate: Decimal | number): Decimal {
+  return Decimal.isDecimal(rate) ? rate : new Decimal(rate);
+}
+
 function points(value: Decimal): string {
   return value.mul(100).toFixed(0);
 }
@@ -764,7 +772,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                     diagnostics.reinvestmentRonic.ronic.value.cells.map((c) => (
                       <div key={c.rate.toString()}>
                         <span className="v">
-                          r={pct(c.rate)}:{" "}
+                          r={pct(ladderRate(c.rate))}:{" "}
                           {/* CF-ANALYZER-USER-READY-01 correction — same
                               defect class as StateBlock above. The other
                               ladder labels (CLEAN, LOW RONIC — VALUE-

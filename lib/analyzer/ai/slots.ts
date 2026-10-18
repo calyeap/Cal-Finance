@@ -243,8 +243,10 @@ export function buildSlotCatalogue(result: AnalysisResult): SlotCatalogue {
     );
   }
 
-  {
-    const solve = priceImplied.reverseDcf;
+  // Absent on a result stored before AR4 (it carried the retired grid), so
+  // no slot is offered for a solve that result never ran.
+  const solve = priceImplied.reverseDcf as AnalysisResult["priceImplied"]["reverseDcf"] | undefined;
+  if (solve !== undefined) {
     const at = `the base scenario at r = ${pct(solve.rate)}`;
     b.figure("priceImplied.reverseDcf.fiveYearGrowth", `price-implied growth for years 1-5, ${at}`, solve.fiveYearGrowth, (v) => pct(v));
     b.figure("priceImplied.reverseDcf.tenYearCagr", `price-implied ten-year CAGR, ${at}`, solve.tenYearCagr, (v) => pct(v));
