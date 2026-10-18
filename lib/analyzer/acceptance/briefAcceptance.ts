@@ -393,8 +393,14 @@ export function checkBriefAcceptance({ ticker, policy, report, overviewText }: B
       figureItem("Steady-state EV", priceImplied.steadyStateEv, overviewText, leverage),
       figureItem("PVGO share of EV", priceImplied.pvgoShareOfEv, overviewText, leverage),
     ];
-    const solve = priceImplied.reverseDcf;
-    items.push(figureItem(`Implied growth, yrs 1-5 at r = ${solve.rate.mul(100).toFixed(1)}%`, solve.fiveYearGrowth, overviewText, leverage));
+    // Absent on a result stored before AR4 (it carried the retired grid):
+    // fail closed as MISSING rather than crash or pass.
+    const solve = priceImplied.reverseDcf as AnalysisResult["priceImplied"]["reverseDcf"] | undefined;
+    items.push(
+      solve === undefined
+        ? { status: "MISSING", detail: "Implied growth is absent: this result was stored before AR4 and carries no reverse-DCF solve" }
+        : figureItem(`Implied growth, yrs 1-5 at r = ${solve.rate.mul(100).toFixed(1)}%`, solve.fiveYearGrowth, overviewText, leverage)
+    );
     sections.push({
       id: 8,
       title: "What today's price assumes",
