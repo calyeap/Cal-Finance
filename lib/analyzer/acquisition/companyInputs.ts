@@ -375,6 +375,21 @@ export function buildCompanyInputs(
   // acquired REQUIRED inputs, not a third acquisition).
   const sharesOutstandingSourced = get("shares-outstanding");
 
+  // CF-LEG2-DECIDED-FACT-GATING-01 — the price input carries the provenance
+  // of this run's own `price` fact (acquire.ts), exactly as `get` carries
+  // every tagged fact's: CONFIRMED once confirmed, SPOT-CHECK PENDING before
+  // a decision, NOT CONFIRMED after a Cannot-verify decision — which
+  // computedValue (figures.ts) then refuses in every figure built from it.
+  // It used to be CLEAN_PROVENANCE whatever the run decided, so a
+  // contradicted price still fed enterprise value and everything after it.
+  // A confirmed price fact's tokens ARE CLEAN_PROVENANCE (PRIMARY,
+  // DETERMINISTIC/STRUCTURED, CONFIRMED), so a confirmed run is unchanged.
+  // The value stays the run's own price; the fact is its record. A price
+  // supplied with no fact beside it (no caller does) is a market-data value
+  // outside the fact array, classified as provenance.ts says such a value is.
+  const priceSourced: SourcedValue<Decimal> | null =
+    price === null ? null : { value: price.value, provenance: tokensOf(byId.get("price")) ?? MARKET_DATA_PROVENANCE };
+
   const fixture: CompanyFixture = {
     schemaVersion: "v1.0.2",
     runId: `acquired-${acquisition.ticker.toLowerCase()}`,
@@ -411,7 +426,7 @@ export function buildCompanyInputs(
       // instead of the missing input it actually was — EnterpriseValueInput
       // already typed this field nullable (modules/enterpriseValue.ts);
       // nothing here previously supplied the null the type already allowed.
-      price: track("price", price === null ? null : { value: price.value, provenance: CLEAN_PROVENANCE }),
+      price: track("price", priceSourced),
       totalDebt: track("totalDebt", get("total-debt")),
       // CALVIN RULING A (issue #308/#309) — the as-of date each of the
       // three named bridge inputs actually resolved to, read off the same
@@ -463,7 +478,7 @@ export function buildCompanyInputs(
       // through via track() instead of being flattened to a $0 SourcedValue.
       // simpleMultiple (multiples.ts) already returns INCOMPLETE for a null
       // operand — nothing new is built for the suppressed case.
-      price: track("price", price === null ? null : { value: price.value, provenance: CLEAN_PROVENANCE }),
+      price: track("price", priceSourced),
       // §4.4's SEC tag mapping has no EPS element (the §3.5 GAAP-vs-I5-
       // adjusted basis question is a per-company decision this milestone
       // still does not make from a filing tag), but a lean/CF-ANALYZER-
@@ -493,11 +508,11 @@ export function buildCompanyInputs(
       // matching how every other derived figure in this file is qualified.
       marketCap: track(
         "marketCap",
-        price === null || sharesOutstandingSourced === null
+        priceSourced === null || sharesOutstandingSourced === null
           ? null
           : {
-              value: price.value.mul(sharesOutstandingSourced.value),
-              provenance: combineProvenance(CLEAN_PROVENANCE, sharesOutstandingSourced.provenance),
+              value: priceSourced.value.mul(sharesOutstandingSourced.value),
+              provenance: combineProvenance(priceSourced.provenance, sharesOutstandingSourced.provenance),
             }
       ),
       bookValue: track("bookValue", null),

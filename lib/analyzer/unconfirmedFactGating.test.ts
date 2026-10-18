@@ -1,6 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { assembleAnalysisResult, type CompanyFixture } from "./assemble";
+import { assembleAnalysisResult, PRICE_NOT_CONFIRMED_CAUSE, type CompanyFixture } from "./assemble";
 import { MSFT_FIXTURE } from "./fixtures/msft";
+import { OKLO_FIXTURE } from "./fixtures/oklo";
 import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 import { NOT_CONFIRMED_INPUT_CAUSE } from "./figures";
 import { boundState, NOT_COMPUTED_BINDING } from "./notComputed";
@@ -81,5 +82,73 @@ describe("a NOT CONFIRMED base revenue", () => {
   it("blocks the terminal share of the base scenario DCF, with its cause bound — never a zero", () => {
     expect(gated.diagnostics.terminal.terminalShareOfValue.isNaN()).toBe(true);
     expect(boundState(gated.states, NOT_COMPUTED_BINDING.terminalShareOfValue)?.state).toBe("INCOMPLETE");
+  });
+});
+
+// CF-LEG2-DECIDED-FACT-GATING-01 — the reads that take the price's bare
+// value (assemble.ts's currentPrice) and the NOPAT gap's bare figures. On
+// an acquired run a NOT CONFIRMED price already blocks these through
+// enterprise value (decidedFactGatingOnRealRun.test.ts); here the fixture
+// states its own enterprise value and typed scenario values, so the range
+// renders and only the price's own decision can block what reads it.
+describe("a NOT CONFIRMED price where the range renders without it", () => {
+  const unconfirmedPrice = (fixture: CompanyFixture): CompanyFixture => ({
+    ...fixture,
+    enterpriseValue: { ...fixture.enterpriseValue, price: unconfirmed(fixture.enterpriseValue.price) },
+    multiplesInput: { ...fixture.multiplesInput, price: unconfirmed(fixture.multiplesInput.price) },
+  });
+  const clean = assembleAnalysisResult(MSFT_FIXTURE);
+  const gated = assembleAnalysisResult(unconfirmedPrice(MSFT_FIXTURE));
+
+  it("is a real precondition: with the price confirmed, the range renders and the price is located within it", () => {
+    expect(clean.fairValueRange.kind).toBe("range");
+    expect(gated.fairValueRange.kind).toBe("range");
+    expect(clean.scenarioOutputs.priceLocationWithinRange).not.toBeNull();
+  });
+
+  it("does not locate the contradicted price within the range, and says why", () => {
+    expect(gated.scenarioOutputs.priceLocationWithinRange).toBeNull();
+    expect(boundState(gated.states, NOT_COMPUTED_BINDING.priceLocationWithinRange)?.state).toBe("INCOMPLETE");
+    expect(boundState(gated.states, NOT_COMPUTED_BINDING.priceLocationWithinRange)?.cause).toBe(PRICE_NOT_CONFIRMED_CAUSE);
+  });
+
+  it("does not present the contradicted price as the current price", () => {
+    expect(boundState(clean.states, NOT_COMPUTED_BINDING.price)).toBeNull();
+    expect(boundState(gated.states, NOT_COMPUTED_BINDING.price)?.state).toBe("INCOMPLETE");
+    expect(boundState(gated.states, NOT_COMPUTED_BINDING.price)?.cause).toBe(PRICE_NOT_CONFIRMED_CAUSE);
+  });
+
+  it("keeps the valuation date at the price date — timing is not a use of the price's value", () => {
+    expect(gated.runIdentity?.valuationTiming).toEqual(clean.runIdentity?.valuationTiming);
+    expect(gated.scenarioOutputs.values.base.equals(clean.scenarioOutputs.values.base)).toBe(true);
+  });
+
+  it("a pre-revenue run's 'success as the price requires' — a REQUIRED part of its range — is not computed from it", () => {
+    const okloClean = assembleAnalysisResult(OKLO_FIXTURE);
+    const okloGated = assembleAnalysisResult(unconfirmedPrice(OKLO_FIXTURE));
+    expect(boundState(okloClean.states, NOT_COMPUTED_BINDING.successAsPriceRequires)).toBeNull();
+    expect(boundState(okloGated.states, NOT_COMPUTED_BINDING.successAsPriceRequires)?.state).toBe("INCOMPLETE");
+    expect(boundState(okloGated.states, NOT_COMPUTED_BINDING.successAsPriceRequires)?.cause).toBe(PRICE_NOT_CONFIRMED_CAUSE);
+  });
+});
+
+describe("a NOT CONFIRMED current operating margin", () => {
+  const clean = assembleAnalysisResult(ACQUIRED_SHAPE);
+  const gated = assembleAnalysisResult({
+    ...ACQUIRED_SHAPE,
+    reverseDcf: { ...ACQUIRED_SHAPE.reverseDcf, currentMargin: unconfirmed(ACQUIRED_SHAPE.reverseDcf.currentMargin) },
+  });
+
+  it("is a real precondition: a margin trigger has fired, so the current-vs-median NOPAT gap is shown", () => {
+    expect(clean.priceImplied.nopatGap).not.toBeNull();
+  });
+
+  it("does not show the NOPAT gap built from it", () => {
+    expect(gated.priceImplied.nopatGap).toBeNull();
+  });
+
+  it("leaves steady-state EV and PVGO, which read the median margin, computed", () => {
+    expect(gated.priceImplied.steadyStateEv).toEqual(clean.priceImplied.steadyStateEv);
+    expect(gated.priceImplied.pvgo).toEqual(clean.priceImplied.pvgo);
   });
 });

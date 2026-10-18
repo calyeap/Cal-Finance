@@ -58,8 +58,15 @@ export function computeSteadyStateEvPvgo(input: SteadyStateEvInput): SteadyState
   const pvgoValue = ev.value.minus(steadyStateEvValue);
   const pvgoShareValue = pvgoValue.dividedBy(ev.value);
 
+  // CF-LEG2-DECIDED-FACT-GATING-01 — the gap shows both figures bare, so it
+  // is shown only where neither is NOT CONFIRMED: a current operating margin
+  // this run rejected (or a median-margin NOPAT built on a rejected input)
+  // is not displayed, exactly as computedValue (figures.ts) refuses it in a
+  // figure. Its absence is the gap's existing "not shown" state.
   const nopatGap =
-    input.triggerAOrBFired && currentNopat !== null
+    input.triggerAOrBFired &&
+    currentNopat !== null &&
+    combineProvenance(currentNopat.provenance, nopat.provenance).verificationState !== "NOT CONFIRMED"
       ? { current: currentNopat.value, medianMargin: nopat.value }
       : null;
 
