@@ -6,6 +6,7 @@ import { acquire, type AcquisitionResult } from "./acquire";
 import { buildCompanyInputs, type AnalystInputs } from "./companyInputs";
 import { FINANCE_LEASES_INSIDE_TOTAL_DEBT, TAG_MAPPING_VERSION, tagMapEntry } from "./tagMap";
 import { resolveEntry } from "./selectTagged";
+import { instantAnnualSeries } from "./history";
 import type { CompanyFactsDocument } from "./secClient";
 import { computeEnterpriseValue, type EnterpriseValueInput } from "../modules/enterpriseValue";
 import { evaluateLeverage } from "../gates";
@@ -146,7 +147,9 @@ function computed(b: Bridge) {
 
 describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real captures", () => {
   it("runs under the bumped mapping version", () => {
-    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-2");
+    // -10-3: CF-LEG2-KO-COMMERCIAL-PAPER-01 (issue #487) added CommercialPaper
+    // to the lease-inclusive total-debt candidate.
+    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-3");
   });
 
   it("LLY: total debt is the latest presented balance sheet's, same date as cash, and EV and the leverage ratio compute", () => {
@@ -178,9 +181,11 @@ describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real 
   it("NUE: total debt is current and same-date with cash; leases counted once on the cited record, and EV and the leverage ratio compute", () => {
     const b = bridge("NUE");
     // The AR2 golden composition (nue.json), at NUE's latest balance sheet.
+    // NUE tags no CommercialPaper at that instant (-10-3), so it is recorded
+    // absent and the value is unchanged.
     expect(debtComposition("NUE")).toEqual({
       tags: ["LongTermDebtAndCapitalLeaseObligations", "LongTermDebtAndCapitalLeaseObligationsCurrent", "ShortTermBorrowings"],
-      absent: [],
+      absent: ["CommercialPaper"],
     });
     expect(b.totalDebt).toEqual({ value: 6_389_000_000 + 581_000_000 + 129_000_000, asOf: "2026-07-04" });
     expect(b.cash).toEqual({ value: 2_692_000_000, asOf: "2026-07-04" });
@@ -218,16 +223,20 @@ describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real 
   it("KO: total debt is current and same-date with cash; INCOMPLETE on its exact cause — no finance-lease input and no cited record", () => {
     const b = bridge("KO");
     expect(debtComposition("KO")).toEqual({
-      tags: ["LongTermDebtAndCapitalLeaseObligations", "LongTermDebtAndCapitalLeaseObligationsCurrent"],
+      tags: ["LongTermDebtAndCapitalLeaseObligations", "LongTermDebtAndCapitalLeaseObligationsCurrent", "CommercialPaper"],
       absent: ["ShortTermBorrowings"],
     });
     // 39,065 + 4,493 = 43,558M — equal to KO's own
     // LongTermDebtAndCapitalLeaseObligationsIncludingCurrentMaturities at
     // 3 Apr 2026 on live companyfacts (an unmapped element, so not in the
-    // trimmed capture). At FY2025 the same two elements sum to 43,941M, which
-    // leaves out KO's 1,551M of loans and notes payable: the AR2 golden total
-    // (ko.json) is 45,492M (CF-LEG2-KO-GOLDEN-DEBT-01, issue #485).
-    expect(b.totalDebt).toEqual({ value: 39_065_000_000 + 4_493_000_000, asOf: "2026-04-03" });
+    // trimmed capture) — plus KO's 250M of tagged commercial paper (-10-3,
+    // CF-LEG2-KO-COMMERCIAL-PAPER-01, issue #487) = 43,808M. At FY2025 the
+    // two lease-inclusive elements sum to 43,941M, which leaves out KO's
+    // 1,551M of loans and notes payable: the AR2 golden total (ko.json) is
+    // 45,492M (CF-LEG2-KO-GOLDEN-DEBT-01, issue #485). The mapping now adds
+    // the 1,495M of commercial paper inside that 1,551M; the other 56M is
+    // unmapped by decision (see the CF-LEG2-KO-COMMERCIAL-PAPER-01 block below).
+    expect(b.totalDebt).toEqual({ value: 39_065_000_000 + 4_493_000_000 + 250_000_000, asOf: "2026-04-03" });
     expect(
       filed("KO", "LongTermDebtAndCapitalLeaseObligations", "2025-12-31") +
         filed("KO", "LongTermDebtAndCapitalLeaseObligationsCurrent", "2025-12-31")
@@ -361,5 +370,49 @@ describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — invested capital counts NUE's fina
     // Pinned on master's code with these same captures.
     expect(investedCapitalByYear("MSFT", capture("MSFT")).get(2026)).toBe("472432000000");
     expect(investedCapitalByYear("COST", capture("COST")).get(2026)).toBe("22077000000");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// CF-LEG2-KO-COMMERCIAL-PAPER-01 (issue #487). The approved total-debt basis
+// (tagMap.ts) says commercial paper sits outside the long-term-debt totals "and
+// is added where tagged". KO resolves through the lease-inclusive candidate,
+// and KO tags CommercialPaper at both its latest balance sheet and its 10-K
+// instant, so its acquired total debt must include it.
+//
+// Not added here: KO's NotesAndLoansPayable / OtherShortTermBorrowings (82M at
+// 2026-04-03, 56M at FY2025). Whether those belong in total debt is a
+// debt-concept decision the issue reserves, so the FY2025 history still sits
+// 56M below the AR2 golden total (ko.json, 45,492M).
+// ---------------------------------------------------------------------------
+
+describe("CF-LEG2-KO-COMMERCIAL-PAPER-01 — KO's total debt includes its tagged commercial paper", () => {
+  it("KO at 2026-04-03: total debt = lease-inclusive debt lines + the captured CommercialPaper (250M)", () => {
+    const at = "2026-04-03";
+    const paper = filed("KO", "CommercialPaper", at);
+    expect(paper).toBe(250_000_000);
+    const expected =
+      filed("KO", "LongTermDebtAndCapitalLeaseObligations", at) +
+      filed("KO", "LongTermDebtAndCapitalLeaseObligationsCurrent", at) +
+      paper;
+    expect(expected).toBe(43_808_000_000);
+    expect(bridge("KO").totalDebt).toEqual({ value: expected, asOf: at });
+    // Taken from the CommercialPaper row at the same instant, not inferred.
+    const r = resolveEntry(capture("KO"), tagMapEntry("total-debt")!);
+    if (r.outcome !== "RESOLVED") throw new Error(`KO total-debt ${r.outcome}`);
+    expect(r.value.contributingTags.find((c) => c.ref.tag === "CommercialPaper")?.row.end).toBe(at);
+  });
+
+  it("KO FY2025 history: the 10-K instant includes its 1,495M of commercial paper too", () => {
+    const series = instantAnnualSeries(capture("KO"), tagMapEntry("total-debt")!.candidates);
+    const fy2025 = series?.observations.find((o) => o.fiscalYear === 2025);
+    const at = "2025-12-31";
+    expect(filed("KO", "CommercialPaper", at)).toBe(1_495_000_000);
+    expect(fy2025?.value).toBe(
+      filed("KO", "LongTermDebtAndCapitalLeaseObligations", at) +
+        filed("KO", "LongTermDebtAndCapitalLeaseObligationsCurrent", at) +
+        filed("KO", "CommercialPaper", at)
+    );
+    expect(fy2025?.value).toBe(45_436_000_000);
   });
 });
