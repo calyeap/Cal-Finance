@@ -58,6 +58,13 @@ export interface EnterpriseValueInput {
   // leases are then counted once — inside total debt — and the separate
   // finance-lease term is neither required nor added (closed issue #311).
   financeLeasesInsideTotalDebt?: { source: string } | null;
+  // Methodology v2.1 D7 (issue #491 ruling B; CF-AR6-FINANCE-LEASE-UPPER-
+  // BOUND-01, issue #492). A cited upper bound for a finance-lease liability
+  // the filer never reports: filed total liabilities less the bridge's total
+  // debt, from the same balance sheet. Used only where no lease figure was
+  // acquired and no nesting record applies; then the bridge carries the bound
+  // as its lease term (overstated on purpose, never zero) and says so.
+  financeLeaseLiabilitiesUpperBound?: { value: SourcedValue<Decimal>; asOfDate: string | null; source: string } | null;
 }
 
 const REQUIRED_FIELD_NAMES = [
@@ -77,8 +84,12 @@ const REQUIRED_FIELD_NAMES = [
 // neither computes a value on partial or incoherent data.
 export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseValueBridge {
   const leasesInsideDebt = input.financeLeasesInsideTotalDebt ?? null;
+  // D7 — the bound stands in only for a lease figure that is genuinely absent.
+  const leaseBound =
+    input.financeLeaseLiabilities === null && leasesInsideDebt === null ? (input.financeLeaseLiabilitiesUpperBound ?? null) : null;
   const missing = REQUIRED_FIELD_NAMES.filter(
-    (name) => input[name] === null && !(name === "financeLeaseLiabilities" && leasesInsideDebt !== null)
+    (name) =>
+      input[name] === null && !(name === "financeLeaseLiabilities" && (leasesInsideDebt !== null || leaseBound !== null))
   );
   if (missing.length > 0) {
     return suppressedValue("INCOMPLETE", `missing REQUIRED input(s): ${missing.join(", ")}`);
@@ -103,7 +114,12 @@ export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseV
   const bridgeDates: { factId: string; asOfDate: string | null | undefined }[] = [
     { factId: "total-debt", asOfDate: input.totalDebtAsOfDate },
     ...(leasesInsideDebt === null
-      ? [{ factId: "finance-lease-liabilities", asOfDate: input.financeLeaseLiabilitiesAsOfDate }]
+      ? [
+          {
+            factId: "finance-lease-liabilities",
+            asOfDate: leaseBound !== null ? leaseBound.asOfDate : input.financeLeaseLiabilitiesAsOfDate,
+          },
+        ]
       : []),
     { factId: "cash-and-marketable-debt-securities", asOfDate: input.cashAndMarketableDebtSecuritiesAsOfDate },
   ];
@@ -128,7 +144,9 @@ export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseV
   const financeLeaseLiabilities: SourcedValue<Decimal> =
     leasesInsideDebt !== null
       ? { value: new Decimal(0), provenance: totalDebtProvenanceOf(input) }
-      : (input.financeLeaseLiabilities as SourcedValue<Decimal>);
+      : leaseBound !== null
+        ? leaseBound.value
+        : (input.financeLeaseLiabilities as SourcedValue<Decimal>);
   const cashAndMarketableDebtSecurities = input.cashAndMarketableDebtSecurities as SourcedValue<Decimal>;
   const nonOperatingEquityInvestmentsAtBook = input.nonOperatingEquityInvestmentsAtBook as SourcedValue<Decimal>;
 
@@ -171,7 +189,7 @@ export function computeEnterpriseValue(input: EnterpriseValueInput): EnterpriseV
       nonOperatingEquityInvestmentsAtBook: nonOperatingEquityInvestmentsAtBook.value,
       nonOperatingInvestmentsErrorDirection: input.nonOperatingInvestmentsErrorDirection,
       enterpriseValue,
-      bridgeFlags: buildBridgeFlags(input, nonOperatingEquityInvestmentsAtBook.value, leasesInsideDebt),
+      bridgeFlags: buildBridgeFlags(input, nonOperatingEquityInvestmentsAtBook.value, leasesInsideDebt, leaseBound, dilutedShares),
     },
     provenance
   );
@@ -205,7 +223,9 @@ function seniorClaim(
 function buildBridgeFlags(
   input: EnterpriseValueInput,
   stakesAtBook: Decimal,
-  leasesInsideDebt: { source: string } | null
+  leasesInsideDebt: { source: string } | null,
+  leaseBound: { value: SourcedValue<Decimal>; source: string } | null,
+  dilutedShares: Decimal
 ): BridgeFlags {
   const convertible = input.convertibleDebt ?? null;
   const fairValue = input.nonOperatingEquityInvestmentsFairValue ?? null;
@@ -237,13 +257,25 @@ function buildBridgeFlags(
       note: "listed, not deducted — a contingent item, not balance-sheet debt",
     })),
     financeLeases:
-      leasesInsideDebt === null
-        ? { treatment: "ADDED SEPARATELY", note: "finance leases added to total debt as their own term" }
-        : {
+      leasesInsideDebt !== null
+        ? {
             treatment: "INCLUDED IN TOTAL DEBT",
             note: `counted once, inside total debt (${leasesInsideDebt.source}); no separate lease term is added`,
-          },
+          }
+        : leaseBound !== null
+          ? {
+              treatment: "UPPER BOUND — NOT DISCLOSED",
+              note:
+                `not disclosed — valued at its upper bound (Methodology D7): ${leaseBound.source}. The true figure is ` +
+                `no larger, so value is understated by at most $${perShare(leaseBound.value.value, dilutedShares)} per diluted share ` +
+                `and leverage is overstated, never the reverse`,
+            }
+          : { treatment: "ADDED SEPARATELY", note: "finance leases added to total debt as their own term" },
   };
+}
+
+function perShare(amount: Decimal, dilutedShares: Decimal): string {
+  return dilutedShares.isZero() ? "—" : amount.dividedBy(dilutedShares).toFixed(2);
 }
 
 // "The equity bridge reverses this exactly" (§3.5) — used by later modules

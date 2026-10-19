@@ -148,8 +148,10 @@ function computed(b: Bridge) {
 describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real captures", () => {
   it("runs under the bumped mapping version", () => {
     // -10-3: CF-LEG2-KO-COMMERCIAL-PAPER-01 (issue #487) added CommercialPaper
-    // to the lease-inclusive total-debt candidate.
-    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-3");
+    // to the lease-inclusive total-debt candidate. -10-4: CF-AR6-FINANCE-
+    // LEASE-UPPER-BOUND-01 (issue #492) added total-liabilities, which these
+    // 18 Oct captures predate (financeLeaseUpperBound.test.ts covers it).
+    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-4");
   });
 
   it("LLY: total debt is the latest presented balance sheet's, same date as cash, and EV and the leverage ratio compute", () => {
@@ -248,6 +250,9 @@ describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real 
     expect(b.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
   });
 
+  // On this 18 Oct capture, which predates the total-liabilities mapping, so
+  // no Methodology D7 bound can form here; D7's NVDA bound is proven on the
+  // 19 Oct capture in financeLeaseUpperBound.test.ts.
   it("NVDA: unchanged and still INCOMPLETE — no finance-lease liability in any current filing", () => {
     const b = bridge("NVDA");
     expect(debtComposition("NVDA").tags).toEqual(["LongTermDebt"]);

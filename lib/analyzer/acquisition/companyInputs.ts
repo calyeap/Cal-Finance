@@ -198,6 +198,44 @@ export function deriveH3CashBasis(facts: readonly FactRecord[]): H3CashBasis {
   return { cashBasis, cashPerShareProvenance, quarterlyBurnProvenance, runwayProvenance };
 }
 
+/**
+ * Methodology v2.1 D7 (issue #491 ruling B; CF-AR6-FINANCE-LEASE-UPPER-
+ * BOUND-01, issue #492). The cited upper bound for a finance-lease liability
+ * the filer never reports: filed total liabilities less the bridge's total
+ * debt, both on one balance sheet. Any such liability is on that balance
+ * sheet, so the part outside the debt lines cannot exceed this. Null — and
+ * the bridge stays INCOMPLETE — wherever the bound cannot be formed exactly:
+ * a lease figure or a nesting record exists, either input is missing or not
+ * confirmed, the dates differ, or liabilities are below debt.
+ */
+export function financeLeaseUpperBound(
+  byId: ReadonlyMap<string, FactRecord>,
+  cik: string
+): { value: SourcedValue<Decimal>; asOfDate: string; source: string } | null {
+  if (FINANCE_LEASES_INSIDE_TOTAL_DEBT[cik] !== undefined) return null;
+  const lease = byId.get("finance-lease-liabilities");
+  if (lease !== undefined && lease.value !== null) return null;
+  const liabilities = byId.get("total-liabilities");
+  const debt = byId.get("total-debt");
+  if (liabilities === undefined || debt === undefined || liabilities.value === null || debt.value === null) return null;
+  if (liabilities.verificationState === "NOT CONFIRMED" || debt.verificationState === "NOT CONFIRMED") return null;
+  if (liabilities.asOfDate !== debt.asOfDate) return null;
+  const liabilitiesValue = new Decimal(String(liabilities.value));
+  const debtValue = new Decimal(String(debt.value));
+  if (liabilitiesValue.lessThan(debtValue)) return null;
+  const millions = (d: Decimal) => `$${d.dividedBy(1_000_000).toNumber().toLocaleString("en-US")}M`;
+  return {
+    value: {
+      value: liabilitiesValue.minus(debtValue),
+      provenance: combineProvenance(tokensOf(liabilities)!, tokensOf(debt)!),
+    },
+    asOfDate: debt.asOfDate,
+    source:
+      `total liabilities ${millions(liabilitiesValue)} (${liabilities.source}) less total debt ` +
+      `${millions(debtValue)}, both at ${debt.asOfDate}`,
+  };
+}
+
 export function buildCompanyInputs(
   acquisition: AcquisitionResult,
   companyFacts: CompanyFactsDocument,
@@ -224,6 +262,8 @@ export function buildCompanyInputs(
     if (f === undefined || f.value === null || f.verificationState === "NOT CONFIRMED") return null;
     return f.value instanceof Decimal ? f.value : new Decimal(String(f.value));
   };
+
+  const leaseUpperBound = financeLeaseUpperBound(byId, acquisition.cik);
 
   const revenueTags = TAG_MAP.find((e) => e.factId === "current-revenue")!.candidates;
   const operatingIncomeTags = TAG_MAP.find((e) => e.factId === "operating-income")!.candidates;
@@ -405,8 +445,11 @@ export function buildCompanyInputs(
       totalDebt: raw("total-debt"),
       // Counted once (R5, closed issue #311): a filer whose leases are inside
       // total debt adds no separate lease term here either.
+      // Methodology D7: an unreported lease enters at its cited upper bound.
       financeLeaseLiabilities:
-        FINANCE_LEASES_INSIDE_TOTAL_DEBT[acquisition.cik] !== undefined ? new Decimal(0) : raw("finance-lease-liabilities"),
+        FINANCE_LEASES_INSIDE_TOTAL_DEBT[acquisition.cik] !== undefined
+          ? new Decimal(0)
+          : (raw("finance-lease-liabilities") ?? leaseUpperBound?.value.value ?? null),
       cashAndMarketableDebtSecurities: raw("cash-and-marketable-debt-securities"),
       // Filled by assemble from M1's own output; null here means M1 was
       // INCOMPLETE, which fails the leverage test closed (§5.3, §6.5).
@@ -466,6 +509,7 @@ export function buildCompanyInputs(
         ] as const
       ).flatMap(([item, amount]) => (amount === null ? [] : [{ item, amount }])),
       financeLeasesInsideTotalDebt: FINANCE_LEASES_INSIDE_TOTAL_DEBT[acquisition.cik] ?? null,
+      financeLeaseLiabilitiesUpperBound: leaseUpperBound,
     },
 
     multiplesInput: {

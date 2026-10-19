@@ -85,8 +85,16 @@
  * tagged paper; NUE records CommercialPaper absent at an unchanged value;
  * MSFT, COST, NVDA, LLY and OKLO resolve byte-identically; NO fact moves
  * between the §3.8.1 exempt and queued sides.
+ *
+ * -10-4 (19 October 2026) — CF-AR6-FINANCE-LEASE-UPPER-BOUND-01 (issue
+ * #492), Methodology v2.1 D7. One factId added, no existing entry or
+ * selection rule touched: `total-liabilities` (us-gaap:Liabilities), the
+ * filed total the bridge bounds an undisclosed finance-lease liability by.
+ * As with -09-3 and -10-1, a new factId cannot change which candidate any
+ * existing entry resolves to, so no previously-acquired fact moves across the
+ * §3.8.1 exempt/queued boundary (docs/tag-mapping-version-review.md §12).
  */
-export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-3";
+export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-4";
 
 export interface TagRef {
   ns: "us-gaap" | "dei";
@@ -498,6 +506,21 @@ export const TAG_MAP: readonly TagMapEntry[] = [
     candidates: [only(usGaap("GuaranteeObligationsMaximumExposure"))],
     basis:
       "R5: contingent items are listed with the bridge, never deducted. us-gaap:GuaranteeObligationsMaximumExposure is the undiscounted maximum the filer could be required to pay.",
+  },
+  // Methodology v2.1 D7 (issue #491 ruling B; CF-AR6-FINANCE-LEASE-UPPER-
+  // BOUND-01, issue #492). Read only to bound a finance-lease liability the
+  // filer never reports: any such liability is on the balance sheet, so the
+  // part outside the bridge's debt cannot exceed total liabilities less that
+  // debt. A filer that tags no single total (e.g. KO) has no bound — never a
+  // total derived by subtraction.
+  {
+    factId: "total-liabilities",
+    name: "Total liabilities (memo — finance-lease upper bound only)",
+    period: "instant",
+    unit: "USD",
+    candidates: [only(usGaap("Liabilities"))],
+    basis:
+      "Methodology v2.1 D7: an undisclosed finance-lease liability enters the EV bridge at a cited, same-date upper bound, total liabilities less the bridge's total debt. us-gaap:Liabilities is the balance-sheet total.",
   },
 ];
 
