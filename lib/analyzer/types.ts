@@ -405,7 +405,7 @@ export interface BridgeFlags {
   strategicStakes: { atBook: Decimal; disclosedFairValue: Decimal | null; note: string };
   // Listed, never deducted: contingent items are not balance-sheet debt.
   contingentItems: { item: string; amount: Decimal; note: string }[];
-  financeLeases: { treatment: "ADDED SEPARATELY" | "INCLUDED IN TOTAL DEBT"; note: string };
+  financeLeases: { treatment: "ADDED SEPARATELY" | "INCLUDED IN TOTAL DEBT" | "UPPER BOUND — NOT DISCLOSED"; note: string };
 }
 
 // A Figure, not a bag of always-present raw fields: M1 is "INCOMPLETE if

@@ -181,6 +181,74 @@ describe("computeEnterpriseValue", () => {
       }
     });
   });
+
+  // Methodology v2.1 D7 (issue #491 ruling B; CF-AR6-FINANCE-LEASE-UPPER-
+  // BOUND-01, issue #492): a finance-lease liability the filer never reports
+  // enters at a cited, same-date upper bound — never zero.
+  describe("Methodology D7 — an undisclosed finance-lease liability at its upper bound", () => {
+    const SAME = "2026-06-30";
+    const BOUND_SOURCE = "total liabilities less total debt, 10-Q 0000000000-26-000001";
+    const bound = (value: number, asOfDate: string | null = SAME) => ({ value: sourced(value), asOfDate, source: BOUND_SOURCE });
+    const dated = { totalDebtAsOfDate: SAME, cashAndMarketableDebtSecuritiesAsOfDate: SAME };
+
+    it("uses the bound as the lease term, labels it and states its per-share effect", () => {
+      const result = computeEnterpriseValue(
+        baseInput({ ...dated, financeLeaseLiabilities: null, financeLeaseLiabilitiesUpperBound: bound(40) })
+      );
+      expect(result.suppressed).toBe(false);
+      if (!result.suppressed) {
+        // 5500 + 200 + 40 (bound) - 300 - 20
+        expect(result.value.enterpriseValue.toString()).toBe("5420");
+        expect(result.value.financeLeaseLiabilities.toString()).toBe("40");
+        expect(result.value.bridgeFlags!.financeLeases.treatment).toBe("UPPER BOUND — NOT DISCLOSED");
+        expect(result.value.bridgeFlags!.financeLeases.note).toContain(BOUND_SOURCE);
+        // 40 / (100 + 10) diluted shares
+        expect(result.value.bridgeFlags!.financeLeases.note).toContain("$0.36 per diluted share");
+      }
+    });
+
+    it("refuses a bound dated other than the bridge's balance sheet (CALVIN RULING A, #308/#309)", () => {
+      const result = computeEnterpriseValue(
+        baseInput({ ...dated, financeLeaseLiabilities: null, financeLeaseLiabilitiesUpperBound: bound(40, "2026-03-31") })
+      );
+      expect(result.suppressed).toBe(true);
+      if (result.suppressed) {
+        expect(result.cause).toContain("different as-of dates");
+        expect(result.cause).toContain("finance-lease-liabilities=2026-03-31");
+      }
+    });
+
+    it("never replaces a reported lease figure", () => {
+      const result = computeEnterpriseValue(baseInput({ ...dated, financeLeaseLiabilitiesAsOfDate: SAME, financeLeaseLiabilitiesUpperBound: bound(40) }));
+      expect(result.suppressed).toBe(false);
+      if (!result.suppressed) {
+        expect(result.value.financeLeaseLiabilities.toString()).toBe("50");
+        expect(result.value.bridgeFlags!.financeLeases.treatment).toBe("ADDED SEPARATELY");
+      }
+    });
+
+    it("never overrides a cited nesting record", () => {
+      const result = computeEnterpriseValue(
+        baseInput({
+          ...dated,
+          financeLeaseLiabilities: null,
+          financeLeasesInsideTotalDebt: { source: "cited lease note" },
+          financeLeaseLiabilitiesUpperBound: bound(40),
+        })
+      );
+      expect(result.suppressed).toBe(false);
+      if (!result.suppressed) {
+        expect(result.value.financeLeaseLiabilities.toString()).toBe("0");
+        expect(result.value.bridgeFlags!.financeLeases.treatment).toBe("INCLUDED IN TOTAL DEBT");
+      }
+    });
+
+    it("with no lease figure, no record and no bound, stays INCOMPLETE — never zero", () => {
+      const result = computeEnterpriseValue(baseInput({ ...dated, financeLeaseLiabilities: null, financeLeaseLiabilitiesUpperBound: null }));
+      expect(result.suppressed).toBe(true);
+      if (result.suppressed) expect(result.cause).toBe("missing REQUIRED input(s): financeLeaseLiabilities");
+    });
+  });
 });
 
 describe("computeEquityValueFromEnterpriseValue", () => {

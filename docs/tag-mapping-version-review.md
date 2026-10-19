@@ -733,3 +733,72 @@ fact `source` text, which now lists the absent component.
   43,808M) and the KO and NUE compositions (KO gains `CommercialPaper`; NUE
   records it absent). The MSFT/COST byte-identical block, the LLY, NVDA and NUE
   values and the AR2 golden harness were not changed, and they pass.
+
+## 12. TAG_MAPPING_VERSION review — `calboard-secmap-2026-10-3` → `-10-4`
+
+**Outcome:** `CF-AR6-FINANCE-LEASE-UPPER-BOUND-01` (issue #492), which
+implements Methodology v2.1 **D7** (issue #491, ruling B, 19 Oct 2026).
+
+### 12.1 The change
+
+One factId is added: `total-liabilities` (`us-gaap:Liabilities`).
+- No existing entry, candidate or selection rule is touched.
+- Its only reader is `financeLeaseUpperBound` in `companyInputs.ts`.
+
+That reader forms the D7 bound, *total liabilities − total debt*, only when every condition holds:
+- no `finance-lease-liabilities` value was acquired;
+- the filer has no `FINANCE_LEASES_INSIDE_TOTAL_DEBT` record;
+- both inputs are present and not NOT CONFIRMED;
+- both share the total-debt as-of date;
+- liabilities ≥ debt.
+
+Wherever any condition fails, the bridge stays exactly as it was.
+
+### 12.2 Captures
+
+`captures/ar6-2026-10-19` was taken from live data.sec.gov companyfacts on 19 Oct 2026 by `capture-companyfacts.ts --out=ar6-2026-10-19` under `-10-4`.
+
+Compared tag by tag with `ar6-2026-10-18`, the only difference is the newly mapped `Liabilities` rows:
+
+| Company | Change |
+|---|---|
+| MSFT | `Liabilities` rows added |
+| COST | `Liabilities` rows added |
+| NVDA | `Liabilities` rows added |
+| NUE | `Liabilities` rows added |
+| KO | none (tags no `Liabilities`) |
+| LLY | none (tags no `Liabilities`) |
+
+### 12.3 The §3.8.1 boundary
+
+`acquire()` was run on both capture sets, and every existing fact's id, value, date, `verificationState` and source was compared.
+
+> Facts changed: **0** at every company.
+> Facts added: `total-liabilities` at MSFT, COST, NVDA and NUE, each `SPOT-CHECK NOT REQUIRED` (mapped, exempt).
+> Facts removed: **0**.
+
+### 12.4 What moves
+
+| Company | Bridge |
+|---|---|
+| NVDA | **Moves.** It reports no finance-lease liability and has no record. Bound = 91,288M − 33,366M = **57,922M** at 2026-07-26 (10-Q `0001045810-26-000075`), the same date as its debt and cash. M1 and §6.5 now compute at the bound and flag it `UPPER BOUND — NOT DISCLOSED` with its per-share effect. |
+| KO | **Unchanged.** It tags no `Liabilities`, so no bound can be formed. It stays INCOMPLETE (`missing REQUIRED input(s): financeLeaseLiabilities`). A bound derived by subtraction (`LiabilitiesAndStockholdersEquity` − equity) would need a selection-rule change and is not made. |
+| MSFT, COST | **Byte-identical.** Both report a lease figure, so no bound is formed. |
+| NUE, LLY | **Byte-identical.** Both have a cited nesting record, so no bound is formed. |
+
+### 12.5 Verification
+
+- **`financeLeaseUpperBound.test.ts`** (real captures, production assembly), 7 tests:
+  - the NVDA bound, its date and its citation;
+  - M1 computes at the bound, with the flag;
+  - §6.5 equals its own definition at the bound;
+  - KO stays INCOMPLETE on its exact cause;
+  - MSFT, COST, NUE and LLY have bridge, leverage and M1 output JSON-identical to the 18 Oct captures.
+- **`enterpriseValue.test.ts`, Methodology D7 block**, 5 tests:
+  - the bound is used, labelled and given a per-share effect;
+  - a bound with a different date is refused (#308/#309);
+  - a reported lease always wins;
+  - a nesting record always wins;
+  - with no bound, the bridge stays INCOMPLETE, never zero.
+- **RED on `-10-3`** (8 failed); **GREEN on `-10-4`**.
+- Evaluator changes are called out separately: only the version pins (`-10-3` → `-10-4`) are re-pinned. No value or composition pin is changed.
