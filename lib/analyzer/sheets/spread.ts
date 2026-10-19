@@ -36,6 +36,8 @@ export function valueSpread(values: (Decimal | null)[]): Decimal | null {
 }
 
 export interface DraftValuation {
+  /** Whether the drafting call produced a valid, validator-passing draft. */
+  drafted: boolean;
   /** Base fair value per share, where the run's bridge allows one. */
   basePerShare: Decimal | null;
   /** Why there is no value, where there is none. */
@@ -49,6 +51,8 @@ export interface SpreadReport {
   drafts: DraftValuation[];
   spread: Decimal | null;
   withinThreshold: boolean | null;
+  /** Whether the run had a price to bridge each draft to a per-share value. */
+  priced: boolean;
 }
 
 export interface SpreadDependencies {
@@ -71,6 +75,7 @@ export async function draftSpread(ticker: string, deps: SpreadDependencies): Pro
     const outcome = await draftAssumptionSheet(ticker, deps.acquired, deps.call, deps.client);
     if (outcome.kind !== "DRAFTED") {
       drafts.push({
+        drafted: false,
         basePerShare: null,
         cause: outcome.kind === "REFUSED" ? outcome.cause : outcome.content.cannotConclude ?? null,
         base: { growth: null, margin: null, returnOnNewInvestment: null },
@@ -89,6 +94,7 @@ export async function draftSpread(ticker: string, deps: SpreadDependencies): Pro
     const result = assembleAnalysisResult(run.fixture);
     const base = result.scenarioOutputs.values.base;
     drafts.push({
+      drafted: true,
       basePerShare: base.isFinite() ? base : null,
       cause: base.isFinite() ? null : result.fairValueRange.kind === "suppressed" ? result.fairValueRange.cause : "no Base value",
       base: {
@@ -100,16 +106,41 @@ export async function draftSpread(ticker: string, deps: SpreadDependencies): Pro
     });
   }
   const spread = valueSpread(drafts.map((d) => d.basePerShare));
-  return { ticker, drafts, spread, withinThreshold: spread === null ? null : spread.lessThanOrEqualTo(SPREAD_THRESHOLD) };
+  return {
+    ticker,
+    drafts,
+    spread,
+    withinThreshold: spread === null ? null : spread.lessThanOrEqualTo(SPREAD_THRESHOLD),
+    priced: deps.price !== null,
+  };
 }
 
 /**
- * Whether a spread run met the bar. Fails closed: a company with no measured
- * spread (null — fewer than two drafts valued, e.g. every call refused) fails
- * exactly like one wider than the bar, and so does a run with no companies.
+ * One company's result against #454's acceptance as amended by Calvin
+ * (recorded ruling, 19 Oct 2026 — #454 comment 6268684236): every golden
+ * company must draft validly; every company the approved rules can value
+ * must show a measured spread inside the bar; a company the engine does not
+ * value at all — outside the §6.5 / D1 net-debt domain, or INCOMPLETE on an
+ * exact cause — is RECORDED with that cause, never counted as a pass.
+ *
+ * Fails closed: a refused draft, an unpriced run, a spread wider than the
+ * bar, or a company valued on some drafts but not others is FAIL.
+ */
+export function spreadOutcome(r: SpreadReport): "WITHIN BAR" | "NOT VALUED — RECORDED" | "FAIL" {
+  if (r.drafts.length === 0 || r.drafts.some((d) => !d.drafted)) return "FAIL";
+  if (r.withinThreshold === true) return "WITHIN BAR";
+  if (r.withinThreshold === false) return "FAIL";
+  return r.priced && r.drafts.every((d) => d.basePerShare === null && d.cause !== null) ? "NOT VALUED — RECORDED" : "FAIL";
+}
+
+/**
+ * Whether a spread run met the amended bar: no company FAILs and at least
+ * one was measured inside it. A run with no companies, or nothing measured,
+ * fails.
  */
 export function spreadRunPasses(reports: SpreadReport[]): boolean {
-  return reports.length > 0 && reports.every((r) => r.withinThreshold === true);
+  const outcomes = reports.map(spreadOutcome);
+  return outcomes.length > 0 && !outcomes.includes("FAIL") && outcomes.includes("WITHIN BAR");
 }
 
 export function formatSpreadReport(reports: SpreadReport[]): string {
@@ -119,7 +150,7 @@ export function formatSpreadReport(reports: SpreadReport[]): string {
       lines.push(
         `| ${i === 0 ? r.ticker : ""} | ${i + 1} | ${d.base.growth ?? "—"} | ${d.base.margin ?? "—"} | ${d.base.returnOnNewInvestment ?? "—"} | ${d.moatClass ?? "—"} | ${
           d.basePerShare === null ? `— (${d.cause ?? "no value"})` : d.basePerShare.toFixed(2)
-        } | ${i === 0 ? (r.spread === null ? "n/a" : `${r.spread.mul(100).toFixed(1)}%${r.withinThreshold ? "" : " — WIDER THAN 10%"}`) : ""} |`
+        } | ${i === 0 ? `${r.spread === null ? "n/a" : `${r.spread.mul(100).toFixed(1)}%${r.withinThreshold ? "" : " — WIDER THAN 10%"}`} · ${spreadOutcome(r)}` : ""} |`
       );
     });
   }

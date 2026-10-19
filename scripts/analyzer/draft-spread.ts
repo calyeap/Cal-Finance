@@ -23,8 +23,10 @@ import { draftSpread, formatSpreadReport, spreadRunPasses, SPREAD_THRESHOLD, typ
 // "none" — the same for all three drafts, so it cannot widen the spread.
 //
 // Output: the table on stdout and <PROOF_OUTPUT_DIR>/draft-spread.{md,json}.
-// Exit 1 when any company's spread is wider than 10% or was not measured
-// (spreadRunPasses — fewer than two drafts valued counts as a failure).
+// Exit 1 unless spreadRunPasses: every company drafted validly, none is wider
+// than 10%, at least one was measured, and any company not valued at all is
+// recorded with the engine's exact cause (#454's acceptance as amended by
+// Calvin, 19 Oct 2026). A refused draft or a missing price is a failure.
 //
 // Run:  npx tsx scripts/analyzer/draft-spread.ts [TICKER ...]
 // Default: the golden companies the engine values — MSFT COST NVDA NUE KO LLY

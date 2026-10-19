@@ -3,7 +3,7 @@ import Decimal from "decimal.js";
 import { acquireCompany, __resetAcquisitionCache } from "../acquisition/provider";
 import { draftRate } from "../acquisition/aiProposedBundle";
 import { historyFrom } from "./research";
-import { draftSpread, formatSpreadReport, spreadRunPasses, valueSpread, SPREAD_THRESHOLD, type SpreadReport } from "./spread";
+import { draftSpread, formatSpreadReport, spreadOutcome, spreadRunPasses, valueSpread, SPREAD_THRESHOLD, type DraftValuation, type SpreadReport } from "./spread";
 import { stubDraftCall } from "./testSupport";
 import type { AnalystCall } from "../ai/analystCall";
 
@@ -75,11 +75,49 @@ describe("draftSpread", () => {
     expect(spreadRunPasses([report])).toBe(false);
   });
 
-  it("passes a run only when every company was measured inside the bar", () => {
-    const at = (withinThreshold: boolean | null): SpreadReport => ({ ticker: "X", drafts: [], spread: null, withinThreshold });
-    expect(spreadRunPasses([at(true), at(true)])).toBe(true);
-    expect(spreadRunPasses([at(true), at(false)])).toBe(false);
-    expect(spreadRunPasses([at(true), at(null)])).toBe(false);
+  // #454's acceptance as amended by Calvin (recorded ruling, 19 Oct 2026,
+  // #454 comment 6268684236). Protected-evaluator change: the run used to
+  // fail on ANY unmeasured company; it now records a company the engine does
+  // not value at all (with its exact cause) and still fails every other gap.
+  it("records a validly drafted company the engine does not value, with the engine's cause", async () => {
+    const { acquired, measures, rate } = await setUp();
+    const { call } = stubDraftCall(measures, rate);
+    // No §4.4 answer: the bridge is INCOMPLETE, so no draft can be valued.
+    const report = await draftSpread("MSFT", { call, client: null, acquired, price: PRICE, nonOperatingInvestments: null, source: "CAPTURE" });
+    expect(report.drafts.every((d) => d.drafted && d.basePerShare === null && d.cause !== null)).toBe(true);
+    expect(report.spread).toBeNull();
+    expect(spreadOutcome(report)).toBe("NOT VALUED — RECORDED");
+    expect(formatSpreadReport([report])).toContain("NOT VALUED — RECORDED");
+  });
+
+  it("passes a run only when nothing fails and at least one company was measured inside the bar", () => {
+    const valued = (v: number): DraftValuation => ({ drafted: true, basePerShare: new Decimal(v), cause: null, base: { growth: null, margin: null, returnOnNewInvestment: null }, moatClass: null });
+    const unvalued: DraftValuation = { drafted: true, basePerShare: null, cause: "missing REQUIRED input(s): financeLeaseLiabilities", base: { growth: null, margin: null, returnOnNewInvestment: null }, moatClass: null };
+    const refused: DraftValuation = { ...unvalued, drafted: false, cause: "the drafting call failed or was refused twice" };
+    const report = (drafts: DraftValuation[], withinThreshold: boolean | null, priced = true): SpreadReport => ({
+      ticker: "X",
+      drafts,
+      spread: withinThreshold === null ? null : new Decimal(withinThreshold ? "0.05" : "0.2"),
+      withinThreshold,
+      priced,
+    });
+    const within = report([valued(100), valued(102), valued(104)], true);
+    const wider = report([valued(90), valued(100), valued(110)], false);
+    const recorded = report([unvalued, unvalued, unvalued], null);
+
+    expect(spreadOutcome(within)).toBe("WITHIN BAR");
+    expect(spreadOutcome(wider)).toBe("FAIL");
+    expect(spreadOutcome(recorded)).toBe("NOT VALUED — RECORDED");
+    // Every gap other than "the engine values none of its drafts" still fails.
+    expect(spreadOutcome(report([unvalued, unvalued, unvalued], null, false))).toBe("FAIL"); // unpriced
+    expect(spreadOutcome(report([refused, unvalued, unvalued], null))).toBe("FAIL"); // a draft refused
+    expect(spreadOutcome(report([valued(100), unvalued, unvalued], null))).toBe("FAIL"); // valued on some drafts only
+    expect(spreadOutcome(report([], null))).toBe("FAIL");
+
+    expect(spreadRunPasses([within, within])).toBe(true);
+    expect(spreadRunPasses([within, recorded])).toBe(true);
+    expect(spreadRunPasses([within, wider])).toBe(false);
+    expect(spreadRunPasses([recorded, recorded])).toBe(false); // nothing measured
     expect(spreadRunPasses([])).toBe(false);
   });
 });
