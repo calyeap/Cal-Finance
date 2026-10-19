@@ -72,8 +72,21 @@
  * companies, total-debt moves for NUE, KO and LLY only (value, row and
  * history series); MSFT, COST, NVDA and OKLO resolve byte-identically; NO
  * fact moves between the §3.8.1 exempt and queued sides.
+ *
+ * -10-3 (19 October 2026) — CF-LEG2-KO-COMMERCIAL-PAPER-01 (issue #487). One
+ * component added, no selection-rule touch: `CommercialPaper` joins the last
+ * `total-debt` candidate (`LongTermDebtAndCapitalLeaseObligations` + current
+ * portion + `ShortTermBorrowings`), as it already is in candidates 1 and 4 —
+ * the entry's own basis says commercial paper is "added where tagged". A
+ * `plus` component never changes which candidate wins (`preferCurrent` reads
+ * primaries only), only the winning candidate's sum. Review
+ * (docs/tag-mapping-version-review.md §11): across the nine captures only KO
+ * moves — 43,558M → 43,808M at 2026-04-03, FY2023–FY2025 history up by its
+ * tagged paper; NUE records CommercialPaper absent at an unchanged value;
+ * MSFT, COST, NVDA, LLY and OKLO resolve byte-identically; NO fact moves
+ * between the §3.8.1 exempt and queued sides.
  */
-export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-2";
+export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-3";
 
 export interface TagRef {
   ns: "us-gaap" | "dei";
@@ -236,6 +249,14 @@ export const TAG_MAP: readonly TagMapEntry[] = [
     // by itself: that takes a cited issuer disclosure in
     // FINANCE_LEASES_INSIDE_TOTAL_DEBT below. Without one the separate lease
     // term stays REQUIRED.
+    //
+    // -10-3 (CF-LEG2-KO-COMMERCIAL-PAPER-01, issue #487) adds CommercialPaper
+    // to that last candidate, in the same place it sits in the first and the
+    // parts candidate: the lease-inclusive elements are long-term debt and
+    // capital leases, noncurrent and current, so commercial paper sits outside
+    // them and, per the basis below, is added where tagged. KO tags it (250M at 2026-04-03,
+    // 1,495M at FY2025); NUE does not at its current instant and records it
+    // absent. NotesAndLoansPayable / OtherShortTermBorrowings stay unmapped.
     candidates: [
       withPlus(usGaap("LongTermDebt"), usGaap("CommercialPaper"), usGaap("ShortTermBorrowings")),
       withPlus(usGaap("DebtCurrent"), usGaap("LongTermDebtNoncurrent")),
@@ -249,6 +270,7 @@ export const TAG_MAP: readonly TagMapEntry[] = [
       withPlus(
         usGaap("LongTermDebtAndCapitalLeaseObligations"),
         usGaap("LongTermDebtAndCapitalLeaseObligationsCurrent"),
+        usGaap("CommercialPaper"),
         usGaap("ShortTermBorrowings")
       ),
     ],
