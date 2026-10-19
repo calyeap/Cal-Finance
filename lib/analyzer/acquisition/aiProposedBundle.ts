@@ -13,7 +13,7 @@ import { validateSheet, errorsIn } from "../sheets/validators";
 import { selectDiscountRate } from "../discountRate";
 import { POLICY } from "../policy";
 import { windowRange, worstSingleYearDecline } from "../marginMath";
-import type { Profile } from "../types";
+import type { MoatClass, Profile } from "../types";
 import { SCENARIO_KEYS, type SheetClassificationInputs, type SheetContent, type SheetScenario, type SheetSource } from "../sheets/sheet";
 
 // ---------------------------------------------------------------------------
@@ -209,6 +209,77 @@ function cannotConcludeContent(reason: string, currentRevenue: Decimal | null, r
   };
 }
 
+// ---------------------------------------------------------------------------
+// CALVIN RULING — A on #454 (19 Oct 2026, comment 6270467028): draft
+// stability. One price-blind draft varied too much between runs (LLY's three
+// drafts valued 25.3% apart), so a sheet is drawn from DRAFTS_PER_SHEET
+// independent drafts: each driver is the median of their values and keeps the
+// anchor and citations of the draft that supplied it, so every driver stays
+// cited. It is still one sheet, adopted per D5.
+// ---------------------------------------------------------------------------
+
+export const DRAFTS_PER_SHEET = 3;
+
+const DRAFT_DRIVER_KEYS = ["revenueGrowthOrPath", "operatingMargin", "returnOnNewInvestment", "reinvestmentCapitalIntensity", "shareCount"] as const;
+const MOAT_ORDER: readonly MoatClass[] = ["none", "narrow", "wide"];
+
+/**
+ * The middle entry of the candidates sorted by value; for an even count the
+ * lower of the two middle entries (the conservative one). Ties keep draft
+ * order, so the result is deterministic.
+ */
+function middle<T>(candidates: { value: Decimal; draft: number; item: T }[]) {
+  const sorted = [...candidates].sort((a, b) => a.value.comparedTo(b.value) || a.draft - b.draft);
+  return sorted[Math.floor((sorted.length - 1) / 2)];
+}
+
+/**
+ * One proposal from several independent ones: each scenario driver is its
+ * median value with the supplying draft's anchor; the moat class is the
+ * median class with its draft's mechanism; the policy constants travel
+ * together from the draft with the median stress margin; the stories are the
+ * "lead" draft's — the one that supplied the most driver values. Medians keep
+ * every per-draft ordering (bear ≤ base ≤ bull), but the combination is
+ * validated again; if it fails, the lead draft itself — which passed — is the
+ * sheet, and the reason is recorded.
+ */
+export function combineDrafts(
+  proposals: DraftProposal[],
+  validate: (proposal: DraftProposal) => string[]
+): { proposal: DraftProposal; method: string } {
+  if (proposals.length === 1) return { proposal: proposals[0], method: `one draft (1 of ${DRAFTS_PER_SHEET} drafts usable)` };
+  const of = proposals.length === DRAFTS_PER_SHEET ? `${proposals.length} drafts` : `${proposals.length} of ${DRAFTS_PER_SHEET} drafts`;
+  const supplied = proposals.map(() => 0);
+  const scenarios = {} as DraftProposal["scenarios"];
+  for (const key of SCENARIO_KEYS) {
+    const drivers = {} as Record<(typeof DRAFT_DRIVER_KEYS)[number], DraftProposal["scenarios"][typeof key]["operatingMargin"]>;
+    for (const d of DRAFT_DRIVER_KEYS) {
+      const m = middle(proposals.map((p, draft) => ({ value: p.scenarios[key][d].value, draft, item: p.scenarios[key][d] })));
+      supplied[m.draft]++;
+      drivers[d] = m.item;
+    }
+    scenarios[key] = { story: "", ...drivers };
+  }
+  const lead = supplied.indexOf(Math.max(...supplied));
+  for (const key of SCENARIO_KEYS) scenarios[key].story = proposals[lead].scenarios[key].story;
+  const moat = middle(proposals.map((p, draft) => ({ value: new Decimal(MOAT_ORDER.indexOf(p.moatClass)), draft, item: p }))).item;
+  const constants = middle(proposals.map((p, draft) => ({ value: p.stressMarginLevel, draft, item: p }))).item;
+  const combined: DraftProposal = {
+    scenarios,
+    moatClass: moat.moatClass,
+    moatAnchor: moat.moatAnchor,
+    nopatTaxRate: constants.nopatTaxRate,
+    stressMarginLevel: constants.stressMarginLevel,
+    constantsAnchor: constants.constantsAnchor,
+  };
+  const defects = validate(combined);
+  if (defects.length === 0) return { proposal: combined, method: `per-driver median of ${of}` };
+  return {
+    proposal: proposals[lead],
+    method: `draft ${lead + 1} of ${of} — the median combination failed: ${defects.join("; ")}`,
+  };
+}
+
 /**
  * Drafts one sheet for a company. `call` null (offline, or no model key)
  * still settles a company that cannot be drafted from history at all; any
@@ -252,22 +323,33 @@ export async function draftAssumptionSheet(
     medianOperatingMargin: median(margins),
   };
 
-  let proposal: DraftProposal;
-  try {
-    proposal = await runScenarioProposal(facts, call, (p) =>
-      errorsIn(
-        validateSheet(contentFromProposal(p, research, currentRevenue, dilutedShares), {
-          measures: research.measures,
-          rate: rateInUse.rate,
-          requireAnchors: true,
-        })
-      ).map((f) => `${f.check}: ${f.message}`)
-    );
-  } catch (err) {
-    const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-    writeAnalystLog(`no assumption sheet drafted for ${ticker.toUpperCase()}: ${message}`);
-    return { kind: "REFUSED", cause: `the drafting call failed or was refused twice — ${message}` };
+  const defectsOf = (p: DraftProposal) =>
+    errorsIn(
+      validateSheet(contentFromProposal(p, research, currentRevenue, dilutedShares), {
+        measures: research.measures,
+        rate: rateInUse.rate,
+        requireAnchors: true,
+      })
+    ).map((f) => `${f.check}: ${f.message}`);
+
+  // Independent drafts: the same price-blind request, each with its own one
+  // regeneration. A refused draft is left out; the sheet needs at least one.
+  const drafts: DraftProposal[] = [];
+  let firstFailure: string | null = null;
+  for (let n = 0; n < DRAFTS_PER_SHEET; n++) {
+    try {
+      drafts.push(await runScenarioProposal(facts, call, defectsOf));
+    } catch (err) {
+      const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      firstFailure ??= message;
+      writeAnalystLog(`draft ${n + 1} of ${DRAFTS_PER_SHEET} for ${ticker.toUpperCase()} refused: ${message}`);
+    }
+  }
+  if (drafts.length === 0) {
+    writeAnalystLog(`no assumption sheet drafted for ${ticker.toUpperCase()}: ${firstFailure}`);
+    return { kind: "REFUSED", cause: `the drafting call failed or was refused twice — ${firstFailure}` };
   }
 
-  return { kind: "DRAFTED", content: contentFromProposal(proposal, research, currentRevenue, dilutedShares) };
+  const { proposal, method } = combineDrafts(drafts, defectsOf);
+  return { kind: "DRAFTED", content: { ...contentFromProposal(proposal, research, currentRevenue, dilutedShares), drafting: method } };
 }

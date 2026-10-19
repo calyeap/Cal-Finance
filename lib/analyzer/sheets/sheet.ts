@@ -130,6 +130,8 @@ export interface SheetContent {
   basis?: SheetBasis | null;
   /** Set where no sheet can be drafted from history (e.g. pre-revenue): the valuation cannot be concluded. */
   cannotConclude?: string | null;
+  /** How an AI-drafted sheet was formed from its independent drafts (CALVIN RULING — A on #454). */
+  drafting?: string | null;
   /** A migrated recorded bundle's typed dollar values — never presented once D2 applies (assemble.ts). */
   legacyScenarioValues?: Record<ScenarioKey, string> | null;
   migratedFrom?: { table: string; recordedAt: string; updatedAt: string } | null;

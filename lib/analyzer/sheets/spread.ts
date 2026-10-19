@@ -96,7 +96,15 @@ export async function draftSpread(ticker: string, deps: SpreadDependencies): Pro
     drafts.push({
       drafted: true,
       basePerShare: base.isFinite() ? base : null,
-      cause: base.isFinite() ? null : result.fairValueRange.kind === "suppressed" ? result.fairValueRange.cause : "no Base value",
+      // The root cause where the bridge itself is INCOMPLETE (e.g. a missing
+      // REQUIRED input), else the fair-value range's own cause.
+      cause: base.isFinite()
+        ? null
+        : result.diagnostics.enterpriseValue.suppressed
+          ? `enterprise value ${result.diagnostics.enterpriseValue.state}: ${result.diagnostics.enterpriseValue.cause}`
+          : result.fairValueRange.kind === "suppressed"
+            ? result.fairValueRange.cause
+            : "no Base value",
       base: {
         growth: outcome.content.scenarios.base.revenueGrowthOrPath,
         margin: outcome.content.scenarios.base.operatingMargin,
@@ -104,6 +112,10 @@ export async function draftSpread(ticker: string, deps: SpreadDependencies): Pro
       },
       moatClass: outcome.content.moatClass,
     });
+    // The bridge reads facts and the price, never the sheet: where it is
+    // INCOMPLETE no draft can be valued, so one valid sheet proves the company
+    // drafts and further paid sheets would measure nothing.
+    if (result.diagnostics.enterpriseValue.suppressed) break;
   }
   const spread = valueSpread(drafts.map((d) => d.basePerShare));
   return {

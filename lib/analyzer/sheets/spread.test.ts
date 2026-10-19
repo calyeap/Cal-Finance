@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import Decimal from "decimal.js";
 import { acquireCompany, __resetAcquisitionCache } from "../acquisition/provider";
-import { draftRate } from "../acquisition/aiProposedBundle";
+import { draftRate, DRAFTS_PER_SHEET } from "../acquisition/aiProposedBundle";
 import { historyFrom } from "./research";
 import { draftSpread, formatSpreadReport, spreadOutcome, spreadRunPasses, valueSpread, SPREAD_THRESHOLD, type DraftValuation, type SpreadReport } from "./spread";
 import { stubDraftCall } from "./testSupport";
@@ -49,8 +49,11 @@ describe("draftSpread", () => {
     const { acquired, measures, rate } = await setUp();
     let n = 0;
     const margins = ["0.30", "0.38", "0.46"];
+    // One margin per sheet: each sheet is drawn from DRAFTS_PER_SHEET calls
+    // (CALVIN RULING — A on #454), so the drafts within a sheet agree and the
+    // three sheets disagree.
     const varying: AnalystCall = async (request) => {
-      const i = n++;
+      const i = Math.floor(n++ / DRAFTS_PER_SHEET);
       const { call } = stubDraftCall(measures, rate, (raw) => {
         raw.base.operatingMargin.value = margins[i];
         raw.bull.operatingMargin.value = margins[i];
@@ -81,10 +84,15 @@ describe("draftSpread", () => {
   // not value at all (with its exact cause) and still fails every other gap.
   it("records a validly drafted company the engine does not value, with the engine's cause", async () => {
     const { acquired, measures, rate } = await setUp();
-    const { call } = stubDraftCall(measures, rate);
+    const { call, requests } = stubDraftCall(measures, rate);
     // No §4.4 answer: the bridge is INCOMPLETE, so no draft can be valued.
     const report = await draftSpread("MSFT", { call, client: null, acquired, price: PRICE, nonOperatingInvestments: null, source: "CAPTURE" });
     expect(report.drafts.every((d) => d.drafted && d.basePerShare === null && d.cause !== null)).toBe(true);
+    // The exact root cause is recorded, and the bridge does not read the
+    // sheet, so the harness stops after one sheet (no further paid calls).
+    expect(report.drafts[0].cause).toMatch(/^enterprise value INCOMPLETE: missing REQUIRED input\(s\): nonOperatingEquityInvestmentsAtBook/);
+    expect(report.drafts).toHaveLength(1);
+    expect(requests).toHaveLength(DRAFTS_PER_SHEET);
     expect(report.spread).toBeNull();
     expect(spreadOutcome(report)).toBe("NOT VALUED — RECORDED");
     expect(formatSpreadReport([report])).toContain("NOT VALUED — RECORDED");

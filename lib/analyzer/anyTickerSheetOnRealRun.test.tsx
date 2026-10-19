@@ -16,7 +16,7 @@ import { acquireCompany, captureFor, __resetAcquisitionCache } from "./acquisiti
 import { historyFrom } from "./sheets/research";
 import { sheetHistory, sheetInForce } from "./sheets/sheetStore";
 import { adoptSheet, validationContextFor } from "./sheets/adopt";
-import { draftRate } from "./acquisition/aiProposedBundle";
+import { draftRate, DRAFTS_PER_SHEET } from "./acquisition/aiProposedBundle";
 import { resetSheetsToMigrated, stubDraftCall } from "./sheets/testSupport";
 import { AnalyzerReport } from "@/app/components/AnalyzerReport";
 import AssumptionSheetPage from "@/app/analyzer/inputs/[ticker]/page";
@@ -95,9 +95,10 @@ describe("CF-AR6-ANY-TICKER-DRAFTS-01 — a new ticker, end to end, with no migr
     expect(sheet!.status).toBe("DRAFT");
     expect(sheet!.origin).toBe("AI DRAFT");
 
-    // One call, and the request carried no price: the acquisition was made
-    // without one and no research source speaks of one.
-    expect(stub.requests).toHaveLength(1);
+    // One sheet — DRAFTS_PER_SHEET independent drafts (CALVIN RULING — A on
+    // #454; was one call) — and no request carried a price: the acquisition
+    // was made without one and no research source speaks of one.
+    expect(stub.requests).toHaveLength(DRAFTS_PER_SHEET);
     // The system prompt is fixed text (it states the limit); the user
     // message is everything about this company the model sees.
     const request = stub.requests[0].user;
@@ -120,7 +121,7 @@ describe("CF-AR6-ANY-TICKER-DRAFTS-01 — a new ticker, end to end, with no migr
     __resetSheetResolution();
     const again = await resolveSheet(NEW_TICKER, { call: stub.call, client: null, acquire: captureAcquire });
     expect(again?.id).toBe(sheet!.id);
-    expect(stub.requests).toHaveLength(1);
+    expect(stub.requests).toHaveLength(DRAFTS_PER_SHEET);
   });
 
   it("the run opens through the gate with no human step, and the report renders", async () => {
