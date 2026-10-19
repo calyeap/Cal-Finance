@@ -108,9 +108,11 @@ describe("Analyzer Home — all five identity outcomes stay honest and reachable
     expect(screen.getByText(/the identity service could not be reached/i)).toBeInTheDocument();
   });
 
-  it("unavailablefixture: names the missing fact set and creates no run", () => {
+  // CF-AR6-ANY-TICKER-DRAFTS-01 — the refusal now names the missing
+  // assumption sheet (any ticker gets a draft; none could be made here).
+  it("unavailablefixture: names the missing assumption sheet and creates no run", () => {
     renderHome({ fixtureMissing: "NVDA" });
-    expect(screen.getByText(/unavailable — no fact set in this build/i)).toBeInTheDocument();
+    expect(screen.getByText(/unavailable — no assumption sheet/i)).toBeInTheDocument();
     expect(screen.getByText(/NVDA resolves as a listed operating company/i)).toBeInTheDocument();
     expect(screen.getByText(/no run was created/i)).toBeInTheDocument();
   });

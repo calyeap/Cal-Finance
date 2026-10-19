@@ -4,8 +4,8 @@ import { describe, it, expect, beforeEach, afterAll } from "vitest";
 import { getPool } from "../../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "../runStore";
 import { computeAnalysisForRun, loadGateState } from "../gate";
-import { recordedAnalystInputBundle } from "./recordedBundles";
 import { analystInputsFor } from "./analystInputs";
+import { bundleInForce, resetSheetsToMigrated } from "../sheets/testSupport";
 
 // ---------------------------------------------------------------------------
 // CF-MSFT-STAGE2-DURABLE-SEED-01 (issue #442) — proves migration
@@ -25,6 +25,15 @@ import { analystInputsFor } from "./analystInputs";
 // migration file itself — not merely a value this file typed out a second
 // time — produces a bundle that resolves, round-trips and computes
 // correctly, regardless of execution order.
+//
+// CF-AR6-ANY-TICKER-DRAFTS-01 — reviewed evaluator change. The recorded
+// store's read path is gone: migration 014 carries this seed into MSFT's
+// assumption sheet as its version 1 DRAFT, and that sheet is what a run
+// reads. The round trip below is the same approved content, read through
+// the sheet (resetSheetsToMigrated re-applies 014 after this seed). The last
+// test's committed-fixture fallback is replaced by its opposite: with no
+// seed and no sheet, MSFT no longer falls back to MSFT_FIXTURE — the fixture
+// path is deleted (issue #454 DO 6).
 // ---------------------------------------------------------------------------
 
 const MIGRATION_SQL = readFileSync(
@@ -38,6 +47,7 @@ async function deleteMsftRecordedBundle(): Promise<void> {
 
 async function applySeedMigration(): Promise<void> {
   await getPool().query(MIGRATION_SQL);
+  await resetSheetsToMigrated();
 }
 
 async function completeSpotCheck(runId: string): Promise<void> {
@@ -53,6 +63,7 @@ describe("CF-MSFT-STAGE2-DURABLE-SEED-01 — migration 010's durably recorded MS
       "TRUNCATE analyzer_run_fact_decisions, analyzer_run_judgments, analyzer_runs CASCADE"
     );
     await deleteMsftRecordedBundle();
+    await resetSheetsToMigrated();
   });
 
   afterAll(async () => {
@@ -82,7 +93,7 @@ describe("CF-MSFT-STAGE2-DURABLE-SEED-01 — migration 010's durably recorded MS
 
   it("round-trips the exact approved classification, all three scenarios' drivers/shareCount, and the approved snapshot values", async () => {
     await applySeedMigration();
-    const stored = await recordedAnalystInputBundle("MSFT");
+    const stored = await bundleInForce("MSFT");
     expect(stored).not.toBeNull();
     if (stored === null) return;
 
@@ -148,9 +159,8 @@ describe("CF-MSFT-STAGE2-DURABLE-SEED-01 — migration 010's durably recorded MS
     expect(inputs.configuredConstants.preRevenueUnleveredRate).toBeNull();
     expect(inputs.configuredConstants.projectDebtCost).toBeNull();
 
-    // analystInputsFor resolves the SAME recorded bundle (recorded wins
-    // over the committed MSFT_FIXTURE carry-over) — the resolver this
-    // migration is meant to feed, not a second, parallel read path.
+    // analystInputsFor resolves the SAME sheet — the one resolver this
+    // migration feeds, not a second, parallel read path.
     const viaResolver = await analystInputsFor("MSFT");
     expect(viaResolver?.inputs.scenarioValues?.bear.toString()).toBe("214.26");
   });
@@ -191,26 +201,21 @@ describe("CF-MSFT-STAGE2-DURABLE-SEED-01 — migration 010's durably recorded MS
     expect(result.diagnostics.enterpriseValue.suppressed).toBe(false);
   });
 
-  it("no regression to NVDA, and MSFT still falls back to the committed fixture once the recorded row is removed", async () => {
+  it("no regression to NVDA, and MSFT never falls back to the committed fixture once its seed is removed", async () => {
     await applySeedMigration();
 
     // NVDA's own migration-008 seed is untouched by this migration — still
     // resolvable, and like MSFT's carrying no D2 input.
-    const nvda = await recordedAnalystInputBundle("NVDA");
+    const nvda = await bundleInForce("NVDA");
     expect(nvda).not.toBeNull();
     expect(nvda?.inputs.scenarios.bear.returnOnNewInvestment).toBeNull();
     expect(nvda?.inputs.scenarioValues?.bear.toString()).toBe("28.08");
 
-    // Removing the recorded MSFT row (simulating "nothing recorded yet")
-    // falls back to the pre-existing committed MSFT_FIXTURE carry-over
-    // exactly as before this migration existed — the precedence this
-    // migration relies on (recorded-wins-over-committed) is not itself
-    // something this migration invents, and removing its effect must not
-    // leave MSFT unsupported.
+    // With no recorded row and so no migrated sheet, MSFT has no sheet; this
+    // offline run calls no model, so none is drafted — and MSFT_FIXTURE's
+    // $265 / $510 / $650 never stand in (the fixture path is deleted).
     await deleteMsftRecordedBundle();
-    const committedFallback = await analystInputsFor("MSFT");
-    expect(committedFallback).not.toBeNull();
-    expect(committedFallback?.inputs.scenarioValuesAreFixtureCarried).toBe(true);
-    expect(committedFallback?.inputs.scenarioValues?.bear.toString()).toBe("265");
+    await resetSheetsToMigrated();
+    expect(await analystInputsFor("MSFT")).toBeNull();
   });
 });

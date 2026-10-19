@@ -50,6 +50,15 @@ import path from "node:path";
 // (qualityBar.ts) and the pending-judgement states. Still no new cut-point,
 // band or threshold: the V1 bands are read from policy.ts unchanged, and
 // verdictSynthesisV1.test.ts asserts they equal the Methodology's numbers.
+//
+// PIN UPDATED by CF-AR6-ANY-TICKER-DRAFTS-01, 17 Oct 2026 (issue #454):
+// product-decisions item 30 (D5, adopt-to-finalize) — on a complete DRAFT
+// assumption sheet the same nine-point check runs and its zone is reported
+// (`draftZone`), while the verdict stays PENDING ADOPTION until Calvin adopts;
+// a sheet recording that no valuation can be concluded from filed history
+// reads "Can't bound value" after any upstream cause. No cut-point, band,
+// threshold or verdict rule changes: the check, the zones and the quality
+// bar are read exactly as before.
 // ---------------------------------------------------------------------------
 
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -58,10 +67,10 @@ function readRepoFile(relPath: string): string {
   return readFileSync(path.join(ROOT, relPath), "utf8");
 }
 
-describe("verdict.ts is untouched since CF-AR5-VERDICT-CONSOLIDATION-01's own authorised change", () => {
+describe("verdict.ts is untouched since CF-AR6-ANY-TICKER-DRAFTS-01's own authorised change", () => {
   it("hashes to the content this outcome left it at — no cut-point, band or threshold beyond the Methodology's own already-approved V1 numbers", () => {
     const hash = createHash("sha256").update(readRepoFile("lib/analyzer/verdict.ts")).digest("hex");
-    expect(hash).toBe("2b17017ac9f54ef7704e05f0016ac879a4a1810f09c74743cf89a8563b60e5be");
+    expect(hash).toBe("a698fa7a42b98fc809f64c99d1cfc6714edadd039e9f3d3f09926cf665e1348a");
   });
 });
 

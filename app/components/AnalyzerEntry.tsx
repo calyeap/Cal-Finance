@@ -114,14 +114,15 @@ export function AnalyzerHomeContent({
         <div className="az-home-result">
           <div className="state">
             <span className="plain">
-              {fixtureMissing} resolves as a listed operating company, but this build has no
-              fact set for it.
+              {fixtureMissing} resolves as a listed operating company, but no assumption sheet
+              could be drafted for it.
             </span>
-            <span className="name">Unavailable — no fact set in this build</span>
+            <span className="name">Unavailable — no assumption sheet</span>
             <span className="cause">
-              Facts are acquired from SEC filings for any resolved ticker. The scenario inputs
-              Step 7 supplies — not yet an interface, so still carried from the validation
-              set — are recorded for MSFT and OKLO only, and a run cannot open without them.
+              Facts are acquired from SEC filings for any resolved ticker, and its first
+              assumption sheet is drafted from them — price-blind, every driver citing its
+              anchor. That draft could not be made here (no model configured, or the filings
+              could not be read), and a run cannot open without a sheet.
             </span>
           </div>
           <p className="note">
@@ -130,9 +131,9 @@ export function AnalyzerHomeContent({
           </p>
           <p className="note">
             <a href={`/analyzer/inputs/${encodeURIComponent(fixtureMissing)}`}>
-              Record analyst inputs for {fixtureMissing}
+              {fixtureMissing}&rsquo;s assumption sheet
             </a>{" "}
-            — a separate authoring surface, not a step in this path.
+            — try a draft there.
           </p>
         </div>
       )}

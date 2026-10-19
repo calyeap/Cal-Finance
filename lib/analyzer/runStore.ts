@@ -327,7 +327,7 @@ export async function getCompanyJudgmentOverride(
  * null: Calvin's recorded verdict judgements for this company (migration 013,
  * verdictJudgementStore.ts) — uncertainty answer, close calls, thesis state,
  * management rating, moat mechanism and process items. The moat class itself
- * is the assumption sheet's (D2), already covered by `recordedSheetUpdatedAt`.
+ * is the assumption sheet's (D2), already covered by `sheetInForce`.
  */
 export interface RecordedJudgementState {
   factDecisions: StoredFactDecision[];
@@ -339,8 +339,12 @@ export interface RecordedJudgementState {
     autoResolved: string | null;
   };
   companyOverrides: { nonOperatingInvestments: string | null };
-  /** When this ticker's recorded assumption sheet was last written; null if none is recorded. */
-  recordedSheetUpdatedAt: string | null;
+  /**
+   * CF-AR6-ANY-TICKER-DRAFTS-01 — the ticker's assumption sheet in force
+   * (migration 014): an adoption or a redraft is a new version, so a new
+   * output. Null where the ticker has no sheet yet.
+   */
+  sheetInForce: { id: number; version: number; status: string } | null;
   verdictJudgements: VerdictJudgements;
 }
 
@@ -351,8 +355,11 @@ export async function getRecordedJudgementState(runId: string): Promise<Recorded
     getFactDecisions(runId),
     getJudgments(runId),
     getCompanyJudgmentOverride(run.ticker, "NON-OPERATING INVESTMENTS"),
-    getPool().query<{ updated_at: Date }>(
-      `SELECT updated_at FROM analyzer_recorded_analyst_bundles WHERE ticker = $1`,
+    getPool().query<{ id: string; version: number; status: string }>(
+      `SELECT id, version, status FROM analyzer_assumption_sheets
+        WHERE ticker = $1
+        ORDER BY (status = 'ADOPTED') DESC, version DESC
+        LIMIT 1`,
       [run.ticker]
     ),
     getVerdictJudgements(run.ticker),
@@ -371,7 +378,8 @@ export async function getRecordedJudgementState(runId: string): Promise<Recorded
       autoResolved: run.profileAutoResolved,
     },
     companyOverrides: { nonOperatingInvestments: override?.selection ?? null },
-    recordedSheetUpdatedAt: sheet.rows.length === 0 ? null : new Date(sheet.rows[0].updated_at).toISOString(),
+    sheetInForce:
+      sheet.rows.length === 0 ? null : { id: Number(sheet.rows[0].id), version: sheet.rows[0].version, status: sheet.rows[0].status },
     verdictJudgements,
   };
 }

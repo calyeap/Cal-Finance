@@ -1,47 +1,39 @@
 import Decimal from "decimal.js";
-import { MSFT_FIXTURE } from "../fixtures/msft";
-import { OKLO_FIXTURE } from "../fixtures/oklo";
 import type { AnalystInputs } from "./companyInputs";
-import { recordedAnalystInputBundle } from "./recordedBundles";
 import type { AnalystSuppliedRange } from "../modules/sensitivity";
 import { acquireCompany, type AcquiredCompany } from "./provider";
-import { analystCallIfConfigured } from "../ai/anthropicCall";
-import { writeAnalystLog } from "../ai/analystCall";
-import { aiProposedAnalystInputBundle } from "./aiProposedBundle";
-import { getAiProposedBundleSnapshot, saveAiProposedBundleSnapshot } from "./aiProposedBundleSnapshot";
-
-// Same switch gate.ts's own isOffline() reads (private there) — never a
-// second ANALYZER_OFFLINE meaning, just this file's own read of the one
-// existing flag, since calling out to acquire a company for the AI-proposed
-// path must not happen from an offline run any more than any other live-only
-// call in this codebase does.
-function isOfflineAnalyzerRun(): boolean {
-  return process.env.ANALYZER_OFFLINE === "1";
-}
+import { secClientFromEnv, type SecClient } from "./secClient";
+import { analystCallIfConfigured, ANALYST_MODEL } from "../ai/anthropicCall";
+import { writeAnalystLog, type AnalystCall } from "../ai/analystCall";
+import { draftAssumptionSheet } from "./aiProposedBundle";
+import { bundleFromSheet, type AssumptionSheet } from "../sheets/sheet";
+import { appendSheet, sheetInForce } from "../sheets/sheetStore";
 
 // ---------------------------------------------------------------------------
-// The inputs that are NOT facts, and were never acquired from anything.
+// The inputs that are NOT facts — Step 7's scenarios, the moat class and the
+// policy constants a company's run needs — and the one resolver for them.
 //
-// Read this before reading anything else in this file: **the values below are
-// not filing data and must never be presented as though they were.**
+// CF-AR6-ANY-TICKER-DRAFTS-01 (product-decisions item 30, D5; frozen spec
+// §14.9 AR0-6). They come from one place now: the company's assumption sheet
+// (sheets/, migration 014), append-only and versioned.
 //
-// M8-a replaces the fixtures as the source of FACTS. It does not, and is not
-// meant to, replace them as the source of the ANALYST's inputs — the three
-// scenarios with their drivers and written anchors (Step 7), the scenario
-// values they produce, and the four §7.1 policy constants Command Center has
-// not defined. Those come from a human, Step 7's interface is not built, and
-// M8-a's scope explicitly excludes building it.
+//   - A ticker with a sheet resolves to the sheet in force: its latest
+//     ADOPTED version, else its latest DRAFT.
+//   - A ticker with none gets one drafted, once, and stored: a price-blind
+//     AI draft from its filings and filed history (aiProposedBundle.ts), or,
+//     where no operating history exists to draft from, a sheet recording
+//     that the valuation cannot be concluded. The report, valuation and
+//     verdict zone then appear with no migration and no PR; the final
+//     verdict waits for Calvin's adoption.
 //
-// So they are carried from the M5/M7 validation fixtures, and this file is the
-// single place that happens, so that a reader can see the whole of the
-// not-acquired surface in one screen rather than discovering it a field at a
-// time. Every FACT-derived input is built from real filings in
-// companyInputs.ts; nothing here touches one.
-//
-// The consequence to keep in view when reading a real run's report: the
-// scenario block and the fair-value range it feeds are still fixture-derived.
-// Everything upstream of them — the fact set, the gates, the margin history,
-// the EV bridge inputs, the FCF components — is acquired.
+// DELETED here (issue #454 DO 6, "delete the fixture path"): the committed
+// M5/M7 validation fixtures (MSFT_FIXTURE, OKLO_FIXTURE) no longer reach a
+// real run — their synthetic scenarios and OKLO's synthetic pre-revenue unit
+// economics were never anyone's view of the company. Also replaced: the
+// recorded-bundle store (one row per ticker, corrected in place — migration
+// 006; its rows are migration 014's version 1 drafts) and the per-run pin of
+// an AI-proposed bundle (migration 009): a sheet is durable per ticker and a
+// run's stored output records the sheet version it was valued on.
 // ---------------------------------------------------------------------------
 
 export interface AnalystInputBundle {
@@ -53,57 +45,12 @@ export interface AnalystInputBundle {
   note: string;
 }
 
-const NOTE =
-  "The three scenarios, the values they produce and four unset policy constants " +
-  "on this run were NOT acquired. They are carried from the validation set, " +
-  "because the screen where you enter scenarios is not built yet. Every fact, " +
-  "gate and margin figure on this run comes from SEC filings.";
-
-function bundleFrom(fixture: typeof MSFT_FIXTURE): AnalystInputBundle {
-  return {
-    inputs: {
-      profile: fixture.profile,
-      scenarios: fixture.scenarios,
-      scenarioValues: fixture.scenarioValues,
-      // A4 (CF-ANALYZER-INTEGRITY-PHASE-A-01) — every bundle built here is
-      // one of the two COMMITTED validation fixtures (MSFT_FIXTURE/
-      // OKLO_FIXTURE), carried into a real run exactly as this file's own
-      // header says. `scenarioValues` above is never a computed fair value
-      // for the real company; assembly (CompanyFixture.
-      // scenarioValuesAreFixtureCarried) must not present it as one.
-      scenarioValuesAreFixtureCarried: true,
-      revalueBaseCaseAtRate: fixture.revalueBaseCaseAtRate,
-      configuredConstants: fixture.configuredConstants,
-      preRevenue: fixture.preRevenue,
-    },
-    note: NOTE,
-  };
-}
-
 // ---------------------------------------------------------------------------
 // CF-STEP4-MSFT-RANGE-CAPTURE-01 — the minimum AnalystSuppliedRange capture
 // CALVIN RULING — A authorised: MSFT only, growth and operating-margin axes
-// only (PR #323 comment 5830507368). Kept beside the rest of this file's
-// not-acquired surface, not in `lib/`'s deterministic modules — these three
-// points per axis are analyst assumptions, exactly like the scenarios above,
-// and sensitivity.ts's own rule (`sensitivity.ts:53-65`) forbids a module
-// deriving a range from POLICY or a historical calculation; this file may
-// only CITE one when authoring the range by hand, never compute one.
-//
-// Growth: the three values already authored for MSFT's own bear/base/bull
-// scenarios above (`scenarios.bear/base/bull.revenueGrowthOrPath`), cited
-// here as the analyst's own already-recorded growth anchors — not re-read
-// from `scenarios` at runtime, and never a substitute for Step 5's scenario
-// range (ruling A / ruling C: no Step 1/Step 5 reuse) since this capture
-// feeds a structurally different mechanism (M14's tornado/two-way tables),
-// not Step 4's forecast-dispersion measure itself.
-//
-// Operating margin: MSFT's own already-configured stress margin
-// (`configuredConstants.stressMarginLevel`, 38.0%) as the downside anchor,
-// and the M3 margin diagnostics already acquired for this company
-// (`reverseDcf.medianMargin` 41.8% / `reverseDcf.currentMargin` 46.8%,
-// `marginHistory.cyclicality.tenYearMarginRange` 21.4pp — cited for context,
-// not read into a formula) for the mid/high anchors.
+// only (PR #323 comment 5830507368). These three points per axis are analyst
+// assumptions, cited by hand, never derived by a module (sensitivity.ts).
+// ---------------------------------------------------------------------------
 const MSFT_GROWTH_RANGE: AnalystSuppliedRange = {
   values: [new Decimal("0.10"), new Decimal("0.137"), new Decimal("0.185")],
   rationale:
@@ -133,184 +80,119 @@ const SENSITIVITY_RANGES: Record<string, SensitivityRangeBundle> = {
   MSFT: { growth: MSFT_GROWTH_RANGE, operatingMargin: MSFT_OPERATING_MARGIN_RANGE },
 };
 
-/**
- * MSFT only (ruling A). Null for every other ticker — including OKLO, whose
- * growth/margin scenario drivers are themselves unauthored (`okloBundle`
- * below) — so their M14 tornado rows and growth x margin table stay
- * `available: false` exactly as before this capture.
- */
+/** MSFT only (ruling A). Null for every other ticker. */
 export function sensitivityRangesFor(ticker: string): SensitivityRangeBundle | null {
   return SENSITIVITY_RANGES[ticker.toUpperCase()] ?? null;
 }
 
-const SENSITIVITY_NOTE =
-  " This run also carries two AnalystSuppliedRange captures for M14's sensitivity tornado/two-way " +
-  "machinery — three explicit growth points and three explicit operating-margin points, each with a " +
-  "recorded rationale (CF-STEP4-MSFT-RANGE-CAPTURE-01, authorised by CALVIN RULING — A). These are " +
-  "likewise analyst assumptions, not filing data: they size a sensitivity test, not a forecast, and " +
-  "must never be presented as though acquired from a filing.";
+// Same switch gate.ts's own isOffline() reads: offline runs call no live
+// endpoint — no EDGAR request and no model call.
+function isOfflineAnalyzerRun(): boolean {
+  return process.env.ANALYZER_OFFLINE === "1";
+}
 
-function msftBundle(): AnalystInputBundle {
-  const bundle = bundleFrom(MSFT_FIXTURE);
-  return { ...bundle, note: bundle.note + SENSITIVITY_NOTE };
+export interface DraftDependencies {
+  call?: AnalystCall | null;
+  client?: SecClient | null;
+  acquire?: (ticker: string) => Promise<AcquiredCompany>;
+}
+
+function defaultAcquire(ticker: string): Promise<AcquiredCompany> {
+  // Made with no price: the draft never sees one.
+  return acquireCompany(ticker, { price: null, source: isOfflineAnalyzerRun() ? "CAPTURE" : undefined });
 }
 
 /**
- * OKLO, less the two things its validation set carries but nobody authored.
- *
- * The validation set gives OKLO's three scenarios a written anchor each and
- * NO growth, margin or reinvestment drivers — it carries 0 for all nine, a
- * placeholder the frozen mock (which has no Section F for OKLO) never shows.
- * And it gives no revaluation of the base case at other discount rates — it
- * carries a constant $31 whatever the rate, which the solver then searched
- * and reported as having no solution. A live report printed the first as
- * 0.0% growth, margin and reinvestment (CB-AUDIT-01 H4c) and would state the
- * second as a finding about the company. Supplied here as absent instead, so
- * both report INCOMPLETE. The fixture itself is untouched: it reproduces the
- * mock, and its placeholders are part of what it reproduces against.
- *
- * `scenarioValuesAreFixtureCarried` is left at `bundleFrom`'s own default
- * (`true`), not overridden to `false` here (REVIEW-38537849376-1, CORRECT):
- * OKLO's headline fair-value diagnostic is the honest `pre-revenue-
- * distribution` cash-floor/success-range shape and never reads
- * `scenarioValues`, but Section G's secondary "Scenario outputs" row and the
- * price-location diagnostic do read `scenarioOutputs.values`/
- * `priceLocationWithinRange` — both derived from this same fixture-carried
- * validation set — so leaving the override at `false` let OKLO_FIXTURE's own
- * $3.10/$31/$48 and a real price's location within them reach a real run's
- * page exactly as the committed MSFT constants did before A4. Inheriting
- * `true` routes both through the same existing NOT_COMPUTED_BINDING.
- * scenarioValues / .priceLocationWithinRange suppression `bundleFrom`'s
- * default already drives for MSFT — no new mechanism.
+ * Drafts and appends a new DRAFT version for a ticker, whatever it already
+ * has — the first draft for a new ticker, and the redraft that refreshes a
+ * stale sheet (NVDA's, issue #454 DO 6). Null, with the cause logged, where
+ * no draft can be made.
  */
-function okloBundle(): AnalystInputBundle {
-  const bundle = bundleFrom(OKLO_FIXTURE);
-  const unauthored = { revenueGrowthOrPath: null, operatingMargin: null, reinvestmentCapitalIntensity: null };
-  const s = bundle.inputs.scenarios;
-  return {
-    inputs: {
-      ...bundle.inputs,
-      scenarios: {
-        bear: { ...s.bear, ...unauthored },
-        base: { ...s.base, ...unauthored },
-        bull: { ...s.bull, ...unauthored },
-      },
-      revalueBaseCaseAtRate: null,
-    },
-    note:
-      bundle.note +
-      " For OKLO the validation set holds no growth, margin or reinvestment drivers and no revaluation " +
-      "of the base case at other discount rates, so those report incomplete rather than carrying placeholders.",
-  };
-}
-
-const BUNDLES: Record<string, AnalystInputBundle> = {
-  MSFT: msftBundle(),
-  OKLO: okloBundle(),
-};
-
-/**
- * Null for any company without a recorded analyst bundle.
- *
- * Null is the correct answer, not a gap to be filled: a company nobody has
- * supplied scenarios for HAS no scenarios, and inventing three would put
- * numbers with no author into a fair-value range.
- *
- * CF-ANALYST-INPUT-ENTRY-01 — the ONE resolver, reading TWO sources: the two
- * bundles committed above, and — for any other ticker — whatever has been
- * recorded through the entry path (recordedBundles.ts) into
- * analyzer_recorded_analyst_bundles. Async because the second source is a
- * database read; both call sites (acquiredRun.ts, calibrate-position.ts)
- * already run inside an async function and now await this one too, rather
- * than caching around the change (SCOPE item 2).
- *
- * CF-ANALYZER-REAL-VALUATION-UNBLOCK-01 (issue #433) — the recorded source is
- * now checked BEFORE the committed one, not after. The two committed bundles
- * above are M5/M7 VALIDATION-FIXTURE carry-overs (this file's own header),
- * never a real analyst's view of MSFT or OKLO; a row actually written through
- * recordAnalystBundle — the same explicit, human-driven act that already
- * durably resolves NVDA (migration 008) — is a genuine reviewed forecast and
- * must not be permanently shadowed by that fixture carry-over once one exists.
- * This changes nothing observable today: nobody has recorded MSFT or OKLO
- * through that path (OKLO's PRE_REVENUE_UNPROFITABLE profile cannot be —
- * recordedBundles.ts's RECORDABLE_PROFILES excludes it), so both still
- * resolve to their committed bundle exactly as before. It only stops being a
- * no-op the moment someone explicitly records one — never silently, never
- * auto-approved, the same one write path NVDA's own real valuation already
- * proves end to end.
- *
- * `runId`, optional (A5, CF-ANALYZER-INTEGRITY-PHASE-A-01): when supplied
- * and NEITHER a recorded NOR a committed bundle exists, this run's own
- * already-pinned AI-proposed bundle (migration
- * 009_ai_proposed_bundle_snapshot.sql) is read BEFORE a fresh model call —
- * see that migration's header for the reproducibility defect this closes.
- * The precedence this resolver already had is unchanged on this point: a
- * committed or recorded bundle still wins over a pin, every time, including
- * on a run that pinned an AI proposal before either existed.
- */
-export async function analystInputsFor(ticker: string, runId?: string): Promise<AnalystInputBundle | null> {
-  const recorded = await recordedAnalystInputBundle(ticker);
-  if (recorded !== null) return recorded;
-  const committed = BUNDLES[ticker.toUpperCase()];
-  if (committed !== undefined) return committed;
-
-  if (runId !== undefined) {
-    const pinned = await getAiProposedBundleSnapshot(runId);
-    if (pinned !== null) return pinned;
-  }
-
-  // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (issue #399). The same one
-  // resolver (CF-ANALYST-INPUT-ENTRY-01's own rule: no second resolution
-  // path), extended with a third, bounded source — consulted only where
-  // both the committed and the recorded source return null, never a second
-  // vote against an analyst's own recorded scenarios. Offline mode and a
-  // missing ANTHROPIC_API_KEY both fall through to this function's own
-  // existing refusal, same as any other unsupported ticker — see
-  // acquisition/aiProposedBundle.ts's own header for why this acquires here
-  // rather than being handed an already-acquired company: this is the one
-  // signature every existing caller already uses, ticker alone.
-  if (isOfflineAnalyzerRun()) return null;
-  // CF-ANALYZER-V1-SETTLE-01 — each refusal below names its cause in the
-  // analyzer log. A null here surfaces downstream only as "the run cannot
-  // open" (gate.ts), so without this line a live run that could not get a
-  // bundle carried no cause at all (PR #399 audit, 7 Oct 2026).
-  const call = analystCallIfConfigured();
-  if (call === null) {
-    writeAnalystLog(
-      `no analyst-input bundle for ${ticker.toUpperCase()}: none is committed or recorded, and no model credentials are configured to propose one`
-    );
-    return null;
+export async function draftNewSheet(ticker: string, deps: DraftDependencies = {}): Promise<{ sheet: AssumptionSheet | null; cause: string | null }> {
+  const symbol = ticker.trim().toUpperCase();
+  const call = deps.call !== undefined ? deps.call : isOfflineAnalyzerRun() ? null : analystCallIfConfigured();
+  let client: SecClient | null = null;
+  if (deps.client !== undefined) client = deps.client;
+  else if (!isOfflineAnalyzerRun()) {
+    try {
+      client = secClientFromEnv();
+    } catch {
+      client = null;
+    }
   }
 
   let acquired: AcquiredCompany;
   try {
-    acquired = await acquireCompany(ticker, { price: null });
+    acquired = await (deps.acquire ?? defaultAcquire)(symbol);
   } catch (err) {
-    writeAnalystLog(
-      `no analyst-input bundle for ${ticker.toUpperCase()}: acquiring the company to propose one failed — ${
-        err instanceof Error ? `${err.name}: ${err.message}` : String(err)
-      }`
-    );
-    return null;
+    const cause = `acquiring the company to draft its sheet failed — ${err instanceof Error ? `${err.name}: ${err.message}` : String(err)}`;
+    writeAnalystLog(`no assumption sheet for ${symbol}: ${cause}`);
+    return { sheet: null, cause };
   }
 
-  const resolved = await aiProposedAnalystInputBundle(ticker, acquired.acquisition.companyName, acquired, call);
-  // A5 — pin this run's own first successful resolution so a later reopen
-  // (cache expiry, process restart) reads it back instead of calling the
-  // model again. Never for a failed resolution (`resolved === null`): a
-  // refusal carries nothing worth pinning, and the next open should retry
-  // exactly as it does today.
-  if (runId !== undefined && resolved !== null) {
-    await saveAiProposedBundleSnapshot(runId, resolved);
+  const outcome = await draftAssumptionSheet(symbol, acquired, call, client);
+  if (outcome.kind === "REFUSED") {
+    writeAnalystLog(`no assumption sheet for ${symbol}: ${outcome.cause}`);
+    return { sheet: null, cause: outcome.cause };
   }
-  return resolved;
+  const sheet = await appendSheet({
+    ticker: symbol,
+    status: "DRAFT",
+    origin: outcome.kind === "DRAFTED" ? "AI DRAFT" : "CANNOT CONCLUDE",
+    content: outcome.content,
+    model: outcome.kind === "DRAFTED" ? ANALYST_MODEL : null,
+  });
+  return { sheet, cause: null };
 }
 
-/** The tickers whose analyst inputs are committed in code, never recorded
- * through the entry path. A company with a RECORDED bundle instead is a
- * supported ticker too (gate.ts's isSupportedTicker checks both), but is
- * deliberately not added to this static list — it is the one place this
- * file's own header can point a reader to "every committed bundle at a
- * glance", and a database-backed ticker cannot honestly join a list that is
- * read without an async call. */
-export const TICKERS_WITH_ANALYST_INPUTS = Object.keys(BUNDLES);
+// One draft at a time per ticker, and a refused draft is not retried for a
+// while: one page view asks for the bundle more than once (gate.ts), and a
+// paid model call must not run twice for the same answer. In-process only —
+// the durable record is the sheet store.
+const inFlight = new Map<string, Promise<AssumptionSheet | null>>();
+const REFUSAL_TTL_MS = 15 * 60 * 1000;
+const refusedAt = new Map<string, number>();
+
+/** Test seam. Never called by application code. */
+export function __resetSheetResolution(): void {
+  inFlight.clear();
+  refusedAt.clear();
+}
+
+/** The sheet in force for a ticker, drafting the first one where none exists. */
+export async function resolveSheet(ticker: string, deps: DraftDependencies = {}): Promise<AssumptionSheet | null> {
+  const symbol = ticker.trim().toUpperCase();
+  if (symbol === "") return null;
+  const existing = await sheetInForce(symbol);
+  if (existing !== null) return existing;
+
+  const refused = refusedAt.get(symbol);
+  if (refused !== undefined && Date.now() - refused < REFUSAL_TTL_MS) return null;
+
+  const running = inFlight.get(symbol);
+  if (running !== undefined) return running;
+  const started = (async () => {
+    // Another process may have drafted meanwhile; the store is the record.
+    const raced = await sheetInForce(symbol);
+    if (raced !== null) return raced;
+    const { sheet } = await draftNewSheet(symbol, deps);
+    if (sheet === null) refusedAt.set(symbol, Date.now());
+    return sheet;
+  })();
+  inFlight.set(symbol, started);
+  const forget = () => {
+    if (inFlight.get(symbol) === started) inFlight.delete(symbol);
+  };
+  void started.then(forget, forget);
+  return started;
+}
+
+/**
+ * The one resolver: the bundle a run of this ticker is valued on, or null
+ * where no sheet exists and none can be drafted — that company cannot open
+ * a run, and the log names why.
+ */
+export async function analystInputsFor(ticker: string, deps: DraftDependencies = {}): Promise<AnalystInputBundle | null> {
+  const sheet = await resolveSheet(ticker, deps);
+  return sheet === null ? null : bundleFromSheet(sheet);
+}

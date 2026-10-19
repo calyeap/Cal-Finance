@@ -288,6 +288,8 @@ export interface SubmissionsDocument {
       filingDate?: string[];
       primaryDocument?: string[];
       reportDate?: string[];
+      /** A current report's item numbers, comma-separated (e.g. "2.02,9.01"). */
+      items?: string[];
     };
   };
 }

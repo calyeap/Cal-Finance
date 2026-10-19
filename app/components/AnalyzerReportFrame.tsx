@@ -195,6 +195,7 @@ export function AnalyzerReportFrame({
         {(activeTab === "overview" || activeTab === "risks") && (
           <VerdictJudgementPanel
             runId={runId}
+            ticker={result.ticker}
             verdict={verdict}
             judgements={result.verdictJudgements ?? NO_VERDICT_JUDGEMENTS}
             moatClass={result.valuationBasis?.d2.moatClass ?? null}

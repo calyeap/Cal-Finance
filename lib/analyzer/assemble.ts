@@ -64,6 +64,7 @@ import {
 import type {
   AchievedGrowth,
   AnalysisResult,
+  AssumptionSheetReference,
   BusinessSectionContent,
   FactRecord,
   Figure,
@@ -231,6 +232,11 @@ export interface CompanyFixture {
   // honest source then), and an AI-proposed bundle (whose scenarioValues is
   // already null) are all unaffected.
   recordedScenarioValuesComputeFromDrivers?: boolean;
+  // CF-AR6-ANY-TICKER-DRAFTS-01 — the assumption sheet these scenarios come
+  // from (sheets/, migration 014). A DRAFT values like an adopted sheet and
+  // its verdict waits for adoption; `cannotConclude` values nothing. Absent
+  // on a hand-authored fixture, which is read as adopted.
+  sheet?: AssumptionSheetReference | null;
   // null where the fixture has no real revaluation-at-rate solver — see
   // computeScenarioOutputs's own doc comment (CB-AUDIT-01 H2). Never a
   // placeholder formula standing in for one.
@@ -523,9 +529,12 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // without a return on new investment for every scenario and a moat class
   // is PENDING ADOPTION (Calvin, 17 Oct 2026, Option A on #447): no D2 value
   // is computed from it — not by the engine, and not from a dollar figure
-  // typed under the superseded conventions — and the report says so. No
-  // agent authors either input (product-decisions item 19).
+  // typed under the superseded conventions — and the report says so.
+  // CF-AR6-ANY-TICKER-DRAFTS-01: a price-blind draft proposes both, each
+  // cited; Calvin's adoption is the authorship (product-decisions items 19
+  // and 30) and only the final verdict waits for it.
   const d2 = resolveD2Inputs(fixture, rate);
+  const cannotConclude = fixture.sheet?.cannotConclude ? `Can't conclude: ${fixture.sheet.cannotConclude}` : null;
 
   // Every value below — M7, M8, M9, M14, M15 and the expected return — is
   // this one function: the scenario's growth (fixed path shape), margin and
@@ -537,6 +546,9 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     overrides: { growth?: Decimal; margin?: Decimal; ronic?: Decimal; terminalRoic?: Decimal; rate?: Decimal } = {}
   ): ScenarioRun => {
     const driver = fixture.scenarios[key];
+    // CF-AR6-ANY-TICKER-DRAFTS-01 — a sheet that could not be drafted from
+    // filed history values nothing, and says why.
+    if (cannotConclude !== null) return { valuation: null, cause: cannotConclude };
     if (baseRevenueSourced === null) {
       return { valuation: null, cause: "base-year revenue is INCOMPLETE on this run (missing, or NOT CONFIRMED)" };
     }
@@ -743,7 +755,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   const scenarioValuesBlockedAsFixtureCarried = fixture.scenarioValuesAreFixtureCarried === true;
   let scenarioValuesMissing: string | null = scenarioValuesBlockedAsFixtureCarried
     ? "this run's scenario dollar values are carried from the M5/M7 validation fixture (analystInputs.ts), not computed for this real acquired report — no acquisition-time valuation path supplies them yet (A4, CF-ANALYZER-INTEGRITY-PHASE-A-01)"
-    : null;
+    : cannotConclude;
   // The bridge's own net debt/cash/non-operating-investments term, held
   // constant across bear/base/bull exactly as the debt and cash on a
   // company's balance sheet do not change by scenario — inverting the
@@ -753,6 +765,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       ? null
       : enterpriseValue.minus(currentEnterpriseValue.value.minus(currentMarketCap)).dividedBy(shareCount);
   const dynamicScenarioValue = (key: keyof ScenarioSet): Decimal => {
+    if (cannotConclude !== null) return new Decimal(NaN);
     if (currentEnterpriseValue === null || currentMarketCap === null) {
       scenarioValuesMissing = "enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply";
       return new Decimal(NaN);
@@ -1456,6 +1469,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       inputsFingerprint: fingerprint("inputs", { ...fixture, runId: null, facts: factsForIdentity, verdictJudgements: undefined }),
       factSnapshot: fingerprint("facts", factsForIdentity),
       sheetVersion: fingerprint("sheet", {
+        sheet: fixture.sheet ?? null,
         scenarios: fixture.scenarios,
         scenarioValues: fixture.scenarioValues,
         configuredConstants: fixture.configuredConstants,
@@ -1470,7 +1484,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         stubYears,
       },
     },
-    valuationBasis: { discountRate, d2: d2.public },
+    valuationBasis: { discountRate, d2: d2.public, ...(fixture.sheet === undefined ? {} : { sheet: fixture.sheet }) },
     ...(fixture.verdictJudgements === undefined ? {} : { verdictJudgements: fixture.verdictJudgements }),
     verdictInputs: {
       ...baseAtCheckRates,
@@ -1519,7 +1533,7 @@ function resolveD2Inputs(
     const statement =
       `Pending adoption: this assumption sheet has no ${missing.join(", ")}, so its valuation under the approved rules ` +
       "(Methodology v2.1 D2 — reinvestment from the return on new investment, terminal return from the moat class) is not " +
-      "computed. Calvin adopts the sheet with those inputs; no agent sets them.";
+      "computed. Calvin adopts the sheet with those inputs set — his own, or a cited draft's.";
     const d2: D2Inputs = { status: "PENDING ADOPTION", missing, moatClass, terminalReturnOnNewCapital: null, statement };
     return { status: d2.status, moatClass, terminal: null, statement, public: d2 };
   }
@@ -1528,9 +1542,16 @@ function resolveD2Inputs(
     base: terminalReturnOnNewCapital(rate, moatClass, "base"),
     bull: terminalReturnOnNewCapital(rate, moatClass, "bull"),
   };
-  const statement = `Adopted: ${moatClass} moat — terminal return on new capital is the rate plus ${POLICY.moatCredit[moatClass]
+  const credit = `${moatClass} moat — terminal return on new capital is the rate plus ${POLICY.moatCredit[moatClass]
     .mul(100)
     .toFixed(1)}pp (bear +0pp; bull +${POLICY.moatCredit[moatClass].plus(POLICY.bullMoatCreditUplift).mul(100).toFixed(1)}pp).`;
-  const d2: D2Inputs = { status: "ADOPTED", missing: [], moatClass, terminalReturnOnNewCapital: terminal, statement };
+  // CF-AR6-ANY-TICKER-DRAFTS-01 — a complete sheet not yet adopted values
+  // exactly as an adopted one; only the final verdict waits (verdict.ts).
+  // A hand-authored fixture carries no sheet and is read as adopted.
+  const draft = fixture.sheet?.status === "DRAFT";
+  const statement = draft
+    ? `Draft (assumption sheet version ${fixture.sheet!.version}, not yet adopted): ${credit} The valuation is computed from the draft; the final verdict waits for adoption.`
+    : `Adopted: ${credit}`;
+  const d2: D2Inputs = { status: draft ? "DRAFT" : "ADOPTED", missing: [], moatClass, terminalReturnOnNewCapital: terminal, statement };
   return { status: d2.status, moatClass, terminal, statement, public: d2 };
 }

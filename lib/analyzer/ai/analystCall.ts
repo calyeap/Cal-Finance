@@ -123,8 +123,12 @@ export async function callWithOneRegeneration<T>(
         `${request.user}\n\n` +
         `YOUR PREVIOUS ANSWER WAS REFUSED IN FULL AND DISCARDED. It failed on:\n\n  ${diagnostic}\n\n` +
         `Write the whole answer again from the beginning. Do not try to repair the previous one — you cannot ` +
-        `see it and it no longer exists. Every figure must be a slot reference from the catalogue above, and ` +
-        `no digit may appear anywhere outside one.`,
+        `see it and it no longer exists.` +
+        // The drafting call proposes numbers by design (scenarioProposal.ts);
+        // the slot rule below belongs to the prose calls only.
+        (request.label === "scenarioProposal"
+          ? ` Every driver must again cite its anchor from the sources above.`
+          : ` Every figure must be a slot reference from the catalogue above, and no digit may appear anywhere outside one.`),
     };
     const recovered = interpret(await call(corrected));
     writeAnalystLog(`${request.label} regeneration recovered — the second attempt passed every check`);

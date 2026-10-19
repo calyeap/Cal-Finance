@@ -1,59 +1,50 @@
 import Decimal from "decimal.js";
 import type { AcquiredCompany } from "./provider";
-import type { AnalystInputBundle } from "./analystInputs";
+import type { SecClient } from "./secClient";
 import { writeAnalystLog, type AnalystCall } from "../ai/analystCall";
-import { runScenarioProposal, type ScenarioProposalFacts } from "../ai/scenarioProposal";
-import { revenueSeries, achievedRevenueCagr, comparatorRecency } from "../calibration/inputs";
-import { annualSeries, operatingMarginSeries } from "./history";
-import { TAG_MAP } from "./tagMap";
+import {
+  runScenarioProposal,
+  US_FEDERAL_STATUTORY_CORPORATE_TAX_RATE,
+  type DraftFacts,
+  type DraftProposal,
+} from "../ai/scenarioProposal";
+import { researchFor, type HistoryMeasures, type ResearchPack } from "../sheets/research";
+import { validateSheet, errorsIn } from "../sheets/validators";
+import { selectDiscountRate } from "../discountRate";
+import { POLICY } from "../policy";
 import { windowRange, worstSingleYearDecline } from "../marginMath";
-import type { ScenarioInputSet, ScenarioDriverInputs } from "../assemble";
-import type { Profile, ProfileClassificationInputs, ScenarioDriverSet } from "../types";
+import type { MoatClass, Profile } from "../types";
+import { SCENARIO_KEYS, type SheetClassificationInputs, type SheetContent, type SheetScenario, type SheetSource } from "../sheets/sheet";
 
 // ---------------------------------------------------------------------------
-// CF-ANALYZER-V1-SETTLE-01's CALVIN RULING — A (issue #399, 3 Oct 2026):
-// "wire COST end-to-end through the existing deterministic valuation engine."
+// CF-AR6-ANY-TICKER-DRAFTS-01 — drafting an assumption sheet for any ticker
+// (product-decisions item 30, D5; issue #454 DO 1–3).
 //
-// analystInputs.ts's own header states the rule this file is the third,
-// bounded exception to: a company with no bundle has no scenarios and cannot
-// open a run — "that is a refusal, not a gap to be filled with invented
-// numbers." An AI-PROPOSED bundle is still not an invented one: every driver
-// and both policy constants are scenarioProposal.ts's own fact-grounded,
-// plausibility-checked proposal (never this file's own invention), and an
-// explicit analyst bundle — committed or recorded — still resolves first and
-// overrides this entirely (analystInputs.ts's own resolution order is
-// unchanged; this is consulted only where both existing sources return null).
+//   research (sheets/research.ts: filed history + cited filing text)
+//     → the price-blind drafting call (ai/scenarioProposal.ts)
+//     → the sheet validators (sheets/validators.ts) — a draft carrying an
+//       ERROR is refused whole and regenerated once
+//     → a DRAFT sheet's content, which analystInputs.ts appends to the store.
 //
-// What this file adds beyond the drivers/constants scenarioProposal.ts
-// itself proposes: the two §6.3 fields no AI call here proposes, because the
-// frozen spec (§6.3) explicitly forbids hard auto-assignment of them and
-// Calvin's ruling authorises only "the existing bounded scenario-proposal
-// call" — not a second judgment call. Both are MECHANICAL, non-judgmental,
-// real-data derivations, both cosmetic (see below), never AI-authored and
-// never this file inventing a classification:
+// The acquisition handed in is made with no price, and nothing here asks for
+// one: the draft never sees the price (issue #454 DO NOT).
 //
-//   - `scenarioValues` is left null — never computed here. §4.4's
-//     non-operating-investments judgment is not yet resolved at the point a
-//     bundle is built (gate.ts calls this before Step 2), so there is no
-//     debt/cash bridge to convert an enterprise value into a per-share
-//     figure yet. assemble.ts's M15 section computes it later, once that
-//     judgment (or its absence) is known, through the SAME
-//     computeScenarioEnterpriseValue model + EV bridge every explicit
-//     bundle's own hand-authored dollar values are already consistent with.
-//   - `profile` is the run's software RECOMMENDATION, automatically used and
-//     explicitly marked NOT human-confirmed (§6.3, §9.6 rule 2) — the exact,
-//     spec-sanctioned path "Where nobody has decided, the run proceeds on
-//     the recommended profile as an automatic resolution that is not...
-//     recorded as human-confirmed" (§6.3 amendment record). `profile` is
-//     read ONLY for display (assemble.ts passes it straight through to the
-//     result) and its one spec-defined consequence — suppressing §10.6's
-//     BUY/HOLD/SELL-style position and action clause — is already moot: this
-//     whole outcome is explicitly "No BUY/HOLD/SELL" (issue #399's own
-//     stated scope). The fair-value range itself still renders regardless
-//     (§6.3: "the fair-value range still renders").
+// A company with no positive current revenue — pre-revenue, like OKLO — has
+// no operating history to anchor a single driver to. No call is made: the
+// sheet records that the valuation cannot be concluded from filed history,
+// and the report says so (AI DEFAULT, recorded in the PR). Nothing is
+// invented in its place.
+//
+// The profile and its classification inputs are the run's mechanical,
+// recommended classification from the same filed data (§6.3: used, never
+// recorded as human-confirmed) — unchanged from the AI-proposed bundle this
+// file replaces.
 // ---------------------------------------------------------------------------
 
-const SHARE_COUNT_MULTIPLIER_BAND = { lo: new Decimal("0.5"), hi: new Decimal("3.0") };
+export type DraftOutcome =
+  | { kind: "DRAFTED"; content: SheetContent }
+  | { kind: "CANNOT CONCLUDE"; content: SheetContent }
+  | { kind: "REFUSED"; cause: string };
 
 function factDecimal(acquired: AcquiredCompany, factId: string): Decimal | null {
   const fact = acquired.acquisition.facts.find((f) => f.id === factId);
@@ -61,14 +52,10 @@ function factDecimal(acquired: AcquiredCompany, factId: string): Decimal | null 
   return fact.value instanceof Decimal ? fact.value : new Decimal(String(fact.value));
 }
 
-/** Mirrors calibrate-position.ts's own `medianMargin` helper exactly — the
- * one existing way this codebase turns a company's filed facts into a margin
- * series, reused rather than re-derived a second way. */
-function marginSeriesFor(acquired: AcquiredCompany): { fiscalYear: number; margin: number }[] | null {
-  const operatingIncomeTags = TAG_MAP.find((e) => e.factId === "operating-income")?.candidates;
-  if (operatingIncomeTags === undefined) return null;
-  const series = operatingMarginSeries(revenueSeries(acquired.companyFacts), annualSeries(acquired.companyFacts, operatingIncomeTags));
-  return series?.years ?? null;
+function marginsOf(measures: HistoryMeasures): Decimal[] {
+  return measures.years
+    .filter((y) => y.revenue !== null && y.operatingIncome !== null && y.revenue.greaterThan(0))
+    .map((y) => y.operatingIncome!.dividedBy(y.revenue!));
 }
 
 function median(values: Decimal[]): Decimal | null {
@@ -78,226 +65,291 @@ function median(values: Decimal[]): Decimal | null {
   return sorted.length % 2 === 1 ? sorted[mid] : sorted[mid - 1].plus(sorted[mid]).dividedBy(2);
 }
 
-function proposalFactsFor(ticker: string, companyName: string, acquired: AcquiredCompany): ScenarioProposalFacts {
-  const margins = marginSeriesFor(acquired);
-  const marginDecimals = (margins ?? []).map((y) => new Decimal(y.margin));
-  const currentOperatingMargin = marginDecimals.length === 0 ? null : marginDecimals[marginDecimals.length - 1];
-  const medianOperatingMargin = median(marginDecimals);
-
-  const revSeries = revenueSeries(acquired.companyFacts);
-  const historicalRevenueCagr =
-    revSeries === null
-      ? null
-      : achievedRevenueCagr(revSeries, 10, comparatorRecency(acquired.companyFacts, revSeries)).value?.cagr ?? null;
-
-  return {
-    ticker,
-    companyName,
-    businessNarrative: acquired.business.narrative?.text ?? null,
-    sicDescription: acquired.sicDescription,
-    currentRevenue: factDecimal(acquired, "current-revenue"),
-    historicalRevenueCagr,
-    currentOperatingMargin,
-    medianOperatingMargin,
-  };
-}
-
-/**
- * The run's software-recommended profile and its classification inputs —
- * mechanical, real-data, cosmetic-only (see this file's header). Null only
- * where there isn't enough real data to classify revenue scale at all, which
- * fails this whole bundle closed exactly like a missing current-revenue fact
- * already does.
- */
-function recommendedProfile(
-  facts: ScenarioProposalFacts,
-  baseReinvestmentCapitalIntensity: Decimal,
-  margins: { fiscalYear: number; margin: number }[] | null
-): { profile: Profile; classificationInputs: ProfileClassificationInputs } | null {
-  if (facts.currentRevenue === null) return null;
-
-  const revenueScale: ProfileClassificationInputs["revenueScale"] =
-    facts.currentRevenue.isZero() ? "zero" : facts.currentRevenue.greaterThanOrEqualTo(new Decimal("1000000000")) ? "large" : "small";
-
-  const revenueGrowthBand: ProfileClassificationInputs["revenueGrowthBand"] =
-    facts.historicalRevenueCagr === null
-      ? "<10%"
-      : facts.historicalRevenueCagr.greaterThan("0.3")
-        ? ">30%"
-        : facts.historicalRevenueCagr.greaterThanOrEqualTo("0.1")
-          ? "10-30%"
-          : "<10%";
-
-  const fcfCharacter: ProfileClassificationInputs["fcfCharacter"] =
-    facts.currentOperatingMargin === null
-      ? "negative"
-      : facts.currentOperatingMargin.greaterThan(0)
-        ? "positive_stable"
-        : "negative";
-
-  const marginDecimals = (margins ?? []).map((y) => new Decimal(y.margin));
-  const cyclicality =
-    marginDecimals.length === 0
-      ? { tenYearMarginRange: new Decimal(0), worstSingleYearChange: new Decimal(0) }
-      : { tenYearMarginRange: windowRange(marginDecimals), worstSingleYearChange: worstSingleYearDecline(marginDecimals) };
-
-  const balanceSheetNature: ProfileClassificationInputs["balanceSheetNature"] =
-    baseReinvestmentCapitalIntensity.lessThan("0.1") ? "asset-light" : "asset-heavy";
-
-  const profile: Profile = revenueGrowthBand === ">30%" ? "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY" : "MATURE_PROFITABLE_STABLE_FCF";
-
+function classificationFor(
+  currentRevenue: Decimal | null,
+  measures: HistoryMeasures,
+  capitalIntensity: Decimal
+): { profile: Profile; classificationInputs: SheetClassificationInputs } {
+  const margins = marginsOf(measures);
+  const cagr = measures.revenueCagr?.value ?? null;
+  const revenueScale: SheetClassificationInputs["revenueScale"] =
+    currentRevenue === null || !currentRevenue.greaterThan(0) ? "zero" : currentRevenue.greaterThanOrEqualTo(new Decimal("1000000000")) ? "large" : "small";
+  const revenueGrowthBand: SheetClassificationInputs["revenueGrowthBand"] =
+    cagr === null ? "<10%" : cagr.greaterThan("0.3") ? ">30%" : cagr.greaterThanOrEqualTo("0.1") ? "10-30%" : "<10%";
+  const current = margins[margins.length - 1] ?? null;
+  const fcfCharacter: SheetClassificationInputs["fcfCharacter"] = current === null || !current.greaterThan(0) ? "negative" : "positive_stable";
+  const profile: Profile =
+    revenueScale === "zero" ? "PRE_REVENUE_UNPROFITABLE" : revenueGrowthBand === ">30%" ? "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY" : "MATURE_PROFITABLE_STABLE_FCF";
   return {
     profile,
-    classificationInputs: { revenueScale, fcfCharacter, revenueGrowthBand, capitalIntensity: baseReinvestmentCapitalIntensity, cyclicality, balanceSheetNature },
+    classificationInputs: {
+      revenueScale,
+      fcfCharacter,
+      revenueGrowthBand,
+      capitalIntensity: capitalIntensity.toString(),
+      cyclicality: {
+        tenYearMarginRange: (margins.length === 0 ? new Decimal(0) : windowRange(margins)).toString(),
+        worstSingleYearChange: (margins.length === 0 ? new Decimal(0) : worstSingleYearDecline(margins)).toString(),
+      },
+      balanceSheetNature: capitalIntensity.lessThan("0.1") ? "asset-light" : "asset-heavy",
+    },
   };
 }
-
-function toScenarioDriverInputs(driver: ScenarioDriverSet, dilutedShares: Decimal | null): ScenarioDriverInputs {
-  // scenarioProposal.ts's own shareCount is a MULTIPLE of the current share
-  // count (0.5x-3x, 1.0 = no change) — converted here to the ABSOLUTE count
-  // every other bundle in this codebase carries (MSFT's fixture, NVDA's
-  // recorded bundle), so Section F shows one consistent unit regardless of a
-  // run's bundle source. Left as the proposed multiple (clamped into the same
-  // band scenarioProposal.ts already checked) only where there is no diluted
-  // share count to multiply it against yet.
-  const shareCount = dilutedShares === null ? driver.shareCount : dilutedShares.mul(driver.shareCount);
-  return {
-    revenueGrowthOrPath: driver.revenueGrowthOrPath,
-    operatingMargin: driver.operatingMargin,
-    reinvestmentCapitalIntensity: driver.reinvestmentCapitalIntensity,
-    shareCount,
-    writtenAnchor: driver.writtenAnchor,
-  };
-}
-
-const NOTE_PREFIX =
-  "The three scenario driver sets and two of the four §7.1 policy constants on this run were PROPOSED by " +
-  "the bounded AI scenario-proposal call (CF-ANALYZER-V1-SETTLE-01, CALVIN RULING — A), grounded only in " +
-  "this company's own sourced facts below — never an analyst's own authorship, and never this software's " +
-  "own invention. An explicit analyst-authored bundle for this ticker, committed or recorded, would " +
-  "override this entirely; none exists yet. The dollar scenario values are not carried here at all — " +
-  "they are computed once this run's own non-operating-investments judgment is known, through the " +
-  "identical deterministic model every analyst-authored bundle's own values are consistent with. The " +
-  "profile below is this run's software RECOMMENDATION only, automatically used and not confirmed by a " +
-  "human analyst (§6.3) — mechanical, from the same sourced facts, never a judgment this software made.";
 
 /**
- * The third, bounded source `analystInputsFor` falls back to — after the two
- * committed fixtures and the recorded-bundle store both return null. Returns
- * null, the same refusal every other unsupported ticker already gets, where
- * there is no configured AI call, not enough sourced data to propose from, or
- * the call itself could not produce an acceptable proposal after one retry
- * (callWithOneRegeneration's own fail-closed discipline) — never a thrown
- * error reaching a report render.
+ * The D1 rate a draft will be valued at — policy, from the SIC code and filed margins; never market data.
+ * A draft measures no §6.5 leverage (that needs the price it never sees), so its rate's domain reads
+ * NOT MEASURED; only the rate and its basis are used, and neither reads leverage.
  */
-// A ticker calls this at least twice on the same request — isSupportedTicker
-// to decide whether the run can even open, buildAcquiredRun to actually
-// build it — and `loadGateState` already attaches that support check to the
-// SAME request `buildAcquiredRun` runs a few lines later (gate.ts). Without
-// this, each would re-run the paid AI call, doubling cost and latency for
-// nothing: the proposal cannot change within that single request. In-process
-// only, same TTL and shape as acquisition/provider.ts's own acquireCompany
-// cache, and for the identical reason — this is NOT a durable second control
-// plane or queue, it is one cache with one key, sitting beside the existing
-// one.
-const TTL_MS = 15 * 60 * 1000;
-const cache = new Map<string, { at: number; value: AnalystInputBundle | null }>();
-
-/** Test seam and cache reset. Never called by application code. */
-export function __resetAiProposedBundleCache(): void {
-  cache.clear();
+export function draftRate(acquired: AcquiredCompany, measures: HistoryMeasures, profile: Profile, on: string) {
+  const margins = marginsOf(measures);
+  const triggerBFired = margins.length > 1 && worstSingleYearDecline(margins).greaterThan(POLICY.triggerBDeclinePoints);
+  return selectDiscountRate({
+    sic: acquired.sic,
+    triggerBFired,
+    profile,
+    leverage: { result: "LEVERAGE UNSUPPORTED IN v1", netDebtRatio: null },
+    priceDate: on,
+  });
 }
 
-export async function aiProposedAnalystInputBundle(
-  ticker: string,
-  companyName: string,
-  acquired: AcquiredCompany,
-  call: AnalystCall | null
-): Promise<AnalystInputBundle | null> {
-  if (call === null) return null;
+const STATUTORY_SOURCE: SheetSource = {
+  id: "STATUTORY",
+  kind: "REFERENCE",
+  label: "General US federal statutory corporate income tax rate",
+  form: null,
+  accession: null,
+  filed: null,
+  url: null,
+  excerpt: `${US_FEDERAL_STATUTORY_CORPORATE_TAX_RATE.mul(100).toFixed(1)}% — a general reference rate, not a disclosure from this company's filings.`,
+};
 
-  const cacheKey = ticker.toUpperCase();
-  const hit = cache.get(cacheKey);
-  if (hit !== undefined && Date.now() - hit.at < TTL_MS) return hit.value;
-
-  const resolved = await resolveAiProposedAnalystInputBundle(ticker, companyName, acquired, call);
-  cache.set(cacheKey, { at: Date.now(), value: resolved });
-  return resolved;
+function dilutedSharesOf(acquired: AcquiredCompany): Decimal | null {
+  const outstanding = factDecimal(acquired, "shares-outstanding");
+  if (outstanding === null) return null;
+  return outstanding.plus(factDecimal(acquired, "treasury-method-dilution") ?? new Decimal(0));
 }
 
-async function resolveAiProposedAnalystInputBundle(
-  ticker: string,
-  companyName: string,
-  acquired: AcquiredCompany,
-  call: AnalystCall
-): Promise<AnalystInputBundle | null> {
-  // CF-ANALYZER-V1-SETTLE-01 — every refusal below names its cause in the
-  // analyzer log; a null here otherwise reaches a live run only as "the run
-  // cannot open", with no cause (PR #399 audit, 7 Oct 2026).
-  const refuse = (cause: string): null => {
-    writeAnalystLog(`no AI-proposed analyst-input bundle for ${ticker.toUpperCase()}: ${cause}`);
-    return null;
+/** The proposal as sheet content — share-count multiples applied to the diluted count. */
+export function contentFromProposal(
+  proposal: DraftProposal,
+  research: ResearchPack,
+  currentRevenue: Decimal | null,
+  dilutedShares: Decimal
+): SheetContent {
+  const scenarios = {} as SheetContent["scenarios"];
+  for (const key of SCENARIO_KEYS) {
+    const p = proposal.scenarios[key];
+    const s: SheetScenario = {
+      revenueGrowthOrPath: p.revenueGrowthOrPath.value.toString(),
+      operatingMargin: p.operatingMargin.value.toString(),
+      reinvestmentCapitalIntensity: p.reinvestmentCapitalIntensity.value.toString(),
+      returnOnNewInvestment: p.returnOnNewInvestment.value.toString(),
+      shareCount: dilutedShares.mul(p.shareCount.value).toDecimalPlaces(0).toString(),
+      writtenAnchor: p.story,
+      anchors: {
+        revenueGrowthOrPath: p.revenueGrowthOrPath.anchor,
+        operatingMargin: p.operatingMargin.anchor,
+        reinvestmentCapitalIntensity: p.reinvestmentCapitalIntensity.anchor,
+        returnOnNewInvestment: p.returnOnNewInvestment.anchor,
+        shareCount: { ...p.shareCount.anchor, text: `${p.shareCount.anchor.text} (${p.shareCount.value.toString()}× today's diluted count)` },
+      },
+    };
+    scenarios[key] = s;
+  }
+  const { profile, classificationInputs } = classificationFor(currentRevenue, research.measures, proposal.scenarios.base.reinvestmentCapitalIntensity.value);
+  return {
+    profile,
+    classificationInputs,
+    scenarios,
+    moatClass: proposal.moatClass,
+    moatAnchor: proposal.moatAnchor,
+    configuredConstants: {
+      nopatTaxRate: proposal.nopatTaxRate.toString(),
+      stressMarginLevel: proposal.stressMarginLevel.toString(),
+      preRevenueUnleveredRate: null,
+      projectDebtCost: null,
+    },
+    constantsAnchor: proposal.constantsAnchor,
+    sources: [...research.sources, STATUTORY_SOURCE],
+    basis: { ...research.basis, dilutedShares: dilutedShares.toString() },
+    cannotConclude: null,
   };
+}
 
-  const facts = proposalFactsFor(ticker, companyName, acquired);
-  if (facts.currentRevenue === null) return refuse("the acquired filings carry no current revenue to propose scenarios from");
+function cannotConcludeContent(reason: string, currentRevenue: Decimal | null, research: ResearchPack | null, dilutedShares: Decimal | null): SheetContent {
+  const measures: HistoryMeasures = research?.measures ?? {
+    years: [],
+    revenueCagr: null,
+    revenueGrowthRange: null,
+    operatingMarginRange: null,
+    roicRange: null,
+    incrementalReturn: null,
+    medianNetReinvestmentShare: null,
+    latestQuarter: null,
+  };
+  const { profile, classificationInputs } = classificationFor(currentRevenue, measures, new Decimal(0));
+  const empty = (): SheetScenario => ({
+    revenueGrowthOrPath: null,
+    operatingMargin: null,
+    reinvestmentCapitalIntensity: null,
+    returnOnNewInvestment: null,
+    shareCount: (dilutedShares ?? new Decimal(1)).toString(),
+    writtenAnchor: reason,
+  });
+  return {
+    profile,
+    classificationInputs,
+    scenarios: { bear: empty(), base: empty(), bull: empty() },
+    moatClass: null,
+    configuredConstants: { nopatTaxRate: null, stressMarginLevel: null, preRevenueUnleveredRate: null, projectDebtCost: null },
+    sources: research?.sources ?? [],
+    basis: research === null ? null : { ...research.basis, dilutedShares: dilutedShares?.toString() ?? null },
+    cannotConclude: reason,
+  };
+}
 
-  let proposal;
-  try {
-    proposal = await runScenarioProposal(facts, call);
-  } catch (err) {
-    // scenarioProposal.ts's own callWithOneRegeneration already retried once
-    // and logged the first refusal. A second failure is the same honest "no
-    // scenarios for this company" refusal analystInputsFor already gives a
-    // ticker with no bundle at all — never an exception reaching a route.
-    const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-    const diagnostic = typeof err === "object" && err !== null ? (err as { diagnostic?: unknown }).diagnostic : undefined;
-    const detail = typeof diagnostic === "string" && !message.includes(diagnostic) ? ` (${diagnostic})` : "";
-    return refuse(`the scenario-proposal call failed or was refused twice — ${message}${detail}`);
+// ---------------------------------------------------------------------------
+// CALVIN RULING — A on #454 (19 Oct 2026, comment 6270467028): draft
+// stability. One price-blind draft varied too much between runs (LLY's three
+// drafts valued 25.3% apart), so a sheet is drawn from DRAFTS_PER_SHEET
+// independent drafts: each driver is the median of their values and keeps the
+// anchor and citations of the draft that supplied it, so every driver stays
+// cited. It is still one sheet, adopted per D5.
+// ---------------------------------------------------------------------------
+
+export const DRAFTS_PER_SHEET = 3;
+
+const DRAFT_DRIVER_KEYS = ["revenueGrowthOrPath", "operatingMargin", "returnOnNewInvestment", "reinvestmentCapitalIntensity", "shareCount"] as const;
+const MOAT_ORDER: readonly MoatClass[] = ["none", "narrow", "wide"];
+
+/**
+ * The middle entry of the candidates sorted by value; for an even count the
+ * lower of the two middle entries (the conservative one). Ties keep draft
+ * order, so the result is deterministic.
+ */
+function middle<T>(candidates: { value: Decimal; draft: number; item: T }[]) {
+  const sorted = [...candidates].sort((a, b) => a.value.comparedTo(b.value) || a.draft - b.draft);
+  return sorted[Math.floor((sorted.length - 1) / 2)];
+}
+
+/**
+ * One proposal from several independent ones: each scenario driver is its
+ * median value with the supplying draft's anchor; the moat class is the
+ * median class with its draft's mechanism; the policy constants travel
+ * together from the draft with the median stress margin; the stories are the
+ * "lead" draft's — the one that supplied the most driver values. Medians keep
+ * every per-draft ordering (bear ≤ base ≤ bull), but the combination is
+ * validated again; if it fails, the lead draft itself — which passed — is the
+ * sheet, and the reason is recorded.
+ */
+export function combineDrafts(
+  proposals: DraftProposal[],
+  validate: (proposal: DraftProposal) => string[]
+): { proposal: DraftProposal; method: string } {
+  if (proposals.length === 1) return { proposal: proposals[0], method: `one draft (1 of ${DRAFTS_PER_SHEET} drafts usable)` };
+  const of = proposals.length === DRAFTS_PER_SHEET ? `${proposals.length} drafts` : `${proposals.length} of ${DRAFTS_PER_SHEET} drafts`;
+  const supplied = proposals.map(() => 0);
+  const scenarios = {} as DraftProposal["scenarios"];
+  for (const key of SCENARIO_KEYS) {
+    const drivers = {} as Record<(typeof DRAFT_DRIVER_KEYS)[number], DraftProposal["scenarios"][typeof key]["operatingMargin"]>;
+    for (const d of DRAFT_DRIVER_KEYS) {
+      const m = middle(proposals.map((p, draft) => ({ value: p.scenarios[key][d].value, draft, item: p.scenarios[key][d] })));
+      supplied[m.draft]++;
+      drivers[d] = m.item;
+    }
+    scenarios[key] = { story: "", ...drivers };
+  }
+  const lead = supplied.indexOf(Math.max(...supplied));
+  for (const key of SCENARIO_KEYS) scenarios[key].story = proposals[lead].scenarios[key].story;
+  const moat = middle(proposals.map((p, draft) => ({ value: new Decimal(MOAT_ORDER.indexOf(p.moatClass)), draft, item: p }))).item;
+  const constants = middle(proposals.map((p, draft) => ({ value: p.stressMarginLevel, draft, item: p }))).item;
+  const combined: DraftProposal = {
+    scenarios,
+    moatClass: moat.moatClass,
+    moatAnchor: moat.moatAnchor,
+    nopatTaxRate: constants.nopatTaxRate,
+    stressMarginLevel: constants.stressMarginLevel,
+    constantsAnchor: constants.constantsAnchor,
+  };
+  const defects = validate(combined);
+  if (defects.length === 0) return { proposal: combined, method: `per-driver median of ${of}` };
+  return {
+    proposal: proposals[lead],
+    method: `draft ${lead + 1} of ${of} — the median combination failed: ${defects.join("; ")}`,
+  };
+}
+
+/**
+ * Drafts one sheet for a company. `call` null (offline, or no model key)
+ * still settles a company that cannot be drafted from history at all; any
+ * other company is then REFUSED with that cause.
+ */
+export async function draftAssumptionSheet(
+  ticker: string,
+  acquired: AcquiredCompany,
+  call: AnalystCall | null,
+  client: SecClient | null,
+  on: string = new Date().toISOString().slice(0, 10)
+): Promise<DraftOutcome> {
+  const currentRevenue = factDecimal(acquired, "current-revenue");
+  const dilutedShares = dilutedSharesOf(acquired);
+
+  if (currentRevenue === null || !currentRevenue.greaterThan(0)) {
+    const research = await researchFor(acquired, null);
+    const reason =
+      "this company's filings report no revenue (pre-revenue, or none tagged), so there is no operating history to anchor " +
+      "growth, margin or returns to — the valuation cannot be concluded from filed history";
+    return { kind: "CANNOT CONCLUDE", content: cannotConcludeContent(reason, currentRevenue, research, dilutedShares) };
   }
 
-  const margins = marginSeriesFor(acquired);
-  const recommended = recommendedProfile(facts, proposal.base.reinvestmentCapitalIntensity, margins);
-  if (recommended === null) return refuse("no financial profile could be recommended from the acquired facts");
+  if (call === null) return { kind: "REFUSED", cause: "no model is configured to draft an assumption sheet (offline, or no ANTHROPIC_API_KEY)" };
+  if (dilutedShares === null || !dilutedShares.greaterThan(0)) {
+    return { kind: "REFUSED", cause: "the filings carry no share count to state the scenarios' share counts against" };
+  }
 
-  const dilutedShares = (() => {
-    const sharesOutstanding = factDecimal(acquired, "shares-outstanding");
-    if (sharesOutstanding === null) return null;
-    const treasuryDilution = factDecimal(acquired, "treasury-method-dilution") ?? new Decimal(0);
-    return sharesOutstanding.plus(treasuryDilution);
-  })();
-
-  const scenarios: ScenarioInputSet = {
-    bear: toScenarioDriverInputs(proposal.bear, dilutedShares),
-    base: toScenarioDriverInputs(proposal.base, dilutedShares),
-    bull: toScenarioDriverInputs(proposal.bull, dilutedShares),
+  const research = await researchFor(acquired, client);
+  const margins = marginsOf(research.measures);
+  const provisional = classificationFor(currentRevenue, research.measures, new Decimal(0));
+  const rateInUse = draftRate(acquired, research.measures, provisional.profile, on);
+  const facts: DraftFacts = {
+    ticker: ticker.toUpperCase(),
+    companyName: acquired.acquisition.companyName,
+    sicDescription: acquired.sicDescription,
+    sources: [...research.sources, STATUTORY_SOURCE],
+    rate: rateInUse.rate,
+    rateBasis: rateInUse.basis,
+    currentOperatingMargin: margins[margins.length - 1] ?? null,
+    medianOperatingMargin: median(margins),
   };
 
-  return {
-    inputs: {
-      profile: {
-        recommended: recommended.profile,
-        confirmedOrOverridden: recommended.profile,
-        override: null,
-        classificationInputs: recommended.classificationInputs,
-      },
-      scenarios,
-      scenarioValues: null,
-      // A4 — scenarioValues is already null here (the dynamic M15 path
-      // supplies the fair value instead); not the committed validation
-      // fixture either way.
-      scenarioValuesAreFixtureCarried: false,
-      revalueBaseCaseAtRate: null,
-      configuredConstants: {
-        nopatTaxRate: proposal.nopatTaxRate,
-        stressMarginLevel: proposal.stressMarginLevel,
-        preRevenueUnleveredRate: null,
-        projectDebtCost: null,
-      },
-      preRevenue: null,
-    },
-    note: `${NOTE_PREFIX} Policy-constants citation: ${proposal.policyConstantsAnchor}`,
-  };
+  const defectsOf = (p: DraftProposal) =>
+    errorsIn(
+      validateSheet(contentFromProposal(p, research, currentRevenue, dilutedShares), {
+        measures: research.measures,
+        rate: rateInUse.rate,
+        requireAnchors: true,
+      })
+    ).map((f) => `${f.check}: ${f.message}`);
+
+  // Independent drafts: the same price-blind request, each with its own one
+  // regeneration. A refused draft is left out; the sheet needs at least one.
+  const drafts: DraftProposal[] = [];
+  let firstFailure: string | null = null;
+  for (let n = 0; n < DRAFTS_PER_SHEET; n++) {
+    try {
+      drafts.push(await runScenarioProposal(facts, call, defectsOf));
+    } catch (err) {
+      const message = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+      firstFailure ??= message;
+      writeAnalystLog(`draft ${n + 1} of ${DRAFTS_PER_SHEET} for ${ticker.toUpperCase()} refused: ${message}`);
+    }
+  }
+  if (drafts.length === 0) {
+    writeAnalystLog(`no assumption sheet drafted for ${ticker.toUpperCase()}: ${firstFailure}`);
+    return { kind: "REFUSED", cause: `the drafting call failed or was refused twice — ${firstFailure}` };
+  }
+
+  const { proposal, method } = combineDrafts(drafts, defectsOf);
+  return { kind: "DRAFTED", content: { ...contentFromProposal(proposal, research, currentRevenue, dilutedShares), drafting: method } };
 }
-
-export { SHARE_COUNT_MULTIPLIER_BAND };

@@ -104,8 +104,28 @@ function ProposalEvidence({ report }: { report: UncertaintyProposalReport | null
   );
 }
 
+// CF-AR6-ANY-TICKER-DRAFTS-01 — where the verdict waits for the sheet's
+// adoption (product-decisions item 30), the way to the sheet: its anchors,
+// its checks, adopt or adjust. One link, no verdict.
+function AdoptionPrompt({ runId, ticker, verdict }: { runId: string; ticker: string; verdict: VerdictResult }) {
+  return (
+    <div className="judgment" data-judgement="ADOPTION">
+      <h3>Adopt the assumption sheet</h3>
+      <p className="why">
+        {verdict.draftZone != null
+          ? `The report and valuation are computed from a price-blind draft; on it the verdict zone is ${verdict.draftZone}. Review its drivers and anchors, adjust any, and adopt it to issue the verdict.`
+          : "This sheet still needs its return on new investment for each scenario and its moat class. Review it, set them, and adopt it to value the company under the approved rules."}
+      </p>
+      <p className="note">
+        <a href={`/analyzer/inputs/${encodeURIComponent(ticker)}?run=${encodeURIComponent(runId)}`}>Review and adopt {ticker}&rsquo;s sheet</a>
+      </p>
+    </div>
+  );
+}
+
 export function VerdictJudgementPanel({
   runId,
+  ticker,
   verdict,
   judgements,
   moatClass,
@@ -113,6 +133,8 @@ export function VerdictJudgementPanel({
   mode,
 }: {
   runId: string;
+  /** The run's ticker; where given, a verdict pending adoption links to the sheet. */
+  ticker?: string;
   verdict: VerdictResult;
   judgements: VerdictJudgements;
   moatClass: MoatClass | null;
@@ -123,9 +145,11 @@ export function VerdictJudgementPanel({
   const question = verdict.state === "UNCERTAINTY QUESTION";
   const closeCall = verdict.state === "CLOSE CALL" && verdict.check?.routing.kind === "CLOSE CALL" && verdict.closeCallBinding !== null;
   const buyCandidate = verdict.state === "BUY CANDIDATE";
-  if (!all && !question && !closeCall && !buyCandidate) return null;
+  const adoption = verdict.state === "PENDING ADOPTION" && ticker !== undefined;
+  if (!all && !question && !closeCall && !buyCandidate && !adoption) return null;
 
   const forms: ReactNode[] = [];
+  if (adoption) forms.push(<AdoptionPrompt key="adoption" runId={runId} ticker={ticker!} verdict={verdict} />);
 
   if (all || question) {
     forms.push(

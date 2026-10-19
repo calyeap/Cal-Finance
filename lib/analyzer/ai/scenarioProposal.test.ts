@@ -1,176 +1,195 @@
 import { describe, it, expect } from "vitest";
 import Decimal from "decimal.js";
-import type { AnalystCall, AnalystCallRequest } from "./analystCall";
-import { runScenarioProposal, type ScenarioProposalFacts } from "./scenarioProposal";
+import { MalformedAnalystResponseError, type AnalystCall, type AnalystCallRequest } from "./analystCall";
+import { buildDraftMessage, interpretDraft, runScenarioProposal, RESPONSE_SCHEMA, type DraftFacts } from "./scenarioProposal";
+import { toDraftWire } from "../sheets/testSupport";
+import type { SheetSource } from "../sheets/sheet";
 
 // ---------------------------------------------------------------------------
-// Mocks the transport only; makes no live/paid AI call — the same contract
-// interpretation.test.ts and challenger.test.ts already state for the other
-// two calls.
+// CF-AR6-ANY-TICKER-DRAFTS-01 — the price-blind drafting call, unit level.
+// The transport is a test double; no live or paid call is made.
 // ---------------------------------------------------------------------------
 
-function fakeCall(response: unknown, seen?: AnalystCallRequest[]): AnalystCall {
-  return async (request) => {
-    seen?.push(request);
-    return response;
-  };
-}
+const SOURCES: SheetSource[] = [
+  { id: "H:revenue", kind: "HISTORY", label: "Revenue", form: null, accession: null, filed: null, url: null, excerpt: "FY2025 100m; FY2026 110m." },
+  { id: "H:margin", kind: "HISTORY", label: "Margin", form: null, accession: null, filed: null, url: null, excerpt: "FY2026 30.0%." },
+  { id: "H:returns", kind: "HISTORY", label: "Returns", form: null, accession: null, filed: null, url: null, excerpt: "ROIC 25%." },
+  { id: "E1", kind: "EARNINGS RELEASE", label: "Release", form: "8-K", accession: "0000-26-1", filed: "2026-07-30", url: null, excerpt: "Guidance: revenue up low double digits." },
+];
 
-function driver(overrides: Partial<Record<string, string>> = {}) {
-  return {
-    revenueGrowthOrPath: "0.08",
-    operatingMargin: "0.20",
-    reinvestmentCapitalIntensity: "0.10",
-    shareCount: "1.0",
-    writtenAnchor: "Reflects the company's own achieved revenue CAGR and current operating margin, supplied below.",
-    ...overrides,
-  };
-}
-
-function policyConstants(overrides: Partial<Record<string, string>> = {}) {
-  return {
-    nopatTaxRate: "0.21",
-    stressMarginLevel: "0.02",
-    writtenAnchor: "Tax rate cites the supplied US federal statutory rate; stress margin cites the company's own current/median operating margin, supplied below.",
-    ...overrides,
-  };
-}
-
-function wellFormedResponse(
-  overrides: Partial<Record<"bear" | "base" | "bull", Record<string, string>>> = {},
-  policyConstantsOverrides: Partial<Record<string, string>> = {}
-) {
-  return {
-    bear: driver({ revenueGrowthOrPath: "0.04", operatingMargin: "0.15", ...overrides.bear }),
-    base: driver({ revenueGrowthOrPath: "0.08", operatingMargin: "0.20", ...overrides.base }),
-    bull: driver({ revenueGrowthOrPath: "0.14", operatingMargin: "0.24", ...overrides.bull }),
-    policyConstants: policyConstants(policyConstantsOverrides),
-  };
-}
-
-const FACTS: ScenarioProposalFacts = {
-  ticker: "COST",
-  companyName: "Costco Wholesale Corporation",
-  businessNarrative: "Operates membership warehouse clubs.",
-  sicDescription: "RETAIL-VARIETY STORES",
-  currentRevenue: new Decimal("254000000000"),
-  historicalRevenueCagr: new Decimal("0.09"),
-  currentOperatingMargin: new Decimal("0.036"),
-  medianOperatingMargin: new Decimal("0.032"),
+const FACTS: DraftFacts = {
+  ticker: "TEST",
+  companyName: "Test Co",
+  sicDescription: "SERVICES-PREPACKAGED SOFTWARE",
+  sources: SOURCES,
+  rate: new Decimal("0.09"),
+  rateBasis: "stable",
+  currentOperatingMargin: new Decimal("0.30"),
+  medianOperatingMargin: new Decimal("0.28"),
 };
 
-describe("runScenarioProposal", () => {
-  it("returns three ordered, bounded driver sets on a well-formed response", async () => {
-    const seen: AnalystCallRequest[] = [];
-    const result = await runScenarioProposal(FACTS, fakeCall(wellFormedResponse(), seen));
+function driver(value: string, cites: string[] = ["H:revenue"]) {
+  return { value, anchor: "Because the filed history says so.", cites };
+}
 
-    expect(result.bear.revenueGrowthOrPath.toString()).toBe("0.04");
-    expect(result.base.revenueGrowthOrPath.toString()).toBe("0.08");
-    expect(result.bull.revenueGrowthOrPath.toString()).toBe("0.14");
-    expect(result.bear.writtenAnchor).toContain("achieved revenue CAGR");
-    expect(result.nopatTaxRate.toString()).toBe("0.21");
-    expect(result.stressMarginLevel.toString()).toBe("0.02");
-    expect(result.policyConstantsAnchor).toContain("US federal statutory rate");
+function scenario(g: string, m: string, r: string) {
+  return {
+    story: "A scenario.",
+    revenueGrowth: driver(g),
+    operatingMargin: driver(m, ["H:margin"]),
+    returnOnNewInvestment: driver(r, ["H:returns"]),
+    reinvestmentShare: driver("0.05", ["H:revenue"]),
+    shareCountMultiple: driver("1.0", ["H:revenue"]),
+  };
+}
 
-    expect(seen).toHaveLength(1);
-    expect(seen[0].label).toBe("scenarioProposal");
-    // Only the supplied facts are in the prompt — never a remembered base
-    // rate the model might otherwise cite.
-    expect(seen[0].user).toContain("Costco Wholesale Corporation");
-    expect(seen[0].user).toContain("9.0%"); // historicalRevenueCagr
-    // The one tax reference the model is allowed to cite, supplied as data.
-    expect(seen[0].user).toContain("US federal statutory corporate income tax rate: 21.0%");
+function good(): Record<string, any> {
+  return {
+    bear: scenario("0.04", "0.25", "0.12"),
+    base: scenario("0.08", "0.29", "0.18"),
+    bull: scenario("0.12", "0.32", "0.22"),
+    moat: { class: "narrow", mechanism: "Switching costs.", cites: ["H:returns"] },
+    policyConstants: { nopatTaxRate: "0.21", stressMarginLevel: "0.20", anchor: "Statutory.", cites: ["STATUTORY"] },
+  };
+}
+
+function scripted(...responses: unknown[]): { call: AnalystCall; requests: AnalystCallRequest[] } {
+  const requests: AnalystCallRequest[] = [];
+  let i = 0;
+  return {
+    requests,
+    call: async (request) => {
+      requests.push(request);
+      return responses[Math.min(i++, responses.length - 1)];
+    },
+  };
+}
+
+describe("the drafting call's message is price-blind and names every citable source", () => {
+  it("carries the sources by id and the policy rate, and no price field of any kind", () => {
+    const message = buildDraftMessage(FACTS);
+    for (const s of SOURCES) expect(message).toContain(`[${s.id}]`);
+    expect(message).toContain("Discount rate in use: 9.0%");
+    expect(message).not.toMatch(/share price|stock price|market cap|price per share|closing price/i);
+    // DraftFacts has no price member: the type is the guarantee, this is its witness.
+    expect(Object.keys(FACTS).some((k) => /price/i.test(k))).toBe(false);
+  });
+});
+
+describe("interpretDraft — structural checks, refused whole", () => {
+  it("accepts a well-formed draft and keeps each anchor with its cites", () => {
+    const p = interpretDraft(toDraftWire(good()), FACTS);
+    expect(p.scenarios.base.revenueGrowthOrPath.value.toString()).toBe("0.08");
+    expect(p.scenarios.base.returnOnNewInvestment.anchor.cites).toEqual(["H:returns"]);
+    expect(p.moatClass).toBe("narrow");
+    expect(p.constantsAnchor.cites).toEqual(["STATUTORY"]);
   });
 
-  it("names a fact as unavailable rather than omitting it silently, so the model cannot cite it from memory", async () => {
-    const seen: AnalystCallRequest[] = [];
-    await runScenarioProposal({ ...FACTS, historicalRevenueCagr: null }, fakeCall(wellFormedResponse(), seen));
-
-    expect(seen[0].user).toContain("Historical achieved revenue CAGR: not available — do not cite this");
+  it("refuses an anchor citing a source that was not supplied", () => {
+    const raw = good();
+    raw.base.operatingMargin.cites = ["MEMORY"];
+    expect(() => interpretDraft(toDraftWire(raw), FACTS)).toThrow(/cites MEMORY, which no supplied source carries/);
   });
 
-  it("refuses a response with a missing driver field", async () => {
-    const bad = wellFormedResponse();
-    delete (bad.bear as Partial<typeof bad.bear>).writtenAnchor;
-
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/missing one of its five drivers/);
+  it("refuses a driver with no citation at all", () => {
+    const raw = good();
+    raw.bull.returnOnNewInvestment.cites = [];
+    expect(() => interpretDraft(toDraftWire(raw), FACTS)).toThrow(/cites no source/);
   });
 
-  it("refuses a non-numeric decimal rather than coercing it", async () => {
-    const bad = wellFormedResponse({ base: { revenueGrowthOrPath: "about eight percent" } });
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/not a finite decimal/);
+  it("refuses a missing driver, a non-decimal and an implausible value", () => {
+    const missing = good();
+    delete missing.bear.returnOnNewInvestment;
+    expect(() => interpretDraft(toDraftWire(missing), FACTS)).toThrow(/bear\.returnOnNewInvestment is missing/);
+    const nan = good();
+    nan.base.revenueGrowth.value = "eight percent";
+    expect(() => interpretDraft(toDraftWire(nan), FACTS)).toThrow(/not a finite decimal/);
+    const wild = good();
+    wild.bull.revenueGrowth.value = "3.5";
+    expect(() => interpretDraft(toDraftWire(wild), FACTS)).toThrow(/outside the plausible band/);
   });
 
-  it("refuses an implausible growth rate outside the band", async () => {
-    const bad = wellFormedResponse({ bull: { revenueGrowthOrPath: "5.0" } });
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/outside the plausible band/);
+  it("refuses a stress margin above the current or median margin, and an unknown moat class", () => {
+    const stress = good();
+    stress.policyConstants.stressMarginLevel = "0.35";
+    expect(() => interpretDraft(toDraftWire(stress), FACTS)).toThrow(/stressMarginLevel/);
+    const moat = good();
+    moat.moat.class = "very wide";
+    expect(() => interpretDraft(toDraftWire(moat), FACTS)).toThrow(/moat\.class/);
+  });
+});
+
+describe("the response schema stays small enough for the API to compile (REVIEW CORRECT on #466)", () => {
+  // The nested shape — 3 scenarios × 5 strict driver objects plus the rest,
+  // 21 object schemas — was refused live by the API ("The compiled grammar is
+  // too large") on every call. These pins hold the flat shape that replaced it.
+  function objectSchemas(node: unknown): number {
+    if (node === null || typeof node !== "object") return 0;
+    const own = (node as Record<string, unknown>).type === "object" ? 1 : 0;
+    return own + Object.values(node as Record<string, unknown>).reduce<number>((n, v) => n + objectSchemas(v), 0);
+  }
+
+  it("is one flat driver list plus three small objects — five object schemas in all", () => {
+    expect(Object.keys((RESPONSE_SCHEMA as any).properties)).toEqual(["stories", "drivers", "moat", "policyConstants"]);
+    expect(objectSchemas(RESPONSE_SCHEMA)).toBe(5);
+    const drivers = (RESPONSE_SCHEMA as any).properties.drivers;
+    expect(drivers.type).toBe("array");
+    expect(drivers.items.properties.scenario.enum).toEqual(["bear", "base", "bull"]);
+    expect(drivers.items.required).toEqual(["scenario", "driver", "value", "anchor", "cites"]);
+    for (const k of ["bear", "base", "bull"]) expect((RESPONSE_SCHEMA as any).properties.stories.properties[k]).toEqual({ type: "string" });
+    expect(JSON.stringify(RESPONSE_SCHEMA).length).toBeLessThanOrEqual(1500);
   });
 
-  it("refuses when bear's growth exceeds base's — the ordering rule, not a style note", async () => {
-    const bad = wellFormedResponse({ bear: { revenueGrowthOrPath: "0.20" } });
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(
-      /growth is not ordered bear <= base <= bull/
-    );
+  it("is the schema the drafting call sends", async () => {
+    const { call, requests } = scripted(toDraftWire(good()));
+    await runScenarioProposal(FACTS, call);
+    expect(requests[0].responseSchema).toBe(RESPONSE_SCHEMA);
   });
 
-  it("refuses when bear's margin exceeds bull's", async () => {
-    const bad = wellFormedResponse({ bear: { operatingMargin: "0.50" } });
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(
-      /operating margin is not ordered bear <= base <= bull/
-    );
+  it("refuses a driver given twice, an unknown driver, and a missing story", () => {
+    const twice = toDraftWire(good()) as any;
+    twice.drivers.push({ ...twice.drivers[0] });
+    expect(() => interpretDraft(twice, FACTS)).toThrow(/bear\.revenueGrowth appears more than once/);
+    const unknown = toDraftWire(good()) as any;
+    unknown.drivers.push({ scenario: "base", driver: "priceTarget", value: "1", anchor: "x", cites: ["H:revenue"] });
+    expect(() => interpretDraft(unknown, FACTS)).toThrow(/unknown scenario or driver/);
+    const noStory = toDraftWire(good()) as any;
+    delete noStory.stories.bull;
+    expect(() => interpretDraft(noStory, FACTS)).toThrow(/"bull" is missing or has no story/);
+  });
+});
+
+describe("runScenarioProposal — one regeneration, then the refusal stands", () => {
+  it("passes on the first well-formed answer", async () => {
+    const { call, requests } = scripted(toDraftWire(good()));
+    const p = await runScenarioProposal(FACTS, call);
+    expect(requests).toHaveLength(1);
+    expect(requests[0].label).toBe("scenarioProposal");
+    expect(p.scenarios.bull.operatingMargin.value.toString()).toBe("0.32");
   });
 
-  it("refuses an empty written anchor", async () => {
-    const bad = wellFormedResponse({ base: { writtenAnchor: "   " } });
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/writtenAnchor is empty/);
+  it("names the validator's defect to the model and recovers on the second answer", async () => {
+    const { call, requests } = scripted(toDraftWire(good()), toDraftWire(good()));
+    let first = true;
+    const p = await runScenarioProposal(FACTS, call, () => {
+      if (first) {
+        first = false;
+        return ["RONIC PATH: base return on new investment is below its terminal return"];
+      }
+      return [];
+    });
+    expect(p).toBeDefined();
+    expect(requests).toHaveLength(2);
+    expect(requests[1].user).toContain("RONIC PATH: base return on new investment is below its terminal return");
+    expect(requests[1].user).toContain("Every driver must again cite its anchor");
+    expect(requests[1].user).not.toContain("slot reference");
   });
 
-  it("refuses a response with a missing policyConstants field", async () => {
-    const bad = wellFormedResponse();
-    delete (bad.policyConstants as Partial<typeof bad.policyConstants>).writtenAnchor;
-
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/missing one of its three fields/);
-  });
-
-  it("refuses a NOPAT tax rate outside the plausible band", async () => {
-    const bad = wellFormedResponse({}, { nopatTaxRate: "0.75" });
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/outside the plausible band/);
-  });
-
-  it("refuses a stress margin level that exceeds the supplied current/median operating margin", async () => {
-    // FACTS supplies currentOperatingMargin 3.6% and medianOperatingMargin 3.2%.
-    const bad = wellFormedResponse({}, { stressMarginLevel: "0.05" });
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(
-      /stressMarginLevel = 0.0500 exceeds the supplied/
-    );
-  });
-
-  it("refuses an empty policyConstants written anchor", async () => {
-    const bad = wellFormedResponse({}, { writtenAnchor: "   " });
-    await expect(runScenarioProposal(FACTS, fakeCall(bad))).rejects.toThrow(/policyConstants.writtenAnchor is empty/);
-  });
-
-  it("regenerates once on a refused response and succeeds if the second attempt is clean", async () => {
-    let calls = 0;
-    const call: AnalystCall = async () => {
-      calls += 1;
-      return calls === 1 ? wellFormedResponse({ bull: { revenueGrowthOrPath: "5.0" } }) : wellFormedResponse();
-    };
-
-    const result = await runScenarioProposal(FACTS, call);
-
-    expect(calls).toBe(2);
-    expect(result.bull.revenueGrowthOrPath.toString()).toBe("0.14");
-  });
-
-  it("gives up after a second refusal rather than looping", async () => {
-    let calls = 0;
-    const call: AnalystCall = async () => {
-      calls += 1;
-      return wellFormedResponse({ bull: { revenueGrowthOrPath: "5.0" } });
-    };
-
-    await expect(runScenarioProposal(FACTS, call)).rejects.toThrow(/outside the plausible band/);
-    expect(calls).toBe(2);
+  it("refuses after two failures", async () => {
+    const bad = good();
+    bad.base.revenueGrowth.cites = ["NOWHERE"];
+    const { call, requests } = scripted(toDraftWire(bad), toDraftWire(bad));
+    await expect(runScenarioProposal(FACTS, call)).rejects.toBeInstanceOf(MalformedAnalystResponseError);
+    expect(requests).toHaveLength(2);
   });
 });

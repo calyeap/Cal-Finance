@@ -2,11 +2,11 @@ import { redirect } from "next/navigation";
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
 import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 
-// CF-ANALYST-INPUT-ENTRY-01 — the recorded analyst-input entry path's own
-// index. A SEPARATE authoring surface (SCOPE item 3), not a step inserted
-// into the normal ticker -> analyze -> report path (frozen §14.8): nothing
-// here is reachable from AnalyzerEntry's begin-analysis action, and a
-// company that already has a bundle never passes through this route.
+// CF-AR6-ANY-TICKER-DRAFTS-01 — the assumption-sheet index: pick a ticker to
+// review, adjust and adopt its sheet (app/analyzer/inputs/[ticker]). Not a
+// step in the ticker -> analyze -> report path (frozen §14.8): a new ticker's
+// draft is written automatically, and the report links here when its verdict
+// waits for adoption.
 
 export default async function AnalystInputsIndexPage({
   searchParams,
@@ -25,15 +25,14 @@ export default async function AnalystInputsIndexPage({
       <div className="cb-steps">
         <div className="wrap">
           <div className="sechead">
-            <h2>Analyst input entry</h2>
-            <span className="screenlabel">Separate authoring surface — not a step in the normal path</span>
+            <h2>Assumption sheets</h2>
+            <span className="screenlabel">Review, adjust and adopt</span>
           </div>
           <hr className="rule" />
           <p className="why">
-            Enter or review the Step 7 analyst inputs for one ticker: the three scenarios with
-            their drivers and written anchors, the three scenario values, and the four §7.1
-            constants. A ticker with no recorded bundle still has no scenarios and still cannot
-            open a run — recording one here is what changes that, for this ticker only.
+            Each company&rsquo;s scenarios, moat class and policy constants live on its assumption
+            sheet: a price-blind draft from its filings, every driver citing its anchor, until you
+            adopt it — as drafted or adjusted. Adoption is what lets the final verdict issue.
           </p>
 
           <form method="GET">

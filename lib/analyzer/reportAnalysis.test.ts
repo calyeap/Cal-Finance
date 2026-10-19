@@ -270,13 +270,17 @@ describe("analysisForReport", () => {
     });
   });
 
-  it("does the same for OKLO, whose pre-revenue analysis suppresses most of the grid", async () => {
+  // CF-AR6-ANY-TICKER-DRAFTS-01 — reviewed evaluator change: OKLO's real run
+  // no longer carries the fixture-built pre-revenue block (its sheet records
+  // that no valuation can be concluded), and the AI layer still completes.
+  it("does the same for OKLO, whose sheet records that its valuation cannot be concluded", async () => {
     const runId = await decidedRun("OKLO", "Oklo Inc.");
 
     const report = await analysisForReport(runId, scriptedCall());
 
     expect(report.aiLayer.status).toBe("COMPLETED");
-    expect(report.result.preRevenue).not.toBeNull();
+    expect(report.result.preRevenue).toBeNull();
+    expect(report.result.valuationBasis?.sheet?.origin).toBe("CANNOT CONCLUDE");
     expect(report.result.interpretation.statements[2].statement).toBe(STATEMENT);
   });
 });

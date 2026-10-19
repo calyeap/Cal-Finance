@@ -72,6 +72,13 @@ export interface VerdictResult {
   qualityBar: QualityBarResult | null;
   /** The inputs fingerprint a close-call answer must be bound to; null where the result carries none. */
   closeCallBinding: string | null;
+  /**
+   * CF-AR6-ANY-TICKER-DRAFTS-01 — on a DRAFT sheet (PENDING ADOPTION), the
+   * zone the draft's valuation points to: "BUY", "HOLD", "SELL", or the
+   * zones a judgement after adoption would choose between. Not a verdict
+   * (product-decisions item 30). Absent otherwise.
+   */
+  draftZone?: string | null;
 }
 
 /** A verdict as a saved version records it (snapshotStore.ts). */
@@ -110,7 +117,43 @@ function gridLine(check: VerdictCheck, rates: Record<CheckRate, Decimal>): strin
   ).join("; ");
 }
 
+/**
+ * The one verdict path. CF-AR6-ANY-TICKER-DRAFTS-01 (product-decisions item
+ * 30, D5): a sheet that could not be drafted from history can't bound value
+ * (deriveVerdictOnSheet, after any upstream cause); a complete DRAFT sheet is valued and its zone computed exactly as an
+ * adopted one, and the result is still PENDING ADOPTION — the final verdict
+ * waits for one adopt.
+ */
 export function deriveVerdict(result: AnalysisResult): VerdictResult {
+  const verdict = deriveVerdictOnSheet(result);
+  const d2 = result.valuationBasis?.d2;
+  if (d2 === undefined || d2.status !== "DRAFT" || verdict.status === "INCOMPLETE") return verdict;
+  const zone =
+    verdict.state === "ISSUED"
+      ? verdict.status
+      : verdict.state === "BUY CANDIDATE"
+        ? "BUY"
+        : verdict.check?.routing.kind === "UNCERTAINTY QUESTION"
+          ? [...new Set(UNCERTAINTY_LEVELS.map((u) => (verdict.check!.routing as { byLevel: Record<string, V1Zone> }).byLevel[u]))].join(" or ")
+          : verdict.check?.routing.kind === "CLOSE CALL"
+            ? verdict.check.routing.zones.join(" or ")
+            : null;
+  return {
+    status: "PENDING",
+    state: "PENDING ADOPTION",
+    reason:
+      `Pending adoption — ${d2.statement} On the draft, the verdict zone is ${zone ?? "not settled"}; ` +
+      `the final verdict issues when you adopt the sheet. The draft's own reading: ${verdict.reason}`,
+    check: verdict.check,
+    rates: verdict.rates,
+    basis: null,
+    qualityBar: null,
+    closeCallBinding: null,
+    draftZone: zone,
+  };
+}
+
+function deriveVerdictOnSheet(result: AnalysisResult): VerdictResult {
   const judgements = result.verdictJudgements ?? NO_VERDICT_JUDGEMENTS;
   const d2 = result.valuationBasis?.d2;
 
@@ -144,6 +187,13 @@ export function deriveVerdict(result: AnalysisResult): VerdictResult {
   // §3.4 — the empty timestamp is the run's own "no price" signal, never a zero price.
   if (result.price.timestamp === "") {
     return incomplete("Decision-critical analysis is incomplete — no price was available for this run, so price / Base cannot be formed.");
+  }
+
+  // A sheet no draft could be made for (e.g. pre-revenue) values nothing;
+  // adopting it would not change that.
+  const sheet = result.valuationBasis?.sheet ?? null;
+  if (sheet != null && sheet.cannotConclude !== null) {
+    return incomplete(`Can't bound value — can't conclude: ${sheet.cannotConclude}`, "CANNOT BOUND VALUE");
   }
 
   // 2 — the final verdict waits for adoption.

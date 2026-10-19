@@ -8,7 +8,7 @@ import { getRun, getFactDecisions, getJudgments, getCompanyJudgmentOverride, typ
 import { buildAcquiredRun, type AcquiredRunInputs } from "./acquiredRun";
 import { constrainedAndPassedFactIds } from "./crosschecks/run";
 import type { DerivedExemptionEvidence } from "./spotCheck";
-import { analystInputsFor, TICKERS_WITH_ANALYST_INPUTS } from "./acquisition/analystInputs";
+import { analystInputsFor } from "./acquisition/analystInputs";
 import { selectionToNonOperatingInvestments } from "./acquisition/nonOperatingJudgment";
 import { activeProvider } from "../marketdata";
 import { roundMoney } from "../money";
@@ -45,26 +45,19 @@ import { fiftyTwoWeekRangeFrom, type FiftyTwoWeekRange } from "./fiftyTwoWeekRan
 // ---------------------------------------------------------------------------
 
 // M8-a: a run's FACTS come from SEC filings, acquired per run through the
-// fixed, versioned tag mapping. What is still keyed by ticker is the
-// ANALYST-side bundle — Step 7's scenarios and the four undefined §7.1 policy
-// constants — because those are a human's output and Step 7's interface is not
-// built. See acquisition/analystInputs.ts, which states that plainly.
+// fixed, versioned tag mapping. The ANALYST side — Step 7's scenarios, the
+// moat class and the policy constants a run needs — is the company's
+// assumption sheet (CF-AR6-ANY-TICKER-DRAFTS-01, acquisition/analystInputs.ts).
 //
-// A company with no bundle has no scenarios, so it has no fair-value range and
-// cannot open a run. That is a refusal, not a gap to be filled with invented
-// numbers.
-export const SUPPORTED_FIXTURE_TICKERS = TICKERS_WITH_ANALYST_INPUTS;
+// Any ticker gets a sheet: the one in force, or a price-blind draft written
+// on first use. A company for which none exists and none can be drafted (no
+// model configured, the filings cannot be read) cannot open a run. That is a
+// refusal, not a gap to be filled with invented numbers.
 
 /**
- * CF-ANALYST-INPUT-ENTRY-01 — async, because a ticker is now supported
- * either by a committed fixture bundle OR by a bundle recorded through the
- * entry path (a database read). analystInputsFor is the one resolver for
- * both, so this defers to it directly rather than re-deriving the same
- * "does a bundle exist" answer a second way (SCOPE item 2).
- *
- * A company with no bundle, committed or recorded, still has no scenarios
- * and still cannot open a run — the refusal itself is unchanged, only its
- * source now has two places to come back negative from.
+ * Whether a ticker can open a run — whether it has, or can be given, an
+ * assumption sheet. analystInputsFor is the one resolver, so this defers to
+ * it rather than re-deriving the answer a second way.
  */
 export async function isSupportedTicker(ticker: string): Promise<boolean> {
   return (await analystInputsFor(ticker)) !== null;
@@ -372,13 +365,13 @@ export async function loadGateState(runId: string, options: LoadGateStateOptions
   const run = await getRun(runId);
   if (run === null) throw new RunNotFoundError(runId);
 
-  // CF-LEG2-PINNED-REOPEN-01 (issue #483) — run-aware, so a run whose
-  // analyst inputs are pinned (A5) is supported by its own pin. Through the
-  // ticker-only isSupportedTicker the pin was skipped: every reopen after the
-  // cache expired called the model again, and offline (or on an empty reply)
-  // a pinned run became unopenable. Still the one resolver, still failing
-  // closed when no bundle exists from any source.
-  if ((await analystInputsFor(run.ticker, runId)) === null) {
+  // CF-LEG2-PINNED-REOPEN-01 (issue #483) guarded a per-run pin (migration
+  // 009) that this resolver used to skip. AR6 replaced that pin with the
+  // durable, append-only assumption sheet: once a ticker has a sheet, every
+  // reopen resolves it from the store with no model call, online or offline.
+  // Still the one resolver, still failing closed when no sheet exists or can
+  // be drafted.
+  if (!(await isSupportedTicker(run.ticker))) {
     // A run exists for a ticker with no analyst-input bundle. Fail closed: a
     // run whose scenarios cannot exist must not be computable.
     throw new RunNotFoundError(runId);

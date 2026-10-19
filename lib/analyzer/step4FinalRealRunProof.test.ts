@@ -3,7 +3,7 @@ import Decimal from "decimal.js";
 import { getPool } from "../db";
 import { createRun, recordFactDecision, recordProfileDecision, recordJudgment } from "./runStore";
 import { computeAnalysisForRun, loadGateState } from "./gate";
-import { recordAnalystBundle, type RecordedAnalystBundleInput } from "./acquisition/recordedBundles";
+import { resetSheetsToMigrated } from "./sheets/testSupport";
 import { deriveVerdict } from "./verdict";
 import type { AnalysisResult } from "./types";
 import type { TornadoRowResult } from "./modules/sensitivity";
@@ -65,62 +65,17 @@ async function openOkloRunUnchanged(): Promise<AnalysisResult> {
 // The approved NVDA Step-7 bundle, transcribed byte-faithful from
 // `step4SignalObservationOnRealRun.test.ts` / `step4ForecastDispersionReadingOnRealRun.test.ts`
 // (both copied it verbatim from `nvdaRealRunObservation.test.ts` in turn).
-function approvedNvdaBundle(): RecordedAnalystBundleInput {
-  return {
-    profile: "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY",
-    classificationInputs: {
-      revenueScale: "large",
-      fcfCharacter: "positive_volatile",
-      revenueGrowthBand: ">30%",
-      capitalIntensity: "0.028",
-      cyclicality: { tenYearMarginRange: "0.4751", worstSingleYearChange: "0.2165" },
-      balanceSheetNature: "asset-light",
-    },
-    scenarios: {
-      bear: {
-        revenueGrowthOrPath: "0.05",
-        operatingMargin: "0.30",
-        reinvestmentCapitalIntensity: "0.02",
-        shareCount: "24.1",
-        writtenAnchor: "AI/datacenter capex cycle corrects; growth slows sharply but stays positive.",
-      },
-      base: {
-        revenueGrowthOrPath: "0.20",
-        operatingMargin: "0.50",
-        reinvestmentCapitalIntensity: "0.04",
-        shareCount: "24.1",
-        writtenAnchor: "AI-driven datacenter demand continues but decelerates off the FY2026 base.",
-      },
-      bull: {
-        revenueGrowthOrPath: "0.35",
-        operatingMargin: "0.60",
-        reinvestmentCapitalIntensity: "0.05",
-        shareCount: "24.1",
-        writtenAnchor: "AI/accelerated-computing demand sustains at a high level.",
-      },
-    },
-    scenarioValues: { bear: "28.08", base: "102.38", bull: "296.44" },
-    configuredConstants: {
-      nopatTaxRate: "0.21",
-      stressMarginLevel: "0.15",
-      preRevenueUnleveredRate: null,
-      projectDebtCost: null,
-    },
-  };
-}
 
-// CF-ANALYZER-V1-SETTLE-01 (issue #392) — migration 008 now durably seeds
-// this exact bundle for NVDA. A bare DELETE would erase that durable seed
-// for any other test file expecting it, for the whole rest of the test
-// run; re-recording the same approved content (recordAnalystBundle's own
-// ON CONFLICT upsert) leaves NVDA exactly where migration 008 puts it,
-// both between this file's own tests and after the whole file finishes.
+// CF-ANALYZER-V1-SETTLE-01 (issue #392) — migration 008 durably seeds NVDA's
+// approved bundle; CF-AR6-ANY-TICKER-DRAFTS-01's migration 014 carries it
+// into NVDA's version 1 sheet. Restoring the migrated sheets leaves NVDA
+// exactly where the migrations put it, between tests and after the file.
 async function seedApprovedNvdaBundle(): Promise<void> {
-  await recordAnalystBundle("NVDA", approvedNvdaBundle());
+  await resetSheetsToMigrated();
 }
 
 async function openNvdaObservationRun(): Promise<AnalysisResult> {
-  await recordAnalystBundle("NVDA", approvedNvdaBundle());
+  await resetSheetsToMigrated();
   const runId = await createRun("NVDA", "NVIDIA Corporation");
   await completeSpotCheck(runId);
   const state = await loadGateState(runId);
