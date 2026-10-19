@@ -174,3 +174,22 @@ The pre-registered rule is already decided without O6:
   AR7 #455 needs AR6 merged; AR8 follows AR7. The one eligible AR6 input follow-up is `CF-LEG2-KO-COMMERCIAL-PAPER-01`
   (`contracts/o6-proposed.md`; reproduced at `c2db01a`; no overlap with PR #466's files). It is proposed to Calvin as O6;
   status CALVIN REQUIRED (release). Not posted, and no label applied.
+
+## O6 CF-LEG2-KO-COMMERCIAL-PAPER-01 (arm B, lean SOP, run from the cloud)
+- Authority: Calvin, 19 Oct 2026: "Release O6. Proceed with CF-LEG2-KO-COMMERCIAL-PAPER-01 under the already-approved
+  Leg 2 lean SOP and the exact proposed contract."
+- 03:02Z pre-dispatch: 0 runs active or queued; master `c2db01a`; open PRs: #466 only; no `lean-sop` items open;
+  no GitHub activity since 00:45Z. Postgres restarted (the container had restarted).
+- 03:03:07Z issue #487 created with `lean-sop` (labeled event 03:03:08Z). The routing run at 03:03:09Z was skipped,
+  so the pre-flight guard holds. The body is `contracts/o6-proposed.md` verbatim, minus its title and "PROPOSED" lines
+  (archived as `contracts/o6-issue.md`).
+- Worker workspace: fresh clone of origin/master at `c2db01a` on `lean/cf-leg2-ko-commercial-paper-01`, `npm ci`
+  OK, DB `leg2c_o6_worker_test`; contract fetched from the issue.
+- **03:04:07Z dispatch:** one worker launched (fresh Opus agent, high effort, matching the local arm-B session's effort
+  and the Leg 1 harness). Brief = briefs.md WORKER, adapted for the cloud:
+  - no `gh`: push with git; PR and `lean-sop` label via the GitHub MCP (as calyeap);
+  - `_test` DB;
+  - Playwright environment-only failure noted;
+  - no sec.gov requests, with `SEC_USER_AGENT` unset;
+  - posts no comments;
+  - never merges.
