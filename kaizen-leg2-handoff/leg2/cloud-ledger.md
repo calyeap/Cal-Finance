@@ -193,3 +193,14 @@ The pre-registered rule is already decided without O6:
   - no sec.gov requests, with `SEC_USER_AGENT` unset;
   - posts no comments;
   - never merges.
+- 03:12:32Z PR #488 opened by the worker (head `ad11789`, base `c2db01a`, 1 commit, 3 files, +173/−8:
+  `tagMap.ts`, `bridgeInputRecovery.test.ts`, `docs/tag-mapping-version-review.md`). Labelled `lean-sop` at
+  03:12:35Z. The routing run on the label was skipped; CI started 03:12:34Z. No comments on #487 or #488.
+  Worker usage: 151,940 tokens, 41 tool uses, 8.6 min.
+  - Worker's claims (evidence, not proof):
+    - `CommercialPaper` added to the last candidate; `TAG_MAPPING_VERSION` → `calboard-secmap-2026-10-3`.
+    - New RED tests: 43,558M → 43,808M at 2026-04-03; FY2025 43,941M → 45,436M.
+    - Only KO's values move; NUE records CP absent.
+    - Full suite 2707 passed / 1 failed (Playwright, environment-only).
+- ~03:14Z review cycle 1: fresh HEAVY reviewer (Opus, high effort) on exact head `ad11789`. Inputs: repo, diff, contract,
+  PR body as evidence, RUBRIC = heavy-slim; DB `leg2c_o6_rev1_test`; no GitHub access.
