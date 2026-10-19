@@ -96,11 +96,21 @@ function classificationFor(
   };
 }
 
-/** The D1 rate a draft will be valued at — policy, from the SIC code and filed margins; never market data. */
+/**
+ * The D1 rate a draft will be valued at — policy, from the SIC code and filed margins; never market data.
+ * A draft measures no §6.5 leverage (that needs the price it never sees), so its rate's domain reads
+ * NOT MEASURED; only the rate and its basis are used, and neither reads leverage.
+ */
 export function draftRate(acquired: AcquiredCompany, measures: HistoryMeasures, profile: Profile, on: string) {
   const margins = marginsOf(measures);
   const triggerBFired = margins.length > 1 && worstSingleYearDecline(margins).greaterThan(POLICY.triggerBDeclinePoints);
-  return selectDiscountRate({ sic: acquired.sic, triggerBFired, profile, leveragePass: true, priceDate: on });
+  return selectDiscountRate({
+    sic: acquired.sic,
+    triggerBFired,
+    profile,
+    leverage: { result: "LEVERAGE UNSUPPORTED IN v1", netDebtRatio: null },
+    priceDate: on,
+  });
 }
 
 const STATUTORY_SOURCE: SheetSource = {
