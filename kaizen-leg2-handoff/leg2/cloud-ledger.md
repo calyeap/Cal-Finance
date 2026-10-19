@@ -204,3 +204,15 @@ The pre-registered rule is already decided without O6:
     - Full suite 2707 passed / 1 failed (Playwright, environment-only).
 - ~03:14Z review cycle 1: fresh HEAVY reviewer (Opus, high effort) on exact head `ad11789`. Inputs: repo, diff, contract,
   PR body as evidence, RUBRIC = heavy-slim; DB `leg2c_o6_rev1_test`; no GitHub access.
+- 03:16:44Z CI "typecheck and tests" success on exact head `ad11789` (run 39193588829).
+- 03:18:04Z review cycle 1 verdict: **`ACCEPT`** on `ad11789` (`reviews/o6-rev1-REVIEW.md`). Reviewer usage: 154,753 tokens,
+  40 tool uses, 4.8 min.
+  - The reviewer recomputed KO from the raw capture (2026-04-03 43,808M; FY2025 45,436M; FY2024 44,162M;
+    FY2023 41,716M).
+  - It diffed all nine captures before and after: only KO's values move; NUE's change is composition text only.
+  - It reproduced RED on base for the reported reason.
+  - Nits (not counted): KO's `roicHistory` invested capital also moves, with no rendered output change; a
+    pre-existing CP+STB double-count pattern hits no capture in this candidate.
+- Correction cycles used: 0 of 2.
+- 03:18:43Z handover: PR open, mergeable `clean`, head unchanged, 0 comments. Calvin told: "reviewer ACCEPT + CI green
+  on exact head ad11789c804571020200842c7c21c57527aeda9d". **Status: CALVIN REQUIRED (merge).**
