@@ -216,3 +216,16 @@ The pre-registered rule is already decided without O6:
 - Correction cycles used: 0 of 2.
 - 03:18:43Z handover: PR open, mergeable `clean`, head unchanged, 0 comments. Calvin told: "reviewer ACCEPT + CI green
   on exact head ad11789c804571020200842c7c21c57527aeda9d". **Status: CALVIN REQUIRED (merge).**
+- **05:01:17Z Calvin merged #488** → master `62c22df`. The head at merge was `ad11789`, equal to the reviewed head.
+  #487 auto-closed (completed) 05:01:18Z. The OWNER-on-merge run at 05:01:19Z was **skipped** (lean-sop guard), so
+  there was no cross-arm fire. 0 comments on #487/#488; 0 runs active afterwards.
+- O6 timings:
+  - dispatch 03:04:07Z (worker launch; issue posted 03:03:07Z) → merge 05:01:17Z = **117.2 min**;
+  - build 8.4 min (to PR open 03:12:32Z), review 5.5 min (to ACCEPT 03:18:04Z), merge wait 103.2 min (Calvin);
+  - dispatch → ACCEPT 14.0 min.
+- 05:03Z O6 blind audit launched: fresh Opus, high effort, exact head `ad11789`, diff, contract; no PR body; DB
+  `leg2c_o6_audit_test`; SEC_USER_AGENT unset.
+  - **Ruling:** the auditor's contract copy drops three arm-revealing phrases ("(arm B)", "labelled `lean-sop`",
+    "Calvin merges it" → "The PR is merged."), so the audit is arm-blind as the plan requires. No substantive clause
+    changed. Cost if wrong: none to the findings; only blindness is affected.
+  - The diff names the outcome ID and "KAIZEN Leg 2 O6" (as O1–O5's contracts named KAIZEN Leg 2), not the arm.
