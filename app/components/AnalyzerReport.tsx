@@ -7,6 +7,7 @@ import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 import { boundState, NOT_COMPUTED_BINDING, type BoundState } from "@/lib/analyzer/notComputed";
 import { fairValueRangeUnavailableLine, notComputedLine } from "@/lib/analyzer/overviewCopy";
+import { rateDomainSentence } from "@/lib/analyzer/trustCopy";
 import type {
   AnalysisResult,
   ComputedValue,
@@ -45,6 +46,14 @@ import type {
 
 function pct(value: Decimal, dp = 1): string {
   return `${value.mul(100).toFixed(dp)}%`;
+}
+
+// CF-LEG2-PREAR4-REPORT-CRASH-01 — AR4 made a RONIC ladder cell's rate a
+// Decimal. A result stored before AR4 carried it as a plain number (0.08,
+// 0.10, 0.12 — the retired grid), and fromStorable revives only tagged
+// Decimals, so it comes back a number. Read as the same rate, not a new one.
+function ladderRate(rate: Decimal | number): Decimal {
+  return Decimal.isDecimal(rate) ? rate : new Decimal(rate);
 }
 
 function points(value: Decimal): string {
@@ -443,8 +452,12 @@ function ReverseDcfSolveView({ solve }: { solve: ReverseDcfSolve }) {
 
 // The dated D1 rate and the D2 inputs every valuation on this page used
 // (product-decisions items 26–27: "the product shows the dated rate in use").
-function ValuationBasisView({ basis }: { basis: ValuationBasis }) {
+// The domain sentence is trustCopy.ts's, one per leverage state
+// (CF-LEG2-RATE-DOMAIN-COPY-01): none at PASS, "not below 10%" only where
+// net debt was measured at or above it, "unknown" where it was never measured.
+function ValuationBasisView({ basis, leverage }: { basis: ValuationBasis; leverage: LeverageResult }) {
   const r = basis.discountRate;
+  const domainSentence = rateDomainSentence(basis, leverage);
   return (
     <table className="t" aria-label="Rate and returns in use">
       <tbody>
@@ -453,7 +466,7 @@ function ValuationBasisView({ basis }: { basis: ValuationBasis }) {
           <td>
             <b>{pct(r.rate)}</b> — {r.basis}. Dated {r.effectiveFrom}; checked at {pct(r.checkRates.lower)} and{" "}
             {pct(r.checkRates.upper)}.
-            {!r.withinValidatedDomain && " Outside its validated domain: net debt is not below 10% of enterprise value."}
+            {domainSentence !== "" && ` ${domainSentence}`}
           </td>
         </tr>
         <tr>
@@ -764,7 +777,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                     diagnostics.reinvestmentRonic.ronic.value.cells.map((c) => (
                       <div key={c.rate.toString()}>
                         <span className="v">
-                          r={pct(c.rate)}:{" "}
+                          r={pct(ladderRate(c.rate))}:{" "}
                           {/* CF-ANALYZER-USER-READY-01 correction — same
                               defect class as StateBlock above. The other
                               ladder labels (CLEAN, LOW RONIC — VALUE-
@@ -1143,7 +1156,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
             is not a warning by itself; it means the valuation is more sensitive to whether growth and returns on
             new investment hold up.
           </Disclosure>
-          {result.valuationBasis !== undefined && <ValuationBasisView basis={result.valuationBasis} />}
+          {result.valuationBasis !== undefined && <ValuationBasisView basis={result.valuationBasis} leverage={result.gates.leverage} />}
           {/* A snapshot stored before AR4 carries the retired grid instead. */}
           {priceImplied.reverseDcf !== undefined && <ReverseDcfSolveView solve={priceImplied.reverseDcf} />}
           <table className="t" style={{ marginTop: "20px" }}>

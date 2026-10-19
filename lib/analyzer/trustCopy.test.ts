@@ -1,7 +1,8 @@
 import { describe, it, expect } from "vitest";
 import { trustStatusLine, trustConsequenceLine, evidenceStatusLabel, rateInUseLine } from "./trustCopy";
 import { selectDiscountRate } from "./discountRate";
-import type { ValuationBasis } from "./types";
+import Decimal from "decimal.js";
+import type { LeverageResult, ValuationBasis } from "./types";
 
 // ---------------------------------------------------------------------------
 // The page-one trust line, derived rather than written.
@@ -95,8 +96,15 @@ describe("evidenceStatusLabel — the slot-2 label, bounded by Calvin's ruling o
 // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — product-decisions item 26: the
 // product shows the dated rate in use, read from the run's own basis.
 describe("rateInUseLine", () => {
-  const basisFor = (sic: string | null, triggerBFired = false, leveragePass = true): ValuationBasis => ({
-    discountRate: selectDiscountRate({ sic, triggerBFired, profile: "MATURE_PROFITABLE_STABLE_FCF", leveragePass, priceDate: "2026-10-16" }),
+  // CF-LEG2-RATE-DOMAIN-COPY-01: the rate reads the §6.5 leverage result
+  // itself (PASS by default), not a PASS boolean.
+  const PASS: Pick<LeverageResult, "result" | "netDebtRatio"> = { result: "PASS", netDebtRatio: new Decimal("0.02") };
+  const basisFor = (
+    sic: string | null,
+    triggerBFired = false,
+    leverage: Pick<LeverageResult, "result" | "netDebtRatio"> = PASS
+  ): ValuationBasis => ({
+    discountRate: selectDiscountRate({ sic, triggerBFired, profile: "MATURE_PROFITABLE_STABLE_FCF", leverage, priceDate: "2026-10-16" }),
     d2: { status: "PENDING ADOPTION", missing: ["moat class"], moatClass: null, terminalReturnOnNewCapital: null, statement: "Pending adoption" },
   });
 
@@ -113,7 +121,18 @@ describe("rateInUseLine", () => {
   });
 
   it("says when the rate is outside its validated domain (net-debt gate)", () => {
-    expect(rateInUseLine(basisFor("7372", false, false))).toMatch(/Outside its validated domain/);
+    const measuredAbove = { result: "LEVERAGE UNSUPPORTED IN v1" as const, netDebtRatio: new Decimal("0.25") };
+    expect(rateInUseLine(basisFor("7372", false, measuredAbove))).toMatch(/Outside its validated domain/);
+  });
+
+  it("says the domain is unknown — not outside — when net debt was never measured", () => {
+    const notMeasured = { result: "LEVERAGE UNSUPPORTED IN v1" as const, netDebtRatio: null };
+    const line = rateInUseLine(basisFor("7372", false, notMeasured));
+    expect(line).toBe(
+      "Valued at 9.0% — the market's expected return, for a stable business (rate dated 2026-10-17). " +
+        "Net debt could not be measured, so whether this rate is within its validated domain (net debt below 10% of enterprise value) is unknown."
+    );
+    expect(line).not.toMatch(/Outside its validated domain/);
   });
 
   it("returns nothing for a snapshot stored before AR4 (no basis)", () => {

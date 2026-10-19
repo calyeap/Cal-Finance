@@ -55,3 +55,37 @@ refuses to start any test run unless `TEST_DATABASE_URL` names a `*_test`
 database. The URL only has to parse with a `_test` database name; for these
 tests the database does not need to exist. CI sets it already, so `npm test`
 there runs the harness unchanged.
+
+## Total debt
+
+CF-LEG2-KO-GOLDEN-DEBT-01 (issue #485). Every golden `facts.totalDebt` uses
+one definition:
+
+```
+total debt = short-term borrowings          (commercial paper, loans and notes payable, other short-term borrowings)
+           + current maturities of long-term debt
+           + long-term debt                 (excluding current maturities)
+           + finance leases presented as debt
+```
+
+"Finance leases presented as debt" means lease obligations the filer reports
+inside its debt lines (the lease-inclusive `LongTermDebtAndCapitalLeaseObligations`
+elements NUE and KO use) or as a separate debt line. A
+`FinanceLeaseLiability` reported outside the debt lines is not part of total
+debt: the engine carries it as the separate `finance-lease-liabilities` input
+to the EV bridge (`lib/analyzer/acquisition/tagMap.ts`).
+
+Each non-null `totalDebt` lists the lines it adds up:
+
+```
+"presentedLines": [
+  { "covers": ["shortTermBorrowings" | "currentMaturities" | "longTermDebt" | "financeLeases", ...],
+    "conceptLabel": string, "xbrlConcept": "us-gaap:...", "value": number }
+],
+"notPresented": { "<term>": string }   // why a term has no line
+```
+
+`debtDefinition.test.ts` asserts that the value equals the sum of the lines,
+that every term has either a line or a reason, and that no short-term
+borrowing tagged at the same instant and accession in the pinned AR6 capture
+(`lib/analyzer/acquisition/captures/ar6-2026-10-18`) is missing.

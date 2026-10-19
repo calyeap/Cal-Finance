@@ -86,7 +86,15 @@
       "accessionNumber": "0001193125-26-323660",
       "form": "10-K",
       "fiscalYear": 2026,
-      "note": "31067000000 (noncurrent) + 9227000000 (current) = 40294000000. Both component tags are live/current for MSFT (no drift). This figure matches the real MSFT debt figure already pinned in lib/analyzer/acquisition/acquire.test.ts (toBe(40294000000)) — an independent cross-check, not re-derived from that test."
+      "note": "31067000000 (noncurrent) + 9227000000 (current) = 40294000000. Both component tags are live/current for MSFT (no drift). This figure matches the real MSFT debt figure already pinned in lib/analyzer/acquisition/acquire.test.ts (toBe(40294000000)) — an independent cross-check, not re-derived from that test.",
+      "presentedLines": [
+        {"covers": ["currentMaturities"], "conceptLabel": "Long-term Debt, Current Maturities", "xbrlConcept": "us-gaap:LongTermDebtCurrent", "value": 9227000000},
+        {"covers": ["longTermDebt"], "conceptLabel": "Long-term Debt, Excluding Current Maturities", "xbrlConcept": "us-gaap:LongTermDebtNoncurrent", "value": 31067000000}
+      ],
+      "notPresented": {
+        "shortTermBorrowings": "MSFT tags no CommercialPaper, ShortTermBorrowings, OtherShortTermBorrowings, NotesAndLoansPayable or DebtCurrent row at 2026-06-30 in this accession.",
+        "financeLeases": "FinanceLeaseLiability 66594000000 is tagged at this instant as its own element, outside the debt-line elements above; the engine carries it as the separate finance-lease-liabilities bridge input (tagMap.ts), so it is not part of total debt. Whether it is a separate line on the face of the balance sheet was not checked: www.sec.gov is blocked from this sandbox."
+      }
     },
     "cashAndEquivalents": {
       "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",

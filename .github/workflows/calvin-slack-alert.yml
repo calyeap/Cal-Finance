@@ -10,12 +10,16 @@ permissions:
 
 jobs:
   notify-calvin:
+    # CF-LEG2-PREFLIGHT-01 (issue #475): only a `calyeap`-authored comment
+    # (every worker and OWNER terminal) on an item not labelled `lean-sop`.
     if: >-
-      contains(github.event.comment.body, 'CALVIN REQUIRED:') ||
-      contains(github.event.comment.body, 'BLOCKED: ACTIONABLE') ||
-      contains(github.event.comment.body, 'COMPLETE:') ||
-      contains(github.event.comment.body, 'BLOCKED: AI') ||
-      contains(github.event.comment.body, 'BLOCKED: EXTERNAL')
+      github.event.comment.user.login == 'calyeap' &&
+      !contains(github.event.issue.labels.*.name, 'lean-sop') &&
+      (contains(github.event.comment.body, 'CALVIN REQUIRED:') ||
+        contains(github.event.comment.body, 'BLOCKED: ACTIONABLE') ||
+        contains(github.event.comment.body, 'COMPLETE:') ||
+        contains(github.event.comment.body, 'BLOCKED: AI') ||
+        contains(github.event.comment.body, 'BLOCKED: EXTERNAL'))
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

@@ -365,7 +365,13 @@ export async function loadGateState(runId: string, options: LoadGateStateOptions
   const run = await getRun(runId);
   if (run === null) throw new RunNotFoundError(runId);
 
-  if (!(await isSupportedTicker(run.ticker))) {
+  // CF-LEG2-PINNED-REOPEN-01 (issue #483) — run-aware, so a run whose
+  // analyst inputs are pinned (A5) is supported by its own pin. Through the
+  // ticker-only isSupportedTicker the pin was skipped: every reopen after the
+  // cache expired called the model again, and offline (or on an empty reply)
+  // a pinned run became unopenable. Still the one resolver, still failing
+  // closed when no bundle exists from any source.
+  if ((await analystInputsFor(run.ticker, runId)) === null) {
     // A run exists for a ticker with no analyst-input bundle. Fail closed: a
     // run whose scenarios cannot exist must not be computable.
     throw new RunNotFoundError(runId);

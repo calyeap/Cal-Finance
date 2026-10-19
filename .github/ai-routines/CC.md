@@ -68,10 +68,10 @@ For a bounded mechanical defect inside existing authority:
 The runtime router additionally enforces an absolute, deterministic backstop independent of REVIEW's own same-class judgement above: after 3 `CORRECT` cycles without `ACCEPT` on one PR, the 4th attempted cycle is refused at admission as `BLOCKED: ACTIONABLE`, with the same reapply-the-wake-label resume path used elsewhere. This never depends on REVIEW recognising the failures as the same class — it counts every `CORRECT` terminal on the thread.
 
 ### BLOCKED
-Use only when review cannot safely finish because of a concrete runtime/evidence dependency. `BLOCKED: AI — ...` stays machine-owned; `BLOCKED: ACTIONABLE — ...` is reserved for a genuine human-only action. Includes a stale contract fence exit (`BLOCKED: AI — STALE_CONTRACT: ...`, see Stale contract fence).
+Use only when review cannot safely finish because of a concrete runtime/evidence dependency. `BLOCKED: AI — ...` stays machine-owned; `BLOCKED: ACTIONABLE — ...` is reserved for a genuine human-only action. Classify by BUILD.md's **Blocker ownership** (CF-ESCALATION-QUALITY-REPAIR-01, issue #473): your own blocked source fetch is `BLOCKED: AI`, not a request for Calvin to supply filing text or change egress; check the PR/issue evidence receipts first, and a source still unverified in every authorised path fails closed as `BLOCKED: AI — SOURCE_UNAVAILABLE: ...`. Includes a stale contract fence exit (`BLOCKED: AI — STALE_CONTRACT: ...`, see Stale contract fence).
 
 ### CALVIN REQUIRED
-One closed question only for a material judgement, permission/security/spend/external side effect, irreversible/expensive choice, authority conflict requiring Calvin, or explicitly reserved acceptance.
+One closed question only for a material judgement, permission/security/spend/external side effect, irreversible/expensive choice, authority conflict requiring Calvin, or explicitly reserved acceptance. Write it as BUILD.md's Blocker ownership decision pack.
 
 ### STOP
 Use for ambiguous target, changed head, conflicting authoritative requirements or unsafe merge state.

@@ -14,12 +14,22 @@ permissions:
   pull-requests: write
 
 jobs:
+  # CF-LEG2-PREFLIGHT-01 (issue #475): every fire job acts only on a
+  # comment or label from `calyeap` (every legitimate worker, OWNER
+  # re-drive and Calvin wake is authored by that identity; GITHUB_TOKEN-
+  # authored events never trigger this workflow — terminal-relay.sh relays
+  # those in-job) and never on an item labelled `lean-sop`.
+
   # One short repo-wide admission lane. It ends after fire acceptance; liveness
   # observation is a separate job, so admission is never held for minutes.
   fire-build:
     if: >-
-      github.event.label.name == 'needs-build-wake' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'CORRECT'))
+      ((github.event_name == 'issue_comment' && github.event.comment.user.login == 'calyeap') ||
+        (github.event_name != 'issue_comment' && github.event.sender.login == 'calyeap')) &&
+      !contains(github.event.issue.labels.*.name, 'lean-sop') &&
+      !contains(github.event.pull_request.labels.*.name, 'lean-sop') &&
+      (github.event.label.name == 'needs-build-wake' ||
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'CORRECT')))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -231,7 +241,7 @@ jobs:
             elif [ "$(fire_transient_status "$CODE")" = true ]; then
               LINE="BLOCKED: ACTIONABLE — BUILD transport did not recover after 4 attempts (${CODE}); reapply the \`needs-build-wake\` label to #${NUMBER} to re-drive. No worker started."
             else
-              LINE="BLOCKED: AI — BUILD transport failed (${CODE}); no worker started."
+              LINE="BLOCKED: ACTIONABLE — BUILD transport failed (${CODE}, not retryable); no worker started. Check the BUILD fire endpoint, then reapply the \`needs-build-wake\` label to #${NUMBER} to re-drive."
             fi
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
             # This is the fire call's own transport failure, not a genuine
@@ -253,52 +263,34 @@ jobs:
     needs: fire-build
     if: needs.fire-build.outputs.fired == 'true'
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    # CF-TIMEOUT-ACTIONABLE-01: room for the 90-minute BUILD lease below.
+    timeout-minutes: 100
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
+      # A lease expiry posts one BLOCKED: ACTIONABLE and sends it to Slack
+      # directly from terminal-watch.sh. It is a monitoring incident, not an
+      # OWNER reconciliation event, so it is never relayed into OWNER.
       - name: Watch for BUILD terminal without re-fire
-        id: watch
-        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
           TARGET_NUMBER: ${{ needs.fire-build.outputs.target_number }}
           ACTOR: BUILD
           ATTEMPT_ID: ${{ needs.fire-build.outputs.attempt_id }}
-          TERMINAL_LEASE_MINUTES: '45'
-        run: bash .github/scripts/terminal-watch.sh
-
-      # terminal-watch.sh's own timeout receipt above ("BLOCKED: AI —
-      # BUILD attempt ... produced no correlated terminal") is posted with
-      # this job's GH_TOKEN, which cannot recursively trigger
-      # fire-owner-on-terminal's issue_comment path (this outcome's own
-      # observed defect: #361's BUILD left PR #362 orphaned this exact
-      # way). Relay it into OWNER directly, in this same job, instead.
-      - name: Relay a workflow-authored BUILD timeout terminal to OWNER
-        if: steps.watch.outcome == 'failure'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          NUMBER: ${{ needs.fire-build.outputs.target_number }}
-          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
-          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
+          TERMINAL_LEASE_MINUTES: '90'
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
-        run: |
-          set -uo pipefail
-          source .github/scripts/terminal-relay.sh
-          LINE="$(cat /tmp/terminal-watch-blocked-line.txt)"
-          terminal_relay_owner "$REPO" "$NUMBER" "$LINE" observe-build-timeout
-
-      - name: Fail the job when the terminal watch failed
-        if: steps.watch.outcome == 'failure'
-        run: exit 1
+        run: bash .github/scripts/terminal-watch.sh
 
   fire-review:
     if: >-
-      github.event.label.name == 'needs-cc-rereview' ||
-      (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'DONE:'))
+      ((github.event_name == 'issue_comment' && github.event.comment.user.login == 'calyeap') ||
+        (github.event_name != 'issue_comment' && github.event.sender.login == 'calyeap')) &&
+      !contains(github.event.issue.labels.*.name, 'lean-sop') &&
+      !contains(github.event.pull_request.labels.*.name, 'lean-sop') &&
+      (github.event.label.name == 'needs-cc-rereview' ||
+        (github.event_name == 'issue_comment' && contains(github.event.comment.body, 'DONE:')))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -490,7 +482,7 @@ jobs:
             elif [ "$(fire_transient_status "$CODE")" = true ]; then
               LINE="BLOCKED: ACTIONABLE — REVIEW transport did not recover after 4 attempts (${CODE}); reapply the \`needs-cc-rereview\` label to PR #${NUMBER} to re-drive."
             else
-              LINE="BLOCKED: AI — REVIEW transport failed (${CODE})."
+              LINE="BLOCKED: ACTIONABLE — REVIEW transport failed (${CODE}, not retryable); no worker started. Check the REVIEW fire endpoint, then reapply the \`needs-cc-rereview\` label to PR #${NUMBER} to re-drive."
             fi
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
             # This is the fire call's own transport failure, not a genuine
@@ -517,9 +509,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           ref: ${{ github.event.repository.default_branch }}
+      # Same actionable timeout as observe-build: Slack directly, no OWNER relay.
       - name: Watch for REVIEW terminal without re-fire
-        id: watch
-        continue-on-error: true
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TARGET_REPO: ${{ github.repository }}
@@ -527,40 +518,22 @@ jobs:
           ACTOR: REVIEW
           ATTEMPT_ID: ${{ needs.fire-review.outputs.attempt_id }}
           TERMINAL_LEASE_MINUTES: '25'
-        run: bash .github/scripts/terminal-watch.sh
-
-      # Same GITHUB_TOKEN-recursion gap as observe-build's equivalent step
-      # (see its comment, and terminal-watch.sh's own header) — relay
-      # directly to OWNER instead of depending on an event that cannot
-      # arrive.
-      - name: Relay a workflow-authored REVIEW timeout terminal to OWNER
-        if: steps.watch.outcome == 'failure'
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          REPO: ${{ github.repository }}
-          NUMBER: ${{ needs.fire-review.outputs.target_number }}
-          OWNER_FIRE_URL: ${{ secrets.OWNER_FIRE_URL }}
-          OWNER_FIRE_TOKEN: ${{ secrets.OWNER_FIRE_TOKEN }}
           SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
-        run: |
-          set -uo pipefail
-          source .github/scripts/terminal-relay.sh
-          LINE="$(cat /tmp/terminal-watch-blocked-line.txt)"
-          terminal_relay_owner "$REPO" "$NUMBER" "$LINE" observe-review-timeout
-
-      - name: Fail the job when the terminal watch failed
-        if: steps.watch.outcome == 'failure'
-        run: exit 1
+        run: bash .github/scripts/terminal-watch.sh
 
   fire-owner-on-terminal:
     if: >-
-      github.event.label.name == 'needs-owner-wake' ||
-      (github.event_name == 'issue_comment' &&
-        (contains(github.event.comment.body, 'CALVIN RULING') ||
-         contains(github.event.comment.body, 'DONE: EVIDENCE') ||
-         contains(github.event.comment.body, 'STOP:') ||
-         contains(github.event.comment.body, 'BLOCKED:') ||
-         contains(github.event.comment.body, 'CALVIN REQUIRED:')))
+      ((github.event_name == 'issue_comment' && github.event.comment.user.login == 'calyeap') ||
+        (github.event_name != 'issue_comment' && github.event.sender.login == 'calyeap')) &&
+      !contains(github.event.issue.labels.*.name, 'lean-sop') &&
+      !contains(github.event.pull_request.labels.*.name, 'lean-sop') &&
+      (github.event.label.name == 'needs-owner-wake' ||
+        (github.event_name == 'issue_comment' &&
+          (contains(github.event.comment.body, 'CALVIN RULING') ||
+           contains(github.event.comment.body, 'DONE: EVIDENCE') ||
+           contains(github.event.comment.body, 'STOP:') ||
+           contains(github.event.comment.body, 'BLOCKED:') ||
+           contains(github.event.comment.body, 'CALVIN REQUIRED:'))))
     runs-on: ubuntu-latest
     timeout-minutes: 10
     concurrency:
@@ -672,7 +645,7 @@ jobs:
             elif [ "$(fire_transient_status "$CODE")" = true ]; then
               LINE="BLOCKED: ACTIONABLE — OWNER transport did not recover after 4 attempts (${CODE}); reapply the \`needs-owner-wake\` label to #${NUMBER} to re-drive. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             else
-              LINE="BLOCKED: AI — OWNER transport failed (${CODE}). [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
+              LINE="BLOCKED: ACTIONABLE — OWNER transport failed (${CODE}, not retryable); no worker started. Check the OWNER fire endpoint, then reapply the \`needs-owner-wake\` label to #${NUMBER} to re-drive. [OWNER_ATTEMPT_ID: ${ATTEMPT_ID}]"
             fi
             gh api --method POST "repos/${REPO}/issues/${NUMBER}/comments" -f body="$LINE"
             # GH_TOKEN-authored; relay to Slack directly (see
@@ -708,4 +681,5 @@ jobs:
           ACTOR: OWNER
           ATTEMPT_ID: ${{ needs.fire-owner-on-terminal.outputs.attempt_id }}
           TERMINAL_LEASE_MINUTES: '25'
+          SLACK_WEBHOOK_URL: ${{ secrets.CALVIN_SLACK_WEBHOOK_URL }}
         run: bash .github/scripts/terminal-watch.sh

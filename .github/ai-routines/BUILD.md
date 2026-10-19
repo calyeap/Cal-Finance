@@ -94,6 +94,16 @@ High consequence/silent-error/switching-cost work.
 
 If LIGHT cannot safely reach an exact-head deterministic pass, fall back to NORMAL review rather than lowering the bar.
 
+## Blocker ownership
+
+CF-ESCALATION-QUALITY-REPAIR-01 (issue #473). Before writing any `BLOCKED:` or `CALVIN REQUIRED:`, decide who owns the next action:
+
+- **AI/Product-owned → `BLOCKED: AI — ...`, never `ACTIONABLE`.** Routine public-source retrieval, fixable technical defects, and source/tool availability where an authorised alternative exists or may exist. One worker's blocked proxy (e.g. `CONNECT 403`) is not proof a human must supply filing text. For a public issuer disclosure, first check the existing PR/issue evidence receipts and the approved retrieval/capture routes; an auditable issuer capture/receipt on GitHub may satisfy the source standard only where the task's source standard allows it — never substitute tag arithmetic for a required caption, and never claim independent verification that did not happen. Still unverified in every authorised path → fail closed as `BLOCKED: AI — SOURCE_UNAVAILABLE: <exact gap>`; the item stays INCOMPLETE and no source is invented.
+- **Human-only → `BLOCKED: ACTIONABLE — ...`.** Only a necessary credential/secret, permission/security access, payment, consent, or a deterministic re-drive the runtime itself names.
+- **Calvin judgement → `CALVIN REQUIRED:`** — policy, spend, security trade-off, irreversible choice or reserved acceptance, after the approved AI/Product paths are exhausted. Write a decision pack: one closed question, 2–3 defensible options, the recommended option (or say explicitly that none is defensible), primary evidence link, main trade-offs and the exact reply/action required.
+- **Never** ask Calvin to research public filings, paste source text, copy technical receipts, operate BUILD/recovery, or change egress as a bare `ACTIONABLE`. Changing egress is a policy choice: `CALVIN REQUIRED:` with a decision pack, or (when the task forbids egress changes) `BLOCKED: AI`. Never re-raise a question a `CALVIN RULING` already settled.
+- `runtime_blocker_owner` (`.github/scripts/runtime-lib.sh`) is the deterministic backstop: an `ACTIONABLE` asking for egress or for a human to supply source text never pages `<!channel>`. It does not replace this judgement.
+
 ## Terminal contract
 
 **Destination**: post the terminal receipt as a comment on the exact wake target the fire prompt names (its `item #<N>` / `PR #<N>`) — the issue or PR the runtime is watching for this exact `BUILD_ATTEMPT_ID`, never a different item (a PR this run opened, a linked issue, a parent outcome). "The worker said done somewhere" never counts as completion; only a correlated receipt on the exact watched target does. `DONE: <PR link>` still names the delivered PR in its body — that PR is what changed, not where the receipt lives.
@@ -103,7 +113,7 @@ Every fired run ends with exactly one first-line terminal receipt and, when the 
 - `DONE: <PR link>` — NORMAL/HEAVY ready for review, or LIGHT fallback review.
 - `DONE: EVIDENCE — <evidence>` — valid no-code/evidence-only outcome.
 - `BLOCKED: AI — <specific unresolved machine/runtime blocker>` — Calvin cannot usefully resolve it. Includes a stale contract fence exit (`BLOCKED: AI — STALE_CONTRACT: ...`, see Stale contract fence).
-- `BLOCKED: ACTIONABLE — <specific human-only action>` — only when a real permission/secret/external action is required.
+- `BLOCKED: ACTIONABLE — <specific human-only action>` — only when a real permission/secret/external action is required (see Blocker ownership).
 - `STOP: RECONCILIATION REQUIRED — <conflicting authorities>` — consequential authority conflict.
 - `CALVIN REQUIRED: <one closed question>` — genuine judgement/trade-off/permission/security/spend/irreversible choice or reserved acceptance.
 

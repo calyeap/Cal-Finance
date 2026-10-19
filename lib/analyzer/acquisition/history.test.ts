@@ -9,7 +9,8 @@ import {
   quarterlySeries,
   quarterlySeriesWithDerivedQ4,
 } from "./history";
-import { TAG_MAP } from "./tagMap";
+import { TAG_MAP, tagMapEntry } from "./tagMap";
+import { resolveEntry } from "./selectTagged";
 import type { CompanyFactsDocument } from "./secClient";
 
 function capture(ticker: string): CompanyFactsDocument {
@@ -249,6 +250,39 @@ describe("latestAnnualFiscalYear — the period a comparator window is measured 
       annualSeries(nvda, [{ ref: { ns: "us-gaap", tag: "RevenueFromContractWithCustomerExcludingAssessedTax" } }])!
         .observations.at(-1)!.fiscalYear
     ).toBe(2022);
+  });
+
+  it("does not count a period that ends after the filing carrying it — an assumption, not a reported year (issue #468)", () => {
+    // The exact row live EDGAR carries for Nucor, trimmed out of the capture
+    // because the mapping never reads the tag: its FY2010 10-K's ultimate
+    // health-care cost-trend rate, tagged as a full-year duration for 2027.
+    // Counted, it made 2027 Nucor's latest year, so no candidate of any entry
+    // could read as current and total-debt fell back to a 2016 figure.
+    const nue = JSON.parse(
+      readFileSync(join(__dirname, "captures", "ar6-2026-10-18", "nue-companyfacts.json"), "utf8")
+    ) as CompanyFactsDocument;
+    const withAssumption: CompanyFactsDocument = {
+      ...nue,
+      facts: {
+        ...nue.facts,
+        "us-gaap": {
+          ...nue.facts["us-gaap"],
+          DefinedBenefitPlanUltimateHealthCareCostTrendRate: {
+            label: null,
+            units: {
+              pure: [
+                { start: "2027-01-01", end: "2027-12-31", val: 0.045, accn: "0001193125-11-049351", fy: 2010, fp: "FY", form: "10-K", filed: "2011-02-28" },
+              ],
+            },
+          },
+        },
+      },
+    };
+    expect(latestAnnualFiscalYear(withAssumption)).toBe(2025);
+    expect(latestAnnualFiscalYear(withAssumption)).toBe(latestAnnualFiscalYear(nue));
+    expect(filedAnnualYearsCount(withAssumption)).toBe(filedAnnualYearsCount(nue));
+    const debt = resolveEntry(withAssumption, tagMapEntry("total-debt")!);
+    expect(debt.outcome === "RESOLVED" && debt.value.asOfDate).toBe("2026-07-04");
   });
 
   it("is never older than a series drawn from the same document", () => {

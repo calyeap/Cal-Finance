@@ -202,6 +202,49 @@ runtime_parent_terminal_kind() {
   esac
 }
 
+# runtime_blocker_owner <body>
+# CF-ESCALATION-QUALITY-REPAIR-01 (issue #473): deterministic ownership of
+# a `BLOCKED: ACTIONABLE` terminal's required action — `ai`, `human` or
+# `unknown`; any other terminal prints `none`. PR #469 (Nucor) paged Calvin
+# three times with `BLOCKED: ACTIONABLE` asking him to supply public filing
+# text or allow cloud egress after one worker's proxy returned CONNECT 403.
+# Neither is human-only: routine public-source retrieval/source access is
+# AI/Product work (BUILD.md "Blocker ownership"), and an egress/policy
+# trade-off Calvin genuinely must decide is a `CALVIN REQUIRED:` decision
+# pack, never a bare ACTIONABLE page. This is the mechanical backstop under
+# that instruction, not a replacement for it:
+#   - `human` first for a strong human-only marker: `refresh <SECRET_NAME>`,
+#     reapplying a wake label, or a credential/security/payment/consent
+#     action. CF-LEG2-PREFLIGHT-01 (issue #475, the #474 regression): a
+#     genuine human gate that merely mentions egress ("egress is not the
+#     cause", "egress-proxy credential") must keep its page;
+#   - `ai` when the line asks for cloud egress / network access, cites a
+#     proxy CONNECT 403, or asks a human to supply/provide/paste/copy source
+#     text (a sentence, caption, quote, excerpt, filing or note text). This
+#     wins over the weaker `permission`/`policy` markers — the real Nucor
+#     OWNER line called its egress ask a "human-only permission change";
+#   - `human` for the remaining genuine human-only shapes: refreshing a
+#     secret/credential, reapplying a wake label to re-drive (#401/#402),
+#     or a named permission/security/policy/payment/consent/acceptance/
+#     credential action;
+#   - `unknown` otherwise. Unknown keeps today's paging behaviour so an
+#     unrecognised but genuine human gate is never silently dropped.
+runtime_blocker_owner() {
+  local line
+  line="$(runtime_terminal_line "$1")"
+  case "$line" in "BLOCKED: ACTIONABLE"*) ;; *) echo none; return ;; esac
+  if printf '%s' "$line" | grep -Eq '\brefresh [A-Z][A-Z0-9_]*\b' \
+    || printf '%s' "$line" | grep -Eiq 'reapply the `[^`]+` label|\b(credential|security|payment|consent)\b'; then
+    echo human
+  elif printf '%s' "$line" | grep -Eiq '\begress\b|CONNECT 403|\b(supply|provide|paste|copy)\b[^.;]{0,80}\b(sentence|caption|quote|excerpt|filing text|note text)\b'; then
+    echo ai
+  elif printf '%s' "$line" | grep -Eiq '\brefresh [A-Z0-9_]+|reapply the `[^`]+` label|\b(credential|permission|security|policy|payment|consent|acceptance)\b'; then
+    echo human
+  else
+    echo unknown
+  fi
+}
+
 # runtime_slack_kind <body>
 # Slack is an interrupt/inform channel for genuine Calvin-visible terminal
 # outcomes. CF-SLACK-ACTION-ONLY-01 (issue #377) made it an action-only
@@ -221,19 +264,31 @@ runtime_parent_terminal_kind() {
 # is OWNER's own. A stale-contract fence exit (body contains
 # `STALE_CONTRACT`) stays `none` regardless of actor — it carries no
 # product signal about the outcome (see BUILD.md's Stale contract fence).
+#
+# A `BLOCKED: ACTIONABLE` whose required action runtime_blocker_owner finds
+# AI-owned (CF-ESCALATION-QUALITY-REPAIR-01, issue #473) is not a human
+# gate: it never gets `actionable_blocked`'s `<!channel>` ping and is
+# treated exactly like a `BLOCKED: AI` — `none` from a child (OWNER still
+# wakes on it and re-evaluates, so nothing stalls silently) and one
+# informational `stopped` from OWNER's own terminal.
 runtime_slack_kind() {
   local body="$1" line tag_text
   line="$(runtime_terminal_line "$body")"
   case "$line" in
     "CALVIN REQUIRED:"*) echo calvin_required; return ;;
-    "BLOCKED: ACTIONABLE"*) echo actionable_blocked; return ;;
+    "BLOCKED: ACTIONABLE"*)
+      if [ "$(runtime_blocker_owner "$body")" != ai ]; then
+        echo actionable_blocked
+        return
+      fi
+      ;;
     "COMPLETE:"*) echo finished; return ;;
   esac
   case "$line" in
     *STALE_CONTRACT*) echo none; return ;;
   esac
   case "$line" in
-    "BLOCKED: AI"*|"BLOCKED: EXTERNAL"*)
+    "BLOCKED: AI"*|"BLOCKED: EXTERNAL"*|"BLOCKED: ACTIONABLE"*)
       tag_text="$(runtime_terminal_tag_text "$body")"
       case "$tag_text" in
         *"[OWNER_ATTEMPT_ID: "*) echo stopped; return ;;
@@ -522,6 +577,43 @@ runtime_attempt_start_prefix() {
   esac
 }
 
+# runtime_actor_wake_label <actor>
+# The existing deterministic human re-drive label for each actor — the
+# same labels cc-auto-fire.yml's fire jobs already admit on.
+runtime_actor_wake_label() {
+  case "$1" in
+    BUILD) echo needs-build-wake ;;
+    REVIEW) echo needs-cc-rereview ;;
+    OWNER) echo needs-owner-wake ;;
+    *) echo "" ;;
+  esac
+}
+
+# runtime_start_session_url <start_line>
+# The session URL a "<ACTOR> START: ... session <id> (<url>) ..." receipt
+# carries, or empty when it has none (the fire response's own "unknown").
+runtime_start_session_url() {
+  printf '%s' "$1" | sed -nE 's/.*session [^ ]+ \((https?:\/\/[^)]+)\).*/\1/p' | head -n1
+}
+
+# runtime_timeout_line <actor> <attempt_id> <lease_minutes> <session_url>
+#                      <repo> <number>
+# CF-TIMEOUT-ACTIONABLE-01 (issue #401): the one typed terminal-watch posts
+# when a lease expires with no correlated terminal. A lease expiry is an
+# observation deadline, not evidence the worker died (#450: the original
+# BUILD finished after its watch expired), so the line asks a human to
+# verify status first and only conditionally names the actor's existing
+# re-drive label. `ref=<attempt_id>` keys runtime_slack_is_duplicate to
+# this one attempt: a replayed observation dedupes, another attempt's
+# timeout does not.
+runtime_timeout_line() {
+  local actor="$1" attempt_id="$2" lease="$3" session_url="$4" repo="$5" number="$6"
+  local tag label
+  tag="$(runtime_attempt_tag "$actor")"
+  label="$(runtime_actor_wake_label "$actor")"
+  printf '%s' "BLOCKED: ACTIONABLE — ${actor} attempt ${attempt_id} (ref=${attempt_id}) posted no correlated terminal inside its ${lease}-minute lease; this is observation expiry, not confirmed worker death. Session: ${session_url:-not available}. Item: https://github.com/${repo}/issues/${number}. Verify status first: check the worker session and later GitHub receipts on #${number}. If it is still working, do nothing and do not re-drive. If it definitively finished or stopped without a correlated terminal, confirm no worker is active, then reapply the \`${label}\` label to #${number}. If status is unknown, do not blindly re-drive. No automatic re-fire was attempted. [${tag}: ${attempt_id}]"
+}
+
 # runtime_attempt_status <comments_json> <actor> <attempt_id> <started_at>
 # Returns complete|missing. A terminal counts only when it is after the start
 # and carries this exact attempt tag.
@@ -630,4 +722,28 @@ runtime_outcome_attempt_open() {
   if [ -z "$attempt" ]; then echo true; return; fi
   status="$(runtime_attempt_status "$comments_json" BUILD "$attempt" "$started")"
   if [ "$status" = complete ]; then echo false; else echo true; fi
+}
+
+# runtime_build_wake_consumed <comments_json> <outcome_id> <baseline_id>
+# CF-CONTINUE-SCRIPT-01 (issue #402): true when a comment newer than
+# <baseline_id> (GitHub comment ids only grow) proves fire-build already
+# consumed a BUILD wake for <outcome_id> — its "BUILD START:" receipt, a
+# "BUILD ADMISSION:" receipt, or a typed BUILD terminal (fire-build's own
+# admission STOP:/BLOCKED:, or the worker's; never a REVIEW/OWNER-tagged
+# line). fire-build clears the needs-build-wake label only after posting
+# one of these, so label-or-receipt never leaves a gap. Comments at or before the baseline are never
+# evidence of the wake being verified.
+runtime_build_wake_consumed() {
+  local comments_json="$1" outcome_id="$2" baseline="$3" body line
+  while IFS= read -r body; do
+    [ -z "$body" ] && continue
+    body="$(jq -r . <<< "$body")"
+    line="$(runtime_terminal_line "$body")"
+    case "$line" in
+      "BUILD START: OUTCOME-ID=${outcome_id} "*|"BUILD ADMISSION:"*) echo true; return ;;
+    esac
+    case "$line" in *"[REVIEW_ATTEMPT_ID:"*|*"[OWNER_ATTEMPT_ID:"*) continue ;; esac
+    if runtime_terminal_is_typed BUILD "$line"; then echo true; return; fi
+  done < <(jq -c --argjson base "$baseline" '[ .[] | select(.id > $base) ] | sort_by(.id) | .[].body' <<< "$comments_json")
+  echo false
 }

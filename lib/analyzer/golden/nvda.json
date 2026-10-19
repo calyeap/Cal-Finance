@@ -86,7 +86,15 @@
       "accessionNumber": "0001045810-26-000021",
       "form": "10-K",
       "fiscalYear": 2026,
-      "note": "7469000000 (noncurrent) + 999000000 (current) = 8468000000, which independently equals the combined us-gaap:LongTermDebt tag's own FY2026 value (8468000000) — a useful internal cross-check. Both component tags are live/current for NVDA."
+      "note": "7469000000 (noncurrent) + 999000000 (current) = 8468000000, which independently equals the combined us-gaap:LongTermDebt tag's own FY2026 value (8468000000) — a useful internal cross-check. Both component tags are live/current for NVDA.",
+      "presentedLines": [
+        {"covers": ["currentMaturities"], "conceptLabel": "Long-term Debt, Current Maturities", "xbrlConcept": "us-gaap:LongTermDebtCurrent", "value": 999000000},
+        {"covers": ["longTermDebt"], "conceptLabel": "Long-term Debt, Excluding Current Maturities", "xbrlConcept": "us-gaap:LongTermDebtNoncurrent", "value": 7469000000}
+      ],
+      "notPresented": {
+        "shortTermBorrowings": "None at this instant: NVDA's DebtCurrent (999000000) equals LongTermDebtCurrent (999000000), so its current debt is all current maturities.",
+        "financeLeases": "NVDA tags no FinanceLeaseLiability at this instant (nor any lease-inclusive debt element); there is no finance-lease debt line to add."
+      }
     },
     "cashAndEquivalents": {
       "conceptLabel": "Cash and Cash Equivalents, at Carrying Value",

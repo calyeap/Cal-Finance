@@ -462,7 +462,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     sic: fixture.marketContext?.sic ?? null,
     triggerBFired: triggerB.fired,
     profile: fixture.profile.confirmedOrOverridden,
-    leveragePass: leverage.result === "PASS",
+    leverage,
     priceDate,
   });
   const rate = discountRate.rate;
@@ -728,7 +728,16 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   // "does this run have a real price" — computeScenarioOutputs and the two
   // presentation bindings below — reads the identical value, never a second
   // signal invented for the same fact.
-  const currentPrice = fixture.enterpriseValue.price?.value ?? null;
+  //
+  // CF-LEG2-DECIDED-FACT-GATING-01 — every read below takes the price's bare
+  // value, so a price this run decided NOT CONFIRMED is withheld here
+  // exactly as a missing one is, the same rule base revenue follows above
+  // (baseRevenueSourced). Its cause says which of the two happened. The
+  // valuation date (priceDate, above) is timing, not a use of the price's
+  // value, and is unchanged.
+  const priceNotConfirmed = fixture.enterpriseValue.price?.provenance.verificationState === "NOT CONFIRMED";
+  const currentPrice = priceNotConfirmed ? null : (fixture.enterpriseValue.price?.value ?? null);
+  const priceUnusableCause = (missing: string): string => (priceNotConfirmed ? PRICE_NOT_CONFIRMED_CAUSE : missing);
 
   // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A. Where no analyst authored
   // dollar scenario values (fixture.scenarioValues === null — an AI-proposed
@@ -1039,7 +1048,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       notComputed(
         NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice,
         "INCOMPLETE",
-        "missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day"
+        priceUnusableCause("missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day")
       )
     );
   } else if (scenarioOutputs.rateAtWhichBaseEqualsPrice === null) {
@@ -1069,7 +1078,9 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       notComputed(
         NOT_COMPUTED_BINDING.priceLocationWithinRange,
         "INCOMPLETE",
-        "missing REQUIRED input: a price for this run — none was available, so today's price has no position to report within the scenario range"
+        priceUnusableCause(
+          "missing REQUIRED input: a price for this run — none was available, so today's price has no position to report within the scenario range"
+        )
       )
     );
   } else if (scenarioOutputs.priceLocationWithinRange.isNaN()) {
@@ -1099,7 +1110,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       notComputed(
         NOT_COMPUTED_BINDING.price,
         "INCOMPLETE",
-        "missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day"
+        priceUnusableCause("missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day")
       )
     );
   }
@@ -1159,12 +1170,12 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     // figure inside it. fixture.enterpriseValue.price is the honest signal
     // (the same one the scenarioOutputs currentPrice read below reuses);
     // fixture.price.value stays the unconditional §3.4 display sentinel.
-    if (fixture.enterpriseValue.price === null) {
+    if (currentPrice === null) {
       suppressing.push({
         ...notComputed(
           NOT_COMPUTED_BINDING.successAsPriceRequires,
           "INCOMPLETE",
-          "missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day"
+          priceUnusableCause("missing REQUIRED input: a price for this run — a price is never estimated or carried forward from an earlier day")
         ),
         scope: "the fair-value range",
       });
@@ -1294,9 +1305,16 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
               // vSuccessAsOfDate is unconditionally nulled a few lines above
               // by companyInputs.ts — so this corrects a $0 read that could
               // never surface today, not an observable change.
-              const currentPrice = fixture.enterpriseValue.price?.value ?? null;
+              // CF-LEG2-DECIDED-FACT-GATING-01 — the same usable price as
+              // every other read in this file (currentPrice, M15 above): a
+              // NOT CONFIRMED price is withheld, and says so.
+              const implied = computeImpliedProbability(d.vSuccess, vFail, currentPrice);
               const state: SuccessDefinitionState =
-                cause !== null ? { kind: "NOT COMPUTED / SUPPRESSED", cause } : computeImpliedProbability(d.vSuccess, vFail, currentPrice);
+                cause !== null
+                  ? { kind: "NOT COMPUTED / SUPPRESSED", cause }
+                  : priceNotConfirmed && implied.kind === "NOT COMPUTED / SUPPRESSED"
+                    ? { kind: "NOT COMPUTED / SUPPRESSED", cause: PRICE_NOT_CONFIRMED_CAUSE }
+                    : implied;
               return {
                 definition: d.definition,
                 vSuccess: d.vSuccess,
@@ -1483,6 +1501,14 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
 // a finance value — an expected return this close to terminal growth is
 // reported as no solution in range.
 const EXPECTED_RETURN_SEARCH_FLOOR_ABOVE_TERMINAL_GROWTH = new Decimal("0.0025");
+
+/**
+ * CF-LEG2-DECIDED-FACT-GATING-01 — why a price-reading output is not
+ * computed on a run whose price fact is NOT CONFIRMED. Kept apart from the
+ * missing-price causes: the price was acquired, and this run rejected it.
+ */
+export const PRICE_NOT_CONFIRMED_CAUSE =
+  "the price is NOT CONFIRMED on this run (contradicted by its source, not located, or failed a cross-check), so nothing is computed from it (§5)";
 
 const SCENARIO_KEYS = ["bear", "base", "bull"] as const;
 

@@ -17,6 +17,13 @@ import lly from "./lly.json";
 import nue from "./nue.json";
 import oklo from "./oklo.json";
 
+// The §6.5 leverage result selectDiscountRate reads (CF-LEG2-RATE-DOMAIN-COPY-01
+// replaced its boolean `leveragePass` input with the result itself, so the
+// rate's domain can tell "measured at or above 10%" from "not measured").
+const LEVERAGE_PASS = { result: "PASS" as const, netDebtRatio: new Decimal("0.02") };
+const LEVERAGE_MEASURED_ABOVE = { result: "LEVERAGE UNSUPPORTED IN v1" as const, netDebtRatio: new Decimal("0.25") };
+const LEVERAGE_NOT_MEASURED = { result: "LEVERAGE UNSUPPORTED IN v1" as const, netDebtRatio: null };
+
 // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 — the issue's VERIFY, run against the
 // real engine: Methodology v2.1 D1 (rate) and D2 (reinvestment, terminal),
 // one reverse-DCF solve on the main engine, the expected return, and the R5
@@ -192,7 +199,7 @@ describe("an independent oracle reproduces the engine for MSFT, COST and NVDA", 
       sic: golden.sic,
       triggerBFired: false,
       profile: "MATURE_PROFITABLE_STABLE_FCF",
-      leveragePass: true,
+      leverage: LEVERAGE_PASS,
       priceDate: "2026-10-16",
     }).rate;
     const terminalRoic = terminalReturnOnNewCapital(rate, moat, "base");
@@ -233,7 +240,7 @@ describe("an independent oracle reproduces the engine for MSFT, COST and NVDA", 
 
 describe("D1 — the dated rate in use, by the approved two-band rule", () => {
   const rateFor = (sic: string | null, profile: Profile = "MATURE_PROFITABLE_STABLE_FCF", triggerBFired = false) =>
-    selectDiscountRate({ sic, triggerBFired, profile, leveragePass: true, priceDate: "2026-10-16" });
+    selectDiscountRate({ sic, triggerBFired, profile, leverage: LEVERAGE_PASS, priceDate: "2026-10-16" });
 
   it.each([
     ["MSFT", msft.sic, "0.09", "stable"],
@@ -264,9 +271,21 @@ describe("D1 — the dated rate in use, by the approved two-band rule", () => {
   });
 
   it("the verdict check points sit ±0.5pp either side, and the rule is marked outside its domain when the net-debt gate fails", () => {
-    const r = selectDiscountRate({ sic: msft.sic, triggerBFired: false, profile: "MATURE_PROFITABLE_STABLE_FCF", leveragePass: false, priceDate: "2026-10-16" });
+    const r = selectDiscountRate({ sic: msft.sic, triggerBFired: false, profile: "MATURE_PROFITABLE_STABLE_FCF", leverage: LEVERAGE_MEASURED_ABOVE, priceDate: "2026-10-16" });
     expect([r.checkRates.lower.toString(), r.checkRates.upper.toString()]).toEqual(["0.085", "0.095"]);
-    expect(r.withinValidatedDomain).toBe(false);
+    expect(r.validatedDomain).toBe("OUTSIDE");
+  });
+
+  // CF-LEG2-RATE-DOMAIN-COPY-01 (#479) — three leverage states, three domain
+  // states; the rate itself is the same in all three.
+  it.each([
+    ["net debt measured below 10% (PASS)", LEVERAGE_PASS, "WITHIN"],
+    ["net debt measured at or above 10%", LEVERAGE_MEASURED_ABOVE, "OUTSIDE"],
+    ["net debt not measured", LEVERAGE_NOT_MEASURED, "NOT MEASURED"],
+  ] as const)("%s → domain %s", (_name, leverage, domain) => {
+    const r = selectDiscountRate({ sic: msft.sic, triggerBFired: false, profile: "MATURE_PROFITABLE_STABLE_FCF", leverage, priceDate: "2026-10-16" });
+    expect(r.validatedDomain).toBe(domain);
+    expect(r.rate.toString()).toBe("0.09");
   });
 
   it("records the measurement convention as provenance — an AI DEFAULT, not a rule value", () => {

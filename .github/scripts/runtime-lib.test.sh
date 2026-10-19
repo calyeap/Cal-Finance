@@ -453,4 +453,104 @@ assert_eq "$(runtime_admission_decision issue 384 '' '' false)" ADMIT "fresh adm
 assert_eq "$(runtime_admission_decision issue 384 '' '' true)" IN_FLIGHT "duplicate suppression stays intact while the stale attempt is still open"
 assert_eq "$(runtime_admission_decision issue 384 '' '30' false)" EXISTING_PR:30 "an already-open PR/branch from before the stale exit is still reused, not duplicated"
 
+# CF-TIMEOUT-ACTIONABLE-01 (issue #401): actor re-drive labels, START session
+# URL extraction and the typed timeout line.
+assert_eq "$(runtime_actor_wake_label BUILD)" needs-build-wake "BUILD re-drive label"
+assert_eq "$(runtime_actor_wake_label REVIEW)" needs-cc-rereview "REVIEW re-drive label"
+assert_eq "$(runtime_actor_wake_label OWNER)" needs-owner-wake "OWNER re-drive label"
+assert_eq "$(runtime_start_session_url 'BUILD START: OUTCOME-ID=X TIER=NORMAL · session cse_1 (https://claude.ai/code/cse_1) [BUILD_ATTEMPT_ID: B1] [CONTRACT: abc]')" "https://claude.ai/code/cse_1" "session URL from a BUILD START receipt"
+assert_eq "$(runtime_start_session_url 'OWNER START: wake=TERMINAL · session unknown (unknown) [OWNER_ATTEMPT_ID: O1]')" "" "an unknown session URL is empty, not the literal 'unknown'"
+for actor in BUILD REVIEW OWNER; do
+  TL="$(runtime_timeout_line "$actor" "${actor}-9-1" 90 "" o/r 5)"
+  assert_eq "$(runtime_slack_kind "$TL")" actionable_blocked "$actor timeout line is one actionable Slack incident"
+  assert_eq "$(runtime_attempt_status "$(jq -n --arg b "$TL" '[{body:$b, created_at:"2026-10-18T01:00:00Z"}]')" "$actor" "${actor}-9-1" "2026-10-18T00:00:00Z")" complete "$actor timeout line still correlates to its own attempt"
+  assert_eq "$(runtime_gate_action_ref "$TL")" "ref=$(printf '%s' "${actor}-9-1" | tr '[:upper:]' '[:lower:]');" "$actor timeout dedupe key is its own attempt"
+  case "$TL" in *"Session: not available"*) ;; *) fail "$actor timeout without a session URL says not available" ;; esac
+done
+for line in \
+  'BLOCKED: ACTIONABLE — BUILD transport failed (404, not retryable); no worker started. Check the BUILD fire endpoint, then reapply the `needs-build-wake` label to #5 to re-drive.' \
+  'BLOCKED: ACTIONABLE — REVIEW transport failed (404, not retryable); no worker started. Check the REVIEW fire endpoint, then reapply the `needs-cc-rereview` label to PR #5 to re-drive.' \
+  'BLOCKED: ACTIONABLE — OWNER transport failed (404, not retryable); no worker started. Check the OWNER fire endpoint, then reapply the `needs-owner-wake` label to #5 to re-drive. [OWNER_ATTEMPT_ID: O1]'; do
+  assert_eq "$(runtime_slack_kind "$line")" actionable_blocked "non-retryable transport failure is actionable, not silent: $line"
+done
+
+# CF-CONTINUE-SCRIPT-01: a BUILD wake is consumed only by a receipt newer
+# than the handoff baseline — START, ADMISSION, or a typed BUILD terminal.
+WAKE_C='[{"id":10,"body":"BUILD START: OUTCOME-ID=CF-W-01 TIER=NORMAL · session s (u) [BUILD_ATTEMPT_ID: B0]"},
+  {"id":20,"body":"STOP: DEAD CONTRACT — CF-W-01 contract closed"},
+  {"id":30,"body":"BUILD START: OUTCOME-ID=CF-W-012 TIER=NORMAL · session s (u) [BUILD_ATTEMPT_ID: B9]"},
+  {"id":40,"body":"BLOCKED: AI — review stopped [REVIEW_ATTEMPT_ID: R1]"},
+  {"id":50,"body":"BUILD ADMISSION: SUPPRESSED — CF-W-01 already active"}]'
+assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 0)" true "newer BUILD START consumes the wake"
+assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 10)" true "fire-build admission terminal consumes the wake"
+assert_eq "$(runtime_build_wake_consumed "$(jq '[.[] | select(.id == 30 or .id == 40)]' <<< "$WAKE_C")" CF-W-01 0)" false "another outcome's START or a REVIEW-tagged BLOCKED is not evidence"
+assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 40)" true "newer ADMISSION receipt consumes the wake"
+assert_eq "$(runtime_build_wake_consumed "$WAKE_C" CF-W-01 50)" false "receipts at or before the baseline never prove this wake"
+
+# CF-ESCALATION-QUALITY-REPAIR-01 (issue #473): blocker ownership. Replays
+# the verbatim first lines of PR #469's four real Nucor `BLOCKED:
+# ACTIONABLE` terminals (fixtures/pr469-nucor-thread.json) — REVIEW, OWNER,
+# BUILD, OWNER — each of which asked Calvin to supply public filing text or
+# allow cloud egress after one proxy CONNECT 403. All four are AI-owned.
+NUCOR_THREAD="$(cat "${SCRIPT_DIR}/fixtures/pr469-nucor-thread.json")"
+nucor_line() { jq -r --argjson id "$1" '.[] | select(.id == $id) | .body' <<< "$NUCOR_THREAD"; }
+NUCOR_REVIEW="$(nucor_line 6246213819)"
+NUCOR_OWNER_1="$(nucor_line 6246224733)"
+NUCOR_BUILD="$(nucor_line 6247031466)"
+NUCOR_OWNER_2="$(nucor_line 6247039084)"
+for line in "$NUCOR_REVIEW" "$NUCOR_OWNER_1" "$NUCOR_BUILD" "$NUCOR_OWNER_2"; do
+  case "$line" in "BLOCKED: ACTIONABLE"*) ;; *) fail "Nucor fixture is not the real ACTIONABLE terminal: $line" ;; esac
+  assert_eq "$(runtime_blocker_owner "$line")" ai "Nucor source-access/egress ask is AI-owned: ${line:0:80}"
+done
+assert_eq "$(runtime_slack_kind "$NUCOR_REVIEW")" none "Nucor REVIEW (child) AI-owned blocker never pages Calvin"
+assert_eq "$(runtime_slack_kind "$NUCOR_BUILD")" none "Nucor BUILD (child) AI-owned blocker never pages Calvin"
+assert_eq "$(runtime_is_child_terminal "$NUCOR_REVIEW")" true "a demoted child blocker still wakes OWNER to re-evaluate (no silent stall)"
+assert_eq "$(runtime_is_child_terminal "$NUCOR_BUILD")" true "a demoted BUILD blocker still wakes OWNER to re-evaluate (no silent stall)"
+assert_eq "$(runtime_slack_kind "$NUCOR_OWNER_1")" stopped "OWNER's own AI-owned blocker is one informational STOPPED, never an action gate"
+assert_eq "$(runtime_slack_kind "$NUCOR_OWNER_2")" stopped "OWNER's 'human-only permission change' egress ask is still AI-owned: egress wins over the permission marker"
+assert_eq "$(runtime_blocker_owner 'BLOCKED: ACTIONABLE — Calvin must paste the exact caption from the 10-K note [REVIEW_ATTEMPT_ID: R1]')" ai "asking a human to paste source text is AI-owned retrieval"
+assert_eq "$(runtime_blocker_owner 'BLOCKED: AI — SOURCE_UNAVAILABLE: www.sec.gov CONNECT 403 [BUILD_ATTEMPT_ID: B1]')" none "only BLOCKED: ACTIONABLE has a blocker owner"
+assert_eq "$(runtime_slack_kind 'BLOCKED: AI — SOURCE_UNAVAILABLE: issuer caption unverified in every authorised path; NUE stays INCOMPLETE [BUILD_ATTEMPT_ID: B1]')" none "fail-closed unverified-source BUILD stop stays Slack-silent for OWNER to reconcile"
+
+# Genuine human-only gates keep their one paging alert, including every
+# existing workflow-authored ACTIONABLE shape (#401 timeout, #402 helper,
+# transport failures).
+for line in \
+  'BLOCKED: ACTIONABLE — BUILD transport unavailable (401); refresh CC_BUILD_FIRE_TOKEN. No worker started.' \
+  'BLOCKED: ACTIONABLE — CF-X-01 repair loop exceeded 3 CORRECT cycles without ACCEPT; reapply the `needs-build-wake` label to #9 to deliberately re-drive.' \
+  'BLOCKED: ACTIONABLE — CONTINUE wake mutation to #9 (CF-X-01) could not be verified after 4 attempts; reapply the `needs-build-wake` label to #9 to deterministically re-drive. [OWNER_ATTEMPT_ID: O1]' \
+  "$(runtime_timeout_line BUILD BUILD-1-1 90 https://s o/r 9)" \
+  'BLOCKED: ACTIONABLE — head `8930faa` still has no credential-backed live proof; a human must run one manual dispatch. [REVIEW_ATTEMPT_ID: R1]' \
+  'BLOCKED: ACTIONABLE — the repo security setting blocks the deploy key; an admin must grant it. [BUILD_ATTEMPT_ID: B1]'; do
+  assert_eq "$(runtime_blocker_owner "$line")" human "genuine human-only gate: ${line:0:80}"
+  assert_eq "$(runtime_slack_kind "$line")" actionable_blocked "genuine human-only gate still pages: ${line:0:80}"
+done
+assert_eq "$(runtime_blocker_owner 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at abc1234 (MSFT) — fix only those, then rerun once.')" unknown "unrecognised blocker is unknown"
+# CF-LEG2-PREFLIGHT-01 (issue #475, #474 regression): a strong human-only
+# marker — refreshing a named secret, reapplying a wake label, or a
+# credential/security/payment/consent action — wins over a bare mention of
+# "egress", so a genuine human gate that merely names egress keeps its page.
+for line in \
+  'BLOCKED: ACTIONABLE — refresh BUILD_FIRE_TOKEN (401); egress is not the cause. [OWNER_ATTEMPT_ID: OWNER-1-1]' \
+  'BLOCKED: ACTIONABLE — security: rotate the leaked egress-proxy credential before any worker runs. [OWNER_ATTEMPT_ID: OWNER-1-1]' \
+  'BLOCKED: ACTIONABLE — Calvin must decide the spend/consent policy for paid data egress (Morningstar). [OWNER_ATTEMPT_ID: OWNER-1-1]' \
+  'BLOCKED: ACTIONABLE — OWNER transport did not recover after 4 attempts (503); reapply the `needs-owner-wake` label to #12 to re-drive. Egress proxy may be degraded. [OWNER_ATTEMPT_ID: OWNER-1-1]' \
+  'BLOCKED: ACTIONABLE — refresh OWNER_FIRE_TOKEN; the egress allow-list itself is fine. [OWNER_ATTEMPT_ID: OWNER-1-1]'; do
+  assert_eq "$(runtime_blocker_owner "$line")" human "strong human marker beats egress: ${line:0:80}"
+  assert_eq "$(runtime_slack_kind "$line")" actionable_blocked "strong human marker keeps the page: ${line:0:80}"
+done
+# Without a strong marker the three AI-owned shapes stay `ai`, and
+# `permission`/`policy` alone never override them.
+for line in \
+  'BLOCKED: ACTIONABLE — allow `www.sec.gov` egress for the BUILD environment, then re-wake BUILD. [BUILD_ATTEMPT_ID: B1]' \
+  'BLOCKED: ACTIONABLE — www.sec.gov returned CONNECT 403; a human must fetch the note. [BUILD_ATTEMPT_ID: B1]' \
+  'BLOCKED: ACTIONABLE — Calvin must provide the exact note text from the 10-K. [REVIEW_ATTEMPT_ID: R1]' \
+  'BLOCKED: ACTIONABLE — needs a human-only permission change: allow `www.sec.gov` egress. [OWNER_ATTEMPT_ID: O1]' \
+  'BLOCKED: ACTIONABLE — the egress policy must allow `www.sec.gov`. [OWNER_ATTEMPT_ID: O1]'; do
+  assert_eq "$(runtime_blocker_owner "$line")" ai "no strong marker: AI-owned shape stays ai: ${line:0:80}"
+done
+assert_eq "$(runtime_blocker_owner 'BLOCKED: ACTIONABLE — refresh the cached egress allow-list. [BUILD_ATTEMPT_ID: B1]')" ai "a lower-case 'refresh the …' is not a named secret"
+
+assert_eq "$(runtime_slack_kind 'BLOCKED: ACTIONABLE — Analyzer live proof FAIL at abc1234 (MSFT) — fix only those, then rerun once.')" actionable_blocked "unknown keeps today's paging: never silently drops a possibly genuine gate"
+
 echo "runtime-lib: PASS"

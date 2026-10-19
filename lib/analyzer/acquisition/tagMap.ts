@@ -62,8 +62,31 @@
  * which candidate any existing entry resolves to, so no previously-acquired
  * fact moves across the §3.8.1 exempt/queued boundary. Plus one cited
  * issuer-disclosure record, FINANCE_LEASES_INSIDE_TOTAL_DEBT, below the map.
+ *
+ * -10-2 (18 October 2026) — CF-AR6-BRIDGE-INPUT-RECOVERY-01 (issue #468).
+ * Two candidates added to `total-debt` (below) and one SELECTION change:
+ * `history.annualFiscalYears` — the source of `latestAnnualFiscalYear`, which
+ * decides what "current" means in `selectTagged.preferCurrent` — no longer
+ * counts a period that ends after the filing carrying it was filed. Review
+ * (docs/tag-mapping-version-review.md §10): across the seven captured
+ * companies, total-debt moves for NUE, KO and LLY only (value, row and
+ * history series); MSFT, COST, NVDA and OKLO resolve byte-identically; NO
+ * fact moves between the §3.8.1 exempt and queued sides.
+ *
+ * -10-3 (19 October 2026) — CF-LEG2-KO-COMMERCIAL-PAPER-01 (issue #487). One
+ * component added, no selection-rule touch: `CommercialPaper` joins the last
+ * `total-debt` candidate (`LongTermDebtAndCapitalLeaseObligations` + current
+ * portion + `ShortTermBorrowings`), as it already is in candidates 1 and 4 —
+ * the entry's own basis says commercial paper is "added where tagged". A
+ * `plus` component never changes which candidate wins (`preferCurrent` reads
+ * primaries only), only the winning candidate's sum. Review
+ * (docs/tag-mapping-version-review.md §11): across the nine captures only KO
+ * moves — 43,558M → 43,808M at 2026-04-03, FY2023–FY2025 history up by its
+ * tagged paper; NUE records CommercialPaper absent at an unchanged value;
+ * MSFT, COST, NVDA, LLY and OKLO resolve byte-identically; NO fact moves
+ * between the §3.8.1 exempt and queued sides.
  */
-export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-1";
+export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-3";
 
 export interface TagRef {
   ns: "us-gaap" | "dei";
@@ -197,12 +220,56 @@ export const TAG_MAP: readonly TagMapEntry[] = [
     // ever reaches. The current half is summed onto it, and where a filer does
     // not tag one (Oklo has no current portion) its absence is RECORDED on the
     // fact rather than read as a zero, per §4.3.
+    //
+    // -10-2 (CF-AR6-BRIDGE-INPUT-RECOVERY-01, issue #468) adds two more.
+    //
+    // Second: DebtCurrent + LongTermDebtNoncurrent. us-gaap:DebtCurrent is the
+    // whole current debt line — current maturities, commercial paper and other
+    // short-term borrowings together — so it takes no further components. It
+    // is the PRIMARY here, not the noncurrent half, so the candidate only ever
+    // resolves for a filer that tags it: led by the noncurrent half it would
+    // resolve for every filer reporting LongTermDebtNoncurrent at all, and
+    // would beat the fourth candidate below with the current portion recorded
+    // absent (Costco's $2.2bn). It sits AHEAD of the combined element on
+    // purpose: Eli Lilly tags the
+    // combined element in its 10-K only, while its quarterly balance sheet
+    // reports these two lines, so the combined figure trails the filer's
+    // latest balance sheet (and its cash) by up to three quarters while still
+    // reading as current by fiscal year. At the 10-K instant the two are the
+    // same quantity — LLY 2025-12-31: 40,868M + 1,635M = 42,503M, exactly the
+    // combined element.
+    //
+    // Last: LongTermDebtAndCapitalLeaseObligations + its current portion +
+    // ShortTermBorrowings, the AR2 golden composition for NUE and KO
+    // (lib/analyzer/golden/{nue,ko}.json), both of which stopped tagging any
+    // debt-only element. These elements INCLUDE capital (finance) lease
+    // obligations by definition, which is why this candidate is ranked last —
+    // a debt-only total wins wherever one is current (docs/lease-once-
+    // measurement.md §6) — and why reaching it never counts the leases once
+    // by itself: that takes a cited issuer disclosure in
+    // FINANCE_LEASES_INSIDE_TOTAL_DEBT below. Without one the separate lease
+    // term stays REQUIRED.
+    //
+    // -10-3 (CF-LEG2-KO-COMMERCIAL-PAPER-01, issue #487) adds CommercialPaper
+    // to that last candidate, in the same place it sits in the first and the
+    // parts candidate: the lease-inclusive elements are long-term debt and
+    // capital leases, noncurrent and current, so commercial paper sits outside
+    // them and, per the basis below, is added where tagged. KO tags it (250M at 2026-04-03,
+    // 1,495M at FY2025); NUE does not at its current instant and records it
+    // absent. NotesAndLoansPayable / OtherShortTermBorrowings stay unmapped.
     candidates: [
       withPlus(usGaap("LongTermDebt"), usGaap("CommercialPaper"), usGaap("ShortTermBorrowings")),
+      withPlus(usGaap("DebtCurrent"), usGaap("LongTermDebtNoncurrent")),
       only(usGaap("DebtLongtermAndShorttermCombinedAmount")),
       withPlus(
         usGaap("LongTermDebtNoncurrent"),
         usGaap("LongTermDebtCurrent"),
+        usGaap("CommercialPaper"),
+        usGaap("ShortTermBorrowings")
+      ),
+      withPlus(
+        usGaap("LongTermDebtAndCapitalLeaseObligations"),
+        usGaap("LongTermDebtAndCapitalLeaseObligationsCurrent"),
         usGaap("CommercialPaper"),
         usGaap("ShortTermBorrowings")
       ),
@@ -509,5 +576,13 @@ export const FINANCE_LEASES_INSIDE_TOTAL_DEBT: Readonly<Record<string, { ticker:
       'Eli Lilly FY2024 Form 10-K, leases note: "Finance leases are included in property and equipment, short-term ' +
       'borrowings and current maturities of long-term debt, and long-term debt in our consolidated balance sheets" ' +
       "(docs/filing-text-evidence-routes.md)",
+  },
+  "0000073309": {
+    ticker: "NUE",
+    source:
+      "Nucor FY2025 Form 10-K (accession 0001193125-26-071575), Note 6 leases, supplemental balance-sheet table: " +
+      'current finance lease liabilities ($24M) classified in "Current portion of long-term debt and finance lease ' +
+      'obligations"; non-current finance lease liabilities ($234M) classified in "Long-term debt and finance lease ' +
+      'obligations due after one year" (docs/evidence/nue-fy2025-finance-lease-classification-capture.md)',
   },
 };

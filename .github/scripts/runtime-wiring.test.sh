@@ -171,4 +171,100 @@ forbid "$OWNER" 'currently-open' "OWNER's fence does not require the source issu
 require "$ROUTER" 'CONTRACT_FETCH_FAILED' 'fire-review and fire-owner-on-terminal emit an empty CONTRACT on a failed source-issue fetch, not the PR-body fallback'
 require "$MERGE" 'CONTRACT_FETCH_FAILED' 'merge-path OWNER fire emits an empty CONTRACT on a failed source-issue fetch, not the PR-body fallback'
 
+# CF-TIMEOUT-ACTIONABLE-01 (issue #401): a lease expiry is a monitoring
+# incident — one typed BLOCKED: ACTIONABLE sent straight to Slack from
+# terminal-watch.sh — never an OWNER reconciliation hop, and never a
+# silent BLOCKED: AI. BUILD's lease is 90 minutes (its job timeout leaves
+# room for it); other leases are unchanged.
+forbid "$ROUTER" 'observe-(build|review)-timeout' 'timeout-only OWNER relay hops removed'
+forbid "$ROUTER" 'terminal-watch-blocked-line' 'observe jobs no longer read a timeout line back to relay it'
+require "$ROUTER" "TERMINAL_LEASE_MINUTES: '90'" 'BUILD terminal lease is 90 minutes'
+[ "$(grep -c "TERMINAL_LEASE_MINUTES: '90'" "$ROUTER")" = 1 ] || fail "$ROUTER: only the BUILD lease is 90 minutes"
+[ "$(grep -c "TERMINAL_LEASE_MINUTES: '25'" "$ROUTER")" = 2 ] || fail "$ROUTER: REVIEW/OWNER leases unchanged at 25 minutes"
+awk '/^  observe-build:/{f=1} f&&/timeout-minutes:/{print $2; exit}' "$ROUTER" | grep -Eq '^(9[5-9]|[1-9][0-9]{2})$' \
+  || fail "$ROUTER: observe-build job timeout must exceed the 90-minute lease"
+# Every live observe step (3 in the router, 1 on the merge path) carries the
+# Slack webhook its actionable timeout is sent through.
+for wf in "$ROUTER" "$MERGE"; do
+  watches=$(grep -c 'run: bash .github/scripts/terminal-watch.sh' "$wf")
+  with_slack=$(awk '
+    /^      - name:/ { slack=0 }
+    /SLACK_WEBHOOK_URL: \$\{\{ secrets.CALVIN_SLACK_WEBHOOK_URL \}\}/ { slack=1 }
+    /run: bash .github\/scripts\/terminal-watch.sh/ { if (slack) n++ }
+    END { print n+0 }' "$wf")
+  [ "$watches" -gt 0 ] && [ "$watches" = "$with_slack" ] || fail "$wf: every terminal-watch step must carry SLACK_WEBHOOK_URL ($with_slack/$watches)"
+done
+[ "$(grep -c 'run: bash .github/scripts/terminal-watch.sh' "$ROUTER")" = 3 ] || fail "$ROUTER: expected 3 live observe jobs"
+# A non-retryable fire-transport failure leaves a human re-drive as the only
+# recovery, so it is actionable rather than a silent BLOCKED: AI.
+forbid "$ROUTER" 'BLOCKED: AI — (BUILD|REVIEW|OWNER) transport failed' 'silent non-retryable transport dead end'
+forbid "$MERGE" 'BLOCKED: AI — OWNER transport failed' 'silent non-retryable merge-path transport dead end'
+forbid .github/scripts/terminal-relay.sh 'BLOCKED: AI — OWNER relay transport failed' 'silent non-retryable OWNER-relay transport dead end'
+require "$ROUTER" 'BUILD transport failed \(\$\{CODE\}, not retryable\).*needs-build-wake' 'non-retryable BUILD transport names its re-drive label'
+require "$ROUTER" 'REVIEW transport failed \(\$\{CODE\}, not retryable\).*needs-cc-rereview' 'non-retryable REVIEW transport names its re-drive label'
+require "$ROUTER" 'OWNER transport failed \(\$\{CODE\}, not retryable\).*needs-owner-wake' 'non-retryable OWNER transport names its re-drive label'
+require "$MERGE" 'OWNER transport failed \(\$\{CODE\}, not retryable\).*needs-owner-wake' 'non-retryable merge-path OWNER transport names its re-drive label'
+
+# CF-CONTINUE-SCRIPT-01 (issue #402): CONTINUE's mechanical handoff is code
+# (owner-continue.sh, behaviorally tested in owner-continue.test.sh); OWNER
+# keeps only the semantic readiness judgment and may not hand-author success.
+require "$OWNER" 'owner-continue\.sh' 'OWNER CONTINUE calls the deterministic helper'
+require "$OWNER" 'Never hand-author a .CONTINUE:' 'OWNER prohibits a hand-authored CONTINUE'
+forbid "$OWNER" 'Read back before claiming success' 'the retired prose apply/read-back protocol'
+
+# CF-LEG2-PREFLIGHT-01 (issue #475): each fire job's live `if:` carries both
+# guards — a `lean-sop` item fires nothing, and only a `calyeap` comment or
+# label sender fires anything. Evaluated behaviourally on the real
+# expressions (workflow-if-eval.js), not only by text match.
+EVAL=.github/scripts/workflow-if-eval.js
+fires() { node "$EVAL" "$1" "$2" "$3"; }
+expect_fire() { [ "$(fires "$1" "$2" "$3")" = "$4" ] || fail "$1 $2 should be $4 for: $5"; }
+for job in fire-build fire-review fire-owner-on-terminal; do
+  block="$(awk -v j="  ${job}:" '$0==j{f=1;next} f&&/^    runs-on:/{exit} f' "$ROUTER")"
+  grep -q "github.event.comment.user.login == 'calyeap'" <<< "$block" || fail "$job missing commenter allow-list"
+  grep -q "github.event.sender.login == 'calyeap'" <<< "$block" || fail "$job missing label-sender allow-list"
+  grep -q "!contains(github.event.issue.labels.\*.name, 'lean-sop')" <<< "$block" || fail "$job missing issue lean-sop guard"
+  grep -q "!contains(github.event.pull_request.labels.\*.name, 'lean-sop')" <<< "$block" || fail "$job missing PR lean-sop guard"
+done
+grep -q "!contains(github.event.pull_request.labels.\*.name, 'lean-sop')" "$MERGE" || fail "$MERGE missing lean-sop guard"
+
+label_issue() { jq -nc --arg n "$1" --arg s "$2" --arg l "${3:-}" '{event_name:"issues",event:{label:{name:$n},sender:{login:$s},issue:{number:1,labels:([$n,$l]|map(select(.!=""))|map({name:.}))}}}'; }
+label_pr() { jq -nc --arg n "$1" --arg s "$2" --arg l "${3:-}" '{event_name:"pull_request",event:{label:{name:$n},sender:{login:$s},pull_request:{number:2,labels:([$n,$l]|map(select(.!=""))|map({name:.}))}}}'; }
+comment() { jq -nc --arg b "$1" --arg u "$2" --arg l "${3:-}" --arg s "${4:-$2}" \
+  '{event_name:"issue_comment",event:{comment:{body:$b,user:{login:$u}},sender:{login:$s},issue:{number:3,labels:([$l]|map(select(.!=""))|map({name:.}))}}}'; }
+
+for case in \
+  "fire-build|$(label_issue needs-build-wake calyeap)|true|calyeap BUILD wake label" \
+  "fire-build|$(label_pr needs-build-wake calyeap)|true|calyeap BUILD wake label on a PR" \
+  "fire-build|$(label_issue needs-build-wake calyeap lean-sop)|false|lean-sop issue" \
+  "fire-build|$(label_pr needs-build-wake calyeap lean-sop)|false|lean-sop PR" \
+  "fire-build|$(label_issue needs-build-wake mallory)|false|non-calyeap label sender" \
+  "fire-build|$(comment 'CORRECT: fix it [REVIEW_ATTEMPT_ID: R1]' calyeap)|true|calyeap CORRECT" \
+  "fire-build|$(comment 'CORRECT: fix it' mallory)|false|non-calyeap CORRECT" \
+  "fire-build|$(comment 'CORRECT: fix it' mallory '' calyeap)|false|comment author, not sender, decides a comment wake" \
+  "fire-build|$(comment 'CORRECT: fix it' calyeap lean-sop)|false|CORRECT on a lean-sop item" \
+  "fire-review|$(label_pr needs-cc-rereview calyeap)|true|calyeap REVIEW wake label" \
+  "fire-review|$(label_pr needs-cc-rereview mallory)|false|non-calyeap REVIEW label" \
+  "fire-review|$(label_pr needs-cc-rereview calyeap lean-sop)|false|REVIEW label on a lean-sop PR" \
+  "fire-review|$(comment 'DONE: https://github.com/o/r/pull/2' calyeap)|true|calyeap DONE" \
+  "fire-review|$(comment 'DONE: https://github.com/o/r/pull/2' mallory)|false|non-calyeap DONE" \
+  "fire-review|$(comment 'DONE: https://github.com/o/r/pull/2' calyeap lean-sop)|false|DONE on a lean-sop item" \
+  "fire-owner-on-terminal|$(label_issue needs-owner-wake calyeap)|true|calyeap OWNER re-drive label" \
+  "fire-owner-on-terminal|$(label_issue needs-owner-wake mallory)|false|non-calyeap OWNER label" \
+  "fire-owner-on-terminal|$(label_issue needs-owner-wake calyeap lean-sop)|false|OWNER label on a lean-sop item" \
+  "fire-owner-on-terminal|$(comment 'BLOCKED: AI — x [BUILD_ATTEMPT_ID: B1]' calyeap)|true|calyeap child terminal" \
+  "fire-owner-on-terminal|$(comment 'CALVIN RULING: A' calyeap)|true|Calvin ruling" \
+  "fire-owner-on-terminal|$(comment 'CALVIN RULING: A' mallory)|false|non-calyeap ruling" \
+  "fire-owner-on-terminal|$(comment 'BLOCKED: AI — x [BUILD_ATTEMPT_ID: B1]' calyeap lean-sop)|false|terminal on a lean-sop item" \
+  "fire-owner-on-terminal|$(comment 'just chatting' calyeap)|false|non-terminal calyeap comment (unchanged)" \
+  "fire-build|$(label_issue needs-owner-wake calyeap)|false|other wake label (unchanged)"; do
+  IFS='|' read -r job ctx want desc <<< "$case"
+  expect_fire "$ROUTER" "$job" "$ctx" "$want" "$desc"
+done
+
+merged() { jq -nc --argjson m "$1" --arg l "${2:-}" '{event_name:"pull_request",event:{action:"closed",sender:{login:"calyeap"},pull_request:{number:4,merged:$m,labels:([$l]|map(select(.!=""))|map({name:.}))}}}'; }
+expect_fire "$MERGE" fire-owner-on-merge "$(merged true)" true "merged PR"
+expect_fire "$MERGE" fire-owner-on-merge "$(merged true lean-sop)" false "merged lean-sop PR"
+expect_fire "$MERGE" fire-owner-on-merge "$(merged false)" false "closed unmerged PR (unchanged)"
+
 echo "runtime-wiring: PASS"

@@ -481,3 +481,255 @@ failed at the documented CI-exempt baseline (`scripts/evidence/
 selfTest.test.ts`, Playwright `chrome-headless-shell`, unrelated to this
 change). Full account, including the two companies' resulting RONIC ladders,
 in `docs/ronic-deltas-composition-reconciliation.md` §7.
+
+---
+
+## 10. TAG_MAPPING_VERSION review — `calboard-secmap-2026-10-1` → `-10-2`
+
+**Status: the bump is made and this is its review.** `CF-AR6-BRIDGE-INPUT-
+RECOVERY-01` (issue #468), the bounded Product repair approved under Calvin's
+ruling on PR #466. No frozen artefact, finance formula, tolerance or date window
+touched.
+
+### 10.1 What the bump contains — two candidates, one selection change
+
+| # | Change | Where |
+|---|---|---|
+| 1 | `total-debt` candidate **`DebtCurrent + LongTermDebtNoncurrent`**, ranked second (after `LongTermDebt + CP + STB`, ahead of the combined element) | `tagMap.ts` |
+| 2 | `total-debt` candidate **`LongTermDebtAndCapitalLeaseObligations + …Current + ShortTermBorrowings`**, ranked last | `tagMap.ts` |
+| 3 | **Selection:** `annualFiscalYears` (→ `latestAnnualFiscalYear`, → what "current" means in `preferCurrent`, `annualSeries`, `instantAnnualSeries`, `quarterlySeries`) no longer counts a period ending after the filing that carries it | `history.ts` |
+
+**Why change 3 was needed, found rather than assumed.** On the trimmed capture,
+change 2 alone moved NUE's `total-debt` to 2026-07-04. On the **live, untrimmed**
+companyfacts document it did not: NUE still resolved to `LongTermDebt` at
+2016-12-31. Nucor's FY2010 10-K (`0001193125-11-049351`, filed 2011-02-28) tags
+`DefinedBenefitPlanUltimateHealthCareCostTrendRate` = 0.045 for **2027-01-01 →
+2027-12-31**, a full-year duration in an annual form. The tag-blind year rule
+counted it, so Nucor's "latest reported annual fiscal year" was **2027**, no
+candidate of any entry could read as current, and `preferCurrent` fell back to
+the stale first candidate — the issue's own diagnosis, for a second reason the
+capture trim had hidden. A period that ends after it was filed is an assumption
+about a year, not a reported one. Fix applied once, in the shared helper, so
+Gate 1 and the comparator keep agreeing on what a filed year is.
+
+**Why candidate 1 leads with `DebtCurrent`.** Led by the noncurrent half (the
+first draft), it resolved for every filer reporting `LongTermDebtNoncurrent` at
+all and beat the existing parts candidate with the current portion recorded
+absent — **Costco dropped from $6.162bn to $3.914bn** in the first measurement.
+With `DebtCurrent` as the primary, it only resolves for a filer that tags the
+whole current-debt line (here LLY and NVDA; NVDA's `LongTermDebt` stays first).
+
+**Why candidate 2 is last and carries no lease conclusion.** These elements
+include capital (finance) lease obligations by definition. A debt-only total
+wins wherever one is current (`docs/lease-once-measurement.md` §6), and reaching
+this candidate never counts the leases once by itself: that takes a cited issuer
+disclosure in `FINANCE_LEASES_INSIDE_TOTAL_DEBT` (DO 3). None was added (§10.4).
+
+### 10.2 Every fact whose resolution changed
+
+Measured by re-resolving **every `TAG_MAP` entry, its history series
+(`annualSeries` / `instantAnnualSeries` / `quarterlySeries`),
+`latestAnnualFiscalYear` and `filedAnnualYearsCount`** under the `origin/master`
+code (`-10-1`) and this branch, on:
+
+- the six fresh captures `lib/analyzer/acquisition/captures/ar6-2026-10-18/`
+  (MSFT, COST, NVDA, NUE, KO, LLY — taken 18 Oct 2026 with
+  `scripts/analyzer/capture-companyfacts.ts --out=ar6-2026-10-18`);
+- the three existing captures (`msft`, `nvda`, `oklo`), left byte-identical;
+- the seven **live, untrimmed** companyfacts documents for the same companies,
+  fetched 18 Oct 2026.
+
+| Company | Fact | Before (`-10-1`) | After (`-10-2`) |
+|---|---|---|---|
+| **NUE** | total-debt | $4.379bn @ 2016-12-31 10-K `LongTermDebt + ShortTermBorrowings` | **$7.099bn @ 2026-07-04 10-Q** `LongTermDebtAndCapitalLeaseObligations (6,389) + …Current (581) + ShortTermBorrowings (129)` |
+| NUE | total-debt history | `LongTermDebt` FY2014–FY2016 | `LongTermDebtAndCapitalLeaseObligations…` FY2018–FY2025; FY2025 = **7,121M = AR2 golden** |
+| NUE (live only) | latestAnnualFiscalYear / filedAnnualYearsCount | 2027 / 20 | **2025 / 19** — the phantom 2027 removed; Gate 1 state unchanged (19 years) |
+| **KO** | total-debt | $42.218bn @ 2024-03-29 10-Q `LongTermDebt + CommercialPaper` | **$43.558bn @ 2026-04-03 10-Q** `LongTermDebtAndCapitalLeaseObligations (39,065) + …Current (4,493)`; STB absent — equals KO's `…IncludingCurrentMaturities` at that date |
+| KO | total-debt history | `LongTermDebt` FY2014–FY2023 | lease-inclusive FY2023–FY2025; FY2025 = **43,941M = AR2 golden** |
+| **LLY** | total-debt | $42.503bn @ 2025-12-31 10-K `DebtLongtermAndShorttermCombinedAmount` | **$54.908bn @ 2026-06-30 10-Q** `DebtCurrent (7,050) + LongTermDebtNoncurrent (47,858)` |
+| LLY | total-debt history | combined element FY2014–FY2025 | `DebtCurrent + LongTermDebtNoncurrent` FY2014–FY2025 — **identical value in all twelve years** |
+
+**MSFT, COST, NVDA and OKLO: zero changes** — every entry, every series, on
+fresh captures, existing captures and live documents alike. Live and captured
+results now agree for all seven companies.
+
+**Each change checked against the filer's own figures, not asserted:**
+
+- **LLY** — at the 10-K instant the new pair foots exactly to LLY's own combined
+  element: 1,635 + 40,868 = **42,503M**, and the two series agree to the dollar
+  for twelve fiscal years. A like-for-like refresh to LLY's latest balance sheet
+  (the one its cash is already read at), not a definitional jump.
+- **NUE** — 6,909 + 90 + 122 = 7,121M at FY2025 is the AR2 golden `nue.json`
+  composition and value exactly.
+- **KO** — 42,119 + 1,822 = 43,941M at FY2025 is the AR2 golden `ko.json` value
+  exactly, and at 2026-04-03 the sum equals KO's own `…IncludingCurrentMaturities`
+  element (43,558M).
+
+### 10.3 The §3.8.1 boundary
+
+`acquire()` run under both versions on all seven captures; `queuedFacts` and
+`exemptFacts` compared as sets:
+
+> Facts moving between exempt and queued: **0**, at every company. Facts that
+> started or stopped being acquired: **0**.
+
+Every changed fact was tag-mapped and exempt before and stays so after. One
+cross-check outcome changed: LLY's `total-debt` footing goes from NOT APPLICABLE
+(a single element) to **PASS** (the two summed lines foot). No other check moved.
+
+### 10.4 What this pass did NOT do, and what it leaves open
+
+- **NUE `FINANCE_LEASES_INSIDE_TOTAL_DEBT` record: added in the correction pass
+  (§10.6).** The first pass added none, because NUE's filing text was unreachable
+  from its session. **KO** still has none: its lease note addresses no finance
+  lease at all (`docs/filing-text-evidence-routes.md` §0), so KO has nothing to
+  cite. KO tags no finance-lease liability and stays INCOMPLETE, `missing
+  REQUIRED input(s): financeLeaseLiabilities`.
+- **KO composition against the previous mapping:** the golden composition
+  excludes KO's `CommercialPaper` / `NotesAndLoansPayable` (1,495M / 1,551M at
+  FY2025), which `LongTermDebt + CommercialPaper` used to add. The candidate
+  follows the golden (DO 2), and STB is recorded absent for KO. Flagged, not
+  re-decided.
+- `treasury-method-dilution` remains untagged for NUE, KO, LLY and NVDA (§5.3).
+  A real run takes it through the §3.8.1 fallback; the proof test states it.
+
+### 10.5 Verification
+
+- `lib/analyzer/acquisition/bridgeInputRecovery.test.ts` (DO 5): eight tests on
+  the six fresh captures. **RED on `origin/master`** code with the same captures:
+  6 failed (version, LLY, NUE ×2, KO; MSFT/COST/NVDA passed, as they must).
+  **GREEN on this branch:** 8/8.
+- `history.test.ts`, "does not count a period that ends after the filing
+  carrying it": the exact live NUE row injected. **RED on master** (`expected
+  2027 to be 2025`), GREEN here.
+
+### 10.6 Correction pass — NUE counted once (same PR, after independent REVIEW)
+
+No `TAG_MAP` candidate or selection change, so `TAG_MAPPING_VERSION` stays
+`-10-2` and §10.2/§10.3 are unchanged. Two changes:
+
+1. **NUE record in `FINANCE_LEASES_INSIDE_TOTAL_DEBT`,** in the LLY entry's form.
+   Citation: Nucor FY2025 Form 10-K, accession `0001193125-26-071575`, Note 6
+   supplemental balance-sheet table. Current finance lease liabilities ($24M) are
+   classified in "Current portion of long-term debt and finance lease
+   obligations", and non-current ($234M) in "Long-term debt and finance lease
+   obligations due after one year".
+   - **Source route.** The caption text is the scoped issuer-source capture
+     `docs/evidence/nue-fy2025-finance-lease-classification-capture.md`, committed
+     on this PR. The session that added the record could not read `www.sec.gov`
+     (CONNECT 403) and did **not** independently re-fetch the captions.
+   - **What it checked on `data.sec.gov`.** `FinanceLeaseLiabilityCurrent` 24M +
+     `…Noncurrent` 234M = `FinanceLeaseLiability` 258M at 2025-12-31, from the same
+     accession. The current line foots: `LongTermDebtCurrent` 66M + 24M =
+     `LongTermDebtAndCapitalLeaseObligationsCurrent` 90M. The non-current caption
+     has no debt-only tag to foot against, so it rests on the cited caption alone.
+   - **Effect.** NUE's bridge adds no separate lease term, so the 10-K-only lease
+     date no longer blocks it. EV and the leverage ratio compute on total debt
+     7,099M and cash 2,692M, both at 2026-07-04. CALVIN RULING A's same-date test
+     is unchanged.
+2. **Invested capital counts the record too** (`companyInputs.ts`,
+   `investedCapitalLeaseSeries`). This is #298's "lease liabilities not already
+   in debt", applied with the same record. Without it, NUE's FY2025 invested
+   capital is 20,936 + 7,121 + **258** − 2,699 = 25,616M; with it, 25,358M.
+   - NUE tags no `OperatingIncomeLoss`, so on the real capture neither ROIC
+     history nor RONIC reaches invested capital. The double count was latent,
+     not live. The test injects a test-only operating-income series to exercise it.
+   - LLY tags no finance-lease liability, so LLY is unchanged. Filers outside the
+     record (MSFT, COST, NVDA, KO, OKLO) still add their lease series exactly as
+     before.
+
+**Verification.** `bridgeInputRecovery.test.ts` is now 9 tests. On the
+pre-correction head it is RED with 2 failures: NUE's record is absent, and NUE's
+FY2025 invested capital is `25616000000`, not `25358000000`. After the correction
+it is GREEN, 9/9.
+
+
+---
+
+## 11. TAG_MAPPING_VERSION review — `calboard-secmap-2026-10-2` → `-10-3`
+
+**Status: the bump is made and this is its review.** `CF-LEG2-KO-COMMERCIAL-
+PAPER-01` (issue #487), released as KAIZEN Leg 2 O6. No frozen artefact, golden
+value, finance formula, finance-lease handling, bridge policy or migration
+touched.
+
+### 11.1 What the bump contains — one component, no selection change
+
+| # | Change | Where |
+|---|---|---|
+| 1 | `us-gaap:CommercialPaper` added as a `plus` component of the last `total-debt` candidate, which is now `LongTermDebtAndCapitalLeaseObligations + …Current + CommercialPaper + ShortTermBorrowings` | `tagMap.ts` |
+
+**Why.** The entry's approved basis already says "commercial paper and other
+short-term borrowings sit outside it and are added where tagged". Candidates 1
+(`LongTermDebt + CP + STB`) and 4 (the noncurrent/current parts) carry
+`CommercialPaper`; the lease-inclusive candidate added at `-10-2` did not. The
+lease-inclusive elements are long-term debt and capital leases, noncurrent
+and current, so commercial paper sits outside them as it sits outside
+`LongTermDebt`. The
+component goes in the same place as in candidate 4, ahead of `ShortTermBorrowings`.
+
+**Why no selection change can follow.** `preferCurrent` and
+`preferCurrentSeries` choose among candidates by their PRIMARY rows only. A
+`plus` component changes the winning candidate's sum and its recorded
+absences, never which candidate wins.
+
+### 11.2 Every fact whose resolution changed
+
+Measured by resolving every `TAG_MAP` entry and its history series
+(`instantAnnualSeries` / `annualSeries`), plus `latestAnnualFiscalYear`,
+`filedAnnualYearsCount`, the full `acquire()` output and the §3.8.2
+cross-check outcomes, under `-10-2` and `-10-3`. The inputs were the six AR6
+captures (`captures/ar6-2026-10-18/`) and the three older captures (`msft`,
+`nvda`, `oklo`). No live data was fetched.
+
+| Company | Fact | Before (`-10-2`) | After (`-10-3`) |
+|---|---|---|---|
+| **KO** | total-debt | 43,558M @ 2026-04-03 10-Q: `LongTermDebtAndCapitalLeaseObligations (39,065) + …Current (4,493)`, STB absent | **43,808M** @ 2026-04-03: the same lines **+ `CommercialPaper (250)`**, STB absent |
+| KO | total-debt history (FY2023 / FY2024 / FY2025) | 37,507 / 43,023 / 43,941M | **41,716 / 44,162 / 45,436M**. Each year adds its 10-K `CommercialPaper` row: 4,209 / 1,139 / 1,495M |
+| KO | cross-check prior period (2025-12-31) | 43,941M | 45,436M |
+| NUE | total-debt | 7,099M @ 2026-07-04, no absent components | **7,099M, unchanged**. `CommercialPaper` is now recorded absent: NUE's last tagged row is 2015-12-31 |
+
+**MSFT, COST, NVDA, LLY and OKLO: zero changes.** That covers every entry,
+every series, every fact and every cross-check outcome, on both capture sets.
+Apart from the version string, the only other output that changed is NUE's
+fact `source` text, which now lists the absent component.
+
+**Checked against the captured rows:**
+
+- KO at 2026-04-03: 39,065 + 4,493 + 250 = **43,808M**.
+- KO at FY2025: 42,119 + 1,822 + 1,495 = **45,436M**. The AR2 golden total
+  (`ko.json`, 45,492M) is `NotesAndLoansPayable` 1,551M (commercial paper
+  1,495M + other short-term borrowings 56M) + 1,822 + 42,119. The 56M gap is
+  KO's non-commercial-paper short-term borrowings, which this pass does not map
+  (§11.4).
+- Cross-check outcomes are identical at every company. KO's `total-debt`
+  footing still PASSes, now with three components.
+
+### 11.3 The §3.8.1 boundary
+
+`acquire()` ran under both versions on all nine captures. Every fact's id,
+`verificationState` and fallback record was compared:
+
+> Facts moving between exempt and queued: **0**, at every company. Facts that
+> started or stopped being acquired: **0**.
+
+### 11.4 What this pass did NOT do
+
+- **`NotesAndLoansPayable` / `OtherShortTermBorrowings` are not mapped.** They
+  account for KO's remaining 82M at 2026-04-03 and 56M at FY2025. Whether those
+  belong in total debt is a debt-concept decision reserved for Calvin by issue #487.
+- KO's EV stays suppressed (`missing REQUIRED input(s): financeLeaseLiabilities`)
+  and its leverage stays `LEVERAGE UNSUPPORTED IN v1`, so no valuation output
+  moves.
+
+### 11.5 Verification
+
+- `bridgeInputRecovery.test.ts`, block `CF-LEG2-KO-COMMERCIAL-PAPER-01`: two
+  tests. **RED on `-10-2`**: `expected { value: 43558000000, … } to deeply
+  equal { value: 43808000000, … }` and `expected 43941000000 to be
+  45436000000`. **GREEN on `-10-3`.**
+- Evaluator change, called out separately: the same file's version pin
+  (`-10-2` → `-10-3`) was re-pinned, along with the KO value (43,558M →
+  43,808M) and the KO and NUE compositions (KO gains `CommercialPaper`; NUE
+  records it absent). The MSFT/COST byte-identical block, the LLY, NVDA and NUE
+  values and the AR2 golden harness were not changed, and they pass.

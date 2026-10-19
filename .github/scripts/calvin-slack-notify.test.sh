@@ -342,6 +342,84 @@ calvin_slack_send \
 [ -f "$DEDUPE_TMP/curl_called" ] && CALLED=1 || CALLED=0
 assert_eq "a genuinely new terminal outcome following a fresh attempt is not suppressed" 1 "$CALLED"
 
+# --- CF-ESCALATION-QUALITY-REPAIR-01 (issue #473): genuine Calvin gates only
+#
+# replay_thread <thread_json> prints one receipt line per comment that
+# would reach Slack — "<id> <header> ping|noping" — by running the real
+# calvin_slack_payload against that comment and the thread history before
+# it, exactly as calvin-slack-alert.yml does on each issue_comment event.
+replay_thread() {
+  local thread="$1" n i id body at payload text ping
+  n="$(jq length <<< "$thread")"
+  for ((i = 0; i < n; i++)); do
+    id="$(jq -r ".[$i].id" <<< "$thread")"
+    body="$(jq -r ".[$i].body" <<< "$thread")"
+    at="$(jq -r ".[$i].created_at" <<< "$thread")"
+    payload="$(calvin_slack_payload "$body" "calyeap/Cal-Finance" "https://x/$id" "$thread" "$at")" || continue
+    text="$(jq -r '.text' <<< "$payload")"
+    case "$text" in *"<!channel>"*) ping=ping ;; *) ping=noping ;; esac
+    echo "$id $(head -n1 <<< "$text" | sed -E 's/ — .*//' | tr ' ' '_') $ping"
+  done
+}
+
+# (a) The real PR #469 Nucor thread (verbatim first lines): proxy CONNECT
+# 403 with cited issuer evidence on the thread. Before this fix it paged
+# `<!channel>` twice (REVIEW's and the post-redrive BUILD's ACTIONABLE).
+# Now: zero pings; only OWNER's own terminals produce one informational
+# STOPPED each (the second follows a label-redrive fresh attempt).
+NUCOR_THREAD="$(cat "${SCRIPT_DIR}/fixtures/pr469-nucor-thread.json")"
+NUCOR_RECEIPTS="$(replay_thread "$NUCOR_THREAD")"
+echo "# Nucor replay receipts:"; sed 's/^/#   /' <<< "$NUCOR_RECEIPTS"
+assert_eq "Nucor replay: no @channel page for the AI-owned source-access blocker" 0 "$(grep -c ' ping$' <<< "$NUCOR_RECEIPTS")"
+assert_eq "Nucor replay: exactly OWNER's two terminals reach Slack, as informational STOPPED" \
+  "6246224733 STOPPED noping
+6247039084 STOPPED noping" "$NUCOR_RECEIPTS"
+
+# (b) Source still unverified in every authorised path: BUILD fails closed
+# as BLOCKED: AI (silent for OWNER to reconcile); OWNER's own stop is one
+# informational STOPPED that carries the worker's line verbatim — the
+# payload never adds or asserts a source.
+UNVERIFIED_THREAD=$(jq -n '[
+  {id: 1, created_at: "2026-10-18T09:00:00Z", body: "BLOCKED: AI — SOURCE_UNAVAILABLE: Nucor Note 6 non-current caption unverified in every authorised path (www.sec.gov CONNECT 403; no issuer capture on the PR); NUE stays INCOMPLETE. [BUILD_ATTEMPT_ID: B1]"},
+  {id: 2, created_at: "2026-10-18T09:01:00Z", body: "BLOCKED: AI — SOURCE_UNAVAILABLE: no approved route verifies the Nucor caption; NUE stays INCOMPLETE, no source recorded. [OWNER_ATTEMPT_ID: O1]"}
+]')
+assert_eq "unverified source: BUILD silent, OWNER one informational STOPPED" "2 STOPPED noping" "$(replay_thread "$UNVERIFIED_THREAD")"
+payload="$(calvin_slack_payload "$(jq -r '.[1].body' <<< "$UNVERIFIED_THREAD")" "o/r" "https://x/2")"
+assert_eq "unverified-source payload is the worker line verbatim, no fabricated source" \
+  "STOPPED — o/r
+BLOCKED: AI — SOURCE_UNAVAILABLE: no approved route verifies the Nucor caption; NUE stays INCOMPLETE, no source recorded.
+Action: none
+https://x/2" "$(jq -r '.text' <<< "$payload")"
+
+# (c) Genuine indispensable credential / security-permission / policy
+# decision: exactly one guided alert per gate, even when BUILD, REVIEW and
+# OWNER each restate it.
+GENUINE_THREAD=$(jq -n '[
+  {id: 1, created_at: "2026-10-18T09:00:00Z", body: "BLOCKED: ACTIONABLE — BUILD transport unavailable (401); refresh CC_BUILD_FIRE_TOKEN. No worker started."},
+  {id: 2, created_at: "2026-10-18T09:01:00Z", body: "BLOCKED: ACTIONABLE — CC_BUILD_FIRE_TOKEN is still rejected; refresh CC_BUILD_FIRE_TOKEN. [OWNER_ATTEMPT_ID: O1]"},
+  {id: 3, created_at: "2026-10-18T09:02:00Z", body: "CALVIN REQUIRED: Allow www.sec.gov egress for cloud BUILD? A: allow it (all workers can fetch filings; wider egress surface). B: keep egress closed and accept auditable GitHub issuer captures (no new egress; capture-review cost). Recommend B. Evidence: https://github.com/calyeap/Cal-Finance/pull/469#issuecomment-6247031466. Action: reply `CALVIN RULING — A` or `CALVIN RULING — B`. [REVIEW_ATTEMPT_ID: R1]"},
+  {id: 4, created_at: "2026-10-18T09:03:00Z", body: "CALVIN REQUIRED: same egress policy decision as above (restated). [OWNER_ATTEMPT_ID: O2]"}
+]')
+assert_eq "genuine gates: one ping per gate, restatements across actors deduped" \
+  "1 ACTIONABLE_BLOCKED ping
+3 CALVIN_REQUIRED ping" "$(replay_thread "$GENUINE_THREAD")"
+payload="$(calvin_slack_payload "$(jq -r '.[2].body' <<< "$GENUINE_THREAD")" "o/r" "https://x/3")"
+case "$(jq -r '.text' <<< "$payload")" in
+  *"A: allow it"*"B: keep egress closed"*"Recommend B"*"pull/469"*"CALVIN RULING — B"*"<!channel>"*)
+    echo "ok - a genuine CALVIN REQUIRED decision pack reaches Slack intact with options, recommendation, evidence and exact action" ;;
+  *) echo "not ok - CALVIN REQUIRED decision pack was not carried intact"; FAILURES=$((FAILURES + 1)) ;;
+esac
+
+# (d) The real issue #467 NVDA Option B thread (verbatim first lines): one
+# CALVIN REQUIRED page, OWNER's restatement deduped, one FINISHED notice.
+# A later worker terminal that simply applies the settled Option B ruling
+# raises zero further gates.
+NVDA_THREAD="$(jq '. + [{id: 99, created_at: "2026-10-18T09:00:00Z", body: "BLOCKED: AI — NVDA stays INCOMPLETE under Calvin RULING B (#467); no finance-lease evidence, nothing to re-ask. [REVIEW_ATTEMPT_ID: R9]"}]' "${SCRIPT_DIR}/fixtures/issue467-nvda-option-b-thread.json")"
+NVDA_RECEIPTS="$(replay_thread "$NVDA_THREAD")"
+echo "# NVDA Option B replay receipts:"; sed 's/^/#   /' <<< "$NVDA_RECEIPTS"
+assert_eq "NVDA Option B: exactly one CALVIN REQUIRED page across the whole thread" 1 "$(grep -c 'CALVIN_REQUIRED ping$' <<< "$NVDA_RECEIPTS")"
+assert_eq "NVDA Option B: post-ruling worker terminal raises zero repeated gates" 0 "$(grep -c '^99 ' <<< "$NVDA_RECEIPTS")"
+
 rm -rf "$DEDUPE_TMP"
 trap - EXIT
 unset -f curl

@@ -22,6 +22,14 @@ config({ path: ".env.local" });
 // reconstructions of a mock's displayed outputs, and these are the filings.
 //
 //   npx tsx scripts/analyzer/capture-companyfacts.ts MSFT OKLO
+//
+// A ticker may be given as TICKER:CIK (e.g. NUE:0000073309) to skip the ticker
+// directory, which is served from www.sec.gov rather than data.sec.gov and is
+// unreachable from some sessions. Everything captured still comes from the
+// same two data.sec.gov endpoints.
+//
+// --out=<dir> writes under lib/analyzer/acquisition/captures/<dir> instead, so
+// a dated evidence set can sit beside the captures other tests already pin.
 // ---------------------------------------------------------------------------
 
 const EXTRA_TAGS: { ns: "us-gaap" | "dei"; tag: string }[] = [
@@ -100,18 +108,21 @@ function trim(doc: CompanyFactsDocument, keep: Set<string>, sinceYear: number): 
 }
 
 async function main(): Promise<void> {
-  const tickers = process.argv.slice(2);
+  const outArg = process.argv.find((a) => a.startsWith("--out="));
+  const tickers = process.argv.slice(2).filter((a) => !a.startsWith("--out="));
   if (tickers.length === 0) {
     throw new Error("Usage: tsx scripts/analyzer/capture-companyfacts.ts MSFT OKLO");
   }
 
   const client = secClientFromEnv();
-  const directory = await client.companyTickers();
-  const outDir = join("lib", "analyzer", "acquisition", "captures");
+  const needsDirectory = tickers.some((t) => !t.includes(":"));
+  const directory = needsDirectory ? await client.companyTickers() : null;
+  const outDir = join("lib", "analyzer", "acquisition", "captures", ...(outArg ? [outArg.slice("--out=".length)] : []));
   mkdirSync(outDir, { recursive: true });
 
-  for (const ticker of tickers) {
-    const found = cikForTicker(directory, ticker);
+  for (const arg of tickers) {
+    const [ticker, givenCik] = arg.split(":");
+    const found = givenCik !== undefined ? { cik: givenCik.padStart(10, "0") } : cikForTicker(directory!, ticker);
     if (found === null) throw new Error(`${ticker} is not in the SEC ticker directory`);
 
     const doc = await client.companyFacts(found.cik);
