@@ -1,6 +1,6 @@
 # KAIZEN Proof Leg 2: cloud handoff
 
-> **Update 19 Oct 2026 (cloud session):** O4 and O5 are done and scored (scorecard rows 4–5; `leg2/cloud-ledger.md`). The provisional comparison is in `leg2/PROVISIONAL-O1-O5.md`. O6 waits on Calvin's release; the proposal is `leg2/contracts/o6-proposed.md`.
+> **Leg 2 complete (19 Oct 2026):** all six outcomes are scored (`leg2/scorecard.tsv`). **Final result: `leg2/FINAL-RESULT.md`. The lean SOP is not proven (conditions 3 and 4 fail), so KEEP the existing workflow.** The cloud operator log is `leg2/cloud-ledger.md`.
 
 **Branch `kaizen/leg2-handoff`.** It is evidence only and must **never be merged**. It holds the full scorecard, every review, the contracts and the briefs.
 
@@ -19,7 +19,7 @@
 | 3 | CF-LEG2-DECIDED-FACT-GATING-01 | B | #481 / #482 | 1b8d9bb → a8058b7 | Merged (by Calvin); blind audit: see the scorecard row |
 | 4 | CF-LEG2-PINNED-REOPEN-01 | A | #483 / #484 | ad9da6b → 2d7f38e | Merged (by the REVIEW routine); blind audit ACCEPT |
 | 5 | CF-LEG2-KO-GOLDEN-DEBT-01 | A | #485 / #486 | e8016aa → c2db01a | Merged (by the REVIEW routine); blind audit CORRECT: 1 escaped (contested; see PROVISIONAL-O1-O5.md §4) |
-| 6 | Next roadmap outcome Calvin releases | B | — | — | **CALVIN REQUIRED: release.** Proposed: `CF-LEG2-KO-COMMERCIAL-PAPER-01` (`leg2/contracts/o6-proposed.md`) |
+| 6 | CF-LEG2-KO-COMMERCIAL-PAPER-01 (released by Calvin, 19 Oct) | B | #487 / #488 | ad11789 → 62c22df | Merged (by Calvin, exact reviewed head); reviewer ACCEPT; blind audit ACCEPT |
 
 The authoritative per-outcome record is `leg2/scorecard.tsv`. Append one row per outcome using the same columns.
 

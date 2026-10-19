@@ -229,3 +229,23 @@ The pre-registered rule is already decided without O6:
     "Calvin merges it" → "The PR is merged."), so the audit is arm-blind as the plan requires. No substantive clause
     changed. Cost if wrong: none to the findings; only blindness is affected.
   - The diff names the outcome ID and "KAIZEN Leg 2 O6" (as O1–O5's contracts named KAIZEN Leg 2), not the arm.
+- ~05:12Z O6 blind audit verdict: **`ACCEPT`**, no material finding (`reviews/audit-o6-REVIEW.md`). Audit usage: 149,059 tokens,
+  39 tool uses, 8.4 min.
+  - Operator reproduction: base `tagMap.ts` makes `bridgeInputRecovery.test.ts` fail 5 / pass 6
+    (KO 43,558M vs 43,808M; FY2025 43,941M vs 45,436M); at head it passes 11/11.
+  - Nits (not counted): KO's `roicHistory` invested capital moves without an output change; the latent CP+STB
+    double-count pattern is reached by no capture.
+- Scorecard row 6 appended: 117.2 min; 1 touch (merge); 0 control comments; 1 cycle / 0 CORRECTs; 306,693 tokens;
+  0 escaped; 0 safety incidents.
+
+## Final (19 Oct)
+- Four conditions over six outcomes:
+  1. Escaped defects: B 0 vs A 1 (contested). ✅
+  2. B safety incidents: 0. ✅
+  3. Calvin touches: B 1.0 vs A 0.0 per outcome. ❌
+  4. Median elapsed: B 38.5 vs A 14.3 min (2.69×; limit 1.5×). ❌
+- **Lean SOP not proven, so KEEP the existing workflow** (`FINAL-RESULT.md`).
+- Decisive variable: who merges (arm A's REVIEW merges itself; Calvin merges arm B). Sensitivity only: dispatch →
+  ACCEPT medians are B 17.5 vs A 14.2 min (1.23×).
+- Nothing left running: 0 Actions runs, no wake labels; no open `lean-sop` items (#487 closed, #488 merged).
+
