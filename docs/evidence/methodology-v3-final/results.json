@@ -1,0 +1,551 @@
+{
+  "yearOneFunding": [
+    {
+      "ticker": "MSFT",
+      "rule": "Drafted constant",
+      "g1": "0.12",
+      "nopat0": "122637230000",
+      "required": "81758153333.333333333",
+      "available": {
+        "fy": 2026,
+        "capexLessDa": "81648000000",
+        "dNwc": "4895000000",
+        "acquisitions": "912000000",
+        "total": "87455000000"
+      },
+      "shortfall": "0",
+      "perShareCharge": "0",
+      "unfunded": {
+        "lower": "342.30161568940763543",
+        "rate": "316.17051257081894809",
+        "upper": "293.1616279128329199"
+      },
+      "funded": {
+        "lower": "342.30161568940763543",
+        "rate": "316.17051257081894809",
+        "upper": "293.1616279128329199"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "rule": "G1 ramp",
+      "g1": "0.1778868679984665843",
+      "nopat0": "122637230000",
+      "required": "121197515248.37547859",
+      "available": {
+        "fy": 2026,
+        "capexLessDa": "81648000000",
+        "dNwc": "4895000000",
+        "acquisitions": "912000000",
+        "total": "87455000000"
+      },
+      "shortfall": "33742515248.37547859",
+      "perShareCharge": "4.6219112361945477509",
+      "unfunded": {
+        "lower": "378.03074620990700319",
+        "rate": "348.40989306904921634",
+        "upper": "322.3327838422476188"
+      },
+      "funded": {
+        "lower": "373.40883497371245544",
+        "rate": "343.78798183285466859",
+        "upper": "317.71087260605307105"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "HOLD"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "CLOSE CALL",
+        "zones": [
+          "HOLD",
+          "SELL"
+        ]
+      },
+      "closeCalls": 1
+    },
+    {
+      "ticker": "COST",
+      "rule": "Drafted constant",
+      "g1": "0.08",
+      "nopat0": "9231150000",
+      "required": "2109977142.8571428571",
+      "available": {
+        "fy": 2026,
+        "capexLessDa": "3761000000",
+        "dNwc": "-2320000000",
+        "acquisitions": "0",
+        "total": "1441000000"
+      },
+      "shortfall": "668977142.8571428571",
+      "perShareCharge": "1.508052507640430048",
+      "unfunded": {
+        "lower": "447.13098845059881739",
+        "rate": "418.9749666695888713",
+        "upper": "394.08531826477116662"
+      },
+      "funded": {
+        "lower": "445.62293594295838734",
+        "rate": "417.46691416194844125",
+        "upper": "392.57726575713073657"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "rule": "G1 ramp",
+      "g1": "0.1014369538757788799",
+      "nopat0": "9231150000",
+      "required": "2675370676.4868463063",
+      "available": {
+        "fy": 2026,
+        "capexLessDa": "3761000000",
+        "dNwc": "-2320000000",
+        "acquisitions": "0",
+        "total": "1441000000"
+      },
+      "shortfall": "1234370676.4868463063",
+      "perShareCharge": "2.7825999944983424963",
+      "unfunded": {
+        "lower": "465.19235981685072986",
+        "rate": "435.62803849662076406",
+        "upper": "409.49485837536376954"
+      },
+      "funded": {
+        "lower": "462.40975982235238736",
+        "rate": "432.84543850212242156",
+        "upper": "406.71225838086542704"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "rule": "Drafted constant",
+      "g1": "0.18",
+      "nopat0": "156087410000",
+      "required": "70239334500",
+      "available": {
+        "fy": 2026,
+        "capexLessDa": "3199000000",
+        "dNwc": "15949000000",
+        "acquisitions": "14535000000",
+        "total": "33683000000"
+      },
+      "shortfall": "36556334500",
+      "perShareCharge": "1.4871179928402896428",
+      "unfunded": {
+        "lower": "129.51641998539131694",
+        "rate": "121.23940119243460362",
+        "upper": "113.78484423536967443"
+      },
+      "funded": {
+        "lower": "128.0293019925510273",
+        "rate": "119.75228319959431398",
+        "upper": "112.29772624252938479"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "rule": "G1 ramp",
+      "g1": "0.8337529809100703313",
+      "nopat0": "156087410000",
+      "required": "325345858425.08080233",
+      "available": {
+        "fy": 2026,
+        "capexLessDa": "3199000000",
+        "dNwc": "15949000000",
+        "acquisitions": "14535000000",
+        "total": "33683000000"
+      },
+      "shortfall": "291662858425.08080233",
+      "perShareCharge": "11.864895387888731687",
+      "unfunded": {
+        "lower": "378.11902137907164812",
+        "rate": "351.85351937201060194",
+        "upper": "328.21598598110553004"
+      },
+      "funded": {
+        "lower": "366.25412599118291643",
+        "rate": "339.98862398412187025",
+        "upper": "316.35109059321679835"
+      },
+      "grid": {
+        "lower": {
+          "Low": "BUY",
+          "Medium": "BUY",
+          "High": "BUY"
+        },
+        "rate": {
+          "Low": "BUY",
+          "Medium": "BUY",
+          "High": "BUY"
+        },
+        "upper": {
+          "Low": "BUY",
+          "Medium": "BUY",
+          "High": "BUY"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "BUY"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "rule": "Drafted constant",
+      "g1": "0.04",
+      "nopat0": "3259540000.0000000001",
+      "required": "1185287272.7272727273",
+      "available": {
+        "fy": 2025,
+        "capexLessDa": "2196000000",
+        "dNwc": "636000000",
+        "acquisitions": "2000000",
+        "total": "2834000000"
+      },
+      "shortfall": "0",
+      "perShareCharge": "0",
+      "unfunded": {
+        "lower": "104.68635091059487883",
+        "rate": "98.123846983098165442",
+        "upper": "92.166829078491056013"
+      },
+      "funded": {
+        "lower": "104.68635091059487883",
+        "rate": "98.123846983098165442",
+        "upper": "92.166829078491056013"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "rule": "G1 ramp",
+      "g1": "0.1718821008894371226",
+      "nopat0": "3259540000.0000000001",
+      "required": "5093241664.8468716238",
+      "available": {
+        "fy": 2025,
+        "capexLessDa": "2196000000",
+        "dNwc": "636000000",
+        "acquisitions": "2000000",
+        "total": "2834000000"
+      },
+      "shortfall": "2259241664.8468716238",
+      "perShareCharge": "9.9580603116169739756",
+      "unfunded": {
+        "lower": "122.45249093978612686",
+        "rate": "113.67684159386840679",
+        "upper": "105.71969328170913276"
+      },
+      "funded": {
+        "lower": "112.49443062816915288",
+        "rate": "103.71878128225143281",
+        "upper": "95.761632970092158784"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "rule": "Drafted constant",
+      "g1": "0.15",
+      "nopat0": "26570070000",
+      "required": "24909440625",
+      "available": {
+        "fy": 2025,
+        "capexLessDa": "5844000000",
+        "dNwc": "8093000000",
+        "acquisitions": "661000000",
+        "total": "14598000000"
+      },
+      "shortfall": "10311440625",
+      "perShareCharge": "10.845350323797757675",
+      "unfunded": {
+        "lower": "342.87311842196666376",
+        "rate": "311.27884345302012087",
+        "upper": "283.42559649819289088"
+      },
+      "funded": {
+        "lower": "332.02776809816890609",
+        "rate": "300.4334931292223632",
+        "upper": "272.58024617439513321"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "rule": "G1 ramp",
+      "g1": "0.4957979090936401598",
+      "nopat0": "26570070000",
+      "required": "82333657190.447847506",
+      "available": {
+        "fy": 2025,
+        "capexLessDa": "5844000000",
+        "dNwc": "8093000000",
+        "acquisitions": "661000000",
+        "total": "14598000000"
+      },
+      "shortfall": "67735657190.447847506",
+      "perShareCharge": "71.242899839039462622",
+      "unfunded": {
+        "lower": "619.3081539387546545",
+        "rate": "557.4917871086531919",
+        "upper": "503.04536972336863338"
+      },
+      "funded": {
+        "lower": "548.06525409971519188",
+        "rate": "486.24888726961372928",
+        "upper": "431.80246988432917076"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    }
+  ],
+  "morningstar": {
+    "average": {
+      "inputs": "161.67134790019386209",
+      "structure": "46.27471131615106964",
+      "rate": "52.19996571566890185"
+    },
+    "values": {
+      "B1": "576.31653750283278167",
+      "B1@9": "524.11657178716387982",
+      "B2": "303.5627490281386781",
+      "B3": "418.95938561218147055",
+      "OURS": "316.17051257081894809"
+    },
+    "split": {
+      "Inputs (our structure): B3 − ours": "102.78887304136252246",
+      "Structure (Morningstar inputs): B1@9 − B3": "105.15718617498240927",
+      "Rate: B1 − B1@9": "52.19996571566890185"
+    },
+    "alternativeSplit": {
+      "Structure (our inputs): B2 − ours": "-12.60776354268026999",
+      "Inputs (Morningstar structure): B1@9 − B2": "220.55382275902520172",
+      "Rate: B1 − B1@9": "52.19996571566890185"
+    },
+    "ourStage2G": "0.042",
+    "ourStage2R": "0.135"
+  },
+  "plateauBull": [
+    {
+      "ticker": "MSFT",
+      "plateau": "0.09",
+      "currentBull": "456.18394229181531138",
+      "opt1Bull": "447.54224523987122972",
+      "plateauBull": "487.00324468446933495",
+      "base": "316.17051257081894809",
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      }
+    },
+    {
+      "ticker": "COST",
+      "plateau": "0.09",
+      "currentBull": "559.4112344807394631",
+      "opt1Bull": "564.86433001976756228",
+      "plateauBull": "678.22804283157721215",
+      "base": "418.9749666695888713",
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      }
+    },
+    {
+      "ticker": "NVDA†",
+      "plateau": "0.09",
+      "currentBull": "263.71851852300190009",
+      "opt1Bull": "274.45730355951033751",
+      "plateauBull": "265.73369065630653665",
+      "base": "121.23940119243460362",
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      }
+    }
+  ]
+}

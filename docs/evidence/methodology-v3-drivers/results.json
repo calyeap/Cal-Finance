@@ -53,6 +53,13 @@
       "to": 2026,
       "v": "0.18530607930579743701"
     },
+    "lastFyReinvestment": {
+      "fy": 2026,
+      "capexLessDa": "81648000000",
+      "dNwc": "4895000000",
+      "acquisitions": "912000000",
+      "total": "87455000000"
+    },
     "operatingIncomeConstruction": null,
     "unclassifiedWorkingCapitalTags": [],
     "goldenTax": {
@@ -117,6 +124,13 @@
       "from": 2024,
       "to": 2026,
       "v": "0.24740162760218232802"
+    },
+    "lastFyReinvestment": {
+      "fy": 2026,
+      "capexLessDa": "3761000000",
+      "dNwc": "-2320000000",
+      "acquisitions": "0",
+      "total": "1441000000"
     },
     "operatingIncomeConstruction": null,
     "unclassifiedWorkingCapitalTags": [
@@ -185,6 +199,13 @@
       "to": 2026,
       "v": "0.14110237799563429929"
     },
+    "lastFyReinvestment": {
+      "fy": 2026,
+      "capexLessDa": "3199000000",
+      "dNwc": "15949000000",
+      "acquisitions": "14535000000",
+      "total": "33683000000"
+    },
     "operatingIncomeConstruction": null,
     "unclassifiedWorkingCapitalTags": [],
     "goldenTax": {
@@ -250,6 +271,13 @@
       "to": 2025,
       "v": "0.21059354509069232734"
     },
+    "lastFyReinvestment": {
+      "fy": 2025,
+      "capexLessDa": "2196000000",
+      "dNwc": "636000000",
+      "acquisitions": "2000000",
+      "total": "2834000000"
+    },
     "operatingIncomeConstruction": "pre-tax income + interest expense − interest income − equity-method earnings",
     "unclassifiedWorkingCapitalTags": [],
     "goldenTax": {
@@ -314,6 +342,13 @@
       "from": 2023,
       "to": 2025,
       "v": "0.188924719226064717"
+    },
+    "lastFyReinvestment": {
+      "fy": 2025,
+      "capexLessDa": "5844000000",
+      "dNwc": "8093000000",
+      "acquisitions": "661000000",
+      "total": "14598000000"
     },
     "operatingIncomeConstruction": "pre-tax income − non-operating income (expense)",
     "unclassifiedWorkingCapitalTags": [

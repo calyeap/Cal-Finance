@@ -28,40 +28,40 @@ import type { CompanyFactsDocument } from "../../lib/analyzer/acquisition/secCli
 // Run: npx tsx scripts/analyzer/calibration-v3-drivers.ts   (free, deterministic)
 // ---------------------------------------------------------------------------
 
-type MoatClass = "none" | "narrow" | "wide";
-type Scenario = "bear" | "base" | "bull";
-interface Row { G: number; R: number; S: Decimal }
-const row = (G: number, R: number, Spp: number): Row => ({ G, R, S: new Decimal(Spp).div(100) });
-const DESIGNS: { name: string; rows: Record<MoatClass, Row> }[] = [
+export type MoatClass = "none" | "narrow" | "wide";
+export type Scenario = "bear" | "base" | "bull";
+export interface Row { G: number; R: number; S: Decimal }
+export const row = (G: number, R: number, Spp: number): Row => ({ G, R, S: new Decimal(Spp).div(100) });
+export const DESIGNS: { name: string; rows: Record<MoatClass, Row> }[] = [
   { name: "CURRENT", rows: { none: row(10, 10, 0), narrow: row(10, 10, 1), wide: row(10, 10, 3) } },
   { name: "OPT1", rows: { none: row(10, 10, 0), narrow: row(10, 15, 0), wide: row(10, 20, 0) } },
 ];
 
-const EV3 = path.join("docs", "evidence", "methodology-v3-calibration");
-const OUT = path.join("docs", "evidence", "methodology-v3-drivers");
-const CAPTURES = path.join("lib", "analyzer", "acquisition", "captures", "ar6-2026-10-19");
-const RUNS: { ticker: string; label: string; file: string }[] = [
+export const EV3 = path.join("docs", "evidence", "methodology-v3-calibration");
+export const OUT = path.join("docs", "evidence", "methodology-v3-drivers");
+export const CAPTURES = path.join("lib", "analyzer", "acquisition", "captures", "ar6-2026-10-19");
+export const RUNS: { ticker: string; label: string; file: string }[] = [
   { ticker: "MSFT", label: "MSFT", file: path.join("docs", "evidence", "ar7-prototype", "msft-run.json") },
   { ticker: "COST", label: "COST", file: path.join(EV3, "cost-run.json") },
   { ticker: "NVDA", label: "NVDA†", file: path.join(EV3, "nvda-run-supplement.json") },
   { ticker: "NUE", label: "NUE†", file: path.join(EV3, "nue-run-supplement.json") },
   { ticker: "LLY", label: "LLY†", file: path.join(EV3, "lly-run-supplement.json") },
 ];
-const D = (v: unknown) => new Decimal(String(v));
-const TG = POLICY.terminalGrowth;
-const ONE = new Decimal(1);
+export const D = (v: unknown) => new Decimal(String(v));
+export const TG = POLICY.terminalGrowth;
+export const ONE = new Decimal(1);
 
 // --- engine ------------------------------------------------------------------
 
-function fade(t: number, v5: Decimal, target: Decimal, Y: number): Decimal {
+export function fade(t: number, v5: Decimal, target: Decimal, Y: number): Decimal {
   if (Y <= 5) return t < Y ? v5 : target;
   if (t <= 5) return v5;
   if (t <= Y) return v5.minus(v5.minus(target).mul(t - 5).div(Y - 5));
   return target;
 }
 
-interface Drivers { g: Decimal[]; m: Decimal[]; ronic: Decimal; shares: Decimal } // g, m: years 1–5
-interface Company {
+export interface Drivers { g: Decimal[]; m: Decimal[]; ronic: Decimal; shares: Decimal } // g, m: years 1–5
+export interface Company {
   ticker: string;
   label: string;
   price: Decimal;
@@ -73,9 +73,9 @@ interface Company {
   moat: MoatClass;
   drivers: Record<Scenario, Drivers>;
 }
-const flat = (v: Decimal) => [v, v, v, v, v];
+export const flat = (v: Decimal) => [v, v, v, v, v];
 
-function valueEv(c: Company, d: Drivers, tax: Decimal, rate: Decimal, r: Row) {
+export function valueEv(c: Company, d: Drivers, tax: Decimal, rate: Decimal, r: Row) {
   const N = Math.max(r.G, r.R);
   const terminalReturn = rate.plus(r.S);
   const after = ONE.minus(tax);
@@ -95,13 +95,13 @@ function valueEv(c: Company, d: Drivers, tax: Decimal, rate: Decimal, r: Row) {
   return { ev: pv.plus(tvPv), tvPv };
 }
 
-function scenarioRow(design: (typeof DESIGNS)[number], cls: MoatClass, s: Scenario): Row {
+export function scenarioRow(design: (typeof DESIGNS)[number], cls: MoatClass, s: Scenario): Row {
   if (s === "bear") return { ...design.rows.none, S: new Decimal(0) };
   const r = design.rows[cls];
   return s === "bull" ? { ...r, S: r.S.plus(POLICY.bullMoatCreditUplift) } : r;
 }
 
-function value(c: Company, drivers: Record<Scenario, Drivers>, tax: Decimal, design: (typeof DESIGNS)[number]) {
+export function value(c: Company, drivers: Record<Scenario, Drivers>, tax: Decimal, design: (typeof DESIGNS)[number]) {
   const at = (s: Scenario, rate = c.rate) => {
     const v = valueEv(c, drivers[s], tax, rate, scenarioRow(design, c.moat, s));
     return { ps: v.ev.minus(c.bridge).div(drivers[s].shares), share: v.tvPv.div(v.ev) };
@@ -156,7 +156,7 @@ type Dated = Record<string, { val: number; accn: string; tag?: string }>;
 const WC_ASSET = ["AccountsReceivable", "AccountsAndOtherReceivables", "Inventories", "OtherCurrentAssets", "PrepaidDeferredExpenseAndOtherAssets", "OtherOperatingAssets", "OtherNoncurrentAssets", "OtherOperatingCapitalNet"];
 const WC_LIABILITY = ["AccountsPayable", "AccountsPayableAndAccruedLiabilities", "AccruedLiabilitiesAndOtherOperatingLiabilities", "AccruedIncomeTaxesPayable", "ContractWithCustomerLiability", "OtherCurrentLiabilities", "OtherNoncurrentLiabilities", "EmployeeRelatedLiabilities"];
 
-function supplement(ticker: string) {
+export function supplement(ticker: string) {
   const s = JSON.parse(readFileSync(path.join(SEC, `${ticker.toLowerCase()}-supplementary-facts.json`), "utf8"));
   const a = s.annual as Record<string, Dated>;
   const byFy = (m: Dated | undefined) => new Map(Object.entries(m ?? {}).map(([end, v]) => [Number(end.slice(0, 4)), D(v.val)]));
@@ -216,9 +216,9 @@ function supplement(ticker: string) {
   const capex = byFy(a.capex);
   return { capex, capexTag: Object.values(a.capex ?? {})[0]?.tag ?? null, pretax, tax, constructedOi, construction, ttmOi, dNwc, unclassified, acquisitions, acqBasis, ltdNoncurrent, source: s.source as string, fetchedAt: s.fetchedAt as string };
 }
-type Supplement = ReturnType<typeof supplement>;
+export type Supplement = ReturnType<typeof supplement>;
 
-function filedData(ticker: string, tax: Decimal, sup: Supplement) {
+export function filedData(ticker: string, tax: Decimal, sup: Supplement) {
   const doc = JSON.parse(readFileSync(path.join(CAPTURES, `${ticker.toLowerCase()}-companyfacts.json`), "utf8")) as CompanyFactsDocument;
   const { measures } = historyFrom(doc);
   // Fill operating income from the supplement where the capture has none (NUE, LLY), and correct LLY's invested
@@ -292,6 +292,15 @@ function filedData(ticker: string, tax: Decimal, sup: Supplement) {
         ? null
         : { from: last3[0].fiscalYear, to: last3[2].fiscalYear, v: fullReinvest3, capexLessDa: capexLessDa!.div(nopat3), dNwc: dNwc3!.div(nopat3), acquisitions: acq3!.div(nopat3), acqBasis: sup.acqBasis },
     tax3,
+    lastFyReinvestment: (() => {
+      const y = last3.at(-1);
+      if (y === undefined) return null;
+      const dNwc = sup.dNwc.get(y.fiscalYear) ?? null;
+      const acq = sup.acquisitions.get(y.fiscalYear) ?? null;
+      if (dNwc === null || acq === null) return null;
+      const capexLessDa = y.capex!.minus(y.depreciationAndAmortisation!);
+      return { fy: y.fiscalYear, capexLessDa, dNwc, acquisitions: acq, total: capexLessDa.plus(dNwc).plus(acq) };
+    })(),
     operatingIncomeConstruction: sup.construction,
     unclassifiedWorkingCapitalTags: sup.unclassified,
   };
@@ -309,7 +318,7 @@ function goldenTax(ticker: string): { rate: Decimal; fy: number; accession: stri
 // --- loading -------------------------------------------------------------------
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-function load(entry: (typeof RUNS)[number]): Company {
+export function load(entry: (typeof RUNS)[number]): Company {
   const run = JSON.parse(readFileSync(entry.file, "utf8"));
   const content = run.sheet.content;
   const result = run.result;
@@ -362,9 +371,9 @@ function solve(f: (x: Decimal) => Decimal, target: Decimal, band: Band): string 
 
 // --- report --------------------------------------------------------------------
 
-const pct = (v: Decimal | null | undefined, dp = 1) => (v === null || v === undefined ? "n/a" : `${v.mul(100).toFixed(dp)}%`);
-const money = (v: Decimal) => `$${v.toFixed(0)}`;
-const grid = (chk: VerdictCheck | null) => (chk === null ? "—" : CHECK_RATES.map((r) => UNCERTAINTY_LEVELS.map((u) => chk.grid[r][u][0]).join("")).join(" / "));
+export const pct = (v: Decimal | null | undefined, dp = 1) => (v === null || v === undefined ? "n/a" : `${v.mul(100).toFixed(dp)}%`);
+export const money = (v: Decimal) => `$${v.toFixed(0)}`;
+export const grid = (chk: VerdictCheck | null) => (chk === null ? "—" : CHECK_RATES.map((r) => UNCERTAINTY_LEVELS.map((u) => chk.grid[r][u][0]).join("")).join(" / "));
 
 function main(): void {
   const lines: string[] = [];
@@ -558,4 +567,5 @@ function main(): void {
   console.log(lines.join("\n"));
 }
 
-main();
+// Run only when executed directly; calibration-v3-final.ts imports the engine.
+if (process.argv[1]?.endsWith("calibration-v3-drivers.ts")) main();
