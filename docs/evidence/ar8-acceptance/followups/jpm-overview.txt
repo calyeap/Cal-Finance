@@ -44,7 +44,7 @@ The independent challenger has not run for this analysis, so no argument is show
 Challenger findings — Risks & Thesis
 Top risks
 The draft's own Bear case (AI draft, every driver cited):
-this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it
+this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it
 All three cases — Risks & Thesis
 What would change it
 No computed change trigger available yet.

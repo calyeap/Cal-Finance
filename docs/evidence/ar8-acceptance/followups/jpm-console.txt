@@ -1,5 +1,5 @@
 ### JPM — FAIL (complete, or explained in plain English)
-Run `c02e4c25-d9b9-4636-a10d-6208de08ff96`
+Run `f5d11dc0-e77b-4e4d-b60f-289368794943`
 
 | # | Section | Status | What the reader sees / why |
 |---|---|---|---|
@@ -18,14 +18,13 @@ Run `c02e4c25-d9b9-4636-a10d-6208de08ff96`
 - #2 30-second view / bottom line: "What matters most" is missing — the AI layer did not complete (NOT CONFIGURED: No model credentials are configured, so the interpretation and challenger calls did not run. Every computed value on this page is unaffected.) | Bottom line: No valuation verdict for this company yet — this version of the model does not value asset-based businesses such as banks and insurers. [engine: no price-vs-range position for this run]
 - #6 Why own it: missing — the AI layer did not complete (NOT CONFIGURED: No model credentials are configured, so the interpretation and challenger calls did not run. Every computed value on this page is unaffected.)
 - #7 Why be cautious / biggest risks: missing "Why be cautious" and "Biggest risk" — the AI layer did not complete (NOT CONFIGURED: No model credentials are configured, so the interpretation and challenger calls did not run. Every computed value on this page is unaffected.)
-- forbidden text on the Overview (Gate 0 / Gate 1): …ot value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it All three cases…
 
 ## Stage timings
-- acquisition + automatic decisions (advanceRunAutomatically): 2329ms
-- deterministic computation: 704ms
+- acquisition + automatic decisions (advanceRunAutomatically): 2671ms
+- deterministic computation: 737ms
 - AI layer (interpretation + challenger): 0ms
-- render the normal Overview: 16ms
-- **total measured:** 3049ms
+- render the normal Overview: 14ms
+- **total measured:** 3422ms
 
 ### AI model calls
 _No model call ran — no credentials configured, or this run's AI outputs were already stored._

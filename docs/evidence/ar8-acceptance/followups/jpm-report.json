@@ -1,6 +1,6 @@
 {
   "ticker": "JPM",
-  "runId": "c02e4c25-d9b9-4636-a10d-6208de08ff96",
+  "runId": "f5d11dc0-e77b-4e4d-b60f-289368794943",
   "acceptance": {
     "ticker": "JPM",
     "policy": "COMPLETE_OR_EXPLAINED",
@@ -67,17 +67,11 @@
         "detail": "Change trigger: No computed change trigger available yet. [engine: no tornado row is available for this run]"
       }
     ],
-    "forbidden": [
-      {
-        "label": "Gate 0 / Gate 1",
-        "context": "ot value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it All three cases"
-      }
-    ],
+    "forbidden": [],
     "failures": [
       "#2 30-second view / bottom line: \"What matters most\" is missing — the AI layer did not complete (NOT CONFIGURED: No model credentials are configured, so the interpretation and challenger calls did not run. Every computed value on this page is unaffected.) | Bottom line: No valuation verdict for this company yet — this version of the model does not value asset-based businesses such as banks and insurers. [engine: no price-vs-range position for this run]",
       "#6 Why own it: missing — the AI layer did not complete (NOT CONFIGURED: No model credentials are configured, so the interpretation and challenger calls did not run. Every computed value on this page is unaffected.)",
-      "#7 Why be cautious / biggest risks: missing \"Why be cautious\" and \"Biggest risk\" — the AI layer did not complete (NOT CONFIGURED: No model credentials are configured, so the interpretation and challenger calls did not run. Every computed value on this page is unaffected.)",
-      "forbidden text on the Overview (Gate 0 / Gate 1): …ot value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it All three cases…"
+      "#7 Why be cautious / biggest risks: missing \"Why be cautious\" and \"Biggest risk\" — the AI layer did not complete (NOT CONFIGURED: No model credentials are configured, so the interpretation and challenger calls did not run. Every computed value on this page is unaffected.)"
     ]
   },
   "aiLayer": {
@@ -101,7 +95,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -119,7 +113,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -137,7 +131,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -155,7 +149,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -173,7 +167,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -191,7 +185,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -209,7 +203,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -227,7 +221,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -245,7 +239,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -263,7 +257,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -281,7 +275,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -299,7 +293,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -317,7 +311,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -335,7 +329,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -353,7 +347,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": "calboard-secmap-2026-10-6",
         "verificationState": "SPOT-CHECK NOT REQUIRED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": null,
         "verificationReasonCode": null
       },
@@ -371,7 +365,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": null,
         "verificationState": "CONFIRMED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": "AUTOMATIC",
         "verificationReasonCode": null
       },
@@ -392,7 +386,7 @@
         "supersedesFactId": null,
         "tagMappingVersion": null,
         "verificationState": "CONFIRMED",
-        "retrievalTimestamp": "2026-10-20T12:43:37.877Z",
+        "retrievalTimestamp": "2026-10-20T13:05:19.152Z",
         "verificationOrigin": "AUTOMATIC",
         "verificationReasonCode": null
       }
@@ -556,15 +550,15 @@
         },
         {
           "state": "INCOMPLETE",
-          "appliesTo": "the terminal share of value — Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it"
+          "appliesTo": "the terminal share of value — Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it"
         },
         {
           "state": "INCOMPLETE",
-          "appliesTo": "the discount rate at which the base case equals the price — Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it"
+          "appliesTo": "the discount rate at which the base case equals the price — Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it"
         },
         {
           "state": "INCOMPLETE",
-          "appliesTo": "the current price's location within the scenario range — Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it"
+          "appliesTo": "the current price's location within the scenario range — Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it"
         },
         {
           "state": "INCOMPLETE",
@@ -580,7 +574,7 @@
         },
         {
           "state": "INCOMPLETE",
-          "appliesTo": "the analyst scenario values — Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it"
+          "appliesTo": "the analyst scenario values — Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it"
         },
         {
           "state": "UNSUPPORTED PROFILE — ASSET-BASED ROW NOT VALIDATED IN v1",
@@ -610,7 +604,7 @@
         "text": "JPMorgan Chase & Co. operates as a bank and financial holding company in the United States, rest of North America, Europe, the Middle East, Africa, the Asia Pacific, Latin America, and the Caribbean. It operates in three segments: Consumer & Community Banking, Commercial & Investment Bank, and Asset & Wealth Management. The company offers deposit, investment and lending products, and cash management; mortgage origination and servicing activities; residential mortgages and home equity loans; and credit cards, payment solutions, travel services, merchant offers, lifestyle benefits, auto loans, and leases to consumers and small businesses through bank branches, ATMs, and digital and telephone banking. It also provides investment banking, market-making, financing, custody, and securities products and services; corporate strategy and structure advisory, equity and debt market capital-raising, and loan origination and syndication services; cash and derivative instruments, risk management solutions, prime brokerage, clearing, and research; and fund services, liquidity and trading services, and data solutions products for large corporations, financial institutions, merchants, start-ups, small and midsized companies, local governments, municipalities, nonprofits, and commercial real estate clients. In addition, the company offers multi-asset investment management solutions in equities, fixed income, alternatives, and money market funds to institutional clients and retail investors; retirement products and services, estate planning, lending, deposits, and investment management products to high-net-worth clients; and financial transaction processing. JPMorgan Chase & Co. was founded in 1799 and is headquartered in New York, New York.",
         "source": "MARKET-DATA PROVIDER SUMMARY",
         "provider": "YAHOO",
-        "retrievedAt": "2026-10-20T12:43:37.876Z",
+        "retrievedAt": "2026-10-20T13:05:19.151Z",
         "primaryUnavailableReason": "The Item 1 extraction rule (item1-2026-10-1) could not locate the section in the filing: found 2 standalone \"Item 1A. Risk Factors\" heading lines — expected exactly one."
       },
       "unavailableReason": null
@@ -618,7 +612,7 @@
     "scenarios": {
       "base": {
         "shareCount": "2658186195",
-        "writtenAnchor": "this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it",
+        "writtenAnchor": "this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it",
         "operatingMargin": "NaN",
         "revenueGrowthOrPath": "NaN",
         "returnOnNewInvestment": null,
@@ -626,7 +620,7 @@
       },
       "bear": {
         "shareCount": "2658186195",
-        "writtenAnchor": "this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it",
+        "writtenAnchor": "this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it",
         "operatingMargin": "NaN",
         "revenueGrowthOrPath": "NaN",
         "returnOnNewInvestment": null,
@@ -634,7 +628,7 @@
       },
       "bull": {
         "shareCount": "2658186195",
-        "writtenAnchor": "this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it",
+        "writtenAnchor": "this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it",
         "operatingMargin": "NaN",
         "revenueGrowthOrPath": "NaN",
         "returnOnNewInvestment": null,
@@ -830,9 +824,9 @@
       }
     },
     "runIdentity": {
-      "codeVersion": "287314014d80372fe91a3be2205ae7b6536c3283+dirty",
+      "codeVersion": "5820e49bb3b0597fb71126306b3d11bcec6eb94c+dirty",
       "factSnapshot": "facts-sha256:86563ac15a88bc87",
-      "sheetVersion": "sheet-sha256:325248766b4dcdbd",
+      "sheetVersion": "sheet-sha256:f2bd3afa9772790a",
       "priceSnapshot": {
         "value": "333.53",
         "timestamp": "2026-10-19"
@@ -844,7 +838,7 @@
         "valuationDate": "2026-10-19",
         "basePeriodKind": "FISCAL YEAR"
       },
-      "inputsFingerprint": "inputs-sha256:c8f44c54f7998e5f"
+      "inputsFingerprint": "inputs-sha256:bceba069eddb2f42"
     },
     "latestFiling": {
       "form": "8-K",
@@ -909,7 +903,7 @@
         "average": null
       },
       "baseAtCheckRates": null,
-      "baseAtCheckRatesCause": "Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it"
+      "baseAtCheckRatesCause": "Can't conclude: this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it"
     },
     "fairValueRange": {
       "kind": "suppressed",
@@ -995,8 +989,8 @@
         "origin": "CANNOT CONCLUDE",
         "status": "DRAFT",
         "version": 1,
-        "recordedAt": "2026-10-20T12:43:36.700Z",
-        "cannotConclude": "this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), so no assumption sheet is drafted for it"
+        "recordedAt": "2026-10-20T13:05:17.763Z",
+        "cannotConclude": "this version of the model does not value asset-based businesses such as banks and insurers, so no assumption sheet is drafted for it"
       },
       "discountRate": {
         "band": "cyclical",
@@ -1331,11 +1325,11 @@
   "timings": [
     {
       "stage": "acquisition + automatic decisions (advanceRunAutomatically)",
-      "ms": 2329
+      "ms": 2671
     },
     {
       "stage": "deterministic computation",
-      "ms": 704
+      "ms": 737
     },
     {
       "stage": "AI layer (interpretation + challenger)",
@@ -1343,7 +1337,7 @@
     },
     {
       "stage": "render the normal Overview",
-      "ms": 16
+      "ms": 14
     }
   ],
   "attempts": []

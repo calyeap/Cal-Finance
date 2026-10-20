@@ -316,7 +316,7 @@ export async function draftAssumptionSheet(
   if (evaluateGate0(gate0InputsFrom(acquired)).result === "UNSUPPORTED PROFILE — ASSET-BASED ROW NOT VALIDATED IN v1") {
     const research = await researchFor(acquired, null);
     const reason =
-      "this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), " +
+      "this version of the model does not value asset-based businesses such as banks and insurers, " +
       "so no assumption sheet is drafted for it";
     return { kind: "CANNOT CONCLUDE", content: cannotConcludeContent(reason, currentRevenue, research, dilutedShares) };
   }

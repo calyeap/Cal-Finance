@@ -71,6 +71,10 @@ describe("F5 — no paid draft for a company Gate 0 refuses as asset-based", () 
     const outcome = await draftAssumptionSheet("JPM", acquired, call, null);
     expect(calls).toBe(0);
     expect(outcome.kind).toBe("CANNOT CONCLUDE");
-    if (outcome.kind === "CANNOT CONCLUDE") expect(outcome.content.cannotConclude).toContain("banks and insurers");
+    if (outcome.kind === "CANNOT CONCLUDE") {
+      expect(outcome.content.cannotConclude).toContain("banks and insurers");
+      // It renders on the Overview, where raw gate names are forbidden text.
+      expect(outcome.content.cannotConclude).not.toContain("Gate 0");
+    }
   });
 });
