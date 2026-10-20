@@ -8,7 +8,8 @@ app imports neither, and the engine's constants are read, never edited.
 |---|---|
 | `results.md` / `results.json` | Every company × design × moat class; implied runway; ROIC history; MSFT input dump. |
 | `<ticker>-run.json` | The frozen inputs: one median-of-three DRAFT sheet per company (COST, NVDA, NUE, KO, LLY), valued unadopted through the production engine. MSFT's is `../ar7-prototype/msft-run.json` (#494). |
-| `spend.json` | Tokens and cost of the one paid drafting run. |
+| `<ticker>-run-supplement.json` | **TEST-ONLY SUPPLEMENT, not engine output** (NVDA, NUE, LLY; KO still fails): the frozen sheet re-valued with treasury-method dilution stated as diluted − basic weighted-average shares from the same capture. The engine itself leaves these NOT VALUED (named gate, `docs/ev-input-gaps-reconciliation.md` §1). Marked † everywhere. |
+| `spend.json` | Tokens and cost of the one paid drafting run: 15 calls, 57,180 in + 71,667 out, **$2.08** of the $5 cap. |
 
 ## Frozen inputs
 
@@ -38,5 +39,13 @@ are cyclical by SIC); for R ≤ 5 the target applies from year R.
 ```
 ANTHROPIC_API_KEY=… DATABASE_URL=… npx tsx scripts/analyzer/calibration-v3-freeze.ts --preflight   # free count_tokens
 ANTHROPIC_API_KEY=… DATABASE_URL=… npx tsx scripts/analyzer/calibration-v3-freeze.ts               # paid, capped; skips frozen companies
+DATABASE_URL=… npx tsx scripts/analyzer/calibration-v3-supplement.ts                                # free: † supplement runs
 npx tsx scripts/analyzer/calibration-v3.ts                                                          # free, deterministic
 ```
+
+## Caveats on the inputs
+
+- **NUE and LLY tag no operating income** in the capture, so their drafted margins rest on an operating-cash-flow proxy (cited in each anchor) and their ROIC history is n/a. NUE's base return on new capital equals its 11% rate, so its value does not move with runway.
+- **NVDA's bridge carries the D7 finance-lease upper bound** ($57.9bn, "not disclosed — valued at its upper bound").
+- **KO** stays NOT VALUED even in the supplement: no finance-lease liability and no same-date upper bound (D7: the bridge stays INCOMPLETE).
+- **MSFT FY2017 ROIC (12.9%)** is a series-edge artefact: that year's cash series excludes short-term investments (invested capital $177.9bn vs $29.5bn in FY2018). It does not change any count.

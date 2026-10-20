@@ -1,0 +1,3908 @@
+{
+  "reproduction": {
+    "MSFT": {
+      "ok": true,
+      "worst": "0.00e+0"
+    },
+    "COST": {
+      "ok": true,
+      "worst": "0.00e+0"
+    },
+    "NVDA†": {
+      "ok": true,
+      "worst": "0.00e+0"
+    },
+    "NUE†": {
+      "ok": true,
+      "worst": "0.00e+0"
+    },
+    "LLY†": {
+      "ok": true,
+      "worst": "0.00e+0"
+    }
+  },
+  "results": [
+    {
+      "ticker": "MSFT",
+      "design": "CURRENT",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "188.88384498000162636",
+      "base": "298.14913755840536607",
+      "bull": "424.01560883814056373",
+      "priceOverBase": "1.78944002444242221",
+      "terminalShare": "0.68977838505195323756",
+      "baseAt": {
+        "lower": "320.99496145434445834",
+        "rate": "298.14913755840536607",
+        "upper": "277.8985284025075787"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "CURRENT",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0.01",
+      "bear": "188.88384498000162636",
+      "base": "310.08224253040483321",
+      "bull": "436.49136576019166217",
+      "priceOverBase": "1.7205757919132895203",
+      "terminalShare": "0.69631701332205286736",
+      "baseAt": {
+        "lower": "335.86708621774458486",
+        "rate": "310.08224253040483321",
+        "upper": "287.60424453836953611"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "CURRENT",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 10,
+      "R": 10,
+      "S": "0.03",
+      "bear": "188.88384498000162636",
+      "base": "328.25823074016124233",
+      "bull": "456.18394229181531138",
+      "priceOverBase": "1.6253057807477108926",
+      "terminalShare": "0.70463524987732218013",
+      "baseAt": {
+        "lower": "358.16655916576202657",
+        "rate": "328.25823074016124233",
+        "upper": "302.60068098883057964"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "OPT1",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "188.88384498000162636",
+      "base": "298.14913755840536607",
+      "bull": "424.01560883814056373",
+      "priceOverBase": "1.78944002444242221",
+      "terminalShare": "0.68977838505195323756",
+      "baseAt": {
+        "lower": "320.99496145434445834",
+        "rate": "298.14913755840536607",
+        "upper": "277.8985284025075787"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "OPT1",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "188.88384498000162636",
+      "base": "308.47912292155375158",
+      "bull": "437.6764738103361932",
+      "priceOverBase": "1.7295173655420245373",
+      "terminalShare": "0.50226019593722848615",
+      "baseAt": {
+        "lower": "333.11558296750064877",
+        "rate": "308.47912292155375158",
+        "upper": "286.71140535532133621"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "OPT1",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 10,
+      "R": 20,
+      "S": "0",
+      "bear": "188.88384498000162636",
+      "base": "316.17051257081894809",
+      "bull": "447.54224523987122972",
+      "priceOverBase": "1.6874438911519207493",
+      "terminalShare": "0.36919614608263380478",
+      "baseAt": {
+        "lower": "342.30161568940763543",
+        "rate": "316.17051257081894809",
+        "upper": "293.1616279128329199"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "OPT2",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "188.88384498000162636",
+      "base": "298.14913755840536607",
+      "bull": "424.01560883814056373",
+      "priceOverBase": "1.78944002444242221",
+      "terminalShare": "0.68977838505195323756",
+      "baseAt": {
+        "lower": "320.99496145434445834",
+        "rate": "298.14913755840536607",
+        "upper": "277.8985284025075787"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "OPT2",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "188.88384498000162636",
+      "base": "308.47912292155375158",
+      "bull": "437.6764738103361932",
+      "priceOverBase": "1.7295173655420245373",
+      "terminalShare": "0.50226019593722848615",
+      "baseAt": {
+        "lower": "333.11558296750064877",
+        "rate": "308.47912292155375158",
+        "upper": "286.71140535532133621"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "OPT2",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 15,
+      "R": 20,
+      "S": "0",
+      "bear": "188.88384498000162636",
+      "base": "340.75527645883503328",
+      "bull": "516.33469727722416509",
+      "priceOverBase": "1.5656984259918038968",
+      "terminalShare": "0.42354274021878277141",
+      "baseAt": {
+        "lower": "371.14601046557055014",
+        "rate": "340.75527645883503328",
+        "upper": "314.12936168285684283"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "HOLD"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "CLOSE CALL",
+        "zones": [
+          "HOLD",
+          "SELL"
+        ]
+      },
+      "closeCalls": 1
+    },
+    {
+      "ticker": "MSFT",
+      "design": "OPT3",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 7,
+      "R": 7,
+      "S": "0",
+      "bear": "186.45170895386292537",
+      "base": "279.32297710200307162",
+      "bull": "381.75506887349996459",
+      "priceOverBase": "1.9100469482865684348",
+      "terminalShare": "0.7682102297682585703",
+      "baseAt": {
+        "lower": "299.14940061414619877",
+        "rate": "279.32297710200307162",
+        "upper": "261.66563084355357841"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "OPT3",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 15,
+      "R": 15,
+      "S": "0",
+      "bear": "186.45170895386292537",
+      "base": "328.82146639639214972",
+      "bull": "498.50542975335423128",
+      "priceOverBase": "1.6225218074930822575",
+      "terminalShare": "0.58259408912432731407",
+      "baseAt": {
+        "lower": "357.01765204903267306",
+        "rate": "328.82146639639214972",
+        "upper": "304.037081602602745"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "MSFT",
+      "design": "OPT3",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 20,
+      "R": 20,
+      "S": "0.01",
+      "bear": "186.45170895386292537",
+      "base": "374.05286110334813067",
+      "bull": "598.8598809858995767",
+      "priceOverBase": "1.4263224679695532103",
+      "terminalShare": "0.50087357110029720083",
+      "baseAt": {
+        "lower": "411.79214167603629604",
+        "rate": "374.05286110334813067",
+        "upper": "341.61637612902654698"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "HOLD",
+          "High": "HOLD"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "HOLD"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "CLOSE CALL",
+        "zones": [
+          "HOLD",
+          "SELL"
+        ]
+      },
+      "closeCalls": 2
+    },
+    {
+      "ticker": "COST",
+      "design": "CURRENT",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "269.32940220678269774",
+      "base": "391.32383336746444076",
+      "bull": "530.52255275358624043",
+      "priceOverBase": "2.5440055399466774286",
+      "terminalShare": "0.55928354224333305208",
+      "baseAt": {
+        "lower": "415.4146701167389168",
+        "rate": "391.32383336746444076",
+        "upper": "369.88422753309027252"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "CURRENT",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0.01",
+      "bear": "269.32940220678269774",
+      "base": "402.41342835216814172",
+      "bull": "541.78240481264976858",
+      "priceOverBase": "2.4738985577011404851",
+      "terminalShare": "0.56971651813456787143",
+      "baseAt": {
+        "lower": "429.34755883600267461",
+        "rate": "402.41342835216814172",
+        "upper": "378.82787920080418417"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "CURRENT",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 10,
+      "R": 10,
+      "S": "0.03",
+      "bear": "269.32940220678269774",
+      "base": "419.17172086084002862",
+      "bull": "559.4112344807394631",
+      "priceOverBase": "2.3749932317846031177",
+      "terminalShare": "0.58406161898815469081",
+      "baseAt": {
+        "lower": "450.08451847563079883",
+        "rate": "419.17172086084002862",
+        "upper": "392.53189064716705441"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "OPT1",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "269.32940220678269774",
+      "base": "391.32383336746444076",
+      "bull": "530.52255275358624043",
+      "priceOverBase": "2.5440055399466774286",
+      "terminalShare": "0.55928354224333305208",
+      "baseAt": {
+        "lower": "415.4146701167389168",
+        "rate": "391.32383336746444076",
+        "upper": "369.88422753309027252"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "OPT1",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "269.32940220678269774",
+      "base": "406.9392557067037291",
+      "bull": "550.05776613819532591",
+      "priceOverBase": "2.4463847762023615929",
+      "terminalShare": "0.40389073041826592346",
+      "baseAt": {
+        "lower": "433.18778947280865564",
+        "rate": "406.9392557067037291",
+        "upper": "383.65405494835612188"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "OPT1",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 10,
+      "R": 20,
+      "S": "0",
+      "bear": "269.32940220678269774",
+      "base": "418.9749666695888713",
+      "bull": "564.86433001976756228",
+      "priceOverBase": "2.3761085487121542216",
+      "terminalShare": "0.29487202259218908607",
+      "baseAt": {
+        "lower": "447.13098845059881739",
+        "rate": "418.9749666695888713",
+        "upper": "394.08531826477116662"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "OPT2",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "269.32940220678269774",
+      "base": "391.32383336746444076",
+      "bull": "530.52255275358624043",
+      "priceOverBase": "2.5440055399466774286",
+      "terminalShare": "0.55928354224333305208",
+      "baseAt": {
+        "lower": "415.4146701167389168",
+        "rate": "391.32383336746444076",
+        "upper": "369.88422753309027252"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "OPT2",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "269.32940220678269774",
+      "base": "406.9392557067037291",
+      "bull": "550.05776613819532591",
+      "priceOverBase": "2.4463847762023615929",
+      "terminalShare": "0.40389073041826592346",
+      "baseAt": {
+        "lower": "433.18778947280865564",
+        "rate": "406.9392557067037291",
+        "upper": "383.65405494835612188"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "OPT2",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 15,
+      "R": 20,
+      "S": "0",
+      "bear": "269.32940220678269774",
+      "base": "440.26998927051854694",
+      "bull": "620.29822577147221237",
+      "priceOverBase": "2.2611806942587419562",
+      "terminalShare": "0.31500090086443489956",
+      "baseAt": {
+        "lower": "471.19805175025204519",
+        "rate": "440.26998927051854694",
+        "upper": "412.98919268107684841"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "OPT3",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 7,
+      "R": 7,
+      "S": "0",
+      "bear": "264.49932287352977774",
+      "base": "368.9677423037957383",
+      "bull": "487.76940850759475199",
+      "priceOverBase": "2.6981491492562886084",
+      "terminalShare": "0.65775601998236608928",
+      "baseAt": {
+        "lower": "390.3751410784105205",
+        "rate": "368.9677423037957383",
+        "upper": "349.86049972897449613"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "OPT3",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 15,
+      "R": 15,
+      "S": "0",
+      "bear": "264.49932287352977774",
+      "base": "425.34630771289429803",
+      "bull": "599.83633585967618608",
+      "priceOverBase": "2.3405163791194247253",
+      "terminalShare": "0.43389830810222257126",
+      "baseAt": {
+        "lower": "453.99967009500775135",
+        "rate": "425.34630771289429803",
+        "upper": "399.98755703078378707"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "COST",
+      "design": "OPT3",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 20,
+      "R": 20,
+      "S": "0.01",
+      "bear": "264.49932287352977774",
+      "base": "466.14278253323834708",
+      "bull": "679.62496892714662632",
+      "priceOverBase": "2.1356761003352307756",
+      "terminalShare": "0.35055687754706942417",
+      "baseAt": {
+        "lower": "502.22481082374512774",
+        "rate": "466.14278253323834708",
+        "upper": "434.78972870027483215"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "CURRENT",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "31.489089677861423103",
+      "base": "112.11776399722346528",
+      "bull": "252.48776787965341623",
+      "priceOverBase": "1.9362676551895568875",
+      "terminalShare": "0.58170178404935007063",
+      "baseAt": {
+        "lower": "119.27163417830077169",
+        "rate": "112.11776399722346528",
+        "upper": "105.64051679829853052"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "CURRENT",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0.01",
+      "bear": "31.489089677861423103",
+      "base": "114.53948705938330119",
+      "bull": "256.76202916919894406",
+      "priceOverBase": "1.8953288998705670219",
+      "terminalShare": "0.58749934660024154535",
+      "baseAt": {
+        "lower": "122.17793216092784176",
+        "rate": "114.53948705938330119",
+        "upper": "107.67554719280745708"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "CURRENT",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 10,
+      "R": 10,
+      "S": "0.03",
+      "bear": "31.489089677861423103",
+      "base": "118.39083396822718209",
+      "bull": "263.71851852300190009",
+      "priceOverBase": "1.8336723606344469034",
+      "terminalShare": "0.5959162921471412375",
+      "baseAt": {
+        "lower": "126.74967899551536571",
+        "rate": "118.39083396822718209",
+        "upper": "110.94486241841907401"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "OPT1",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "31.489089677861423103",
+      "base": "112.11776399722346528",
+      "bull": "252.48776787965341623",
+      "priceOverBase": "1.9362676551895568875",
+      "terminalShare": "0.58170178404935007063",
+      "baseAt": {
+        "lower": "119.27163417830077169",
+        "rate": "112.11776399722346528",
+        "upper": "105.64051679829853052"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "OPT1",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "31.489089677861423103",
+      "base": "117.5504858241114417",
+      "bull": "265.76054325713547148",
+      "priceOverBase": "1.8467809680074622742",
+      "terminalShare": "0.38212992724025451296",
+      "baseAt": {
+        "lower": "125.32725363882282158",
+        "rate": "117.5504858241114417",
+        "upper": "110.52677346758174105"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "OPT1",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 10,
+      "R": 20,
+      "S": "0",
+      "bear": "31.489089677861423103",
+      "base": "121.23940119243460362",
+      "bull": "274.45730355951033751",
+      "priceOverBase": "1.7905895102156486022",
+      "terminalShare": "0.25507655049665438004",
+      "baseAt": {
+        "lower": "129.51641998539131694",
+        "rate": "121.23940119243460362",
+        "upper": "113.78484423536967443"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "OPT2",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "31.489089677861423103",
+      "base": "112.11776399722346528",
+      "bull": "252.48776787965341623",
+      "priceOverBase": "1.9362676551895568875",
+      "terminalShare": "0.58170178404935007063",
+      "baseAt": {
+        "lower": "119.27163417830077169",
+        "rate": "112.11776399722346528",
+        "upper": "105.64051679829853052"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "OPT2",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "31.489089677861423103",
+      "base": "117.5504858241114417",
+      "bull": "265.76054325713547148",
+      "priceOverBase": "1.8467809680074622742",
+      "terminalShare": "0.38212992724025451296",
+      "baseAt": {
+        "lower": "125.32725363882282158",
+        "rate": "117.5504858241114417",
+        "upper": "110.52677346758174105"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "OPT2",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 15,
+      "R": 20,
+      "S": "0",
+      "bear": "31.489089677861423103",
+      "base": "143.50320740753913869",
+      "bull": "398.38544048055910781",
+      "priceOverBase": "1.5127884869045434157",
+      "terminalShare": "0.30619590539827649221",
+      "baseAt": {
+        "lower": "154.3168932634025706",
+        "rate": "143.50320740753913869",
+        "upper": "133.81607952965805996"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "HOLD"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "CLOSE CALL",
+        "zones": [
+          "HOLD",
+          "SELL"
+        ]
+      },
+      "closeCalls": 1
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "OPT3",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 7,
+      "R": 7,
+      "S": "0",
+      "bear": "31.351837895219881035",
+      "base": "97.891730705317425909",
+      "bull": "194.24568255713676555",
+      "priceOverBase": "2.2176541208930509645",
+      "terminalShare": "0.67418084787888179124",
+      "baseAt": {
+        "lower": "103.61330230975173787",
+        "rate": "97.891730705317425909",
+        "upper": "92.688955146877191661"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "OPT3",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 15,
+      "R": 15,
+      "S": "0",
+      "bear": "31.351837895219881035",
+      "base": "136.76276216234537612",
+      "bull": "376.76947033048645498",
+      "priceOverBase": "1.5873472907947084824",
+      "terminalShare": "0.46656520836603556591",
+      "baseAt": {
+        "lower": "146.73709121664997585",
+        "rate": "136.76276216234537612",
+        "upper": "127.80575312513707986"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NVDA†",
+      "design": "OPT3",
+      "moatClass": "wide",
+      "recorded": true,
+      "G": 20,
+      "R": 20,
+      "S": "0.01",
+      "bear": "31.351837895219881035",
+      "base": "166.66305795011592895",
+      "bull": "557.71869171355414593",
+      "priceOverBase": "1.3025682035966087027",
+      "terminalShare": "0.38594057626089070408",
+      "baseAt": {
+        "lower": "180.80239043077620854",
+        "rate": "166.66305795011592895",
+        "upper": "154.15058641943200033"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "HOLD",
+          "High": "HOLD"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "HOLD"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "HOLD"
+        }
+      },
+      "routing": {
+        "kind": "CLOSE CALL",
+        "zones": [
+          "HOLD",
+          "SELL"
+        ]
+      },
+      "closeCalls": 1
+    },
+    {
+      "ticker": "NUE†",
+      "design": "CURRENT",
+      "moatClass": "none",
+      "recorded": true,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "48.63123473831784817",
+      "base": "98.123846983098165442",
+      "bull": "181.97750163905312496",
+      "priceOverBase": "2.6571522419510391555",
+      "terminalShare": "0.50157440161950371266",
+      "baseAt": {
+        "lower": "104.68635091059487883",
+        "rate": "98.123846983098165442",
+        "upper": "92.166829078491056013"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "CURRENT",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0.01",
+      "bear": "48.63123473831784817",
+      "base": "100.58091873899916761",
+      "bull": "185.78579059427176268",
+      "priceOverBase": "2.5922411851951472733",
+      "terminalShare": "0.50708982914704692813",
+      "baseAt": {
+        "lower": "107.6120061704660523",
+        "rate": "100.58091873899916761",
+        "upper": "94.247823759137834296"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "CURRENT",
+      "moatClass": "wide",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0.03",
+      "bear": "48.63123473831784817",
+      "base": "104.50532181481795561",
+      "bull": "192.0429975147929786",
+      "priceOverBase": "2.4948968671854826916",
+      "terminalShare": "0.51507954508694077164",
+      "baseAt": {
+        "lower": "112.23479982968644178",
+        "rate": "104.50532181481795561",
+        "upper": "97.604724850123252609"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "OPT1",
+      "moatClass": "none",
+      "recorded": true,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "48.63123473831784817",
+      "base": "98.123846983098165442",
+      "bull": "181.97750163905312496",
+      "priceOverBase": "2.6571522419510391555",
+      "terminalShare": "0.50157440161950371266",
+      "baseAt": {
+        "lower": "104.68635091059487883",
+        "rate": "98.123846983098165442",
+        "upper": "92.166829078491056013"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "OPT1",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "48.63123473831784817",
+      "base": "98.123846983098165438",
+      "bull": "182.31951725186186925",
+      "priceOverBase": "2.6571522419510391556",
+      "terminalShare": "0.34506951488301579467",
+      "baseAt": {
+        "lower": "104.92068648741892974",
+        "rate": "98.123846983098165438",
+        "upper": "91.973805117319874229"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "OPT1",
+      "moatClass": "wide",
+      "recorded": false,
+      "G": 10,
+      "R": 20,
+      "S": "0",
+      "bear": "48.63123473831784817",
+      "base": "98.123846983098165438",
+      "bull": "182.56945173359513296",
+      "priceOverBase": "2.6571522419510391556",
+      "terminalShare": "0.237398419291599088",
+      "baseAt": {
+        "lower": "105.10509477095294286",
+        "rate": "98.123846983098165438",
+        "upper": "91.825271621945859449"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "OPT2",
+      "moatClass": "none",
+      "recorded": true,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "48.63123473831784817",
+      "base": "98.123846983098165442",
+      "bull": "181.97750163905312496",
+      "priceOverBase": "2.6571522419510391555",
+      "terminalShare": "0.50157440161950371266",
+      "baseAt": {
+        "lower": "104.68635091059487883",
+        "rate": "98.123846983098165442",
+        "upper": "92.166829078491056013"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "OPT2",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "48.63123473831784817",
+      "base": "98.123846983098165438",
+      "bull": "182.31951725186186925",
+      "priceOverBase": "2.6571522419510391556",
+      "terminalShare": "0.34506951488301579467",
+      "baseAt": {
+        "lower": "104.92068648741892974",
+        "rate": "98.123846983098165438",
+        "upper": "91.973805117319874229"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "OPT2",
+      "moatClass": "wide",
+      "recorded": false,
+      "G": 15,
+      "R": 20,
+      "S": "0",
+      "bear": "48.63123473831784817",
+      "base": "98.123846983098165455",
+      "bull": "185.70761476554931156",
+      "priceOverBase": "2.6571522419510391552",
+      "terminalShare": "0.2432121908733287587",
+      "baseAt": {
+        "lower": "105.17367828839955793",
+        "rate": "98.123846983098165455",
+        "upper": "91.76827704827537291"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "OPT3",
+      "moatClass": "none",
+      "recorded": true,
+      "G": 7,
+      "R": 7,
+      "S": "0",
+      "bear": "48.422212051755059499",
+      "base": "98.123846983098165442",
+      "bull": "179.71677050303938963",
+      "priceOverBase": "2.6571522419510391555",
+      "terminalShare": "0.61871024141908245183",
+      "baseAt": {
+        "lower": "104.48030008114367589",
+        "rate": "98.123846983098165442",
+        "upper": "92.339673465646352802"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "OPT3",
+      "moatClass": "narrow",
+      "recorded": false,
+      "G": 15,
+      "R": 15,
+      "S": "0",
+      "bear": "48.422212051755059499",
+      "base": "98.123846983098165451",
+      "bull": "185.36536288208641592",
+      "priceOverBase": "2.6571522419510391553",
+      "terminalShare": "0.35352009911746235273",
+      "baseAt": {
+        "lower": "104.97575225949524373",
+        "rate": "98.123846983098165451",
+        "upper": "91.928145087466507106"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "NUE†",
+      "design": "OPT3",
+      "moatClass": "wide",
+      "recorded": false,
+      "G": 20,
+      "R": 20,
+      "S": "0.01",
+      "bear": "48.422212051755059499",
+      "base": "100.06599197190914289",
+      "bull": "192.351161936455827",
+      "priceOverBase": "2.6055805260311913986",
+      "terminalShare": "0.25294924575179458399",
+      "baseAt": {
+        "lower": "107.53526334550145017",
+        "rate": "100.06599197190914289",
+        "upper": "93.376318695975951278"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "CURRENT",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "133.24756191224767591",
+      "base": "299.00094598228069084",
+      "bull": "607.07022497054816843",
+      "priceOverBase": "4.1482811899648794987",
+      "terminalShare": "0.77866807590872561559",
+      "baseAt": {
+        "lower": "328.28532168746188921",
+        "rate": "299.00094598228069084",
+        "upper": "273.10257839472691884"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "CURRENT",
+      "moatClass": "narrow",
+      "recorded": true,
+      "G": 10,
+      "R": 10,
+      "S": "0.01",
+      "bear": "133.24756191224767591",
+      "base": "315.09847669911949793",
+      "bull": "628.8843321949887421",
+      "priceOverBase": "3.9363567002717470459",
+      "terminalShare": "0.78138778309758119581",
+      "baseAt": {
+        "lower": "348.28872024746485752",
+        "rate": "315.09847669911949793",
+        "upper": "286.23581917328683161"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "CURRENT",
+      "moatClass": "wide",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0.03",
+      "bear": "133.24756191224767591",
+      "base": "339.69826170589954406",
+      "bull": "663.40503768745167281",
+      "priceOverBase": "3.6512992258813757696",
+      "terminalShare": "0.78412628782370148786",
+      "baseAt": {
+        "lower": "378.37506236991371747",
+        "rate": "339.69826170589954406",
+        "upper": "306.59849166361153025"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "OPT1",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "133.24756191224767591",
+      "base": "299.00094598228069084",
+      "bull": "607.07022497054816843",
+      "priceOverBase": "4.1482811899648794987",
+      "terminalShare": "0.77866807590872561559",
+      "baseAt": {
+        "lower": "328.28532168746188921",
+        "rate": "299.00094598228069084",
+        "upper": "273.10257839472691884"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "OPT1",
+      "moatClass": "narrow",
+      "recorded": true,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "133.24756191224767591",
+      "base": "311.27884345302012087",
+      "bull": "632.25750281392704342",
+      "priceOverBase": "3.9846588551952095369",
+      "terminalShare": "0.56665593936558620503",
+      "baseAt": {
+        "lower": "342.87311842196666376",
+        "rate": "311.27884345302012087",
+        "upper": "283.42559649819289088"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "OPT1",
+      "moatClass": "wide",
+      "recorded": false,
+      "G": 10,
+      "R": 20,
+      "S": "0",
+      "bear": "133.24756191224767591",
+      "base": "320.16081561206994115",
+      "bull": "649.71220478549873498",
+      "priceOverBase": "3.8741155679178612546",
+      "terminalShare": "0.41665538251283959837",
+      "baseAt": {
+        "lower": "353.62023285025259102",
+        "rate": "320.16081561206994115",
+        "upper": "290.76347684646928386"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "OPT2",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 10,
+      "R": 10,
+      "S": "0",
+      "bear": "133.24756191224767591",
+      "base": "299.00094598228069084",
+      "bull": "607.07022497054816843",
+      "priceOverBase": "4.1482811899648794987",
+      "terminalShare": "0.77866807590872561559",
+      "baseAt": {
+        "lower": "328.28532168746188921",
+        "rate": "299.00094598228069084",
+        "upper": "273.10257839472691884"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "OPT2",
+      "moatClass": "narrow",
+      "recorded": true,
+      "G": 10,
+      "R": 15,
+      "S": "0",
+      "bear": "133.24756191224767591",
+      "base": "311.27884345302012087",
+      "bull": "632.25750281392704342",
+      "priceOverBase": "3.9846588551952095369",
+      "terminalShare": "0.56665593936558620503",
+      "baseAt": {
+        "lower": "342.87311842196666376",
+        "rate": "311.27884345302012087",
+        "upper": "283.42559649819289088"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "OPT2",
+      "moatClass": "wide",
+      "recorded": false,
+      "G": 15,
+      "R": 20,
+      "S": "0",
+      "bear": "133.24756191224767591",
+      "base": "357.93322872500551278",
+      "bull": "830.4767096587657453",
+      "priceOverBase": "3.4652831882030538534",
+      "terminalShare": "0.50036824002757612367",
+      "baseAt": {
+        "lower": "398.64725962868796076",
+        "rate": "357.93322872500551278",
+        "upper": "322.40737864353109498"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "OPT3",
+      "moatClass": "none",
+      "recorded": false,
+      "G": 7,
+      "R": 7,
+      "S": "0",
+      "bear": "132.54539062382952871",
+      "base": "273.69589735856305857",
+      "bull": "512.18136942853938582",
+      "priceOverBase": "4.5318180212802293832",
+      "terminalShare": "0.84087402092384359235",
+      "baseAt": {
+        "lower": "298.4812390255630286",
+        "rate": "273.69589735856305857",
+        "upper": "251.64917778224931204"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "OPT3",
+      "moatClass": "narrow",
+      "recorded": true,
+      "G": 15,
+      "R": 15,
+      "S": "0",
+      "bear": "132.54539062382952871",
+      "base": "342.17446429031174956",
+      "bull": "791.55988519601060269",
+      "priceOverBase": "3.6248759900085820238",
+      "terminalShare": "0.6909033291895638066",
+      "baseAt": {
+        "lower": "379.76487090302908141",
+        "rate": "342.17446429031174956",
+        "upper": "309.26784771015355758"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    },
+    {
+      "ticker": "LLY†",
+      "design": "OPT3",
+      "moatClass": "wide",
+      "recorded": false,
+      "G": 20,
+      "R": 20,
+      "S": "0.01",
+      "bear": "132.54539062382952871",
+      "base": "411.70001037186923839",
+      "bull": "1064.0563664937806869",
+      "priceOverBase": "3.0127276384561158199",
+      "terminalShare": "0.61427771823762694898",
+      "baseAt": {
+        "lower": "464.67762109421268086",
+        "rate": "411.70001037186923839",
+        "upper": "366.45973025046704697"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      },
+      "closeCalls": 0
+    }
+  ],
+  "notValued": [
+    {
+      "ticker": "NVDA",
+      "cause": "engine values no Base: enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply; verdict CANNOT BOUND VALUE — Can't bound value — decision-critical analysis is incomplete: LEVERAGE UNSUPPORTED IN v1 — inputs missing — the ratio could not be computed, so the precondition fails closed"
+    },
+    {
+      "ticker": "NUE",
+      "cause": "engine values no Base: enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply; verdict CANNOT BOUND VALUE — Can't bound value — decision-critical analysis is incomplete: LEVERAGE UNSUPPORTED IN v1 — inputs missing — the ratio could not be computed, so the precondition fails closed"
+    },
+    {
+      "ticker": "KO",
+      "cause": "engine values no Base: enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply; verdict CANNOT BOUND VALUE — Can't bound value — decision-critical analysis is incomplete: LEVERAGE UNSUPPORTED IN v1 — inputs missing — the ratio could not be computed, so the precondition fails closed"
+    },
+    {
+      "ticker": "LLY",
+      "cause": "engine values no Base: enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply; verdict CANNOT BOUND VALUE — Can't bound value — decision-critical analysis is incomplete: LEVERAGE UNSUPPORTED IN v1 — inputs missing — the ratio could not be computed, so the precondition fails closed"
+    },
+    {
+      "ticker": "OKLO",
+      "cause": "Can't conclude: this company's filings report no revenue (pre-revenue, or none tagged), so there is no operating history to anchor growth, margin or returns to — the valuation cannot be concluded from filed history (production drafting path on the newest committed OKLO capture, 24 Sep 2026 — no 19 Oct OKLO capture exists)"
+    },
+    {
+      "ticker": "JPM (the bank)",
+      "cause": "Gate 0: UNSUPPORTED PROFILE — ASSET-BASED ROW NOT VALIDATED IN v1 — SIC 6021 (National Commercial Banks) classifies as Financials, an asset-based sector; refused before any valuation (no capture needed or committed)"
+    }
+  ],
+  "impliedRunway": {
+    "MSFT": {
+      "state": "NO SOLUTION in 5–40 — Base stays below price through N=40 (max $472 vs $533.52)",
+      "monotone": true,
+      "points": [
+        {
+          "N": 5,
+          "base": "268.77"
+        },
+        {
+          "N": 6,
+          "base": "280.13"
+        },
+        {
+          "N": 7,
+          "base": "286.44"
+        },
+        {
+          "N": 8,
+          "base": "291.40"
+        },
+        {
+          "N": 9,
+          "base": "295.28"
+        },
+        {
+          "N": 10,
+          "base": "298.15"
+        },
+        {
+          "N": 11,
+          "base": "300.59"
+        },
+        {
+          "N": 12,
+          "base": "302.78"
+        },
+        {
+          "N": 13,
+          "base": "304.81"
+        },
+        {
+          "N": 14,
+          "base": "306.70"
+        },
+        {
+          "N": 15,
+          "base": "308.48"
+        },
+        {
+          "N": 16,
+          "base": "315.00"
+        },
+        {
+          "N": 17,
+          "base": "321.48"
+        },
+        {
+          "N": 18,
+          "base": "327.92"
+        },
+        {
+          "N": 19,
+          "base": "334.34"
+        },
+        {
+          "N": 20,
+          "base": "340.76"
+        },
+        {
+          "N": 21,
+          "base": "347.16"
+        },
+        {
+          "N": 22,
+          "base": "353.57"
+        },
+        {
+          "N": 23,
+          "base": "359.99"
+        },
+        {
+          "N": 24,
+          "base": "366.42"
+        },
+        {
+          "N": 25,
+          "base": "372.86"
+        },
+        {
+          "N": 26,
+          "base": "379.31"
+        },
+        {
+          "N": 27,
+          "base": "385.78"
+        },
+        {
+          "N": 28,
+          "base": "392.28"
+        },
+        {
+          "N": 29,
+          "base": "398.79"
+        },
+        {
+          "N": 30,
+          "base": "405.33"
+        },
+        {
+          "N": 31,
+          "base": "411.89"
+        },
+        {
+          "N": 32,
+          "base": "418.48"
+        },
+        {
+          "N": 33,
+          "base": "425.10"
+        },
+        {
+          "N": 34,
+          "base": "431.74"
+        },
+        {
+          "N": 35,
+          "base": "438.41"
+        },
+        {
+          "N": 36,
+          "base": "445.11"
+        },
+        {
+          "N": 37,
+          "base": "451.83"
+        },
+        {
+          "N": 38,
+          "base": "458.59"
+        },
+        {
+          "N": 39,
+          "base": "465.38"
+        },
+        {
+          "N": 40,
+          "base": "472.20"
+        }
+      ]
+    },
+    "COST": {
+      "state": "NO SOLUTION in 5–40 — Base stays below price through N=40 (max $551 vs $995.53)",
+      "monotone": true,
+      "points": [
+        {
+          "N": 5,
+          "base": "355.28"
+        },
+        {
+          "N": 6,
+          "base": "367.55"
+        },
+        {
+          "N": 7,
+          "base": "375.76"
+        },
+        {
+          "N": 8,
+          "base": "382.22"
+        },
+        {
+          "N": 9,
+          "base": "387.36"
+        },
+        {
+          "N": 10,
+          "base": "391.32"
+        },
+        {
+          "N": 11,
+          "base": "394.87"
+        },
+        {
+          "N": 12,
+          "base": "398.16"
+        },
+        {
+          "N": 13,
+          "base": "401.24"
+        },
+        {
+          "N": 14,
+          "base": "404.17"
+        },
+        {
+          "N": 15,
+          "base": "406.94"
+        },
+        {
+          "N": 16,
+          "base": "413.87"
+        },
+        {
+          "N": 17,
+          "base": "420.65"
+        },
+        {
+          "N": 18,
+          "base": "427.31"
+        },
+        {
+          "N": 19,
+          "base": "433.85"
+        },
+        {
+          "N": 20,
+          "base": "440.27"
+        },
+        {
+          "N": 21,
+          "base": "446.59"
+        },
+        {
+          "N": 22,
+          "base": "452.80"
+        },
+        {
+          "N": 23,
+          "base": "458.91"
+        },
+        {
+          "N": 24,
+          "base": "464.94"
+        },
+        {
+          "N": 25,
+          "base": "470.87"
+        },
+        {
+          "N": 26,
+          "base": "476.71"
+        },
+        {
+          "N": 27,
+          "base": "482.47"
+        },
+        {
+          "N": 28,
+          "base": "488.15"
+        },
+        {
+          "N": 29,
+          "base": "493.75"
+        },
+        {
+          "N": 30,
+          "base": "499.28"
+        },
+        {
+          "N": 31,
+          "base": "504.73"
+        },
+        {
+          "N": 32,
+          "base": "510.11"
+        },
+        {
+          "N": 33,
+          "base": "515.41"
+        },
+        {
+          "N": 34,
+          "base": "520.65"
+        },
+        {
+          "N": 35,
+          "base": "525.82"
+        },
+        {
+          "N": 36,
+          "base": "530.93"
+        },
+        {
+          "N": 37,
+          "base": "535.97"
+        },
+        {
+          "N": 38,
+          "base": "540.95"
+        },
+        {
+          "N": 39,
+          "base": "545.87"
+        },
+        {
+          "N": 40,
+          "base": "550.73"
+        }
+      ]
+    },
+    "NVDA†": {
+      "state": "N ≈ 32.4 (Base crosses price between N=32 and N=33)",
+      "monotone": true,
+      "points": [
+        {
+          "N": 5,
+          "base": "91.25"
+        },
+        {
+          "N": 6,
+          "base": "99.01"
+        },
+        {
+          "N": 7,
+          "base": "104.05"
+        },
+        {
+          "N": 8,
+          "base": "107.80"
+        },
+        {
+          "N": 9,
+          "base": "110.46"
+        },
+        {
+          "N": 10,
+          "base": "112.12"
+        },
+        {
+          "N": 11,
+          "base": "113.46"
+        },
+        {
+          "N": 12,
+          "base": "114.63"
+        },
+        {
+          "N": 13,
+          "base": "115.68"
+        },
+        {
+          "N": 14,
+          "base": "116.65"
+        },
+        {
+          "N": 15,
+          "base": "117.55"
+        },
+        {
+          "N": 16,
+          "base": "122.62"
+        },
+        {
+          "N": 17,
+          "base": "127.74"
+        },
+        {
+          "N": 18,
+          "base": "132.93"
+        },
+        {
+          "N": 19,
+          "base": "138.18"
+        },
+        {
+          "N": 20,
+          "base": "143.50"
+        },
+        {
+          "N": 21,
+          "base": "148.91"
+        },
+        {
+          "N": 22,
+          "base": "154.39"
+        },
+        {
+          "N": 23,
+          "base": "159.96"
+        },
+        {
+          "N": 24,
+          "base": "165.62"
+        },
+        {
+          "N": 25,
+          "base": "171.37"
+        },
+        {
+          "N": 26,
+          "base": "177.22"
+        },
+        {
+          "N": 27,
+          "base": "183.17"
+        },
+        {
+          "N": 28,
+          "base": "189.22"
+        },
+        {
+          "N": 29,
+          "base": "195.37"
+        },
+        {
+          "N": 30,
+          "base": "201.62"
+        },
+        {
+          "N": 31,
+          "base": "207.99"
+        },
+        {
+          "N": 32,
+          "base": "214.46"
+        },
+        {
+          "N": 33,
+          "base": "221.05"
+        },
+        {
+          "N": 34,
+          "base": "227.76"
+        },
+        {
+          "N": 35,
+          "base": "234.58"
+        },
+        {
+          "N": 36,
+          "base": "241.53"
+        },
+        {
+          "N": 37,
+          "base": "248.59"
+        },
+        {
+          "N": 38,
+          "base": "255.79"
+        },
+        {
+          "N": 39,
+          "base": "263.11"
+        },
+        {
+          "N": 40,
+          "base": "270.56"
+        }
+      ]
+    },
+    "NUE†": {
+      "state": "NO SOLUTION in 5–40 — Base stays below price through N=40 (max $98 vs $260.73)",
+      "monotone": false,
+      "points": [
+        {
+          "N": 5,
+          "base": "98.12"
+        },
+        {
+          "N": 6,
+          "base": "98.12"
+        },
+        {
+          "N": 7,
+          "base": "98.12"
+        },
+        {
+          "N": 8,
+          "base": "98.12"
+        },
+        {
+          "N": 9,
+          "base": "98.12"
+        },
+        {
+          "N": 10,
+          "base": "98.12"
+        },
+        {
+          "N": 11,
+          "base": "98.12"
+        },
+        {
+          "N": 12,
+          "base": "98.12"
+        },
+        {
+          "N": 13,
+          "base": "98.12"
+        },
+        {
+          "N": 14,
+          "base": "98.12"
+        },
+        {
+          "N": 15,
+          "base": "98.12"
+        },
+        {
+          "N": 16,
+          "base": "98.12"
+        },
+        {
+          "N": 17,
+          "base": "98.12"
+        },
+        {
+          "N": 18,
+          "base": "98.12"
+        },
+        {
+          "N": 19,
+          "base": "98.12"
+        },
+        {
+          "N": 20,
+          "base": "98.12"
+        },
+        {
+          "N": 21,
+          "base": "98.12"
+        },
+        {
+          "N": 22,
+          "base": "98.12"
+        },
+        {
+          "N": 23,
+          "base": "98.12"
+        },
+        {
+          "N": 24,
+          "base": "98.12"
+        },
+        {
+          "N": 25,
+          "base": "98.12"
+        },
+        {
+          "N": 26,
+          "base": "98.12"
+        },
+        {
+          "N": 27,
+          "base": "98.12"
+        },
+        {
+          "N": 28,
+          "base": "98.12"
+        },
+        {
+          "N": 29,
+          "base": "98.12"
+        },
+        {
+          "N": 30,
+          "base": "98.12"
+        },
+        {
+          "N": 31,
+          "base": "98.12"
+        },
+        {
+          "N": 32,
+          "base": "98.12"
+        },
+        {
+          "N": 33,
+          "base": "98.12"
+        },
+        {
+          "N": 34,
+          "base": "98.12"
+        },
+        {
+          "N": 35,
+          "base": "98.12"
+        },
+        {
+          "N": 36,
+          "base": "98.12"
+        },
+        {
+          "N": 37,
+          "base": "98.12"
+        },
+        {
+          "N": 38,
+          "base": "98.12"
+        },
+        {
+          "N": 39,
+          "base": "98.12"
+        },
+        {
+          "N": 40,
+          "base": "98.12"
+        }
+      ]
+    },
+    "LLY†": {
+      "state": "NO SOLUTION in 5–40 — Base stays below price through N=40 (max $579 vs $1240.34)",
+      "monotone": true,
+      "points": [
+        {
+          "N": 5,
+          "base": "260.40"
+        },
+        {
+          "N": 6,
+          "base": "275.74"
+        },
+        {
+          "N": 7,
+          "base": "283.95"
+        },
+        {
+          "N": 8,
+          "base": "290.42"
+        },
+        {
+          "N": 9,
+          "base": "295.41"
+        },
+        {
+          "N": 10,
+          "base": "299.00"
+        },
+        {
+          "N": 11,
+          "base": "301.97"
+        },
+        {
+          "N": 12,
+          "base": "304.60"
+        },
+        {
+          "N": 13,
+          "base": "306.99"
+        },
+        {
+          "N": 14,
+          "base": "309.20"
+        },
+        {
+          "N": 15,
+          "base": "311.28"
+        },
+        {
+          "N": 16,
+          "base": "320.50"
+        },
+        {
+          "N": 17,
+          "base": "329.75"
+        },
+        {
+          "N": 18,
+          "base": "339.06"
+        },
+        {
+          "N": 19,
+          "base": "348.45"
+        },
+        {
+          "N": 20,
+          "base": "357.93"
+        },
+        {
+          "N": 21,
+          "base": "367.52"
+        },
+        {
+          "N": 22,
+          "base": "377.23"
+        },
+        {
+          "N": 23,
+          "base": "387.05"
+        },
+        {
+          "N": 24,
+          "base": "397.01"
+        },
+        {
+          "N": 25,
+          "base": "407.11"
+        },
+        {
+          "N": 26,
+          "base": "417.36"
+        },
+        {
+          "N": 27,
+          "base": "427.75"
+        },
+        {
+          "N": 28,
+          "base": "438.30"
+        },
+        {
+          "N": 29,
+          "base": "449.01"
+        },
+        {
+          "N": 30,
+          "base": "459.88"
+        },
+        {
+          "N": 31,
+          "base": "470.93"
+        },
+        {
+          "N": 32,
+          "base": "482.14"
+        },
+        {
+          "N": 33,
+          "base": "493.53"
+        },
+        {
+          "N": 34,
+          "base": "505.11"
+        },
+        {
+          "N": 35,
+          "base": "516.86"
+        },
+        {
+          "N": 36,
+          "base": "528.81"
+        },
+        {
+          "N": 37,
+          "base": "540.95"
+        },
+        {
+          "N": 38,
+          "base": "553.28"
+        },
+        {
+          "N": 39,
+          "base": "565.81"
+        },
+        {
+          "N": 40,
+          "base": "578.55"
+        }
+      ]
+    }
+  },
+  "roic": {
+    "MSFT": {
+      "years": [
+        {
+          "fiscalYear": 2017,
+          "nopat": "22929750000",
+          "investedCapital": "177858000000",
+          "roic": "0.12892166784738386803",
+          "note": null
+        },
+        {
+          "fiscalYear": 2018,
+          "nopat": "27695820000",
+          "investedCapital": "29451000000",
+          "roic": "0.94040338188856066008",
+          "note": null
+        },
+        {
+          "fiscalYear": 2019,
+          "nopat": "33937610000",
+          "investedCapital": "47263000000",
+          "roic": "0.71805873516281234793",
+          "note": null
+        },
+        {
+          "fiscalYear": 2020,
+          "nopat": "41837610000",
+          "investedCapital": "54600000000",
+          "roic": "0.76625659340659340659",
+          "note": null
+        },
+        {
+          "fiscalYear": 2021,
+          "nopat": "55233640000",
+          "investedCapital": "82341000000",
+          "roic": "0.67079146476239054663",
+          "note": null
+        },
+        {
+          "fiscalYear": 2022,
+          "nopat": "65872570000",
+          "investedCapital": "126468000000",
+          "roic": "0.52086353860265047285",
+          "note": null
+        },
+        {
+          "fiscalYear": 2023,
+          "nopat": "69933170000",
+          "investedCapital": "159265000000",
+          "roic": "0.43909942548582551094",
+          "note": null
+        },
+        {
+          "fiscalYear": 2024,
+          "nopat": "86452070000",
+          "investedCapital": "271709000000",
+          "roic": "0.31817889727612997729",
+          "note": null
+        },
+        {
+          "fiscalYear": 2025,
+          "nopat": "101537120000",
+          "investedCapital": "338237000000",
+          "roic": "0.30019518858078802733",
+          "note": null
+        },
+        {
+          "fiscalYear": 2026,
+          "nopat": "122637230000",
+          "investedCapital": "472432000000",
+          "roic": "0.25958705168151183662",
+          "note": null
+        }
+      ],
+      "measured": 10,
+      "aboveRate": 10,
+      "aboveRatePlus3": 10,
+      "engineFloor": {
+        "status": "PASS",
+        "average": "0.36758482032538116502",
+        "years": [
+          {
+            "fiscalYear": 2026,
+            "roic": "0.25958705168151183662"
+          },
+          {
+            "fiscalYear": 2025,
+            "roic": "0.30019518858078802733"
+          },
+          {
+            "fiscalYear": 2024,
+            "roic": "0.31817889727612997729"
+          },
+          {
+            "fiscalYear": 2023,
+            "roic": "0.43909942548582551094"
+          },
+          {
+            "fiscalYear": 2022,
+            "roic": "0.52086353860265047285"
+          }
+        ],
+        "rate": "0.09",
+        "reason": "Average return on invested capital, goodwill included, over FY2022–FY2026 is 36.8%, above the 9.0% rate."
+      },
+      "crossCheck": "matches the engine's five-year floor"
+    },
+    "COST": {
+      "years": [
+        {
+          "fiscalYear": 2017,
+          "nopat": "3247690000",
+          "investedCapital": "11658000000",
+          "roic": "0.2785803739921084234",
+          "note": null
+        },
+        {
+          "fiscalYear": 2018,
+          "nopat": "3539200000",
+          "investedCapital": "12117000000",
+          "roic": "0.29208549971114962449",
+          "note": null
+        },
+        {
+          "fiscalYear": 2019,
+          "nopat": "3742230000",
+          "investedCapital": "12622000000",
+          "roic": "0.29648470923783869434",
+          "note": null
+        },
+        {
+          "fiscalYear": 2020,
+          "nopat": "4293650000",
+          "investedCapital": "13276000000",
+          "roic": "0.32341443205784874962",
+          "note": null
+        },
+        {
+          "fiscalYear": 2021,
+          "nopat": "5299320000",
+          "investedCapital": "13932000000",
+          "roic": "0.38037037037037037037",
+          "note": null
+        },
+        {
+          "fiscalYear": 2022,
+          "nopat": "6156470000",
+          "investedCapital": "16150000000",
+          "roic": "0.38120557275541795666",
+          "note": null
+        },
+        {
+          "fiscalYear": 2023,
+          "nopat": "6410060000",
+          "investedCapital": "16282000000",
+          "roic": "0.39368996437784056013",
+          "note": null
+        },
+        {
+          "fiscalYear": 2024,
+          "nopat": "7335150000",
+          "investedCapital": "18375000000",
+          "roic": "0.39919183673469387755",
+          "note": null
+        },
+        {
+          "fiscalYear": 2025,
+          "nopat": "8202570000",
+          "investedCapital": "21147000000",
+          "roic": "0.38788338771456944247",
+          "note": null
+        },
+        {
+          "fiscalYear": 2026,
+          "nopat": "9231150000",
+          "investedCapital": "22077000000",
+          "roic": "0.41813425737192553336",
+          "note": null
+        }
+      ],
+      "measured": 10,
+      "aboveRate": 10,
+      "aboveRatePlus3": 10,
+      "engineFloor": {
+        "status": "PASS",
+        "average": "0.39602100379088947404",
+        "years": [
+          {
+            "fiscalYear": 2026,
+            "roic": "0.41813425737192553336"
+          },
+          {
+            "fiscalYear": 2025,
+            "roic": "0.38788338771456944247"
+          },
+          {
+            "fiscalYear": 2024,
+            "roic": "0.39919183673469387755"
+          },
+          {
+            "fiscalYear": 2023,
+            "roic": "0.39368996437784056013"
+          },
+          {
+            "fiscalYear": 2022,
+            "roic": "0.38120557275541795666"
+          }
+        ],
+        "rate": "0.09",
+        "reason": "Average return on invested capital, goodwill included, over FY2022–FY2026 is 39.6%, above the 9.0% rate."
+      },
+      "crossCheck": "matches the engine's five-year floor"
+    },
+    "NVDA": {
+      "years": [
+        {
+          "fiscalYear": 2017,
+          "nopat": "1527860000",
+          "investedCapital": "5979000000",
+          "roic": "0.25553771533701287841",
+          "note": null
+        },
+        {
+          "fiscalYear": 2018,
+          "nopat": "2535900000",
+          "investedCapital": "5454000000",
+          "roic": "0.4649614961496149615",
+          "note": null
+        },
+        {
+          "fiscalYear": 2019,
+          "nopat": "3005160000",
+          "investedCapital": "10548000000",
+          "roic": "0.28490329920364050057",
+          "note": null
+        },
+        {
+          "fiscalYear": 2020,
+          "nopat": "2248340000",
+          "investedCapital": "3299000000",
+          "roic": "0.68152167323431342831",
+          "note": null
+        },
+        {
+          "fiscalYear": 2021,
+          "nopat": "3580280000",
+          "investedCapital": "23009000000",
+          "roic": "0.15560345951584162719",
+          "note": null
+        },
+        {
+          "fiscalYear": 2022,
+          "nopat": "7932390000",
+          "investedCapital": "35568000000",
+          "roic": "0.22302041160593792173",
+          "note": null
+        },
+        {
+          "fiscalYear": 2023,
+          "nopat": "3336960000",
+          "investedCapital": "29665000000",
+          "roic": "0.11248811730996123378",
+          "note": null
+        },
+        {
+          "fiscalYear": 2024,
+          "nopat": "26047880000",
+          "investedCapital": "45407000000",
+          "roic": "0.57365340145792498954",
+          "note": null
+        },
+        {
+          "fiscalYear": 2025,
+          "nopat": "64347870000",
+          "investedCapital": "79201000000",
+          "roic": "0.81246284769131702883",
+          "note": null
+        },
+        {
+          "fiscalYear": 2026,
+          "nopat": "103005730000",
+          "investedCapital": "155156000000",
+          "roic": "0.66388492871690427699",
+          "note": null
+        }
+      ],
+      "measured": 10,
+      "aboveRate": 10,
+      "aboveRatePlus3": 9,
+      "engineFloor": {
+        "status": "PASS",
+        "average": "0.47710194135640909016",
+        "years": [
+          {
+            "fiscalYear": 2026,
+            "roic": "0.66388492871690427699"
+          },
+          {
+            "fiscalYear": 2025,
+            "roic": "0.81246284769131702883"
+          },
+          {
+            "fiscalYear": 2024,
+            "roic": "0.57365340145792498954"
+          },
+          {
+            "fiscalYear": 2023,
+            "roic": "0.11248811730996123378"
+          },
+          {
+            "fiscalYear": 2022,
+            "roic": "0.22302041160593792173"
+          }
+        ],
+        "rate": "0.11",
+        "reason": "Average return on invested capital, goodwill included, over FY2022–FY2026 is 47.7%, above the 11.0% rate."
+      },
+      "crossCheck": "matches the engine's five-year floor"
+    },
+    "NUE": {
+      "years": [
+        {
+          "fiscalYear": 2016,
+          "nopat": null,
+          "investedCapital": null,
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2017,
+          "nopat": null,
+          "investedCapital": null,
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2018,
+          "nopat": null,
+          "investedCapital": "12684338000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2019,
+          "nopat": null,
+          "investedCapital": "12991454000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2020,
+          "nopat": null,
+          "investedCapital": "13171908000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2021,
+          "nopat": null,
+          "investedCapital": "17262390000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2022,
+          "nopat": null,
+          "investedCapital": "20436632000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2023,
+          "nopat": null,
+          "investedCapital": "20841000000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2024,
+          "nopat": null,
+          "investedCapital": "23296000000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2025,
+          "nopat": null,
+          "investedCapital": "25616000000",
+          "roic": null,
+          "note": "operating income not tagged"
+        }
+      ],
+      "measured": 0,
+      "aboveRate": 0,
+      "aboveRatePlus3": 0,
+      "engineFloor": {
+        "status": "UNAVAILABLE",
+        "average": null,
+        "years": [],
+        "rate": "0.11",
+        "reason": "no return-on-capital history was acquired for this run"
+      },
+      "crossCheck": "matches the engine's five-year floor"
+    },
+    "KO": {
+      "years": [
+        {
+          "fiscalYear": 2016,
+          "nopat": "6839030000",
+          "investedCapital": null,
+          "roic": null,
+          "note": "invested capital: an equity, debt or cash input not tagged that year"
+        },
+        {
+          "fiscalYear": 2017,
+          "nopat": "6126450000",
+          "investedCapital": null,
+          "roic": null,
+          "note": "invested capital: an equity, debt or cash input not tagged that year"
+        },
+        {
+          "fiscalYear": 2018,
+          "nopat": "7230080000",
+          "investedCapital": null,
+          "roic": null,
+          "note": "invested capital: an equity, debt or cash input not tagged that year"
+        },
+        {
+          "fiscalYear": 2019,
+          "nopat": "7967940000",
+          "investedCapital": null,
+          "roic": null,
+          "note": "invested capital: an equity, debt or cash input not tagged that year"
+        },
+        {
+          "fiscalYear": 2020,
+          "nopat": "7107630000",
+          "investedCapital": null,
+          "roic": null,
+          "note": "invested capital: an equity, debt or cash input not tagged that year"
+        },
+        {
+          "fiscalYear": 2021,
+          "nopat": "8143320000",
+          "investedCapital": null,
+          "roic": null,
+          "note": "invested capital: an equity, debt or cash input not tagged that year"
+        },
+        {
+          "fiscalYear": 2022,
+          "nopat": "8618110000",
+          "investedCapital": null,
+          "roic": null,
+          "note": "invested capital: an equity, debt or cash input not tagged that year"
+        },
+        {
+          "fiscalYear": 2023,
+          "nopat": "8935690000",
+          "investedCapital": "58291000000",
+          "roic": "0.15329450515516975176",
+          "note": null
+        },
+        {
+          "fiscalYear": 2024,
+          "nopat": "7893680000",
+          "investedCapital": "58190000000",
+          "roic": "0.1356535487197112906",
+          "note": null
+        },
+        {
+          "fiscalYear": 2025,
+          "nopat": "10871980000",
+          "investedCapital": "67335000000",
+          "roic": "0.16146105294423405361",
+          "note": null
+        }
+      ],
+      "measured": 3,
+      "aboveRate": 3,
+      "aboveRatePlus3": 3,
+      "engineFloor": {
+        "status": "UNAVAILABLE",
+        "average": null,
+        "years": [],
+        "rate": "0.09",
+        "reason": "FY2022 is missing invested capital"
+      },
+      "crossCheck": "matches the engine's five-year floor"
+    },
+    "LLY": {
+      "years": [
+        {
+          "fiscalYear": 2016,
+          "nopat": null,
+          "investedCapital": "18274300000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2017,
+          "nopat": null,
+          "investedCapital": "17205200000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2018,
+          "nopat": null,
+          "investedCapital": "12718400000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2019,
+          "nopat": null,
+          "investedCapital": "15485600000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2020,
+          "nopat": null,
+          "investedCapital": "18555600000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2021,
+          "nopat": null,
+          "investedCapital": "21955300000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2022,
+          "nopat": null,
+          "investedCapital": "24676600000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2023,
+          "nopat": null,
+          "investedCapital": "33069500000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2024,
+          "nopat": null,
+          "investedCapital": "44493200000",
+          "roic": null,
+          "note": "operating income not tagged"
+        },
+        {
+          "fiscalYear": 2025,
+          "nopat": null,
+          "investedCapital": "61770000000",
+          "roic": null,
+          "note": "operating income not tagged"
+        }
+      ],
+      "measured": 0,
+      "aboveRate": 0,
+      "aboveRatePlus3": 0,
+      "engineFloor": {
+        "status": "UNAVAILABLE",
+        "average": null,
+        "years": [],
+        "rate": "0.09",
+        "reason": "no return-on-capital history was acquired for this run"
+      },
+      "crossCheck": "matches the engine's five-year floor"
+    }
+  },
+  "msftInputs": [
+    [
+      "Revenue growth yrs 1–5",
+      "12.0% each year (5-yr CAGR 12.0%); then 10.2%, 8.4%, 6.6%, 4.8%, 3.0% in yrs 6–10; 3.0% after",
+      "13.8% 5-yr CAGR"
+    ],
+    [
+      "Operating margin path",
+      "45.5% flat, every year (TTM 46.8%; filed 10-yr median 41.7%)",
+      "rising to 47.6%"
+    ],
+    [
+      "Discount rate",
+      "9.0% (D1 stable band); Base at 8.5% = $358",
+      "WACC 8.5%"
+    ],
+    [
+      "Tax rate (NOPAT)",
+      "21.0% — statutory; the draft cites no company tax disclosure",
+      "—"
+    ],
+    [
+      "TTM base revenue",
+      "$331.8bn (FY2026, period end 2026-06-30); yr-5 revenue $585bn",
+      "—"
+    ],
+    [
+      "TTM NOPAT",
+      "$122.6bn (operating income $155.2bn × (1 − 21.0%))",
+      "—"
+    ],
+    [
+      "Invested capital (FY2026 year-end, goodwill incl.)",
+      "$472.4bn → ROIC 26.0%",
+      "—"
+    ],
+    [
+      "Return on new capital yrs 1–5",
+      "18.0%; fades 16.8%, 15.6%, 14.4%, 13.2%, 12.0% in yrs 6–10; terminal 12.0% (rate + 3.0% wide moat)",
+      "—"
+    ],
+    [
+      "Share count",
+      "Base 7301m (0.98× today's diluted 7450m)",
+      "—"
+    ],
+    [
+      "Net cash in the bridge",
+      "$6.3bn = cash & securities $76.8bn + non-operating investments $36.3bn − debt $40.3bn − finance leases $66.6bn",
+      "—"
+    ],
+    [
+      "Terminal growth",
+      "3.0% (POLICY.terminalGrowth), reached in yr 10",
+      "—"
+    ]
+  ]
+}

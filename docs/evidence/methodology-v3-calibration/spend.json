@@ -1,0 +1,39 @@
+{
+  "calls": 15,
+  "inputTokens": 57180,
+  "outputTokens": 71667,
+  "costUsd": 2.077575,
+  "capUsd": 5,
+  "perTicker": {
+    "COST": {
+      "calls": 3,
+      "inputTokens": 11559,
+      "outputTokens": 11797,
+      "costUsd": 0.35272000000000003
+    },
+    "NVDA": {
+      "calls": 3,
+      "inputTokens": 11544,
+      "outputTokens": 13802,
+      "costUsd": 0.40277
+    },
+    "NUE": {
+      "calls": 3,
+      "inputTokens": 11355,
+      "outputTokens": 17091,
+      "costUsd": 0.48405
+    },
+    "KO": {
+      "calls": 3,
+      "inputTokens": 11439,
+      "outputTokens": 11737,
+      "costUsd": 0.35062000000000004
+    },
+    "LLY": {
+      "calls": 3,
+      "inputTokens": 11283,
+      "outputTokens": 17240,
+      "costUsd": 0.48741500000000004
+    }
+  }
+}

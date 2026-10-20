@@ -58,6 +58,12 @@ const RUN_FILES: Record<string, string> = {
   KO: path.join(EVIDENCE, "ko-run.json"),
   LLY: path.join(EVIDENCE, "lly-run.json"),
 };
+// TEST-ONLY SUPPLEMENT (calibration-v3-supplement.ts): companies the engine
+// leaves NOT VALUED on treasury-method dilution, re-valued with it stated as
+// diluted − basic weighted-average shares. Reported apart, marked †.
+const SUPPLEMENT_FILES: Record<string, string> = Object.fromEntries(
+  ["NVDA", "NUE", "KO", "LLY"].map((t) => [t, path.join(EVIDENCE, `${t.toLowerCase()}-run-supplement.json`)])
+);
 const CAPTURE_19_OCT = path.join("lib", "analyzer", "acquisition", "captures", "ar6-2026-10-19");
 const D = (v: unknown) => new Decimal(String(v));
 const TG = POLICY.terminalGrowth;
@@ -170,7 +176,15 @@ function roicHistory(doc: CompanyFactsDocument, tax: Decimal, rate: Decimal) {
     const nopat = y.operatingIncome === null ? null : y.operatingIncome.mul(new Decimal(1).minus(tax));
     const ic = y.investedCapital;
     const roic = nopat !== null && ic !== null && ic.greaterThan(0) ? nopat.div(ic) : null;
-    return { fiscalYear: y.fiscalYear, nopat, investedCapital: ic, roic, note: roic === null ? (ic !== null && !ic.greaterThan(0) ? "invested capital not positive" : "input missing") : null };
+    return { fiscalYear: y.fiscalYear, nopat, investedCapital: ic, roic, note:
+        roic !== null
+          ? null
+          : nopat === null
+            ? "operating income not tagged"
+            : ic === null
+              ? "invested capital: an equity, debt or cash input not tagged that year"
+              : "invested capital not positive",
+    };
   });
   const measured = years.filter((y) => y.roic !== null);
   return {
@@ -267,6 +281,16 @@ async function main(): Promise<void> {
     else companies.push(company);
   }
 
+  const supplements: Company[] = [];
+  const supplementNotValued: { ticker: string; cause: string }[] = [];
+  for (const [ticker, file] of Object.entries(SUPPLEMENT_FILES)) {
+    if (!existsSync(file)) continue;
+    const { company, cause, run } = loadCompany(`${ticker}†`, file);
+    runs[`${ticker}†`] = run;
+    if (company === null) supplementNotValued.push({ ticker: `${ticker}†`, cause: cause! });
+    else supplements.push(company);
+  }
+
   // OKLO: no 19 Oct capture is committed; the newest committed one (24 Sep) is
   // read through the production drafting path with no model — it settles a
   // company that cannot be drafted from history without a call.
@@ -299,7 +323,7 @@ async function main(): Promise<void> {
   lines.push("## Engine reproduction (CURRENT at recorded class = live engine)", "");
   lines.push("| Company | worst relative error vs the frozen run (Bear, Base, Bull, Base at rate ± 0.5pp, terminal share) | |", "|---|---|---|");
   const repro: Record<string, unknown> = {};
-  for (const c of companies) {
+  for (const c of [...companies, ...supplements]) {
     const r = reproduce(c);
     repro[c.ticker] = { ok: r.ok, worst: r.worst.toExponential(2) };
     lines.push(`| ${c.ticker} | ${r.worst.toExponential(2)} | ${r.ok ? "MATCH" : "**MISMATCH**"} |`);
@@ -309,8 +333,9 @@ async function main(): Promise<void> {
   lines.push("");
 
   lines.push("## Frozen inputs", "");
+  lines.push("† = TEST-ONLY SUPPLEMENT, not engine output: the engine leaves this company NOT VALUED; re-valued with treasury-method dilution stated as diluted − basic weighted-average shares.", "");
   lines.push("| Company | Price 19 Oct | D1 rate | Moat (draft) | Base g yrs 1–5 | Base margin | Base RONIC | Tax | Stub yrs | Bridge (EV − mkt cap) |", "|---|---|---|---|---|---|---|---|---|---|");
-  for (const c of companies) {
+  for (const c of [...companies, ...supplements]) {
     const b = c.drivers.base;
     lines.push(`| ${c.ticker} | $${c.price.toFixed(2)} | ${pct(c.rate)} | ${c.moat} | ${pct(b.g)} | ${pct(b.m)} | ${pct(b.ronic)} | ${pct(c.tax)} | ${c.stub.toFixed(3)} | $${c.bridge.div(1e9).toFixed(1)}bn |`);
   }
@@ -320,7 +345,7 @@ async function main(): Promise<void> {
   lines.push("## Results — every design × every moat class (★ = the draft's recorded class)", "");
   lines.push("Grid = verdict zones at rate −0.5pp / rate / +0.5pp, each as Low·Med·High (B/H/S). Close calls = uncertainty levels (of 3) where the three rates disagree.", "");
   lines.push("| Company | Design | Class | G/R/S | Bear | Base | Bull | Price/Base | Terminal share | D3 grid | Routing | Close calls |", "|---|---|---|---|---|---|---|---|---|---|---|---|");
-  for (const c of companies) {
+  for (const c of [...companies, ...supplements]) {
     for (const design of DESIGNS) {
       for (const cls of CLASSES) {
         const v = valueDesign(c, design, cls);
@@ -337,14 +362,14 @@ async function main(): Promise<void> {
   lines.push("");
 
   lines.push("## Not valued", "", "| Company | Cause |", "|---|---|");
-  for (const n of notValued) lines.push(`| ${n.ticker} | ${n.cause.replace(/\|/g, "\\|")} |`);
+  for (const n of [...notValued, ...supplementNotValued]) lines.push(`| ${n.ticker} | ${n.cause.replace(/\|/g, "\\|")} |`);
   json.notValued = notValued;
   lines.push("");
 
   lines.push("## Implied runway (Base = price; R = N, G = max(10, N − 5), S = 0; base drivers, D1 rate)", "");
   lines.push("| Company | Price | Base at N=5 | Base at N=40 | Base rises with N throughout | Result |", "|---|---|---|---|---|---|");
   const runway: Record<string, unknown> = {};
-  for (const c of companies) {
+  for (const c of [...companies, ...supplements]) {
     const r = impliedRunway(c);
     runway[c.ticker] = { state: r.state, monotone: r.monotone, points: r.points.map((p) => ({ N: p.N, base: p.base.toFixed(2) })) };
     lines.push(`| ${c.ticker} | $${c.price.toFixed(2)} | ${money(r.atN5)} | ${money(r.atN40)} | ${r.monotone ? "yes" : "no"} | ${r.state} |`);
@@ -354,11 +379,15 @@ async function main(): Promise<void> {
 
   lines.push("## Moat-floor data — ROIC including goodwill, every filed year in the 19 Oct capture (NOPAT at the sheet's tax rate ÷ year-end invested capital)", "");
   const roics: Record<string, unknown> = {};
-  for (const c of companies) {
+  // Every company with a 19 Oct capture and a frozen sheet, valued or not: the
+  // floor needs no price, bridge or value.
+  for (const ticker of Object.keys(RUN_FILES).filter((t) => runs[t] !== undefined)) {
+    const run = runs[ticker];
+    const c = { ticker, tax: D(run.sheet.content.configuredConstants.nopatTaxRate), rate: D(run.result.valuationBasis.discountRate.rate) };
     const doc = JSON.parse(readFileSync(path.join(CAPTURE_19_OCT, `${c.ticker.toLowerCase()}-companyfacts.json`), "utf8")) as CompanyFactsDocument;
     const h = roicHistory(doc, c.tax, c.rate);
     // The engine's own five-year floor on the frozen run, for a cross-check.
-    const floor = runs[c.ticker].result.verdictInputs.roicFloor;
+    const floor = run.result.verdictInputs.roicFloor;
     const engineYears: Record<number, string> = Object.fromEntries((floor.years ?? []).map((y: { fiscalYear: number; roic: string }) => [y.fiscalYear, y.roic]));
     const mismatches = h.years.filter((y) => engineYears[y.fiscalYear] !== undefined && y.roic !== null && D(engineYears[y.fiscalYear]).minus(y.roic).abs().greaterThan("1e-9"));
     roics[c.ticker] = { ...h, engineFloor: floor, crossCheck: mismatches.length === 0 ? "matches the engine's five-year floor" : `differs from the engine's floor in FY${mismatches.map((m) => m.fiscalYear).join(", FY")}` };
