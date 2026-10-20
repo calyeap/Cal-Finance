@@ -1,0 +1,1596 @@
+{
+  "capture": {
+    "note": "Real run for the AR7 prototype (#455): one median-of-three DRAFT sheet, valued unadopted, read-only.",
+    "exportedAt": "2026-10-20T03:15:49.913Z",
+    "ticker": "MSFT",
+    "price": {
+      "value": "533.52",
+      "timestamp": "2026-10-19",
+      "source": "YAHOO latest close"
+    },
+    "nonOperatingSelection": "us-gaap:LongTermInvestments",
+    "model": "claude-opus-5",
+    "usage": {
+      "calls": 3,
+      "inputTokens": 31971,
+      "outputTokens": 13690,
+      "costUsd": 0.502105,
+      "capUsd": 1
+    }
+  },
+  "sheet": {
+    "id": -1,
+    "ticker": "MSFT",
+    "version": 1,
+    "status": "DRAFT",
+    "origin": "AI DRAFT",
+    "content": {
+      "profile": "MATURE_PROFITABLE_STABLE_FCF",
+      "classificationInputs": {
+        "revenueScale": "large",
+        "fcfCharacter": "positive_stable",
+        "revenueGrowthBand": "10-30%",
+        "capitalIntensity": "0.14",
+        "cyclicality": {
+          "tenYearMarginRange": "0.16725211653275938255",
+          "worstSingleYearChange": "0.00282397519945732697"
+        },
+        "balanceSheetNature": "asset-heavy"
+      },
+      "scenarios": {
+        "bear": {
+          "revenueGrowthOrPath": "0.07",
+          "operatingMargin": "0.4",
+          "reinvestmentCapitalIntensity": "0.08",
+          "returnOnNewInvestment": "0.11",
+          "shareCount": "7598536401",
+          "writtenAnchor": "AI and cloud demand normalises faster than the current build-out assumes. Azure growth decelerates from the 43% posted in the June 2026 quarter toward the rate of the broader commercial base, Windows OEM, devices and Xbox keep shrinking, and revenue growth settles near the weakest year in the filed decade (6.9% in FY2023). The enormous capital programme — capex of $115.9bn in FY2026 against $34.3bn of depreciation — lands in the cost base as depreciation catches up, so operating margin gives back the recent gains and runs below the ten-year median rather than at the FY2026 peak of 46.8%. New capital earns roughly the discount rate: filed ROIC has already fallen from 94.0% in FY2018 to 26.0% in FY2026 as invested capital scaled, and the five-year incremental return of 17.3% compresses further in a capital-heavy AI regime. Rising stock-based compensation outpaces repurchases and share count drifts up slightly.",
+          "anchors": {
+            "revenueGrowthOrPath": {
+              "text": "Set at the bottom of the filed single-year range (6.9% in FY2023), reflecting a demand normalisation in which the declining More Personal Computing lines (Windows OEM and devices down 7%, Xbox content down 10% in the June 2026 quarter) weigh on a decelerating cloud base.",
+              "cites": [
+                "H:revenue",
+                "E1"
+              ]
+            },
+            "operatingMargin": {
+              "text": "Below the 41.7% median and well below the 46.8% current level (H:margin), the level that would follow if depreciation on the AI fleet — D&A rose from $22.0bn to $34.3bn in one year against $115.9bn of capex (H:capex) — outruns the revenue it supports.",
+              "cites": [
+                "H:margin",
+                "H:capex"
+              ]
+            },
+            "reinvestmentCapitalIntensity": {
+              "text": "Net investment (capex less D&A) over revenue has a filed median of 6.2%; with slow growth the bear spends only slightly above that median rather than the 24.6% implied by FY2026's $115.9bn capex against $34.3bn D&A.",
+              "cites": [
+                "H:capex",
+                "H:revenue"
+              ]
+            },
+            "returnOnNewInvestment": {
+              "text": "Below the 17.3% five-year incremental return on new capital and far below any filed full-year ROIC, extending the decline from 67.1% in FY2021 to 26.0% in FY2026 as the capital-heavy AI estate dilutes returns (H:returns, H:capex). Allowed to sit near the discount rate in the downside case.",
+              "cites": [
+                "H:returns",
+                "H:capex"
+              ]
+            },
+            "shareCount": {
+              "text": "Slight dilution: stock-based compensation has risen every year on file, to $12.4bn in FY2026, and in a weaker cash case repurchases (part of the $10.2bn of dividends and buybacks in the June 2026 quarter) no longer fully offset it. (1.02× today's diluted count)",
+              "cites": [
+                "H:cashflow",
+                "E1"
+              ]
+            }
+          }
+        },
+        "base": {
+          "revenueGrowthOrPath": "0.12",
+          "operatingMargin": "0.455",
+          "reinvestmentCapitalIntensity": "0.14",
+          "returnOnNewInvestment": "0.18",
+          "shareCount": "7300554581",
+          "writtenAnchor": "Microsoft compounds off a very large base at a rate between its ten-year CAGR (14.7%) and the slowest year on file. Commercial remaining performance obligation of $684bn at FY2026 year-end, up from $375bn a year earlier, plus Microsoft 365 Copilot at over 30 million paid seats and Azure crossing $100bn of annual revenue, underpin mid-teens growth that fades as the backlog converts. Operating margin holds close to the FY2026 level of 46.8% — mix shifts toward capital-intensive cloud and AI infrastructure, which carries more depreciation, but software and M365 scale offsets it — so the base sits just below the peak at 45.5%. Returns on new capital stay well above the cost of capital but far below the asset-light history: 18% is near the trailing five-year incremental return of 17.3% and well under the 26.0% FY2026 ROIC. Net reinvestment stays elevated versus the 6.2% median of capex less depreciation as data-centre spend continues, and steady repurchases shrink the share count modestly.",
+          "anchors": {
+            "revenueGrowthOrPath": {
+              "text": "Between the filed ten-year CAGR of 14.7% and the slow years, reflecting 18% FY2026 growth and commercial RPO of $684bn (up from $375bn) converting over several years while the base grows larger and Windows/Xbox lines shrink.",
+              "cites": [
+                "H:revenue",
+                "H:backlog",
+                "E1"
+              ]
+            },
+            "operatingMargin": {
+              "text": "A touch below the FY2026 record of 46.8% and above the 45.6% of FY2025 (H:margin); the June quarter ran at 45.1% operating margin ($40.6bn on $90.0bn, E1), and rising AI depreciation (H:capex) argues against assuming further expansion.",
+              "cites": [
+                "H:margin",
+                "E1",
+                "H:capex"
+              ]
+            },
+            "reinvestmentCapitalIntensity": {
+              "text": "FY2026 net investment was $81.6bn of capex less D&A on $331.8bn of revenue, about 24.6%, against a filed median of 6.2%; the base assumes the AI build moderates to a level well above history but well below the FY2026 peak.",
+              "cites": [
+                "H:capex",
+                "H:revenue"
+              ]
+            },
+            "returnOnNewInvestment": {
+              "text": "Close to the filed five-year incremental return on new capital of 17.3% and comfortably below the FY2026 ROIC of 26.0%; it sits above the base terminal return of 12.0% (9.0% discount rate plus the 3.0-point wide-moat credit).",
+              "cites": [
+                "H:returns"
+              ]
+            },
+            "shareCount": {
+              "text": "Modest net shrinkage: Microsoft returned $10.2bn in dividends and repurchases in each of the last two reported quarters, which offsets stock-based compensation of $12.4bn in FY2026 and leaves a small annual reduction. (0.98× today's diluted count)",
+              "cites": [
+                "E1",
+                "E2",
+                "H:cashflow"
+              ]
+            }
+          }
+        },
+        "bull": {
+          "revenueGrowthOrPath": "0.16",
+          "operatingMargin": "0.48",
+          "reinvestmentCapitalIntensity": "0.17",
+          "returnOnNewInvestment": "0.22",
+          "shareCount": "7077068216",
+          "writtenAnchor": "The agentic-computing cycle keeps Microsoft's growth at the top of its filed range. Revenue grew 18% in FY2026 and 17.7% in the June quarter, Microsoft Cloud revenue rose 27% to $59.3bn, Azure grew 43%, and the AI business passed a $37bn run rate up 123% year over year; commercial RPO up 84% to $678bn gives multi-year visibility. Growth holds at 16% for five years. The AI stack proves high-margin as utilisation of the FY2024–FY2026 capex wave rises, pushing operating margin above the FY2026 record to 48%. New capital earns 22% after tax — above the recent five-year incremental return of 17.3% but still below the 26.0% ROIC Microsoft actually filed in FY2026 — and strong free cash flow (operating cash flow $182.9bn in FY2026) funds both the build-out and continued repurchases, lowering the share count.",
+          "anchors": {
+            "revenueGrowthOrPath": {
+              "text": "Near the top of the filed single-year range (18.0%) and just above the ten-year CAGR of 14.7%, supported by FY2026 revenue growth of 18%, Azure up 43% and commercial RPO up 84% to $678bn at quarter-end.",
+              "cites": [
+                "H:revenue",
+                "E1",
+                "H:backlog"
+              ]
+            },
+            "operatingMargin": {
+              "text": "Slightly above the FY2026 record of 46.8%, extending the unbroken ten-year climb from 30.1%, as utilisation of the installed AI capacity rises; operating income grew 21% in FY2026 against 18% revenue growth, showing continued leverage.",
+              "cites": [
+                "H:margin",
+                "E1"
+              ]
+            },
+            "reinvestmentCapitalIntensity": {
+              "text": "Elevated against the 6.2% median because faster growth requires continued capacity, but below the roughly 24.6% FY2026 peak as D&A catches up with capex (D&A rose from $22.0bn to $34.3bn) and the fleet is utilised against the $678bn contracted backlog (H:capex, H:revenue, E1).",
+              "cites": [
+                "H:capex",
+                "H:revenue",
+                "E1"
+              ]
+            },
+            "returnOnNewInvestment": {
+              "text": "Above the five-year incremental return of 17.3% but still below the 26.0% ROIC Microsoft actually filed in FY2026, and far below 1.5 times the best filed return; it clears the bull terminal return of 13.5% (9.0% plus 3.0 wide-moat points plus the 1.5 bull point).",
+              "cites": [
+                "H:returns"
+              ]
+            },
+            "shareCount": {
+              "text": "Operating cash flow reached $182.9bn in FY2026 against $12.4bn of stock-based compensation; with capex funded internally, the $10.2bn-per-quarter shareholder return can tilt further to repurchases and shrink the diluted count faster. (0.95× today's diluted count)",
+              "cites": [
+                "H:cashflow",
+                "E1"
+              ]
+            }
+          }
+        }
+      },
+      "moatClass": "wide",
+      "moatAnchor": {
+        "text": "Switching costs reinforced by intangible assets and efficient scale: Microsoft 365 Commercial cloud, Dynamics 365 and Azure are embedded in customer operations, shown by commercial remaining performance obligation of $684bn at FY2026 year-end (up from $73bn in FY2018) and over 30 million paid Microsoft 365 Copilot seats, while global data-centre scale supports a $100bn-plus Azure business. The filed returns support the credit: ROIC has been 26.0% or higher in every year since FY2018, peaking at 94.0%, far above the 9.0% discount rate, so a 12.0% terminal return sits well below any return the company has filed.",
+        "cites": [
+          "H:returns",
+          "H:backlog",
+          "E1",
+          "E2"
+        ]
+      },
+      "configuredConstants": {
+        "nopatTaxRate": "0.21",
+        "stressMarginLevel": "0.36",
+        "preRevenueUnleveredRate": null,
+        "projectDebtCost": null
+      },
+      "constantsAnchor": {
+        "text": "No company-specific effective tax disclosure was supplied, so the general US federal statutory rate of 21.0% is used — the same rate used to compute NOPAT in the filed return history. The stress margin of 36% is below both the current margin of 46.8% and the ten-year median of 41.7%, and sits between the FY2019 (34.1%) and FY2020 (37.0%) filed levels.",
+        "cites": [
+          "STATUTORY",
+          "H:returns",
+          "H:margin"
+        ]
+      },
+      "sources": [
+        {
+          "id": "H:revenue",
+          "kind": "HISTORY",
+          "label": "Revenue, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001193125-26-323660",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 96571m; FY2018 110360m; FY2019 125843m; FY2020 143015m; FY2021 168088m; FY2022 198270m; FY2023 211915m; FY2024 245122m; FY2025 281724m; FY2026 331839m. Window CAGR 14.7% over 9 years; single-year growth ranged 6.9% to 18.0%."
+        },
+        {
+          "id": "H:margin",
+          "kind": "HISTORY",
+          "label": "Operating income and operating margin, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001193125-26-323660",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 29025m (30.1%); FY2018 35058m (31.8%); FY2019 42959m (34.1%); FY2020 52959m (37.0%); FY2021 69916m (41.6%); FY2022 83383m (42.1%); FY2023 88523m (41.8%); FY2024 109433m (44.6%); FY2025 128528m (45.6%); FY2026 155237m (46.8%). Margin ranged 30.1% to 46.8%."
+        },
+        {
+          "id": "H:capex",
+          "kind": "HISTORY",
+          "label": "Capital expenditure and depreciation & amortisation, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001193125-26-323660",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 capex 8129m, D&A 6100m; FY2018 capex 11632m, D&A 7700m; FY2019 capex 13925m, D&A 9700m; FY2020 capex 15441m, D&A 10700m; FY2021 capex 20622m, D&A 9300m; FY2022 capex 23886m, D&A 12600m; FY2023 capex 28107m, D&A 11000m; FY2024 capex 44477m, D&A 15200m; FY2025 capex 64551m, D&A 22000m; FY2026 capex 115948m, D&A 34300m. Median net reinvestment (capex − D&A) ÷ revenue 6.2%."
+        },
+        {
+          "id": "H:cashflow",
+          "kind": "HISTORY",
+          "label": "Operating cash flow and stock-based compensation, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001193125-26-323660",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 operating cash flow 39507m, SBC 3266m; FY2018 operating cash flow 43884m, SBC 3940m; FY2019 operating cash flow 52185m, SBC 4652m; FY2020 operating cash flow 60675m, SBC 5289m; FY2021 operating cash flow 76740m, SBC 6118m; FY2022 operating cash flow 89035m, SBC 7502m; FY2023 operating cash flow 87582m, SBC 9611m; FY2024 operating cash flow 118548m, SBC 10734m; FY2025 operating cash flow 136162m, SBC 11974m; FY2026 operating cash flow 182935m, SBC 12405m."
+        },
+        {
+          "id": "H:returns",
+          "kind": "HISTORY",
+          "label": "NOPAT (operating income at the 21.0% statutory rate), invested capital and return on invested capital, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001193125-26-323660",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 NOPAT 22930m, invested capital 177858m, ROIC 12.9%; FY2018 NOPAT 27696m, invested capital 29451m, ROIC 94.0%; FY2019 NOPAT 33938m, invested capital 47263m, ROIC 71.8%; FY2020 NOPAT 41838m, invested capital 54600m, ROIC 76.6%; FY2021 NOPAT 55234m, invested capital 82341m, ROIC 67.1%; FY2022 NOPAT 65873m, invested capital 126468m, ROIC 52.1%; FY2023 NOPAT 69933m, invested capital 159265m, ROIC 43.9%; FY2024 NOPAT 86452m, invested capital 271709m, ROIC 31.8%; FY2025 NOPAT 101537m, invested capital 338237m, ROIC 30.0%; FY2026 NOPAT 122637m, invested capital 472432m, ROIC 26.0%. ROIC ranged 12.9% to 94.0%; incremental return on new capital over the latest five years (ΔNOPAT ÷ Δinvested capital) 17.3%."
+        },
+        {
+          "id": "H:backlog",
+          "kind": "HISTORY",
+          "label": "Remaining performance obligations (backlog), at fiscal year end",
+          "form": "XBRL company facts",
+          "accession": "0001193125-26-323660",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2018 73000m; FY2019 91000m; FY2020 111000m; FY2021 146000m; FY2022 193000m; FY2023 229000m; FY2024 275000m; FY2025 375000m; FY2026 684000m."
+        },
+        {
+          "id": "H:quarter",
+          "kind": "HISTORY",
+          "label": "Latest reported quarter (revenue, from the quarterly filings)",
+          "form": "XBRL company facts",
+          "accession": null,
+          "filed": null,
+          "url": null,
+          "excerpt": "Quarter ended 2026-06-30: revenue 90007m, 17.7% on the year-ago quarter; trailing twelve months 331839m."
+        },
+        {
+          "id": "E1",
+          "kind": "EARNINGS RELEASE",
+          "label": "Earnings release (8-K, item 2.02, exhibit 99) filed 2026-07-29",
+          "form": "8-K",
+          "accession": "0001193125-26-323632",
+          "filed": "2026-07-29",
+          "url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323632/msft-ex99_1.htm",
+          "excerpt": "EX-99.1 2 msft-ex99_1.htm EX-99.1 EX-99.1 Exhibit 99.1 Microsoft Cloud and AI Strength Fuels Fourth Quarter Results REDMOND, Wash. — July 29, 2026 — Microsoft Corp. today announced the following results for the quarter ended June 30, 2026, as compared to the corresponding period of last fiscal year: • Revenue was $90.0 billion and increased 18% (up 17% in constant currency) • Operating income was $40.6 billion and increased 18% • Net income was $35.8 billion and increased 31% on a GAAP basis, and was $35.3 billion and increased 22% on a non-GAAP basis • Diluted earnings per share was $4.81 and increased 32% on a GAAP basis, and was $4.74 and increased 23% on a non-GAAP basis • Non-GAAP results exclude the impact from investments in OpenAI, explained in the Non-GAAP Definition section below Several discrete items impacted our financial results in the quarter when compared to our forward-looking guidance provided on April 29, 2026, resulting in a benefit of $0.27 on diluted earnings per share. These include a $3.2 billion gain from our investment in Anthropic and lower-than-expected expenses related to the Voluntary Retirement Program which were partially offset by severance expense and impairment charges in XBOX. When adjusting for these items, we exceeded expectations across revenue, operating income, and diluted earnings per share. “We are advancing the frontier on the cost-to-outcome curve, ensuring every customer can turn tokens into business results,” said Satya Nadella, chairman and chief executive officer of Microsoft. “This year, Azure revenue surpassed $100 billion for the first time, and Microsoft 365 Copilot reached over 30 million paid seats, reflecting the confidence customers are placing in us to power their AI transformation.” “We delivered a strong quarter to close out the fiscal year, highlighted by Microsoft Cloud revenue of $59.3 billion, up 27% year-over-year,” said Amy Hood, executive vice president and chief financial officer of Microsoft. The following table adjusts for the impact from investments in OpenAI and reconciles our financial results reported in accordance with generally accepted accounting principles (GAAP) to non-GAAP financial results. Additional information regarding our non-GAAP definition is provided below. All growth comparisons relate to the corresponding period in the last fiscal year. Three Months Ended June 30, 2026 2025 Percentage Change Y/Y Percentage Change Y/Y ($ in millions, except per share amounts) As Reported (GAAP) Impact from OpenAI* As Adjusted (non-GAAP) As Reported (GAAP) Impact from OpenAI* As Adjusted (non-GAAP) GAAP Constant Currency Net Impact from OpenAI* Non-GAAP Non-GAAP Constant Currency Net Income $35,766 $(480) $35,286 $27,233 $1,575 $28,808 31% 31% $(2,055) 22% 22% Diluted Earnings per Share $4.81 $(0.07) $4.74 $3.65 $0.21 $3.86 32% 32% $(0.28) 23% 23% *Impact from OpenAI adjusts for the impact from investments in OpenAI Business Highlights Microsoft Cloud revenue was $59.3 billion and increased 27%, and commercial remaining performance obligation increased 84% to $678 billion. Revenue in Productivity and Business Processes was $37.8 billion and increased 14%, with the following business highlights: • Microsoft 365 Commercial cloud revenue increased 16% when adjusted for the prior year comparable that benefited from 2 points of in-period revenue recognition. On a reported basis, Microsoft 365 Commercial cloud revenue increased 14%. • Microsoft 365 Consumer cloud revenue increased 24% (up 22% in constant currency) • LinkedIn revenue increased 12% (up 10% in constant currency) • Dynamics 365 revenue increased 13% (up 12% in constant currency) Revenue in Intelligent Cloud was $39.3 billion and increased 32% (up 31% in constant currency), with the following business highlights: • Azure and other cloud services revenue increased 43% Revenue in More Personal Computing was $12.9 billion and decreased 4% (down 5% in constant currency), with the following business highlights: • Windows OEM and Devices revenue decreased 7% • XBOX content and services revenue decreased 10% • Search advertising revenue excluding traffic acquisition costs increased 10% (up 9% in constant currency) Microsoft returned $10.2 billion to shareholders in the form of dividends and share repurchases in the fourth quarter of fiscal year 2026. Fiscal Year 2026 Results Microsoft Corp. today announced the following results for the fiscal year ended June 30, 2026, as compared to the corresponding period of last fiscal year: • Revenue was $331.8 billion and increased 18% (up 16% in constant currency) • Operating income was $155.2 billion and increased 21% (up 19% in constant currency) • Net income was $133.7 billion and increased 31% on a GAAP basis, and increased 22% (up 20% in constant currency) on a non-GAAP basis • Diluted earnings per share was $17.95 and increased 32% on a GAAP basis, and increased 22% (up 21% in constant currency) on a non-GAAP basis • Non-GAAP results exclude the impact from investments in OpenAI, explained in the Non-GAAP Definition section below The following table adjusts for the impact from investments in OpenAI and reconciles our financial results reported in accordance with GAAP to non-GAAP financial results. Additional information regarding our non-GAAP definition is provided below. All growth comparisons relate to the corresponding period in the last fiscal year. Twelve Months Ended June 30, 2026 2025 Percentage Change Y/Y Percentage Change Y/Y ($ in millions, except per share amounts) As Reported (GAAP) Impact from OpenAI* As Adjusted (non-GAAP) As Reported (GAAP) Impact from OpenAI* As Adjusted (non-GAAP) GAAP Constant Currency Net Impact from OpenAI* Non-GAAP Non-GAAP Constant Currency Net Income $133,749 $(4,963) $128,786 $101,832 $3,620 $105,452 31% 30% $(8,583) 22% 20% Diluted Earnings per Share $17.95 $(0.67) $17.28 $13.64 $0.49 $14.13 32% 30% $(1.16) 22% 21% *Impact from OpenAI adjusts for the impact from investments in OpenAI Business Outlook Microsoft will provide forward-looking guidance in connection with this quarterly earnings announcement on its earnings conference call and webcast. Quarterly Highlights, Product Releases, and Customer Stories Every quarter Microsoft delivers hundreds of products, services, and enhancements. These releases are driven by years of significant research and development investments, to empower customers with greater productivity, security, and differentiated value. This momentum is reflected in stories that showcase how our technology is shaping industries and driving customer success . We share innovation updates on our product blogs across Azure , Microsoft 365 , and more on our Official Microsoft blog . Webcast Details Satya Nadella, chairman and chief executive officer, Amy Hood, executive vice president and chief financial officer, Alice Jolla, chief accounting officer, Brian DeFoe, deputy general counsel and corporate secretary, and Jonathan Neilson, vice president of investor relations, will host a conference call and webcast at 2:30 p.m. Pacific time (5:30 p.m. Eastern time) today to discuss details of the company’s performance for the quarter and certain forward-looking information. The session may be accessed at http://www.microsoft.com/en-us/investor . Participants can also dial into the conference call at (877) 407-0666 or +1 (201) 689-8023 for international, no password required. The webcast will be available for replay through the close of business on July 29, 2027. Non-GAAP Definition Impact from investments in OpenAI. In fiscal year 2026, net income and diluted earnings per share were impacted by net gains from investments in OpenAI, which resulted in an increase in net income and diluted earnings per share of $480 million and $0.07, respectively, in the fourth quarter, and $4,963 million and $0.67, respectively, for the full fiscal year. In fiscal year 2025, net income and diluted earnings per share were impacted by net losses from investments in OpenAI, which resulted in a decrease in net income and diluted earnings per share of $1,575 million and $0.21, respectively, in the fourth quarter, and $3,620 million and $0.49, respectively, for the full fiscal year. Microsoft has provided non-GAAP financial measures related to the impact from investments in OpenAI to aid investors in better understanding our performance. Microsoft believes these non-GAAP measures assist investors by providing additional insight into its operational performance and help clarify trends affecting its business. For comparability of reporting, management considers non-GAAP measures in conjunction with GAAP financial results in evaluating business performance. The non-GAAP financial measures presented in this release should not be considered as a substitute for, or superior to, the measures of financial performance prepared in accordance with GAAP. Constant Currency Microsoft presents constant currency information to provide a framework for as …"
+        },
+        {
+          "id": "E2",
+          "kind": "EARNINGS RELEASE",
+          "label": "Earnings release (8-K, item 2.02, exhibit 99) filed 2026-04-29",
+          "form": "8-K",
+          "accession": "0001193125-26-191457",
+          "filed": "2026-04-29",
+          "url": "https://www.sec.gov/Archives/edgar/data/789019/000119312526191457/msft-ex99_1.htm",
+          "excerpt": "EX-99.1 2 msft-ex99_1.htm EX-99.1 EX-99.1 Exhibit 99.1 Microsoft Cloud and AI Strength Fuels Third Quarter Results REDMOND, Wash. — April 29, 2026 — Microsoft Corp. today announced the following results for the quarter ended March 31, 2026, as compared to the corresponding period of last fiscal year: • Revenue was $82.9 billion and increased 18% (up 15% in constant currency) • Operating income was $38.4 billion and increased 20% (up 16% in constant currency) • Net income was $31.8 billion and increased 23% on a GAAP basis, and increased 20% (up 18% in constant currency) on a non-GAAP basis • Diluted earnings per share was $4.27 and increased 23% on a GAAP basis, and increased 21% (up 18% in constant currency) on a non-GAAP basis • Non-GAAP results exclude the impact from investments in OpenAI, explained in the Non-GAAP Definition section below “We are focused on delivering cloud and AI infrastructure and solutions that empower every business to eval-max their outcomes in the agentic computing era,” said Satya Nadella, chairman and chief executive officer of Microsoft. “Our AI business surpassed an annual revenue run rate of $37 billion, up 123% year-over-year.” “We delivered results that exceeded expectations across revenue, operating income, and earnings per share, reflecting strong execution and growing demand for the Microsoft Cloud,” said Amy Hood, executive vice president and chief financial officer of Microsoft. The following table reconciles our financial results reported in accordance with generally accepted accounting principles (GAAP) to non-GAAP financial results. Additional information regarding our non-GAAP definition is provided below. All growth comparisons relate to the corresponding period in the last fiscal year. Three Months Ended March 31, 2026 2025 Percentage Change Y/Y ($ in millions, except per share amounts) As Reported (GAAP) Adjustment* As Adjusted (non-GAAP) As Reported (GAAP) Adjustment* As Adjusted (non-GAAP) GAAP Constant Currency Non-GAAP Non-GAAP Constant Currency Net Income $31,778 $14 $31,792 $25,824 $583 $26,407 23% 20% 20% 18% Diluted Earnings per Share $4.27 $0.00 $4.27 $3.46 $0.08 $3.54 23% 21% 21% 18% *Adjustment is the impact from investments in OpenAI Business Highlights Microsoft Cloud revenue was $54.5 billion and increased 29% (up 25% in constant currency), and commercial remaining performance obligation increased 99% to $627 billion. Revenue in Productivity and Business Processes was $35.0 billion and increased 17% (up 13% in constant currency), with the following business highlights: • Microsoft 365 Commercial cloud revenue increased 19% (up 15% in constant currency) • Microsoft 365 Consumer cloud revenue increased 33% (up 29% in constant currency) • LinkedIn revenue increased 12% (up 9% in constant currency) • Dynamics 365 revenue increased 22% (up 17% in constant currency) Revenue in Intelligent Cloud was $34.7 billion and increased 30% (up 28% in constant currency), with the following business highlights: • Azure and other cloud services revenue increased 40% (up 39% in constant currency) Revenue in More Personal Computing was $13.2 billion and decreased 1% (down 3% in constant currency), with the following business highlights: • Windows OEM and Devices revenue decreased 2% (down 3% in constant currency) • Xbox content and services revenue decreased 5% (down 7% in constant currency) • Search advertising revenue excluding traffic acquisition costs increased 12% (up 9% in constant currency) Microsoft returned $10.2 billion to shareholders in the form of dividends and share repurchases in the third quarter of fiscal year 2026. Business Outlook Microsoft will provide forward-looking guidance in connection with this quarterly earnings announcement on its earnings conference call and webcast. Quarterly Highlights, Product Releases, and Customer Stories Every quarter Microsoft delivers hundreds of products, services, and enhancements. These releases are driven by years of significant research and development investments, to empower customers with greater productivity, security, and differentiated value. This momentum is reflected in stories that showcase how our technology is shaping industries and driving customer success . We share innovation updates on our product blogs across Azure , Microsoft 365 , and more on our Official Microsoft blog . Webcast Details Satya Nadella, chairman and chief executive officer, Amy Hood, executive vice president and chief financial officer, Alice Jolla, chief accounting officer, Brian DeFoe, deputy general counsel and corporate secretary, and Jonathan Neilson, vice president of investor relations, will host a conference call and webcast at 2:30 p.m. Pacific time (5:30 p.m. Eastern time) today to discuss details of the company’s performance for the quarter and certain forward-looking information. The session may be accessed at http://www.microsoft.com/en-us/investor . Participants can also dial into the conference call at (877) 407-0666 or +1 (201) 689-8023 for international, no password required. The webcast will be available for replay through the close of business on April 29, 2027. Non-GAAP Definition Impact from investments in OpenAI. In the third quarter of fiscal year 2026, net losses from investments in OpenAI resulted in a decrease in net income of $14 million and had minimal impact on earnings per share. In the third quarter of fiscal year 2025, net income and diluted earnings per share were impacted by net losses from investments in OpenAI, which resulted in a decrease in net income and diluted earnings per share of $583 million and $0.08, respectively. Microsoft has provided non-GAAP financial measures related to the impact from investments in OpenAI to aid investors in better understanding our performance. Microsoft believes these non-GAAP measures assist investors by providing additional insight into its operational performance and help clarify trends affecting its business. For comparability of reporting, management considers non-GAAP measures in conjunction with GAAP financial results in evaluating business performance. The non-GAAP financial measures presented in this release should not be considered as a substitute for, or superior to, the measures of financial performance prepared in accordance with GAAP. Constant Currency Microsoft presents constant currency information to provide a framework for assessing how our underlying businesses performed excluding the effect of foreign currency rate fluctuations. To present this information, current and comparative prior period results for entities reporting in currencies other than United States dollars are converted into United States dollars using the average exchange rates from the comparative period rather than the actual exchange rates in effect during the respective periods. All growth comparisons relate to the corresponding period in the last fiscal year. Microsoft has provided this non-GAAP financial information to aid investors in better understanding our performance. The non-GAAP financial measures presented in this release should not be considered as a substitute for, or superior to, the measures of financial performance prepared in accordance with GAAP. Financial Performance Constant Currency Reconciliation Three Months Ended March 31, 2026 2025 Percentage Change Y/Y Percentage Change Y/Y ($ in millions, except per share amounts) As Reported (GAAP) As Adjusted (non-GAAP) As Reported (GAAP) As Adjusted (non-GAAP) GAAP Non-GAAP Constant Currency Impact Constant Currency Non-GAAP Constant Currency Revenue $82,886 - $70,066 - 18% - $2,067 15% - Operating Income $38,398 - $32,000 - 20% - $1,300 16% - Net Income $31,778 $31,792 $25,824 $26,407 23% 20% $740 20% 18% Diluted Earnings per Share $4.27 $4.27 $3.46 $3.54 23% 21% $0.10 21% 18% Segment Revenue Constant Currency Reconciliation Three Months Ended March 31, 2026 2025 Percentage Change Y/Y Percentage Change Y/Y ($ in millions) As Reported (GAAP) As Reported (GAAP) GAAP Constant Currency Impact Constant Currency Productivity and Business Processes $35,013 $29,944 17% $1,325 13% Intelligent Cloud $34,681 $26,751 30% $506 28% More Personal Computing $13,192 $13,371 (1)% $235 (3)% Selected Product and Service Information Constant Currency Reconciliation Three Months Ended March 31, 2026 Percentage Change Y/Y (GAAP) Constant Currency Impact Percentage Change Y/Y Constant Currency Microsoft Cloud revenue 29% (4)% 25% Commercial remaining performance obligation 99% 0% 99% Microsoft 365 Commercial cloud revenue 19% (4)% 15% Microsoft 365 Consumer cloud revenue 33% (4)% 29% LinkedIn revenue 12% (3)% 9% Dynamics 365 revenue 22% (5)% 17% Azure and other cloud services revenue 40% (1)% 39% Windows OEM and Devices revenue (2)% (1)% (3)% Xbox content and services revenue (5)% (2)% (7)% Search advertising revenue excluding traffic acquisition costs 12% (3)% 9% About Microsoft Microsoft (Nasdaq “MSFT” @microsoft) creates platforms and tools powered …"
+        },
+        {
+          "id": "STATUTORY",
+          "kind": "REFERENCE",
+          "label": "General US federal statutory corporate income tax rate",
+          "form": null,
+          "accession": null,
+          "filed": null,
+          "url": null,
+          "excerpt": "21.0% — a general reference rate, not a disclosure from this company's filings."
+        }
+      ],
+      "basis": {
+        "latestFiscalYear": "2026",
+        "latestQuarterEnd": "2026-06-30",
+        "ttmRevenue": "331839000000",
+        "dilutedShares": "7449545491"
+      },
+      "cannotConclude": null,
+      "drafting": "per-driver median of 3 drafts"
+    },
+    "adoptedFrom": null,
+    "model": "claude-opus-5",
+    "recordedAt": "2026-10-20T03:15:47.806Z"
+  },
+  "verdict": {
+    "status": "PENDING",
+    "state": "PENDING ADOPTION",
+    "reason": "Pending adoption — Draft (assumption sheet version 1, not yet adopted): wide moat — terminal return on new capital is the rate plus 3.0pp (bear +0pp; bull +4.5pp). The valuation is computed from the draft; the final verdict waits for adoption. On the draft, the verdict zone is SELL; the final verdict issues when you adopt the sheet. The draft's own reading: SELL — price $533.52 is 1.49× / 1.63× / 1.76× the Base fair value $358.17 / $328.26 / $302.60 at 8.5% / 9.0% / 9.5% — the SELL band at all nine rate × uncertainty checks.",
+    "check": {
+      "ratios": {
+        "lower": "1.4895863009731267402",
+        "rate": "1.6253057807477108926",
+        "upper": "1.7631156620552779918"
+      },
+      "grid": {
+        "lower": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "rate": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        },
+        "upper": {
+          "Low": "SELL",
+          "Medium": "SELL",
+          "High": "SELL"
+        }
+      },
+      "routing": {
+        "kind": "AUTOMATIC",
+        "zone": "SELL"
+      }
+    },
+    "rates": {
+      "lower": "0.085",
+      "rate": "0.09",
+      "upper": "0.095"
+    },
+    "basis": null,
+    "qualityBar": null,
+    "closeCallBinding": null,
+    "draftZone": "SELL"
+  },
+  "result": {
+    "schemaVersion": "v1.0.2",
+    "runId": "acquired-msft",
+    "ticker": "MSFT",
+    "companyName": "MICROSOFT CORP",
+    "price": {
+      "value": "533.52",
+      "timestamp": "2026-10-19"
+    },
+    "facts": [
+      {
+        "id": "shares-outstanding",
+        "name": "Shares outstanding",
+        "type": "FACT",
+        "value": "7425545491",
+        "source": "10-K 2026-07-23 (accession 0001193125-26-323660) · XBRL dei:EntityCommonStockSharesOutstanding",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-07-23",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "treasury-method-dilution",
+        "name": "Treasury-method dilution",
+        "type": "FACT",
+        "value": "24000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:IncrementalCommonSharesAttributableToShareBasedPaymentArrangements",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-07-01 to 2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "total-debt",
+        "name": "Total debt",
+        "type": "FACT",
+        "value": "40294000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:LongTermDebt · not tagged at this period: us-gaap:CommercialPaper, us-gaap:ShortTermBorrowings",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "total-equity",
+        "name": "Total equity",
+        "type": "FACT",
+        "value": "442387000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:StockholdersEquity",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "finance-lease-liabilities",
+        "name": "Finance lease liabilities",
+        "type": "FACT",
+        "value": "66594000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:FinanceLeaseLiability",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "cash-and-marketable-debt-securities",
+        "name": "Cash and marketable debt securities",
+        "type": "FACT",
+        "value": "76843000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:CashAndCashEquivalentsAtCarryingValue + us-gaap:ShortTermInvestments (summed)",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "operating-lease-liabilities",
+        "name": "Operating lease liabilities (memo only)",
+        "type": "FACT",
+        "value": "21925000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:OperatingLeaseLiability",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "current-revenue",
+        "name": "Current-period revenue",
+        "type": "FACT",
+        "value": "331839000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-07-01 to 2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "operating-income",
+        "name": "Operating income",
+        "type": "FACT",
+        "value": "155237000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:OperatingIncomeLoss",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-07-01 to 2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "capex",
+        "name": "Capital expenditure (cash)",
+        "type": "FACT",
+        "value": "115948000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:PaymentsToAcquirePropertyPlantAndEquipment",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-07-01 to 2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "finance-lease-rou-additions",
+        "name": "Finance-lease ROU assets obtained in the period",
+        "type": "FACT",
+        "value": "24608000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:RightOfUseAssetObtainedInExchangeForFinanceLeaseLiability",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-07-01 to 2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "operating-cash-flow",
+        "name": "Operating cash flow",
+        "type": "FACT",
+        "value": "182935000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:NetCashProvidedByUsedInOperatingActivities",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-07-01 to 2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "sbc",
+        "name": "Share-based compensation",
+        "type": "FACT",
+        "value": "12405000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:ShareBasedCompensation",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-07-01 to 2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "depreciation-and-amortisation",
+        "name": "Depreciation and amortisation",
+        "type": "FACT",
+        "value": "39000000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:Depreciation + us-gaap:AmortizationOfIntangibleAssets (summed)",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-07-01 to 2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "cash-balance",
+        "name": "Cash balance",
+        "type": "FACT",
+        "value": "20935000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:CashAndCashEquivalentsAtCarryingValue",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "quarterly-burn",
+        "name": "Operating cash flow, latest single quarter (burn where negative)",
+        "type": "FACT",
+        "value": "46679000000",
+        "source": "10-Q 2026-03-31 (accession 0001193125-26-191507) · XBRL us-gaap:NetCashProvidedByUsedInOperatingActivities",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526191507/0001193125-26-191507-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-01-01 to 2026-03-31",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "unrecognized-tax-benefits",
+        "name": "Unrecognized tax benefits (contingent — memo)",
+        "type": "FACT",
+        "value": "25831000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:UnrecognizedTaxBenefits",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "total-liabilities",
+        "name": "Total liabilities (memo — finance-lease upper bound only)",
+        "type": "FACT",
+        "value": "315989000000",
+        "source": "10-K 2026-06-30 (accession 0001193125-26-323660) · XBRL us-gaap:Liabilities",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/789019/000119312526323660/0001193125-26-323660-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "price",
+        "name": "Price",
+        "type": "FACT",
+        "value": "533.52",
+        "source": "YAHOO latest close",
+        "sourceUrl": null,
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK PENDING",
+        "asOfDate": "2026-10-19",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": null,
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "current-operating-margin",
+        "name": "Current operating margin",
+        "type": "FACT",
+        "value": "0.46780818408927220731",
+        "source": "Computed from operating-income, current-revenue, each acquired for this run",
+        "sourceUrl": null,
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK PENDING",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": null,
+        "derivedFrom": [
+          "operating-income",
+          "current-revenue"
+        ],
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "net-debt",
+        "name": "Net debt (including finance leases)",
+        "type": "FACT",
+        "value": "30045000000",
+        "source": "Computed from total-debt, finance-lease-liabilities, cash-and-marketable-debt-securities, each acquired for this run",
+        "sourceUrl": null,
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK PENDING",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": null,
+        "derivedFrom": [
+          "total-debt",
+          "finance-lease-liabilities",
+          "cash-and-marketable-debt-securities"
+        ],
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "cash-fcf",
+        "name": "Cash FCF",
+        "type": "FACT",
+        "value": "66987000000",
+        "source": "Computed from operating-cash-flow, capex, each acquired for this run",
+        "sourceUrl": null,
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK PENDING",
+        "asOfDate": "2026-06-30",
+        "retrievalTimestamp": "2026-10-20T03:15:49.425Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": null,
+        "derivedFrom": [
+          "operating-cash-flow",
+          "capex"
+        ],
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      }
+    ],
+    "provenance": [],
+    "gates": {
+      "gate0": {
+        "result": "PASS",
+        "evaluatedTests": {
+          "sectorClassification": "Services-Prepackaged Software",
+          "interestIncomeOverRevenue": "0",
+          "hasInsurancePremiumOrReserveLineItems": false,
+          "industryClassification": "Services-Prepackaged Software"
+        },
+        "override": null
+      },
+      "gate1": {
+        "filedYearsCount": 19,
+        "state": null
+      },
+      "leverage": {
+        "netDebtRatio": "0.0075714839747184120157",
+        "operatingLeaseInclusiveMemo": "0.013096689038645893575",
+        "result": "PASS",
+        "leveredResidualExceptionApplies": false
+      },
+      "triggerA": {
+        "fired": true,
+        "evidence": "current margin 0.4678081840892722, window max 0.4678081840892722, window range 0.18172090322392346"
+      },
+      "triggerB": {
+        "fired": false,
+        "evidence": "worst single-year decline 0.0028239751994573"
+      }
+    },
+    "profile": {
+      "recommended": "MATURE_PROFITABLE_STABLE_FCF",
+      "confirmedOrOverridden": "MATURE_PROFITABLE_STABLE_FCF",
+      "override": null,
+      "classificationInputs": {
+        "revenueScale": "large",
+        "fcfCharacter": "positive_stable",
+        "revenueGrowthBand": "10-30%",
+        "capitalIntensity": "0.14",
+        "cyclicality": {
+          "tenYearMarginRange": "0.16725211653275938255",
+          "worstSingleYearChange": "0.00282397519945732697"
+        },
+        "balanceSheetNature": "asset-heavy"
+      }
+    },
+    "states": {
+      "suppressing": [
+        {
+          "state": "PRECONDITION FAILED",
+          "appliesTo": "FCF yield + growth"
+        },
+        {
+          "state": "INCOMPLETE",
+          "appliesTo": "±1% rate sensitivity — missing REQUIRED input: the base case revalued at a discount rate one point higher and one point lower — none was supplied for this run"
+        }
+      ],
+      "qualifying": [
+        {
+          "flag": "MARGIN AT HISTORICAL HIGH",
+          "appliesTo": "operating margin"
+        }
+      ]
+    },
+    "diagnostics": {
+      "enterpriseValue": {
+        "suppressed": false,
+        "value": {
+          "marketCap": "3974481510358.32",
+          "totalDebt": "40294000000",
+          "financeLeaseLiabilities": "66594000000",
+          "cashAndMarketableDebtSecurities": "76843000000",
+          "nonOperatingEquityInvestmentsAtBook": "36348000000",
+          "nonOperatingInvestmentsErrorDirection": "understates",
+          "enterpriseValue": "3968178510358.32",
+          "bridgeFlags": {
+            "claims": [
+              {
+                "claim": "minority interests",
+                "status": "NOT TAGGED",
+                "amount": null,
+                "note": "not found in this filer's structured data — a missing tag is not zero, so this claim is unverified"
+              },
+              {
+                "claim": "preferred stock",
+                "status": "NOT TAGGED",
+                "amount": null,
+                "note": "not found in this filer's structured data — a missing tag is not zero, so this claim is unverified"
+              },
+              {
+                "claim": "convertible debt",
+                "status": "NOT TAGGED",
+                "amount": null,
+                "note": "not found in this filer's structured data — a missing tag is not zero, so this claim is unverified"
+              }
+            ],
+            "strategicStakes": {
+              "atBook": "36348000000",
+              "disclosedFairValue": null,
+              "note": "carried at book; no disclosed fair value was tagged"
+            },
+            "contingentItems": [
+              {
+                "item": "unrecognized tax benefits (open tax positions, e.g. an IRS dispute)",
+                "amount": "25831000000",
+                "note": "listed, not deducted — a contingent item, not balance-sheet debt"
+              }
+            ],
+            "financeLeases": {
+              "treatment": "ADDED SEPARATELY",
+              "note": "finance leases added to total debt as their own term"
+            }
+          }
+        },
+        "qualification": {
+          "provenanceTokens": {
+            "sourceClass": "PRIMARY",
+            "extractionType": "DETERMINISTIC/STRUCTURED",
+            "verificationState": "SPOT-CHECK PENDING"
+          },
+          "analyticFlags": []
+        }
+      },
+      "multiples": {
+        "peTrailing": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s) for P/E trailing"
+        },
+        "peForward": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s) for P/E forward"
+        },
+        "evToEbit": {
+          "suppressed": false,
+          "value": "25.562066455537790604",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK NOT REQUIRED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "evToEbitda": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s) for EV/EBITDA"
+        },
+        "fcfYieldOnMarketCap": {
+          "suppressed": false,
+          "value": "0.016908748362544146434",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK PENDING"
+            },
+            "analyticFlags": []
+          }
+        },
+        "priceToBook": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s) for P/B"
+        },
+        "evToRevenue": {
+          "value": {
+            "suppressed": false,
+            "value": "11.958143890134432662",
+            "qualification": {
+              "provenanceTokens": {
+                "sourceClass": "PRIMARY",
+                "extractionType": "DETERMINISTIC/STRUCTURED",
+                "verificationState": "SPOT-CHECK NOT REQUIRED"
+              },
+              "analyticFlags": []
+            }
+          },
+          "impliedMarginForNormalMultiple": "0.2"
+        },
+        "peBasis": {
+          "gaapEps": "0",
+          "nonOperatingItemAfterTax": null,
+          "nopatBasisShown": false
+        },
+        "ownHistoryPercentile": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): current value or historical window"
+        }
+      },
+      "marginHistory": {
+        "suppressed": true,
+        "state": "INCOMPLETE",
+        "cause": "missing REQUIRED input(s): fiftyTwoWeekLow, fiftyTwoWeekHigh"
+      },
+      "fcf": {
+        "cashFcf": {
+          "suppressed": false,
+          "value": "66987000000",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK NOT REQUIRED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "fcfAfterLeaseFundedCapacity": {
+          "suppressed": false,
+          "value": "42379000000",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK NOT REQUIRED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "unleveredFcf": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): deltaNwc"
+        },
+        "sbc": "12405000000",
+        "workingCapitalSwing": null,
+        "fcfYield": {
+          "cashFcf": {
+            "suppressed": false,
+            "value": "66987000000",
+            "qualification": {
+              "provenanceTokens": {
+                "sourceClass": "PRIMARY",
+                "extractionType": "DETERMINISTIC/STRUCTURED",
+                "verificationState": "SPOT-CHECK NOT REQUIRED"
+              },
+              "analyticFlags": []
+            }
+          },
+          "cashFcfLessSbc": {
+            "suppressed": false,
+            "value": "54582000000",
+            "qualification": {
+              "provenanceTokens": {
+                "sourceClass": "PRIMARY",
+                "extractionType": "DETERMINISTIC/STRUCTURED",
+                "verificationState": "SPOT-CHECK NOT REQUIRED"
+              },
+              "analyticFlags": []
+            }
+          }
+        }
+      },
+      "reinvestmentRonic": {
+        "reinvestment": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): acquisitions, deltaNwc"
+        },
+        "ronic": {
+          "suppressed": false,
+          "value": {
+            "cells": [
+              {
+                "rate": "0.09",
+                "state": "CLEAN",
+                "value": "0.17278940042195282639"
+              }
+            ]
+          },
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK NOT REQUIRED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "capitalLight": false,
+        "workingCapitalIntensity": null,
+        "lagBiasDirection": "conservative"
+      },
+      "impliedReturnOnNewCapital": {
+        "value": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): capex, acquisitions, financeLeaseRouAdditions, depreciationAndAmortization, deltaNwc"
+        },
+        "period": "current fiscal year (year-over-year)"
+      },
+      "terminal": {
+        "terminalShareOfValue": "0.70463524987732218013",
+        "terminalFcfConsistencyApplied": true
+      },
+      "impliedExitMultiple": {
+        "value": {
+          "suppressed": false,
+          "value": "10.17125",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "CONFIRMED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "dividesMetric": "year-10 operating income (EBIT), base scenario"
+      },
+      "rateSensitivity": {
+        "plusOnePoint": "NaN",
+        "minusOnePoint": "NaN",
+        "closeToDeterministicFunctionOfTerminalShare": true
+      },
+      "fcfYieldGrowth": {
+        "precondition": "PRECONDITION FAILED",
+        "output": null
+      },
+      "runRate": {
+        "seasonalityTestResult": "PASS",
+        "ttm": "331839000000",
+        "runRate": null,
+        "triggeringQuarterGrowth": null
+      },
+      "shapeMismatch": {
+        "fired": false,
+        "gapPoints": null
+      },
+      "sensitivity": {
+        "tornado": [
+          {
+            "driver": "growth",
+            "available": true,
+            "displayed": true,
+            "fullRangeValueImpact": "0.36820097920575656452",
+            "values": [
+              "2212932252610.4766314",
+              "2554238488343.5319428",
+              "3092993025805.6106642"
+            ]
+          },
+          {
+            "driver": "operatingMargin",
+            "available": true,
+            "displayed": true,
+            "fullRangeValueImpact": "0.19340659340659340659",
+            "values": [
+              "1996181031799.5492039",
+              "2195799134979.5041242",
+              "2458454533900.4974406"
+            ]
+          },
+          {
+            "driver": "discountRate",
+            "available": true,
+            "displayed": true,
+            "fullRangeValueImpact": "0.16972128455511488305",
+            "values": [
+              "2608511514278.6115014",
+              "2390164130181.0391784",
+              "2202849787806.726698"
+            ]
+          },
+          {
+            "driver": "terminalGrowth",
+            "available": false,
+            "cause": "missing REQUIRED analyst-supplied range: terminalGrowth"
+          },
+          {
+            "driver": "ronic",
+            "available": true,
+            "displayed": true,
+            "fullRangeValueImpact": "0.19603139848144881861",
+            "values": [
+              "2029812513117.4125592",
+              "2390164130181.0391784",
+              "2498359730156.9973592"
+            ]
+          },
+          {
+            "driver": "moat",
+            "available": true,
+            "displayed": false,
+            "fullRangeValueImpact": "0.091965683603985110554",
+            "values": [
+              "2170351052023.2154503",
+              "2257469336192.1000369",
+              "2390164130181.0391784"
+            ]
+          }
+        ],
+        "twoWayGrowthMargin": {
+          "available": true,
+          "rowValues": [
+            "0.1",
+            "0.137",
+            "0.185"
+          ],
+          "columnValues": [
+            "0.38",
+            "0.418",
+            "0.468"
+          ],
+          "cells": [
+            [
+              "1848163199982.3760878",
+              "2032979519980.6136966",
+              "2276158888399.3473922"
+            ],
+            [
+              "2133210166089.1036007",
+              "2346531182698.0139607",
+              "2627216730867.6328555"
+            ],
+            [
+              "2583159010562.9275878",
+              "2841474911619.2203466",
+              "3181364255114.3423976"
+            ]
+          ]
+        },
+        "twoWayRateTerminalGrowth": {
+          "available": false,
+          "cause": "missing REQUIRED analyst-supplied range: terminalGrowth"
+        },
+        "debtShareRemoved": true
+      }
+    },
+    "scenarios": {
+      "bear": {
+        "revenueGrowthOrPath": "0.07",
+        "operatingMargin": "0.4",
+        "reinvestmentCapitalIntensity": "0.08",
+        "shareCount": "7598536401",
+        "writtenAnchor": "AI and cloud demand normalises faster than the current build-out assumes. Azure growth decelerates from the 43% posted in the June 2026 quarter toward the rate of the broader commercial base, Windows OEM, devices and Xbox keep shrinking, and revenue growth settles near the weakest year in the filed decade (6.9% in FY2023). The enormous capital programme — capex of $115.9bn in FY2026 against $34.3bn of depreciation — lands in the cost base as depreciation catches up, so operating margin gives back the recent gains and runs below the ten-year median rather than at the FY2026 peak of 46.8%. New capital earns roughly the discount rate: filed ROIC has already fallen from 94.0% in FY2018 to 26.0% in FY2026 as invested capital scaled, and the five-year incremental return of 17.3% compresses further in a capital-heavy AI regime. Rising stock-based compensation outpaces repurchases and share count drifts up slightly.",
+        "returnOnNewInvestment": "0.11"
+      },
+      "base": {
+        "revenueGrowthOrPath": "0.12",
+        "operatingMargin": "0.455",
+        "reinvestmentCapitalIntensity": "0.14",
+        "shareCount": "7300554581",
+        "writtenAnchor": "Microsoft compounds off a very large base at a rate between its ten-year CAGR (14.7%) and the slowest year on file. Commercial remaining performance obligation of $684bn at FY2026 year-end, up from $375bn a year earlier, plus Microsoft 365 Copilot at over 30 million paid seats and Azure crossing $100bn of annual revenue, underpin mid-teens growth that fades as the backlog converts. Operating margin holds close to the FY2026 level of 46.8% — mix shifts toward capital-intensive cloud and AI infrastructure, which carries more depreciation, but software and M365 scale offsets it — so the base sits just below the peak at 45.5%. Returns on new capital stay well above the cost of capital but far below the asset-light history: 18% is near the trailing five-year incremental return of 17.3% and well under the 26.0% FY2026 ROIC. Net reinvestment stays elevated versus the 6.2% median of capex less depreciation as data-centre spend continues, and steady repurchases shrink the share count modestly.",
+        "returnOnNewInvestment": "0.18"
+      },
+      "bull": {
+        "revenueGrowthOrPath": "0.16",
+        "operatingMargin": "0.48",
+        "reinvestmentCapitalIntensity": "0.17",
+        "shareCount": "7077068216",
+        "writtenAnchor": "The agentic-computing cycle keeps Microsoft's growth at the top of its filed range. Revenue grew 18% in FY2026 and 17.7% in the June quarter, Microsoft Cloud revenue rose 27% to $59.3bn, Azure grew 43%, and the AI business passed a $37bn run rate up 123% year over year; commercial RPO up 84% to $678bn gives multi-year visibility. Growth holds at 16% for five years. The AI stack proves high-margin as utilisation of the FY2024–FY2026 capex wave rises, pushing operating margin above the FY2026 record to 48%. New capital earns 22% after tax — above the recent five-year incremental return of 17.3% but still below the 26.0% ROIC Microsoft actually filed in FY2026 — and strong free cash flow (operating cash flow $182.9bn in FY2026) funds both the build-out and continued repurchases, lowering the share count.",
+        "returnOnNewInvestment": "0.22"
+      }
+    },
+    "scenarioOutputs": {
+      "values": {
+        "bear": "188.88384498000162636",
+        "base": "328.25823074016124233",
+        "bull": "456.18394229181531138"
+      },
+      "weightedDistribution": "324.44200600399272669",
+      "priceLocationWithinRange": "1.2893229687753155868",
+      "rateAtWhichBaseEqualsPrice": "0.068986621335303788585",
+      "sensitivity": {
+        "tornado": [],
+        "twoWayGrowthMargin": [],
+        "twoWayRateTerminalGrowth": [],
+        "debtShareRemoved": true
+      }
+    },
+    "priceImplied": {
+      "steadyStateEv": {
+        "suppressed": false,
+        "value": "1211579375351.0065939",
+        "qualification": {
+          "provenanceTokens": {
+            "sourceClass": "PRIMARY",
+            "extractionType": "DETERMINISTIC/STRUCTURED",
+            "verificationState": "SPOT-CHECK NOT REQUIRED"
+          },
+          "analyticFlags": []
+        }
+      },
+      "pvgo": {
+        "suppressed": false,
+        "value": "2756599135007.3134061",
+        "qualification": {
+          "provenanceTokens": {
+            "sourceClass": "PRIMARY",
+            "extractionType": "DETERMINISTIC/STRUCTURED",
+            "verificationState": "SPOT-CHECK NOT REQUIRED"
+          },
+          "analyticFlags": []
+        }
+      },
+      "pvgoShareOfEv": {
+        "suppressed": false,
+        "value": "0.69467619156034314423",
+        "qualification": {
+          "provenanceTokens": {
+            "sourceClass": "PRIMARY",
+            "extractionType": "DETERMINISTIC/STRUCTURED",
+            "verificationState": "SPOT-CHECK NOT REQUIRED"
+          },
+          "analyticFlags": []
+        }
+      },
+      "nopatGap": {
+        "current": "122637230000",
+        "medianMargin": "109042143781.59059345"
+      },
+      "reverseDcf": {
+        "rate": "0.09",
+        "fiveYearGrowth": {
+          "suppressed": false,
+          "value": "0.24584958967082814835",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK NOT REQUIRED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "tenYearCagr": {
+          "suppressed": false,
+          "value": "0.1784345263219531476",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK NOT REQUIRED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "year10Revenue": {
+          "suppressed": false,
+          "value": "1713886302113.449163",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK NOT REQUIRED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "heldAt": {
+          "operatingMargin": "0.455",
+          "returnOnNewInvestment": "0.18",
+          "terminalReturnOnNewCapital": "0.12"
+        }
+      },
+      "impliedExitMultiple": {
+        "value": {
+          "suppressed": false,
+          "value": "10.17125",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "CONFIRMED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "dividesMetric": "year-10 operating income (EBIT), base scenario"
+      }
+    },
+    "fairValueRange": {
+      "kind": "range",
+      "bear": "188.88384498000162636",
+      "bull": "456.18394229181531138",
+      "weightedValueInside": "324.44200600399272669",
+      "drivingInputs": [
+        "years 1-5 revenue growth",
+        "operating margin path",
+        "return on new investment"
+      ],
+      "scenarioLabelsWarning": true
+    },
+    "trust": {
+      "status": "PARTIAL",
+      "determinedBy": [
+        {
+          "kind": "qualifying flag",
+          "detail": "MARGIN AT HISTORICAL HIGH on operating margin"
+        },
+        {
+          "kind": "incomplete input",
+          "detail": "9 diagnostic(s) INCOMPLETE on a missing REQUIRED input"
+        },
+        {
+          "kind": "incomplete input",
+          "detail": "INCOMPLETE on ±1% rate sensitivity — missing REQUIRED input: the base case revalued at a discount rate one point higher and one point lower — none was supplied for this run"
+        }
+      ]
+    },
+    "achievedRevenueCagr": {
+      "value": {
+        "tag": "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
+        "horizonYears": 10,
+        "fromValue": "91154000000",
+        "toValue": "331839000000",
+        "cagr": "0.1379290104313901146",
+        "window": {
+          "tag": "us-gaap:RevenueFromContractWithCustomerExcludingAssessedTax",
+          "horizonYears": 10,
+          "fromFiscalYear": 2016,
+          "toFiscalYear": 2026,
+          "currentFiscalYear": 2026,
+          "yearsStale": 0
+        },
+        "staleWindowDisclosure": null
+      },
+      "blockedBy": []
+    },
+    "preRevenue": null,
+    "challenger": null,
+    "interpretation": {
+      "statements": [],
+      "pageOne": null
+    },
+    "business": {
+      "narrative": {
+        "source": "MARKET-DATA PROVIDER SUMMARY",
+        "text": "Microsoft Corporation, a technology company, develops and supports a portfolio of technology solutions for individuals and businesses worldwide. Its products include operating systems, server applications, business solution applications, software development tools, desktop and server management tools, and video games; and devices, such as PCs, tablets, gaming and entertainment consoles, other intelligent devices, and related accessories. The company's Productivity and Business Processes segment offers Microsoft 365 Commercial, Enterprise Mobility + Security, Power BI, Exchange, SharePoint, Microsoft Teams, Microsoft 365 Security and Compliance, Microsoft 365 Copilot, and Windows Commercial on-premises and Office licensed on-premises. This segment also provides Microsoft 365 Consumer products and cloud services; LinkedIn, including talent solutions, marketing solutions, subscriptions, and sales solutions; Dynamics 365, a set of cloud-based applications; and on-premises ERP and CRM applications. Its Intelligent Cloud segment offers server products and cloud services; cloud and AI consumption-based services, GitHub cloud services, health and life sciences cloud services, as well as virtual desktop offerings, and other cloud services; SQL Server, Windows Server, Visual Studio, System Center, and related client access licenses; and enterprise support services, industry solutions, Microsoft partner network, and learning experience. The company's More Personal Computing segment provides Windows OEM licensing and devices comprising Surface and PC accessories; XBOX hardware, and XBOX first- and third-party content and services; XBOX Game Pass and other subscriptions; XBOX Cloud Gaming, advertising, and other cloud services; and search advertising consisting of Bing, Copilot, Microsoft News, Microsoft Edge, and third-party affiliates. It sells its products through partners and retail networks. The company was founded in 1975 and is headquartered in Redmond, Washington.",
+        "provider": "YAHOO",
+        "retrievedAt": "2026-10-20T03:15:49.425Z",
+        "primaryUnavailableReason": "The Item 1 extraction rule (item1-2026-10-1) could not locate the section in the filing: found 2 standalone \"Item 1. Business\" heading lines — expected exactly one."
+      },
+      "unavailableReason": null
+    },
+    "marketContext": {
+      "sic": "7372",
+      "sicDescription": "Services-Prepackaged Software"
+    },
+    "latestFiling": {
+      "form": "8-K",
+      "filingDate": "2026-09-02"
+    },
+    "policy": {
+      "version": "policy-sha256:b3e69cf751f770c0",
+      "constants": {
+        "terminalGrowth": "0.03",
+        "discountRate": {
+          "table": [
+            {
+              "effectiveFrom": "2026-10-17",
+              "stable": "0.09",
+              "cyclicalOrPreRevenue": "0.11",
+              "provenance": {
+                "approval": "Approved values, Calvin, 17 Oct 2026 (Methodology v2.1 D1; docs/product-decisions.md item 26).",
+                "evidence": "At approval: 10-yr Treasury 5.09% + Damodaran implied equity premium 3.7–4.2% — 9.0% either way.",
+                "measurementConvention": "Yearly reset measured as Damodaran's published implied expected return on the S&P 500 (8.99% in his October 2026 update), rounded to the nearest 0.5% — an AI DEFAULT inside the D1 rule, reconciled 17 Oct 2026; the annual methodology review may change it. Provenance, not a rule value."
+              }
+            }
+          ],
+          "verdictCheckOffset": "0.005"
+        },
+        "moatCredit": {
+          "none": "0",
+          "narrow": "0.01",
+          "wide": "0.03"
+        },
+        "bullMoatCreditUplift": "0.015",
+        "preRevenueConstructionLeadYears": 2,
+        "leveredCostOfEquityCap": "0.3",
+        "leverageThreshold": "0.1",
+        "gate0InterestIncomeOverRevenueThreshold": "0.5",
+        "gate1HistoryInsufficientYears": 5,
+        "gate1ShortHistoryYears": 9,
+        "triggerAMarginProximityPoints": "0.02",
+        "triggerAWindowRangePoints": "0.15",
+        "triggerBDeclinePoints": "0.1",
+        "historyInsufficientStressMarginRelativeReductions": [
+          "0.25",
+          "0.5"
+        ],
+        "peBasisNonOperatingThresholdOfPretaxIncome": "0.05",
+        "runRateSequentialGrowthTrigger": "0.1",
+        "seasonalityPriorYearThreshold": "0.1",
+        "capitalLightRonicFloor": "0.6",
+        "ronicCap": "2",
+        "shapeMismatchGapPoints": "0.15",
+        "sensitivityDisplayThreshold": "0.1",
+        "fcfYieldGrowthPreconditionBand": [
+          "0.8",
+          "1.5"
+        ],
+        "verdictSynthesisV1Buy": {
+          "low": "0.9",
+          "medium": "0.8",
+          "high": "0.7"
+        },
+        "verdictSynthesisV1Sell": {
+          "low": "1.2",
+          "medium": "1.3",
+          "high": "1.45"
+        }
+      },
+      "undefinedConstants": {
+        "nopatTaxRate": "0.21",
+        "stressMarginLevel": "0.36",
+        "preRevenueUnleveredRate": null,
+        "projectDebtCost": null
+      },
+      "provisionalLabels": {
+        "preRevenueConstructionLeadYears": "First-order estimate; worth $27/share on OKLO's 8 GW case (§7.1).",
+        "leveredCostOfEquityCap": "No observations behind the 30% level itself; capped cells are labelled RATE CAPPED — VALUE IS AN UPPER BOUND (I12, §7.1).",
+        "gate0InterestIncomeOverRevenueThreshold": "No observations behind it (Appendix B); the other three Gate 0 tests are classification lookups, not thresholds (§6.1).",
+        "gate1HistoryInsufficientYears": "Red-team judgment with no observations (Appendix B). Direction of error is suppression, so a wrong threshold shows less rather than something false (§6.2).",
+        "gate1ShortHistoryYears": "Red-team judgment with no observations (Appendix B), same basis as the <5-year threshold (§6.2).",
+        "historyInsufficientStressMarginRelativeReductions": "No observations; substitutes for a median that does not exist under HISTORY INSUFFICIENT (§6.2).",
+        "runRateSequentialGrowthTrigger": "Calibrated on NVIDIA only (Appendix B) (§7.2 M12).",
+        "seasonalityPriorYearThreshold": "Comes from I4 and has no observations behind it (§7.2 M12)."
+      }
+    },
+    "runIdentity": {
+      "codeVersion": "883225c2136e0e122bb57a005b2e7fb2a488a764+dirty",
+      "inputsFingerprint": "inputs-sha256:da09f06fd90cf834",
+      "factSnapshot": "facts-sha256:b97aa6c405b9eb8b",
+      "sheetVersion": "sheet-sha256:aaaf4e8cc2187b3b",
+      "priceSnapshot": {
+        "value": "533.52",
+        "timestamp": "2026-10-19"
+      },
+      "valuationTiming": {
+        "convention": "MID-YEAR",
+        "valuationDate": "2026-10-19",
+        "basePeriodEnd": "2026-06-30",
+        "basePeriodKind": "FISCAL YEAR",
+        "stubYears": "0.30390143737166324435"
+      }
+    },
+    "valuationBasis": {
+      "discountRate": {
+        "rate": "0.09",
+        "band": "stable",
+        "basis": "stable — SEC SIC code 7372 is not a cyclical industry and trigger B did not fire; growth does not raise the rate",
+        "effectiveFrom": "2026-10-17",
+        "provenance": {
+          "approval": "Approved values, Calvin, 17 Oct 2026 (Methodology v2.1 D1; docs/product-decisions.md item 26).",
+          "evidence": "At approval: 10-yr Treasury 5.09% + Damodaran implied equity premium 3.7–4.2% — 9.0% either way.",
+          "measurementConvention": "Yearly reset measured as Damodaran's published implied expected return on the S&P 500 (8.99% in his October 2026 update), rounded to the nearest 0.5% — an AI DEFAULT inside the D1 rule, reconciled 17 Oct 2026; the annual methodology review may change it. Provenance, not a rule value."
+        },
+        "checkRates": {
+          "lower": "0.085",
+          "upper": "0.095"
+        },
+        "validatedDomain": "WITHIN"
+      },
+      "d2": {
+        "status": "DRAFT",
+        "missing": [],
+        "moatClass": "wide",
+        "terminalReturnOnNewCapital": {
+          "bear": "0.09",
+          "base": "0.12",
+          "bull": "0.135"
+        },
+        "statement": "Draft (assumption sheet version 1, not yet adopted): wide moat — terminal return on new capital is the rate plus 3.0pp (bear +0pp; bull +4.5pp). The valuation is computed from the draft; the final verdict waits for adoption."
+      },
+      "sheet": {
+        "id": -1,
+        "version": 1,
+        "status": "DRAFT",
+        "origin": "AI DRAFT",
+        "recordedAt": "2026-10-20T03:15:47.806Z",
+        "cannotConclude": null
+      }
+    },
+    "verdictInputs": {
+      "baseAtCheckRates": {
+        "lower": "358.16655916576202657",
+        "rate": "328.25823074016124233",
+        "upper": "302.60068098883057964"
+      },
+      "baseAtCheckRatesCause": null,
+      "roicFloor": {
+        "status": "PASS",
+        "average": "0.36758482032538116502",
+        "years": [
+          {
+            "fiscalYear": 2026,
+            "roic": "0.25958705168151183662"
+          },
+          {
+            "fiscalYear": 2025,
+            "roic": "0.30019518858078802733"
+          },
+          {
+            "fiscalYear": 2024,
+            "roic": "0.31817889727612997729"
+          },
+          {
+            "fiscalYear": 2023,
+            "roic": "0.43909942548582551094"
+          },
+          {
+            "fiscalYear": 2022,
+            "roic": "0.52086353860265047285"
+          }
+        ],
+        "rate": "0.09",
+        "reason": "Average return on invested capital, goodwill included, over FY2022–FY2026 is 36.8%, above the 9.0% rate."
+      }
+    }
+  }
+}
