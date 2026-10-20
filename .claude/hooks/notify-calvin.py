@@ -141,6 +141,8 @@ def main():
         return 0
     if event == "PreToolUse" and payload.get("tool_name") != "AskUserQuestion":
         return 0
+    if event == "PermissionRequest" and payload.get("tool_name") == "AskUserQuestion":
+        return 0  # the question itself already alerted as NEEDS INPUT
     if event == "Stop" and payload.get("stop_hook_active"):
         return 0  # another Stop hook kept the agent going; it has not really stopped
 
