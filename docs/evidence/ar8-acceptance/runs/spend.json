@@ -1,9 +1,9 @@
 {
   "capUsd": 5,
-  "calls": 4,
-  "inputTokens": 28371,
-  "outputTokens": 19842,
-  "costUsd": 0.637905,
+  "calls": 7,
+  "inputTokens": 48576,
+  "outputTokens": 29359,
+  "costUsd": 0.9768550000000001,
   "rows": [
     {
       "ticker": "MSFT",
@@ -32,6 +32,27 @@
       "inputTokens": 8035,
       "outputTokens": 5618,
       "costUsd": 0.18062500000000004
+    },
+    {
+      "ticker": "NVDA",
+      "preflight": false,
+      "inputTokens": 8078,
+      "outputTokens": 3215,
+      "costUsd": 0.12076500000000001
+    },
+    {
+      "ticker": "NVDA",
+      "preflight": false,
+      "inputTokens": 5853,
+      "outputTokens": 3648,
+      "costUsd": 0.120465
+    },
+    {
+      "ticker": "NUE",
+      "preflight": false,
+      "inputTokens": 6274,
+      "outputTokens": 2654,
+      "costUsd": 0.09772
     }
   ]
 }

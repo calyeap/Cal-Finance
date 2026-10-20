@@ -1,0 +1,68 @@
+NVIDIA CORP
+NVDA
+No valuation verdict for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Uncertainty — not set
+$217.09
+2026-10-19
+No price history is in this analysis' fact set.
+Bear
+—
+Base
+—
+Bull
+—
+Current price
+$217.09
+No fair-value range for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Overview
+Business
+Financials
+Valuation
+Risks & Thesis
+Market Context
+Evidence
+Save this version
+Look at this company again
+What today's price assumes
+Not computed for this company yet — it needs the company's enterprise value, which is not available for this company.
+Steady-state EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+PVGO share of EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+NVIDIA CORP grew revenue 45.7%/yr over 10 years (FY2016–FY2026).
+How the price is read — Valuation
+If our Base case happens
+No break-even return is computed for this analysis.
+Scenario outputs — Valuation
+Why this verdict
+No valuation verdict for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+The sheet behind the Base value — Valuation
+Business quality
+Wide moat
+5-year average return on invested capital 51.9%, above the 11.0% rate.
+Returns by year — Financials
+Strongest argument against
+The record carries a guarantee-obligations maximum exposure of $108.5B, tagged as a contingent memo from the most recent interim filing. That figure stands above total liabilities as filed ($91.3B), far above total debt ($33.4B), and is a large multiple of the cash balance ($22.4B). It is an off-balance-sheet commitment that no line in the fact record offsets, and nothing in the record describes the counterparties, the triggering conditions, or any expected-loss estimate against it.
+Challenger findings — Risks & Thesis
+Top risks
+The draft's own Bear case (AI draft, every driver cited):
+The AI build-out that drove revenue from 60.9bn in FY2024 to 215.9bn in FY2026 proves to be a pull-forward: hyperscale customers digest the capacity they have bought, and NVIDIA's own filed history shows how fast this business can stall — revenue grew 0.2% in FY2023 and operating margin collapsed to 15.7% that year (H:revenue, H:margin). Growth flattens to low single digits off a very large base, pricing concessions and a heavier mix of lower-margin systems pull margin back toward the mid-30s, and the capital already deployed (invested capital rose from 45.4bn to 155.2bn in two years) earns far less than the 66-81% returns of the boom (H:returns). Stock compensation of 6.4bn a year keeps leaking share count (H:cashflow).
+All three cases — Risks & Thesis
+What would change it
+The single largest driver of this valuation is RONIC, which can move the result by 51.9% across its tested range.
+Sensitivity — Valuation
+Key Stats (TTM)
+Market cap
+Not computed for this company yet — it needs a decision on which of its investments are non-operating, which is not available for this company.
+P/E (trailing)
+27.4
+Spot-check not required
+FCF yield
+1.8%
+Spot-check not required
+52-week range
+$165.17 – $239.24
+Leverage
+Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Market Context
+SIC 3674 · Semiconductors & Related Devices
+Upcoming Events
+No upcoming events are tracked for this company yet.
