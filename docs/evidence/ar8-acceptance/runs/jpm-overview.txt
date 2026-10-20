@@ -1,0 +1,67 @@
+JPMORGAN CHASE & CO
+JPM
+No valuation verdict for this company yet — this version of the model does not value asset-based businesses such as banks and insurers.
+Uncertainty — not set
+$333.53
+2026-10-19
+No price history is in this analysis' fact set.
+Bear
+—
+Base
+—
+Bull
+—
+Current price
+$333.53
+No fair-value range for this company yet — this version of the model does not value asset-based businesses such as banks and insurers.
+Overview
+Business
+Financials
+Valuation
+Risks & Thesis
+Market Context
+Evidence
+Save this version
+Look at this company again
+What today's price assumes
+Not computed for this company yet — it needs the company's enterprise value, which is not available for this company.
+Steady-state EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+PVGO share of EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+JPMORGAN CHASE & CO grew revenue 6.9%/yr over 10 years (FY2015–FY2025).
+How the price is read — Valuation
+If our Base case happens
+No break-even return is computed for this analysis.
+Scenario outputs — Valuation
+Why this verdict
+No valuation verdict for this company yet — this version of the model does not value asset-based businesses such as banks and insurers.
+The sheet behind the Base value — Valuation
+Business quality
+Narrow moat
+FY2023 is missing invested capital
+Returns by year — Financials
+Strongest argument against
+The margin carried in the record is computed, per its own source line, from the operating-income fact and the current-revenue fact — but those two inputs are drawn from different annual filings covering different fiscal years. The record contains no earlier margin observation at all, so the qualifier that margin sits at a historical high rests on a figure whose numerator and denominator do not share a period, and against a history the fact record does not supply.
+Challenger findings — Risks & Thesis
+Top risks
+The draft's own Bear case (AI draft, every driver cited):
+A credit and rate cycle turns against the firm. The 78.6% operating margin posted in FY2023 (H:margin) proves to be the peak of the filed range rather than a new normal: net interest income flattens as the -100bp earnings-at-risk sensitivity of -$2.2bn bites (E1), provisions rise back toward the $4.7bn quarterly level booked in 4Q25 (E1), and expenses keep compounding at the 12-14% year-on-year pace of 2026 (E1). Revenue growth settles near the bottom of the filed single-year range (1.4%, H:revenue), margin reverts toward the FY2020 trough of 30.6% (H:margin), and returns on new capital fall below the discount rate so growth stops adding value. Buybacks slow as capital is preserved.
+All three cases — Risks & Thesis
+What would change it
+The single largest driver of this valuation is RONIC, which can move the result by 16.6% across its tested range.
+Sensitivity — Valuation
+Key Stats (TTM)
+Market cap
+Not computed for this company yet — it needs finance-lease liabilities and a decision on which of its investments are non-operating, which are not available for this company.
+P/E (trailing)
+14.0
+Spot-check not required
+FCF yield
+Not computed for this company yet — an input it needs is not available for this company.
+52-week range
+$282.84 – $365.18
+Leverage
+Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Market Context
+SIC 6021 · National Commercial Banks
+Upcoming Events
+No upcoming events are tracked for this company yet.

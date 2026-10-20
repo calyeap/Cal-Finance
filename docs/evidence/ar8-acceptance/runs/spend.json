@@ -1,9 +1,9 @@
 {
   "capUsd": 5,
-  "calls": 19,
-  "inputTokens": 140946,
-  "outputTokens": 93372,
-  "costUsd": 3.039030000000001,
+  "calls": 24,
+  "inputTokens": 187525,
+  "outputTokens": 121037,
+  "costUsd": 3.9635500000000006,
   "rows": [
     {
       "ticker": "MSFT",
@@ -137,6 +137,41 @@
       "inputTokens": 13724,
       "outputTokens": 6150,
       "costUsd": 0.22237
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 13724,
+      "outputTokens": 6363,
+      "costUsd": 0.22769499999999998
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 13724,
+      "outputTokens": 6582,
+      "costUsd": 0.23317
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 5439,
+      "outputTokens": 4109,
+      "costUsd": 0.12992
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 8068,
+      "outputTokens": 6649,
+      "costUsd": 0.206565
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 5624,
+      "outputTokens": 3962,
+      "costUsd": 0.12717
     }
   ]
 }
