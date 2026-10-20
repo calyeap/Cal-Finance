@@ -1,7 +1,8 @@
 import * as React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
-import { AnalyzerOverview } from "./AnalyzerOverview";
+import { QuickReadGrid } from "./ReportContent";
+import type { AssumptionSheet } from "@/lib/analyzer/sheets/sheet";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
 import { profileNotConfirmedFor } from "@/lib/analyzer/trust";
 import type { ReportAnalysis } from "@/lib/analyzer/reportAnalysis";
@@ -23,7 +24,7 @@ import type { ReportAnalysis } from "@/lib/analyzer/reportAnalysis";
 
 (globalThis as { React?: typeof React }).React ??= React;
 
-export function renderOverviewTabMarkup(runId: string, report: ReportAnalysis): string {
+export function renderOverviewTabMarkup(runId: string, report: ReportAnalysis, sheet: AssumptionSheet | null = null): string {
   const element = (
     <AnalyzerReportFrame
       runId={runId}
@@ -32,7 +33,13 @@ export function renderOverviewTabMarkup(runId: string, report: ReportAnalysis): 
       profileNotConfirmed={profileNotConfirmedFor(report.result)}
       activeTab="overview"
     >
-      <AnalyzerOverview result={report.result} aiLayer={report.aiLayer} />
+      <QuickReadGrid
+        runId={runId}
+        result={report.result}
+        verdict={deriveVerdict(report.result)}
+        sheet={sheet}
+        aiLayer={report.aiLayer}
+      />
     </AnalyzerReportFrame>
   );
 

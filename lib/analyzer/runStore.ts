@@ -130,6 +130,50 @@ export async function getRun(runId: string): Promise<AnalyzerRun | null> {
   };
 }
 
+/** One row of Analyzer Home's recent-analyses list (CF-AR7-REPORT-CONTENT-01). */
+export interface RecentRun {
+  runId: string;
+  ticker: string;
+  companyName: string;
+  createdAt: Date;
+  /** The latest "Save this version" record on the run, where one exists. */
+  latestSave: { version: number; savedAt: Date; verdictStatus: string; verdictState: string | null } | null;
+}
+
+/**
+ * The most recent runs, newest first, each with its latest saved version.
+ * Product-decisions item 31 (D6, frozen spec §14.9 AR0-7): a compact
+ * recent-analyses list is allowed; "Save this version" stays the dated
+ * decision record. Reads only — nothing is cached or carried between runs.
+ */
+export async function listRecentRuns(limit = 8): Promise<RecentRun[]> {
+  const { rows } = await getPool().query(
+    `SELECT r.run_id, r.ticker, r.resolved_company_name, r.created_at,
+            s.version, s.created_at AS saved_at, s.verdict_status, s.verdict_state
+       FROM analyzer_runs r
+       LEFT JOIN LATERAL (
+         SELECT version, created_at, verdict_status, verdict_state
+           FROM analyzer_run_snapshots
+          WHERE run_id = r.run_id
+          ORDER BY version DESC
+          LIMIT 1
+       ) s ON true
+      ORDER BY r.created_at DESC
+      LIMIT $1`,
+    [limit]
+  );
+  return rows.map((r) => ({
+    runId: r.run_id,
+    ticker: r.ticker,
+    companyName: r.resolved_company_name,
+    createdAt: new Date(r.created_at),
+    latestSave:
+      r.version === null
+        ? null
+        : { version: r.version, savedAt: new Date(r.saved_at), verdictStatus: r.verdict_status, verdictState: r.verdict_state ?? null },
+  }));
+}
+
 /**
  * Records one Step 2 decision, replacing any earlier decision on the same
  * fact so an analyst may change their mind before the step completes.

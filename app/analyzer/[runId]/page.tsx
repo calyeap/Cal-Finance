@@ -8,7 +8,16 @@ import {
   isAnalyzerTabSlug,
   type AnalyzerTabSlug,
 } from "@/app/components/AnalyzerReportFrame";
-import { AnalyzerOverview } from "@/app/components/AnalyzerOverview";
+import {
+  QuickReadGrid,
+  AssumptionSheetSection,
+  SensitivitySection,
+  BusinessResearch,
+  FinancialStatements,
+  ScenarioStories,
+  MarketFacts,
+  SourceLedger,
+} from "@/app/components/ReportContent";
 import {
   BusinessSection,
   FinancialsSections,
@@ -20,10 +29,18 @@ import {
 } from "@/app/components/AnalyzerReport";
 import { QuickRead } from "@/app/components/QuickRead";
 import { SourcesAndDetails } from "@/app/components/SourcesAndDetails";
-import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
+import { RunNotFoundError, SpotCheckIncompleteError, type GateState } from "@/lib/analyzer/gate";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
-import { analysisForReport, currentRunOutput, type AiLayerReport } from "@/lib/analyzer/reportAnalysis";
-import { deriveVerdict } from "@/lib/analyzer/verdict";
+import {
+  analysisForReport,
+  currentRunOutput,
+  deterministicReport,
+  reportMarketOptions,
+  type AiLayerReport,
+} from "@/lib/analyzer/reportAnalysis";
+import { deriveVerdict, type VerdictResult } from "@/lib/analyzer/verdict";
+import { getSheet } from "@/lib/analyzer/sheets/sheetStore";
+import type { AssumptionSheet } from "@/lib/analyzer/sheets/sheet";
 import { uncertaintyProposalForRun } from "@/lib/analyzer/uncertaintyProposalStore";
 import { analystCallIfConfigured, ANALYST_MODEL } from "@/lib/analyzer/ai/anthropicCall";
 import { profileNotConfirmedFor } from "@/lib/analyzer/trust";
@@ -44,28 +61,63 @@ import type { AnalysisResult } from "@/lib/analyzer/types";
 
 function TabBody({
   tab,
+  runId,
   result,
+  verdict,
+  sheet,
   aiLayer,
   profileNotConfirmed,
 }: {
   tab: AnalyzerTabSlug;
+  runId: string;
   result: AnalysisResult;
+  verdict: VerdictResult;
+  sheet: AssumptionSheet | null;
   aiLayer?: AiLayerReport;
   profileNotConfirmed: boolean;
 }) {
+  // CF-AR7-REPORT-CONTENT-01 — each tab leads with the content Calvin
+  // accepted in the AR7 prototype (#455; app/components/ReportContent.tsx);
+  // the existing deterministic sections follow as the deep dive.
   switch (tab) {
     case "overview":
-      return <AnalyzerOverview result={result} aiLayer={aiLayer} />;
+      return <QuickReadGrid runId={runId} result={result} verdict={verdict} sheet={sheet} aiLayer={aiLayer} />;
     case "business":
-      return <BusinessSection result={result} />;
+      return (
+        <>
+          <BusinessSection result={result} />
+          <BusinessResearch sheet={sheet} />
+        </>
+      );
     case "financials":
-      return <FinancialsSections result={result} />;
+      return (
+        <>
+          <FinancialStatements runId={runId} result={result} />
+          <FinancialsSections result={result} />
+        </>
+      );
     case "valuation":
-      return <ValuationSections result={result} />;
+      return (
+        <>
+          <AssumptionSheetSection runId={runId} result={result} sheet={sheet} />
+          <SensitivitySection result={result} />
+          <ValuationSections result={result} withScenarios={false} />
+        </>
+      );
     case "risks":
-      return <RisksThesisSections result={result} aiLayer={aiLayer} />;
+      return (
+        <>
+          <ScenarioStories result={result} sheet={sheet} />
+          <RisksThesisSections result={result} aiLayer={aiLayer} />
+        </>
+      );
     case "market":
-      return <MarketContextSection result={result} />;
+      return (
+        <>
+          <MarketFacts runId={runId} result={result} />
+          <MarketContextSection result={result} />
+        </>
+      );
     case "evidence":
       // Section A and Quick Read have no other route in the unified shell
       // (AnalyzerReport, the only other renderer of either, now backs only
@@ -75,6 +127,7 @@ function TabBody({
       // V1-SETTLE-01) lives here too, not repeated on the other six tabs.
       return (
         <>
+          <SourceLedger runId={runId} sheet={sheet} />
           <QuickRead result={result} />
           <TrustAndProfileNote result={result} profileNotConfirmed={profileNotConfirmed} />
           <HeaderAndStatesSection result={result} />
@@ -100,16 +153,30 @@ export default async function ReportPage({
   // recorded on it, there is nothing to advance or compute: the automatic
   // pass below loads the filings and the price, and a run with a stored
   // output was already past it.
+  //
+  // CF-AR7-REPORT-CONTENT-01 (speed fix from closed PR #421) — the gate state
+  // the automatic pass loads is handed on to the computation, on the same
+  // pinned market data, so one view loads it once rather than twice.
+  let state: GateState | undefined;
   try {
-    if ((await currentRunOutput(runId)) === null) await advanceRunAutomatically(runId);
+    if ((await currentRunOutput(runId)) === null) {
+      state = await advanceRunAutomatically(runId, await reportMarketOptions(runId));
+    }
   } catch (err) {
     if (err instanceof RunNotFoundError) notFound();
     throw err;
   }
 
-  let report;
+  // Only Overview, Risks & Thesis and Evidence show the AI layer's prose; the
+  // other four tabs read the deterministic output alone, so they never wait
+  // on, start or pay for a model call (speed fix from closed PR #421).
+  const needsAiLayer = activeTab === "overview" || activeTab === "risks" || activeTab === "evidence";
+
+  let report: { result: AnalysisResult; aiLayer?: AiLayerReport };
   try {
-    report = await analysisForReport(runId);
+    report = needsAiLayer
+      ? await analysisForReport(runId, undefined, undefined, state)
+      : await deterministicReport(runId, state);
   } catch (err) {
     if (err instanceof SpotCheckIncompleteError) {
       // Unreachable in the normal path: the automatic pass above decides every
@@ -135,6 +202,12 @@ export default async function ReportPage({
   // exactly the failure mode trust.ts's own header comment warns against.
   const profileNotConfirmed = profileNotConfirmedFor(report.result);
   const verdict = deriveVerdict(report.result);
+  // CF-AR7-REPORT-CONTENT-01 — the assumption sheet this output was valued
+  // on (its drivers' anchors, citations and sources), read by id from the
+  // append-only store. The Financials and Market Context tabs do not use it.
+  const sheetRef = report.result.valuationBasis?.sheet ?? null;
+  const sheet =
+    sheetRef !== null && activeTab !== "financials" && activeTab !== "market" ? await getSheet(sheetRef.id) : null;
   // CF-AR5-VERDICT-CONSOLIDATION-01 — only while the verdict asks the one
   // uncertainty question does the AI propose a level (Methodology v2.1 D3).
   const uncertaintyProposal =
@@ -155,7 +228,10 @@ export default async function ReportPage({
       >
         <TabBody
           tab={activeTab}
+          runId={runId}
           result={report.result}
+          verdict={verdict}
+          sheet={sheet}
           aiLayer={report.aiLayer}
           profileNotConfirmed={profileNotConfirmed}
         />

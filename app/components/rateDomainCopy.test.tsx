@@ -4,7 +4,7 @@ import { render, cleanup } from "@testing-library/react";
 import Decimal from "decimal.js";
 import { AnalyzerReport } from "./AnalyzerReport";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
-import { AnalyzerOverview } from "./AnalyzerOverview";
+import { QuickReadGrid } from "./ReportContent";
 import { assembleAnalysisResult, type CompanyFixture } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import { rateInUseLine } from "@/lib/analyzer/trustCopy";
@@ -70,7 +70,7 @@ function frameText(result: AnalysisResult): string {
       profileNotConfirmed={profileNotConfirmedFor(result)}
       activeTab="overview"
     >
-      <AnalyzerOverview result={result} />
+      <QuickReadGrid runId="run-rate-domain" result={result} verdict={deriveVerdict(result)} sheet={null} />
     </AnalyzerReportFrame>
   );
   return container.textContent ?? "";

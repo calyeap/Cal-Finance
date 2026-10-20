@@ -4273,3 +4273,216 @@ h6 {
   color: var(--color-text-muted);
   font-size: 0.85em;
 }
+
+/* ---------------------------------------------------------------------------
+   CF-AR7-REPORT-CONTENT-01 — the report content Calvin accepted in the AR7
+   prototype (issue 455), inside the one Analyzer shell (ReportContent.tsx).
+   Shared tokens, the 12-column tab-body grid (6/6 and 12/12 only), the
+   15px body / 13px metadata floor and the 4/8/12/16/24/32 spacing scale
+   (docs/design/analyzer-v2-design-authority.md). Half-window and iPad
+   landscape keep two columns; iPad portrait and phone read one column.
+   --------------------------------------------------------------------------- */
+.cb-analyzer .rc-qr {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+.cb-analyzer .rc-item {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 0;
+  font-size: 15px;
+  line-height: 1.5;
+}
+.cb-analyzer .rc-6 {
+  grid-column: span 6;
+}
+.cb-analyzer .rc-12 {
+  grid-column: span 12;
+}
+.cb-analyzer .rc-item h3,
+.cb-analyzer .rc-card h3,
+.cb-analyzer .rc-section h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.cb-analyzer .rc-item p,
+.cb-analyzer .rc-section p,
+.cb-analyzer .rc-card p {
+  margin: 0 0 8px;
+  max-width: 75ch;
+}
+.cb-analyzer .rc-item ul {
+  margin: 0 0 8px;
+  padding-left: 20px;
+}
+.cb-analyzer .rc-muted,
+.cb-analyzer .rc-cites,
+.cb-analyzer .rc-anchor {
+  color: var(--muted);
+  font-size: 13px;
+}
+.cb-analyzer .rc-cites a {
+  color: var(--muted);
+  margin-left: 4px;
+}
+.cb-analyzer .rc-slot {
+  color: var(--muted);
+  border: 1px dashed var(--line-strong);
+  border-radius: 6px;
+  padding: 8px 12px;
+}
+.cb-analyzer .rc-source {
+  display: inline-block;
+  margin-top: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+.cb-analyzer .num {
+  font-variant-numeric: tabular-nums;
+}
+.cb-analyzer .rc-scroll {
+  overflow-x: auto;
+  max-width: 100%;
+}
+.cb-analyzer table.rc-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 15px;
+}
+.cb-analyzer table.rc-table thead th {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.cb-analyzer table.rc-table td,
+.cb-analyzer table.rc-table tbody th {
+  padding: 8px;
+  border-bottom: 1px solid var(--hairline);
+  text-align: left;
+  vertical-align: top;
+  font-weight: inherit;
+}
+.cb-analyzer table.rc-table tbody th {
+  font-weight: 600;
+}
+.cb-analyzer table.rc-table td.num,
+.cb-analyzer table.rc-table th.num {
+  text-align: right;
+  white-space: nowrap;
+}
+.cb-analyzer table.rc-table td a {
+  color: var(--ink);
+}
+.cb-analyzer .rc-zone.z-sell {
+  color: var(--loss);
+}
+.cb-analyzer .rc-zone.z-buy {
+  color: var(--gain);
+}
+.cb-analyzer table.rc-sheet {
+  min-width: 640px;
+}
+.cb-analyzer table.rc-sheet td {
+  width: 28%;
+}
+.cb-analyzer .rc-driver {
+  font-weight: 500;
+  margin-bottom: 4px;
+}
+.cb-analyzer table.rc-statements {
+  min-width: 880px;
+}
+.cb-analyzer table.rc-statements tr.rc-derived th,
+.cb-analyzer table.rc-statements tr.rc-derived td {
+  color: var(--muted);
+}
+.cb-analyzer table.rc-returns {
+  max-width: 320px;
+}
+.cb-analyzer .rc-section {
+  margin-bottom: 32px;
+}
+.cb-analyzer .rc-cards {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+.cb-analyzer .rc-card {
+  border: 1px solid var(--hairline);
+  border-radius: 8px;
+  padding: 16px;
+  min-width: 0;
+  font-size: 15px;
+}
+.cb-analyzer .rc-excerpt {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+.cb-analyzer table.rc-ledger {
+  min-width: 640px;
+}
+.cb-analyzer .rc-actions {
+  margin-top: 16px;
+}
+@media (max-width: 1024px) {
+  .cb-analyzer .rc-6 {
+    grid-column: span 12;
+  }
+  .cb-analyzer .rc-cards {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+.cb-analyzer .rc-section a,
+.cb-analyzer .rc-item a {
+  color: inherit;
+}
+/* CF-AR7-REPORT-CONTENT-01 — Analyzer Home's recent analyses: a compact
+   list under the one dominant entry action, never a dashboard grid. */
+.cb-analyzer .az-recent {
+  max-width: 560px;
+  margin: 0 auto 96px;
+  padding: 0 24px;
+}
+.cb-analyzer .az-recent h2 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 0 0 8px;
+}
+.cb-analyzer .az-recent ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cb-analyzer .az-recent li {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 4px 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--hairline);
+}
+.cb-analyzer .az-recent a {
+  color: var(--ink);
+  text-decoration: none;
+}
+.cb-analyzer .az-recent-name {
+  font-weight: 500;
+}
+.cb-analyzer .az-recent-ticker,
+.cb-analyzer .az-recent-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+/* CF-AR7-REPORT-CONTENT-01 (issue 418: no overflow blockers across the seven
+   tabs) — the Evidence fact ledger is a wide analytical table; on narrow
+   widths it scrolls inside its own section instead of widening the page. */
+.cb-analyzer section#B {
+  overflow-x: auto;
+}

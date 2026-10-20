@@ -7,7 +7,7 @@ import { createRun, recordFactDecision, recordProfileDecision } from "@/lib/anal
 import { computeAnalysisForRun, loadGateState } from "@/lib/analyzer/gate";
 import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
-import { AnalyzerOverview } from "./AnalyzerOverview";
+import { QuickReadGrid } from "./ReportContent";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
 import { AnalyzerReport } from "./AnalyzerReport";
 import type { AnalysisResult } from "@/lib/analyzer/types";
@@ -25,7 +25,7 @@ import { incompleteVerdictExplanation, verdictExplanation } from "@/lib/analyzer
 // routes first meet a real fact set: a run driven through the same gated
 // path both routes read (lib/analyzer/gate.ts), acquired from the committed
 // SEC captures (ANALYZER_OFFLINE=1, vitest.setup.ts:51) rather than from any
-// fixture, then rendered through AnalyzerOverview and AnalyzerReport exactly
+// fixture, then rendered through the Overview Quick Read and AnalyzerReport exactly
 // as the routes render them.
 //
 // The helper below is trustOnRealRun.test.ts's own completeSpotCheck,
@@ -70,19 +70,17 @@ async function openRealRun(ticker: string, companyName: string): Promise<RealRun
   return { runId, result, aiLayer: report.aiLayer, recommendedProfile };
 }
 
-// CF-DESIGN-AUTHORITY-CUTOVER-01 — AnalyzerOverview now renders only the
-// Overview tab's own body (slots 5-11); slots 1-4 and 12 moved to
-// AnalyzerReportFrame, exercised separately below.
+// CF-AR7-REPORT-CONTENT-01 — reviewed evaluator change: the Overview tab
+// body is the Quick Read Calvin accepted in the AR7 prototype (#455),
+// replacing M9 slots 5-12; slots 1-4 stay in AnalyzerReportFrame.
 const OVERVIEW_TAB_SLOT_ORDER = [
-  "slot-quickread",
-  "slot-5",
-  "slot-6",
-  "slot-7",
-  "slot-8",
-  "slot-9",
-  "slot-10",
-  "slot-11",
-  "slot-12",
+  "qr-price-assumes",
+  "qr-base-return",
+  "qr-why",
+  "qr-quality",
+  "qr-against",
+  "qr-risks",
+  "qr-change",
 ];
 
 const REPORT_SECTION_ORDER = ["quickread", "A", "C", "D", "E", "F", "G", "H", "I", "I2", "B", "J", "atglance"];
@@ -150,11 +148,13 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       expect(recommendedProfile).toBe(expectedProfile);
     });
 
-    it("all seven Overview tab slots are present, in the fixed §2.1 order, none absent", async () => {
-      const { result, aiLayer } = await openRealRun(ticker, companyName);
+    it("all seven Quick Read items are present, in the fixed order, none absent", async () => {
+      const { runId, result, aiLayer } = await openRealRun(ticker, companyName);
 
-      const { container } = render(<AnalyzerOverview result={result} aiLayer={aiLayer} />);
-      const ids = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
+      const { container } = render(
+        <QuickReadGrid runId={runId} result={result} verdict={deriveVerdict(result)} sheet={null} aiLayer={aiLayer} />
+      );
+      const ids = Array.from(container.querySelectorAll(".rc-qr > .rc-item")).map((el) => el.id);
       expect(ids).toEqual(OVERVIEW_TAB_SLOT_ORDER);
     });
 
@@ -231,40 +231,25 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       expect(hero.textContent).toContain(verdict.reason);
     });
 
-    it("no slot renders a numeral the Analysis Result does not carry — the price-implied restatement (slot 8) shows its suppression state, not a figure, wherever the result itself is suppressed", async () => {
-      const { result, aiLayer } = await openRealRun(ticker, companyName);
-      const { priceImplied } = result;
+    // CF-AR7-REPORT-CONTENT-01 — reviewed evaluator change: the price-
+    // implied read on the Overview is the Quick Read's "What today's price
+    // assumes" (the reverse-DCF solve), replacing slot 8. Same invariant: it
+    // shows the figure the result carries, or the plain reason it does not.
+    it("no Quick Read item renders a numeral the Analysis Result does not carry — the price-implied read shows its plain reason, not a figure, wherever the result itself is suppressed", async () => {
+      const { runId, result, aiLayer } = await openRealRun(ticker, companyName);
+      const solve = result.priceImplied.reverseDcf;
 
-      const { container } = render(<AnalyzerOverview result={result} aiLayer={aiLayer} />);
-      const slot8 = container.querySelector("#slot-8") as HTMLElement;
-      const steadyStateEv = priceImplied.steadyStateEv;
-      const pvgoShareOfEv = priceImplied.pvgoShareOfEv;
-
-      if (steadyStateEv.suppressed) {
-        // CF-ANALYZER-V1-SETTLE-01 — the raw state code never renders
-        // outside Evidence; the Overview states the reason in plain English
-        // (Calvin's 7 Oct 2026 decision on #399, Option 1) — the raw code
-        // still reaches Evidence via `states.suppressing`, assemble.ts.
-        expect(slot8.textContent).toContain(
-          `Steady-state EV ${notComputedLine(steadyStateEv.state, steadyStateEv.cause, result.gates.leverage)}`
+      const { container } = render(
+        <QuickReadGrid runId={runId} result={result} verdict={deriveVerdict(result)} sheet={null} aiLayer={aiLayer} />
+      );
+      const item = container.querySelector("#qr-price-assumes") as HTMLElement;
+      if (solve.fiveYearGrowth.suppressed) {
+        expect(item.textContent).toContain(
+          notComputedLine(solve.fiveYearGrowth.state, solve.fiveYearGrowth.cause, result.gates.leverage)
         );
-        expect(slot8.textContent).not.toContain(steadyStateEv.state);
+        expect(item.textContent).not.toContain(solve.fiveYearGrowth.state);
       } else {
-        expect(slot8.textContent).toContain(`$${formatCompactUsd(steadyStateEv.value)}`);
-      }
-      if (pvgoShareOfEv.suppressed) {
-        expect(slot8.textContent).toContain(
-          `PVGO share of EV ${notComputedLine(pvgoShareOfEv.state, pvgoShareOfEv.cause, result.gates.leverage)}`
-        );
-      } else {
-        expect(slot8.textContent).toContain(`${pvgoShareOfEv.value.mul(100).toFixed(1)}%`);
-      }
-      // The one shared cause both figures suppress under on a real run
-      // whose §4.4 judgment is unanswered — asserted directly, not only
-      // inferred from the branch taken above.
-      if (steadyStateEv.suppressed && pvgoShareOfEv.suppressed) {
-        expect(steadyStateEv.state).toBe("LEVERAGE UNSUPPORTED IN v1");
-        expect(pvgoShareOfEv.state).toBe("LEVERAGE UNSUPPORTED IN v1");
+        expect(item.textContent).toContain(`${solve.fiveYearGrowth.value.mul(100).toFixed(1)}%/yr`);
       }
     });
 
@@ -302,18 +287,24 @@ describe("#118 item 10 — real acquired runs against the two M9 routes", () => 
       expect(result.business.narrative).toBeNull();
 
       const { container } = render(<AnalyzerReport result={result} aiLayer={aiLayer} />);
+      // CF-AR7-REPORT-CONTENT-01 — the empty state's lead-in is plain words
+      // now ("Not yet available" is forbidden on reading tabs); the disclosed
+      // reason itself is still shown in full.
       expect(container.textContent).toContain(
-        "Not yet available — 10-K Item 1 excerpts are not part of the committed SEC capture — this run " +
+        "No company description for this analysis — 10-K Item 1 excerpts are not part of the committed SEC capture — this run " +
           "reads captured XBRL facts only, and the extraction rule requires a live EDGAR filing-document fetch."
       );
+      expect(container.textContent).not.toContain("Not yet available");
     });
 
     it("renders without throwing when the profile is Cannot-judge (not human-confirmed) too — the other §6.3 path this run's real profile decision could have taken", async () => {
       // Exercised as a rendering-path check, not a second acceptance run:
       // the same real AnalysisResult, with profileNotConfirmed flipped, the
       // way report/page.tsx computes it off state.run.profileHumanConfirmed.
-      const { result, aiLayer } = await openRealRun(ticker, companyName);
-      expect(() => render(<AnalyzerOverview result={result} aiLayer={aiLayer} />)).not.toThrow();
+      const { runId, result, aiLayer } = await openRealRun(ticker, companyName);
+      expect(() =>
+        render(<QuickReadGrid runId={runId} result={result} verdict={deriveVerdict(result)} sheet={null} aiLayer={aiLayer} />)
+      ).not.toThrow();
     });
   });
 });

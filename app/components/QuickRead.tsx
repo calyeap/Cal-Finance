@@ -775,31 +775,3 @@ export function QuickRead({ result }: { result: AnalysisResult }) {
     </section>
   );
 }
-
-/**
- * CF-AR1-QUICK-READ-OVERVIEW-01 — Quick Read's own items (§17.16), rendered
- * in the Overview tab body (DO item 1). Same branch logic and figures as
- * `QuickRead` above, via the same `buildQuickRead`/`applyInterpretedPageOne`
- * — nothing here is computed twice or differently. Two differences only,
- * both presentational: the bear/base/bull/current-price grid is omitted —
- * the hero's `ScenarioRangeStrip`, shared by every tab, already renders it
- * immediately above (no duplicate verdict card) — and `buildQuickRead`'s
- * `plain` flag routes every technical state name through overviewCopy.ts
- * and drops the Evidence-only "see Section X" cross-reference (see
- * `sectionPointer`'s doc comment above).
- */
-export function OverviewQuickRead({ result }: { result: AnalysisResult }) {
-  const items = applyInterpretedPageOne(buildQuickRead(result, true), result);
-
-  return (
-    <div className="ovslot" id="slot-quickread">
-      <h3>Quick read</h3>
-      {items.map((item) => (
-        <div className="qitem" key={item.label}>
-          <span className="k">{item.label}</span>
-          {item.body}
-        </div>
-      ))}
-    </div>
-  );
-}

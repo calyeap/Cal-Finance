@@ -199,11 +199,13 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       const runId = await analyze("MSFT", "Microsoft Corporation");
       const { container } = await renderTab(runId, "overview");
 
-      const overview = container.querySelector(".ovtab") as HTMLElement;
-      const markers = Array.from(overview.querySelectorAll(".note")).filter(
-        (el) => (el.textContent ?? "").includes("Not yet available")
-      );
-      expect(markers.length).toBeLessThanOrEqual(3);
+      // CF-AR7-REPORT-CONTENT-01 — reviewed evaluator change: the Overview
+      // body is the AR7 Quick Read (#455); its empty-slot marker is `.rc-slot`,
+      // and the "Not yet available" wording is gone from it entirely.
+      const overview = container.querySelector(".rc-qr") as HTMLElement;
+      expect(overview).not.toBeNull();
+      expect(overview.querySelectorAll(".rc-slot").length).toBeLessThanOrEqual(3);
+      expect(overview.textContent).not.toContain("Not yet available");
     });
 
     it("no raw gate/trust/spot-check state code appears outside Evidence (rail and hero included)", async () => {
@@ -313,7 +315,9 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
     it("slot 11 keeps the structural 'not yet available' frame while the sheet is pending adoption", async () => {
       const runId = await analyze("MSFT", "Microsoft Corporation");
       const { container } = await renderTab(runId, "overview");
-      const slot = container.querySelector("#slot-11") as HTMLElement;
+      // CF-AR7-REPORT-CONTENT-01 — slot 11 is the Quick Read's "What would
+      // change it" item now; the same fixed fallback sentence.
+      const slot = container.querySelector("#qr-change") as HTMLElement;
       expect(slot).not.toBeNull();
       expect(slot.textContent).toContain("No computed change trigger available yet.");
     });
@@ -339,13 +343,19 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       // 75.2385% for this exact capture) — they render as real figures, not
       // swallowed by the Leverage precondition row's own state beside them.
       expect(financialsText).toContain("13 filed years");
-      expect(financialsText).toContain("CLEAN (75.2%)");
+      // CF-AR7-REPORT-CONTENT-01 (#418's tab-level findings): the ladder
+      // state reads in words on Financials.
+      expect(financialsText).toContain("value-creating growth (75.2%)");
       expect(financialsText).toContain("Leverage precondition");
       // CF-ANALYZER-V1-SETTLE-01 correction (REVIEW's `CORRECT:`, comment
       // 5931716147) — the precondition's own raw code must not render
       // outside Evidence; a local marker takes its place, and the raw code
       // still reaches Evidence via `states.suppressing` (assemble.ts).
-      expect(financialsText).toContain("Unavailable — see Evidence");
+      // CF-AR7-REPORT-CONTENT-01 — the local marker is the plain leverage
+      // line now ("see Evidence" placeholders are forbidden on reading tabs).
+      expect(financialsText).toContain(
+        "Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available"
+      );
       assertNoRawStateTextOnCorrectedSurfaces(financials.container);
     });
 
@@ -359,11 +369,13 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       const runId = await analyze("NVDA", "NVIDIA Corporation");
       const { container } = await renderTab(runId, "overview");
 
-      const overview = container.querySelector(".ovtab") as HTMLElement;
-      const markers = Array.from(overview.querySelectorAll(".note")).filter(
-        (el) => (el.textContent ?? "").includes("Not yet available")
-      );
-      expect(markers.length).toBeLessThanOrEqual(3);
+      // CF-AR7-REPORT-CONTENT-01 — reviewed evaluator change: the Overview
+      // body is the AR7 Quick Read (#455); its empty-slot marker is `.rc-slot`,
+      // and the "Not yet available" wording is gone from it entirely.
+      const overview = container.querySelector(".rc-qr") as HTMLElement;
+      expect(overview).not.toBeNull();
+      expect(overview.querySelectorAll(".rc-slot").length).toBeLessThanOrEqual(3);
+      expect(overview.textContent).not.toContain("Not yet available");
     });
 
     // CF-ANALYZER-V1-SETTLE-01 — CALVIN RULING — A (PR #399, comment
@@ -374,7 +386,9 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
     it("slot 11 shows the honest 'no computed change trigger' fallback — NVDA has no analyst-supplied sensitivity range", async () => {
       const runId = await analyze("NVDA", "NVIDIA Corporation");
       const { container } = await renderTab(runId, "overview");
-      const slot = container.querySelector("#slot-11") as HTMLElement;
+      // CF-AR7-REPORT-CONTENT-01 — slot 11 is the Quick Read's "What would
+      // change it" item now; the same fixed fallback sentence.
+      const slot = container.querySelector("#qr-change") as HTMLElement;
       expect(slot).not.toBeNull();
       expect(slot.textContent).toContain("No computed change trigger available yet.");
     });
