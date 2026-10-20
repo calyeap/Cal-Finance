@@ -176,23 +176,24 @@ export function validateSheet(content: SheetContent, ctx: ValidationContext): Va
   }
 
   // --- RONIC PATH and TERMINAL CONSISTENCY ------------------------------------
-  // D2: each scenario's return on new investment fades to its terminal
-  // return — the rate plus the moat credit — by year 10. Base and bull fade
-  // DOWN to it: a scenario whose return starts below its own terminal would
-  // have returns rising into perpetuity, which no moat class describes.
+  // v3 D2′: each scenario's return on new investment fades to its terminal
+  // return — the rate (Bull: rate + 1.5pp) — by the end of its runway. Base
+  // and bull fade DOWN to it: a scenario whose return starts below its own
+  // terminal would have returns rising toward perpetuity, which no moat class
+  // describes.
   const moat: MoatClass | null = content.moatClass;
   if (moat !== null) {
     for (const key of SCENARIO_KEYS) {
       const ronic = v[key].returnOnNewInvestment;
       if (ronic === null) continue;
-      const terminal = terminalReturnOnNewCapital(ctx.rate, moat, key);
+      const terminal = terminalReturnOnNewCapital(ctx.rate, key);
       if (key !== "bear" && ronic.lessThan(terminal)) {
         add({
           check: "RONIC PATH",
           severity: "ERROR",
           scenario: key,
           driver: "returnOnNewInvestment",
-          message: `${key} return on new investment ${pct(ronic)} is below its terminal return ${pct(terminal)} (rate ${pct(ctx.rate)} + the ${moat} moat credit), so returns would rise toward perpetuity`,
+          message: `${key} return on new investment ${pct(ronic)} is below its terminal return ${pct(terminal)} (the rate ${pct(ctx.rate)}${key === "bull" ? " + 1.5pp" : ""}), so returns would rise toward perpetuity`,
         });
       }
       if (key === "bear" && ronic.lessThan(ctx.rate)) {
@@ -206,13 +207,13 @@ export function validateSheet(content: SheetContent, ctx: ValidationContext): Va
       }
     }
     const roicHigh = ctx.measures?.roicRange?.high ?? null;
-    const baseTerminal = terminalReturnOnNewCapital(ctx.rate, moat, "base");
+    const baseTerminal = terminalReturnOnNewCapital(ctx.rate, "base");
     if (roicHigh !== null && baseTerminal.greaterThan(roicHigh)) {
       add({
         check: "TERMINAL CONSISTENCY",
         severity: range,
         driver: "moatClass",
-        message: `the ${moat} moat holds a perpetual return of ${pct(baseTerminal)} on new capital, above the highest return on invested capital this company has filed (${pct(roicHigh)})`,
+        message: `new capital earns the rate ${pct(baseTerminal)} in perpetuity, above the highest return on invested capital this company has filed (${pct(roicHigh)})`,
       });
     }
     if (moat !== "none" && roicHigh !== null && roicHigh.lessThan(ctx.rate)) {

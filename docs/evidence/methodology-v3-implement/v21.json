@@ -1,0 +1,160 @@
+{
+  "MSFT": {
+    "price": "533.52",
+    "moat": "wide",
+    "rate": "0.09",
+    "band": "stable",
+    "tax": "0.21",
+    "evCause": null,
+    "values": {
+      "bear": "188.88384498000162636",
+      "base": "328.25823074016124233",
+      "bull": "456.18394229181531138"
+    },
+    "baseAt": {
+      "lower": "358.16655916576202657",
+      "rate": "328.25823074016124233",
+      "upper": "302.60068098883057964"
+    },
+    "baseAtCause": null,
+    "flatGrowthBaseAt": null,
+    "terminalShare": "0.70463524987732218013",
+    "verdict": {
+      "status": "PENDING",
+      "state": "PENDING ADOPTION",
+      "draftZone": "SELL",
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): wide moat — terminal return on new capital is the rate plus 3.0pp (bear +0pp; bull +4.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": null
+  },
+  "COST": {
+    "price": "995.53",
+    "moat": "wide",
+    "rate": "0.09",
+    "band": "stable",
+    "tax": "0.21",
+    "evCause": null,
+    "values": {
+      "bear": "269.32940220678269774",
+      "base": "419.17172086084002862",
+      "bull": "559.4112344807394631"
+    },
+    "baseAt": {
+      "lower": "450.08451847563079883",
+      "rate": "419.17172086084002862",
+      "upper": "392.53189064716705441"
+    },
+    "baseAtCause": null,
+    "flatGrowthBaseAt": null,
+    "terminalShare": "0.58406161898815469081",
+    "verdict": {
+      "status": "PENDING",
+      "state": "PENDING ADOPTION",
+      "draftZone": "SELL",
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): wide moat — terminal return on new capital is the rate plus 3.0pp (bear +0pp; bull +4.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": null
+  },
+  "NVDA": {
+    "price": "217.09",
+    "moat": "wide",
+    "rate": "0.11",
+    "band": "cyclical",
+    "tax": "0.21",
+    "evCause": "INCOMPLETE — missing REQUIRED input(s): treasuryMethodDilution",
+    "values": {
+      "bear": "NaN",
+      "base": "NaN",
+      "bull": "NaN"
+    },
+    "baseAt": null,
+    "baseAtCause": "enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply",
+    "flatGrowthBaseAt": null,
+    "terminalShare": "0.5959162921471412375",
+    "verdict": {
+      "status": "INCOMPLETE",
+      "state": "CANNOT BOUND VALUE",
+      "draftZone": null,
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): wide moat — terminal return on new capital is the rate plus 3.0pp (bear +0pp; bull +4.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": null
+  },
+  "NUE": {
+    "price": "260.73",
+    "moat": "none",
+    "rate": "0.11",
+    "band": "cyclical",
+    "tax": "0.21",
+    "evCause": "INCOMPLETE — missing REQUIRED input(s): treasuryMethodDilution",
+    "values": {
+      "bear": "NaN",
+      "base": "NaN",
+      "bull": "NaN"
+    },
+    "baseAt": null,
+    "baseAtCause": "enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply",
+    "flatGrowthBaseAt": null,
+    "terminalShare": "0.50157440161950371266",
+    "verdict": {
+      "status": "INCOMPLETE",
+      "state": "CANNOT BOUND VALUE",
+      "draftZone": null,
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): none moat — terminal return on new capital is the rate plus 0.0pp (bear +0pp; bull +1.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": null
+  },
+  "KO": {
+    "price": "93.42",
+    "moat": "wide",
+    "rate": "0.09",
+    "band": "stable",
+    "tax": "0.21",
+    "evCause": "INCOMPLETE — missing REQUIRED input(s): treasuryMethodDilution, financeLeaseLiabilities",
+    "values": {
+      "bear": "NaN",
+      "base": "NaN",
+      "bull": "NaN"
+    },
+    "baseAt": null,
+    "baseAtCause": "enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply",
+    "flatGrowthBaseAt": null,
+    "terminalShare": "0.58576239279198127578",
+    "verdict": {
+      "status": "INCOMPLETE",
+      "state": "CANNOT BOUND VALUE",
+      "draftZone": null,
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): wide moat — terminal return on new capital is the rate plus 3.0pp (bear +0pp; bull +4.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": null
+  },
+  "LLY": {
+    "price": "1240.34",
+    "moat": "narrow",
+    "rate": "0.09",
+    "band": "stable",
+    "tax": "0.21",
+    "evCause": "INCOMPLETE — missing REQUIRED input(s): treasuryMethodDilution",
+    "values": {
+      "bear": "NaN",
+      "base": "NaN",
+      "bull": "NaN"
+    },
+    "baseAt": null,
+    "baseAtCause": "enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply",
+    "flatGrowthBaseAt": null,
+    "terminalShare": "0.78138778309758119581",
+    "verdict": {
+      "status": "INCOMPLETE",
+      "state": "CANNOT BOUND VALUE",
+      "draftZone": null,
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): narrow moat — terminal return on new capital is the rate plus 1.0pp (bear +0pp; bull +2.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": null
+  }
+}

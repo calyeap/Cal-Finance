@@ -3,6 +3,7 @@ import { join } from "node:path";
 import Decimal from "decimal.js";
 import { secClientFromEnv, cikForTicker, type SecClient } from "./secClient";
 import type { CompanyFactsDocument, CompanyTickerDirectory, SubmissionsDocument } from "./secClient";
+import { withDerivedFacts } from "./derivedFacts";
 import { acquire, type AcquisitionResult, type PriceQuote } from "./acquire";
 import { runCrossChecks, assertEveryInputReported, type CrossCheckReport } from "../crosschecks/run";
 import { extractItem1 } from "./item1Extraction";
@@ -129,7 +130,7 @@ function assemble(
   ticker: string,
   cik: string,
   companyName: string,
-  companyFacts: CompanyFactsDocument,
+  filedFacts: CompanyFactsDocument,
   // Both halves travel together so neither path can carry one without the
   // other: the code is what §6.1 looks up, the description is what the analyst
   // reads, and a run showing one with the other missing would be telling the
@@ -140,6 +141,10 @@ function assemble(
   provenanceNote: string,
   options: AcquireOptions
 ): AcquiredCompany {
+  // CF-METHODOLOGY-V3-IMPLEMENT-01 — the derived operating-income elements
+  // (derivedFacts.ts) join the filer's facts once, here, so every reader of
+  // this run's document sees the same series.
+  const companyFacts = withDerivedFacts(filedFacts);
   const acquisition = acquire({
     ticker: ticker.toUpperCase(),
     cik,

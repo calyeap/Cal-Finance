@@ -591,7 +591,15 @@ export interface ReverseDcfSolve {
   tenYearCagr: Figure<Decimal>;
   year10Revenue: Figure<Decimal>;
   // The drivers the solve held at the base scenario's adopted values.
-  heldAt: { operatingMargin: Decimal; returnOnNewInvestment: Decimal; terminalReturnOnNewCapital: Decimal } | null;
+  heldAt: {
+    operatingMargin: Decimal;
+    returnOnNewInvestment: Decimal;
+    terminalReturnOnNewCapital: Decimal;
+    /** v3 — the Base valuation's own D5 margin path, D2′ runway and D2.1 year-1 funding, held while growth is solved. */
+    marginPath?: Decimal[];
+    runwayYears?: number;
+    yearOne?: { nopat0: Decimal; available: Decimal | null } | null;
+  } | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -645,8 +653,12 @@ export interface D2Inputs {
   status: "ADOPTED" | "DRAFT" | "PENDING ADOPTION";
   missing: string[];
   moatClass: MoatClass | null;
-  // Rate + moat credit (bear +0; bull = base + 1.5pp); null while pending.
+  // v3 D2′: the rate for bear and base, rate + 1.5pp for bull; null while pending.
   terminalReturnOnNewCapital: { bear: Decimal; base: Decimal; bull: Decimal } | null;
+  // v3 D2′: the year each scenario's return on new capital reaches its
+  // terminal return (bear: the no-moat 10; base and bull: the class's
+  // 10 / 15 / 20). Absent on results stored before v3.
+  returnRunwayYears?: { bear: number; base: number; bull: number } | null;
   statement: string;
 }
 
@@ -670,6 +682,89 @@ export interface ValuationBasis {
   d2: D2Inputs;
   /** Absent on a result valued from a hand-authored fixture (tests) or stored before AR6. */
   sheet?: AssumptionSheetReference | null;
+  /** Methodology v3 (D2.1, D5, D6, D8). Absent on results stored before v3. */
+  v3?: V3ValuationBasis;
+}
+
+// ---------------------------------------------------------------------------
+// CF-METHODOLOGY-V3-IMPLEMENT-01 — Methodology v3 (approved 20 Oct 2026;
+// frozen spec §14.10). Filed inputs read at acquisition (acquisition/
+// v3Inputs.ts) and what the valuation did with them (assemble.ts).
+// ---------------------------------------------------------------------------
+
+/** One D5 anchor read from filings: its value, or null with why it could not be formed. */
+export interface FiledAnchor {
+  value: Decimal | null;
+  basis: string;
+}
+
+/** v3 D5 — the NOPAT tax rate and how it was set. */
+export interface TaxResolution {
+  rate: Decimal;
+  basis: "FILED 3-YR AVERAGE" | "STATUTORY" | "ADOPTED OVERRIDE" | "CONFIGURED";
+  years: { fiscalYear: number; incomeTax: Decimal; pretaxIncome: Decimal; rate: Decimal | null; excluded: string | null }[];
+  label: string;
+}
+
+/** v3 D2.1 — one fiscal year's filed net reinvestment (capex − D&A + ΔNWC + acquisitions). */
+export type NetReinvestment =
+  | { formed: true; fiscalYear: number; capexLessDa: Decimal; deltaNwc: Decimal; acquisitions: Decimal; total: Decimal }
+  | { formed: false; fiscalYear: number | null; missing: string[] };
+
+export interface V3FiledInputs {
+  ttmMargin: FiledAnchor;
+  ttmRevenueGrowth: FiledAnchor;
+  revenueCagr3: FiledAnchor;
+  tax: TaxResolution;
+  lastFyNetReinvestment: NetReinvestment;
+  /** Trailing 3 fiscal years' net reinvestment ÷ NOPAT, for the D5 coherence check. */
+  trailingNetReinvestment:
+    | { formed: true; fromFiscalYear: number; toFiscalYear: number; ratioToNopat: Decimal }
+    | { formed: false; missing: string[] };
+  /** D5's return-on-new-capital anchor: latest ROIC (goodwill included) and the 3-yr incremental ROIC. */
+  roic: { latest: { fiscalYear: number; value: Decimal } | null; incremental3: { fromFiscalYear: number; toFiscalYear: number; value: Decimal } | null };
+  /** v3 D8 — the filed fallback for an absent treasury-method dilution tag. */
+  dilutionFallback: { applied: boolean; value: Decimal | null; label: string } | null;
+}
+
+export interface YearOneFundingResult {
+  required: Decimal;
+  available: Decimal | null;
+  shortfall: Decimal;
+  /** The shortfall per share of that scenario. */
+  perShare: Decimal | null;
+}
+
+export type ImpliedDriverState = "SOLVED" | "NO SOLUTION IN RANGE" | "NON-UNIQUE";
+
+/** v3 D6 — one driver's value that makes Base equal the price, others at sheet values. Display only. */
+export interface ImpliedDriverLine {
+  state: ImpliedDriverState;
+  value: Decimal | null;
+  /** Every value found where the solve is NON-UNIQUE. */
+  values: Decimal[];
+  bracket: [Decimal, Decimal];
+  /** The filed history it is shown against. */
+  history: string;
+  statement: string;
+}
+
+export interface V3ValuationBasis {
+  tax: TaxResolution | null;
+  /** v3 D5 — how the Base drivers were built (Bear and Bull keep flat drafted drivers). */
+  baseDrivers: { growthPath: Decimal[]; marginPath: Decimal[]; growthRamped: boolean; marginRamped: boolean; notes: string[] };
+  /** v3 D2.1 — per scenario; null for a scenario not valued. */
+  yearOneFunding: {
+    nopat0: Decimal | null;
+    available: NetReinvestment | null;
+    byScenario: { bear: YearOneFundingResult | null; base: YearOneFundingResult | null; bull: YearOneFundingResult | null };
+    label: string;
+  };
+  /** v3 D5 coherence display: model reinvestment ÷ NOPAT yrs 1–5 against the filed trailing 3-yr actual. */
+  reinvestmentCoherence: { model: Decimal; actual: Decimal | null; gap: Decimal | null; flagged: boolean; statement: string } | null;
+  impliedDrivers: { growth: ImpliedDriverLine; margin: ImpliedDriverLine; returnOnNewCapital: ImpliedDriverLine } | null;
+  /** v3 D8's label where the dilution fallback was applied or refused. */
+  dilutionFallback: string | null;
 }
 
 export interface PriceImplied {
@@ -974,8 +1069,13 @@ export type MoatClass = "none" | "narrow" | "wide";
 export interface PolicyConstants {
   terminalGrowth: Decimal;
   discountRate: { table: DatedDiscountRate[]; verdictCheckOffset: Decimal };
-  moatCredit: Record<MoatClass, Decimal>;
-  bullMoatCreditUplift: Decimal;
+  returnRunwayYears: Record<MoatClass, number>;
+  bullTerminalReturnUplift: Decimal;
+  taxAverageYears: number;
+  taxNormalRateBand: [Decimal, Decimal];
+  taxMinimumNormalYears: number;
+  driverRampYears: number;
+  reinvestmentCoherenceGapPoints: Decimal;
   preRevenueConstructionLeadYears: number;
   leveredCostOfEquityCap: Decimal;
   leverageThreshold: Decimal;
@@ -1134,6 +1234,13 @@ export interface VerdictInputs {
    */
   baseAtCheckRates: { lower: Decimal; rate: Decimal; upper: Decimal } | null;
   baseAtCheckRatesCause: string | null;
+  /**
+   * v3 D5 — Base at the three check rates with growth held at the drafted
+   * rate from year 1 (the margin ramp kept). Present only where the growth
+   * ramp moved Base; a BUY that this check does not also issue as BUY is
+   * labelled "ramp-dependent".
+   */
+  flatGrowthBaseAtCheckRates?: { lower: Decimal; rate: Decimal; upper: Decimal } | null;
   /** D4 item 2 — 5-yr average ROIC including goodwill against the D1 rate. */
   roicFloor: RoicFloorResult;
 }

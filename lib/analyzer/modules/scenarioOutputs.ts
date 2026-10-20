@@ -7,38 +7,72 @@ import type { ScenarioOutputs } from "../types";
 
 // M15 — scenario valuation and outputs (§7.2, §10 F/G) — the main valuation
 // engine. CF-AR4-RATE-REINVESTMENT-TERMINAL-01 put it on Methodology v2.1
-// D2 (frozen spec §14.9 AR0-3), and M7's reverse DCF now solves on this
-// same function (reverseDcf.ts), so the two engines are one:
+// D2 (frozen spec §14.9 AR0-3), CF-METHODOLOGY-V3-IMPLEMENT-01 on v3 D2′ and
+// D2.1 (§14.10), and M7's reverse DCF solves on this same function
+// (reverseDcf.ts), so the two engines are one:
 //
 // - Reinvestment_t = NOPAT_t × g_(t+1) ÷ RONIC_t — this year's investment
-//   funds next year's growth; g_11 is terminal growth.
-// - RONIC_t is the scenario's return on new investment, fading to the
-//   terminal return on new capital by year 10 (growthPath.ts
-//   buildRonicPath), so year 10 already reinvests at terminal economics.
-// - Terminal FCF = terminal NOPAT × (1 − g ÷ terminal return on new
-//   capital) (§7.2 M8, unchanged), where the terminal return is the rate
-//   plus the D2 moat credit — chosen by the caller from the sheet's moat
-//   class (assemble.ts), never defaulted here.
+//   funds next year's growth; growth after year 10 is terminal growth.
+// - RONIC_t is the scenario's return on new investment, fading linearly
+//   from its year-5 value to the terminal return by `runwayYears`
+//   (growthPath.ts buildRonicPath). The explicit period runs to
+//   max(10, runwayYears), so the last year already reinvests at terminal
+//   economics.
+// - Terminal FCF = terminal NOPAT × (1 − g ÷ terminal return) (§7.2 M8,
+//   unchanged). v3 D2′: the terminal return is the rate (Bull: rate +
+//   1.5pp), chosen by the caller — never defaulted here.
 // - Timing is D2's (valuationTiming.ts): mid-year flows, the terminal value
-//   from 9.5 years, valued at the price date.
+//   from (last explicit year − 0.5), valued at the price date.
+// - v3 D2.1 — year 1's growth must be funded by last year's actual
+//   investment. Where `yearOne` is supplied, the required year-0
+//   investment NOPAT_0 × g_1 ÷ RONIC_1 less the filed net reinvestment
+//   available (all of it where none can be formed) is charged, if positive,
+//   at the valuation date.
 //
-// With a constant margin the terminal FCF is exactly (1 + g) × year-10 FCF,
-// and RONIC equal to the rate makes value independent of growth — the two
-// coherence invariants the golden harness checks.
+// With a constant margin the terminal FCF is exactly (1 + g) × final-year
+// FCF, and RONIC equal to the rate makes value independent of growth after
+// year 1 — the coherence invariants the golden harness checks.
 //
-// margin may be a single constant (broadcast across all ten years) or an
-// explicit ten-entry path (§5.4).
+// margin may be a single constant (broadcast) or an explicit path of up to
+// the horizon's length; its last entry is held after the path ends.
 
 export interface ScenarioValuation {
+  /** Present value at the price date, after any D2.1 year-1 funding charge. */
   enterpriseValue: Decimal;
   explicitPeriodPv: Decimal;
   terminalValuePv: Decimal;
-  // Undiscounted, at the end of year 10 — M9's numerator.
+  // Undiscounted, at the end of the explicit period — M9's numerator.
   terminalValue: Decimal;
+  /** The explicit period's length: max(10, runway years). */
+  horizonYears: number;
   year10Revenue: Decimal;
-  year10OperatingIncome: Decimal;
-  year10Fcf: Decimal;
+  /** Revenue, operating income and FCF in the explicit period's last year (year 10 on a ten-year horizon). */
+  finalYearRevenue: Decimal;
+  finalYearOperatingIncome: Decimal;
+  finalYearFcf: Decimal;
   terminalFcf: Decimal;
+  /** v3 D2.1 — the year-1 funding check; null where the caller supplied no year-0 NOPAT. */
+  yearOneFunding: YearOneFunding | null;
+}
+
+export interface YearOneFundingInput {
+  /** NOPAT over the twelve months the valuation starts from (TTM). */
+  nopat0: Decimal;
+  /** Last fiscal year's filed net reinvestment; null where it cannot be formed from filings. */
+  available: Decimal | null;
+}
+
+export interface YearOneFunding {
+  required: Decimal;
+  available: Decimal | null;
+  /** max(0, required − available); the whole requirement where `available` is null. */
+  shortfall: Decimal;
+}
+
+export interface ScenarioValuationOptions {
+  /** v3 D2′ — the year the return on new capital reaches the terminal return. Default 10. */
+  runwayYears?: number;
+  yearOne?: YearOneFundingInput | null;
 }
 
 export function computeScenarioValuation(
@@ -53,7 +87,8 @@ export function computeScenarioValuation(
   // CF-AR3-REPRODUCIBLE-RUNS-01 — years from the TTM base period end to the
   // price date (valuationTiming.ts). Zero values the flows at the base
   // period end.
-  stubYears: Decimal = new Decimal(0)
+  stubYears: Decimal = new Decimal(0),
+  options: ScenarioValuationOptions = {}
 ): ScenarioValuation {
   if (growthPath.length !== 10) {
     throw new Error("growthPath must have exactly ten entries (years 1-10)");
@@ -61,41 +96,56 @@ export function computeScenarioValuation(
   if (!returnOnNewInvestment.greaterThan(0) || !terminalReturnOnNewCapital.greaterThan(0)) {
     throw new Error("return on new investment and the terminal return on new capital must be positive");
   }
+  const runwayYears = options.runwayYears ?? 10;
+  const horizon = Math.max(10, runwayYears);
 
   const afterTax = new Decimal(1).minus(nopatTaxRate);
-  const marginAt = (t: number): Decimal => (Array.isArray(margin) ? margin[t - 1] : margin);
-  const growthAfter = (t: number): Decimal => (t < 10 ? growthPath[t] : terminalGrowth);
-  const ronicPath = buildRonicPath(returnOnNewInvestment, terminalReturnOnNewCapital);
+  const marginAt = (t: number): Decimal => (Array.isArray(margin) ? margin[Math.min(t, margin.length) - 1] : margin);
+  const growthAt = (t: number): Decimal => (t <= 10 ? growthPath[t - 1] : terminalGrowth);
+  const ronicPath = buildRonicPath(returnOnNewInvestment, terminalReturnOnNewCapital, runwayYears);
   const discountFactorBase = new Decimal(1).plus(rate);
 
   let revenue = baseRevenue;
   let pvSum = new Decimal(0);
-  let year10Fcf = new Decimal(0);
-  for (let t = 1; t <= 10; t++) {
-    revenue = revenue.mul(new Decimal(1).plus(growthPath[t - 1]));
+  let finalYearFcf = new Decimal(0);
+  let year10Revenue = new Decimal(0);
+  for (let t = 1; t <= horizon; t++) {
+    revenue = revenue.mul(new Decimal(1).plus(growthAt(t)));
+    if (t === 10) year10Revenue = revenue;
     const nopat = revenue.mul(marginAt(t)).mul(afterTax);
-    const reinvestment = nopat.mul(growthAfter(t)).dividedBy(ronicPath[t - 1]);
+    const reinvestment = nopat.mul(growthAt(t + 1)).dividedBy(ronicPath[t - 1]);
     const fcff = nopat.minus(reinvestment);
-    if (t === 10) year10Fcf = fcff;
+    if (t === horizon) finalYearFcf = fcff;
     pvSum = pvSum.plus(fcff.dividedBy(discountFactorBase.pow(explicitYearDiscountTime(t, stubYears))));
   }
 
-  const year10Revenue = revenue;
-  const year10OperatingIncome = year10Revenue.mul(marginAt(10));
-  const terminalNopat = year10OperatingIncome.mul(afterTax).mul(new Decimal(1).plus(terminalGrowth));
+  const finalYearRevenue = revenue;
+  const finalYearOperatingIncome = finalYearRevenue.mul(marginAt(horizon));
+  const terminalNopat = finalYearOperatingIncome.mul(afterTax).mul(new Decimal(1).plus(terminalGrowth));
   const terminalFcf = terminalNopat.mul(new Decimal(1).minus(terminalGrowth.dividedBy(terminalReturnOnNewCapital)));
   const terminalValue = terminalFcf.dividedBy(rate.minus(terminalGrowth));
-  const terminalValuePv = terminalValue.dividedBy(discountFactorBase.pow(terminalDiscountTime(stubYears)));
+  const terminalValuePv = terminalValue.dividedBy(discountFactorBase.pow(terminalDiscountTime(stubYears, horizon)));
+
+  let yearOneFunding: YearOneFunding | null = null;
+  if (options.yearOne != null) {
+    const required = Decimal.max(0, options.yearOne.nopat0.mul(growthAt(1)).dividedBy(ronicPath[0]));
+    const available = options.yearOne.available;
+    const shortfall = available === null ? required : Decimal.max(0, required.minus(available));
+    yearOneFunding = { required, available, shortfall };
+  }
 
   return {
-    enterpriseValue: pvSum.plus(terminalValuePv),
+    enterpriseValue: pvSum.plus(terminalValuePv).minus(yearOneFunding?.shortfall ?? 0),
     explicitPeriodPv: pvSum,
     terminalValuePv,
     terminalValue,
+    horizonYears: horizon,
     year10Revenue,
-    year10OperatingIncome,
-    year10Fcf,
+    finalYearRevenue,
+    finalYearOperatingIncome,
+    finalYearFcf,
     terminalFcf,
+    yearOneFunding,
   };
 }
 
@@ -109,7 +159,8 @@ export function computeScenarioEnterpriseValue(
   rate: Decimal,
   nopatTaxRate: Decimal,
   terminalGrowth: Decimal = POLICY.terminalGrowth,
-  stubYears: Decimal = new Decimal(0)
+  stubYears: Decimal = new Decimal(0),
+  options: ScenarioValuationOptions = {}
 ): Decimal {
   return computeScenarioValuation(
     baseRevenue,
@@ -120,7 +171,8 @@ export function computeScenarioEnterpriseValue(
     rate,
     nopatTaxRate,
     terminalGrowth,
-    stubYears
+    stubYears,
+    options
   ).enterpriseValue;
 }
 

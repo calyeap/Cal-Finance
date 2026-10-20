@@ -125,6 +125,13 @@ export interface SheetContent {
   moatClass: MoatClass | null;
   moatAnchor?: DriverAnchor | null;
   configuredConstants: SheetConstants;
+  /**
+   * CF-METHODOLOGY-V3-IMPLEMENT-01 — the NOPAT tax rate Calvin set at
+   * adoption, as decimal text. Absent or null: the engine uses the filed
+   * 3-yr average effective rate (Methodology v3 D5), whatever
+   * `configuredConstants.nopatTaxRate` the draft proposed.
+   */
+  taxRateOverride?: string | null;
   constantsAnchor?: DriverAnchor | null;
   sources?: SheetSource[];
   basis?: SheetBasis | null;
@@ -268,6 +275,7 @@ export function bundleFromSheet(sheet: AssumptionSheet): AnalystInputBundle {
         preRevenueUnleveredRate: decimalOrNull(c.configuredConstants.preRevenueUnleveredRate),
         projectDebtCost: decimalOrNull(c.configuredConstants.projectDebtCost),
       },
+      taxRateOverride: decimalOrNull(c.taxRateOverride ?? null),
       preRevenue: null,
       sheet: sheetReference(sheet),
     },

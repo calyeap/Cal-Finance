@@ -291,7 +291,11 @@ describe("a real OKLO run — pre-revenue, thinner filings", () => {
   // for OKLO — unrelated to this ruling, and untouched by it): the
   // same-date test must not introduce a second, different suppression
   // reason on top of it.
-  it("stays INCOMPLETE for the same pre-existing reason (missing treasuryMethodDilution), never a date-mismatch cause — no regression for OKLO", async () => {
+  // Methodology v3 D8 (CF-METHODOLOGY-V3-IMPLEMENT-01, #499) closed the
+  // pre-existing gap: treasuryMethodDilution is now the same 10-K's diluted −
+  // basic weighted-average shares (zero for OKLO's loss year, no convertibles
+  // filed), so the bridge computes — still never a date-mismatch cause.
+  it("computes once D8 fills treasuryMethodDilution, never a date-mismatch cause — no regression for OKLO", async () => {
     const run = await buildAcquiredRun({
       ticker: "OKLO",
       price: { value: new Decimal("92.44"), timestamp: "2026-09-04T21:00:00-04:00", source: "Yahoo Finance latest close" },
@@ -305,12 +309,10 @@ describe("a real OKLO run — pre-revenue, thinner filings", () => {
     expect(ev.financeLeaseLiabilitiesAsOfDate).toBe("2026-06-30");
     expect(ev.cashAndMarketableDebtSecuritiesAsOfDate).toBe("2026-06-30");
 
+    expect(ev.treasuryMethodDilution?.value.toString()).toBe("0");
+    expect(run.fixture.v3Inputs?.dilutionFallback?.applied).toBe(true);
     const result = computeEnterpriseValue(ev);
-    expect(result.suppressed).toBe(true);
-    if (result.suppressed) {
-      expect(result.state).toBe("INCOMPLETE");
-      expect(result.cause).toBe("missing REQUIRED input(s): treasuryMethodDilution");
-    }
+    expect(result.suppressed).toBe(false);
   });
 
   // CB-H3-IMPLEMENT-01's two OKLO tests (cash per share and runway from the

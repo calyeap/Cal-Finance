@@ -483,8 +483,69 @@ function ValuationBasisView({ basis, leverage }: { basis: ValuationBasis; levera
           <th scope="row">Reinvestment and terminal returns</th>
           <td>{basis.d2.statement}</td>
         </tr>
+        {basis.v3 !== undefined && <V3BasisRows v3={basis.v3} />}
       </tbody>
     </table>
+  );
+}
+
+// CF-METHODOLOGY-V3-IMPLEMENT-01 — what Methodology v3 did on this run: the
+// filed tax rate (D5), the Base driver paths (D5), the year-1 funding charge
+// (D2.1), the reinvestment coherence check (D5), the price-implied single
+// driver (D6, display only) and the dilution fallback (D8).
+function V3BasisRows({ v3 }: { v3: NonNullable<ValuationBasis["v3"]> }) {
+  const f = v3.yearOneFunding;
+  const perShare = (key: "bear" | "base" | "bull") => {
+    const r = f.byScenario[key];
+    return r === null || r.perShare === null ? `${key} —` : `${key} $${formatCompactUsd(r.perShare)}/sh`;
+  };
+  const implied = v3.impliedDrivers;
+  return (
+    <>
+      {v3.tax !== null && (
+        <tr>
+          <th scope="row">NOPAT tax rate</th>
+          <td>{v3.tax.label}</td>
+        </tr>
+      )}
+      <tr>
+        <th scope="row">Base growth and margin paths</th>
+        <td>
+          {v3.baseDrivers.notes.length === 0 ? "Drafted values from year 1." : v3.baseDrivers.notes.join("; ")}. Bear and bull use their drafted
+          values from year 1.
+        </td>
+      </tr>
+      <tr>
+        <th scope="row">Year-1 growth funding</th>
+        <td>
+          {f.label}. Charged: {perShare("bear")} · {perShare("base")} · {perShare("bull")}.
+        </td>
+      </tr>
+      {v3.reinvestmentCoherence !== null && (
+        <tr>
+          <th scope="row">Reinvestment check</th>
+          <td>
+            {v3.reinvestmentCoherence.flagged && <b>Flagged — </b>}
+            {v3.reinvestmentCoherence.statement}.
+          </td>
+        </tr>
+      )}
+      {implied !== null && (
+        <tr>
+          <th scope="row">What the price implies (one driver at a time)</th>
+          <td>
+            Growth: {implied.growth.statement}. Margin: {implied.margin.statement}. Return on new capital:{" "}
+            {implied.returnOnNewCapital.statement}. Display only — not a valuation input.
+          </td>
+        </tr>
+      )}
+      {v3.dilutionFallback !== null && (
+        <tr>
+          <th scope="row">Share dilution</th>
+          <td>{v3.dilutionFallback}</td>
+        </tr>
+      )}
+    </>
   );
 }
 

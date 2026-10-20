@@ -87,7 +87,9 @@ function built(ticker: Ticker, set: "ar6-2026-10-18" | "ar6-2026-10-19" = "ar6-2
 
 describe("CF-AR6-FINANCE-LEASE-UPPER-BOUND-01 — Methodology D7 on six real captures", () => {
   it("runs under the bumped mapping version", () => {
-    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-4");
+    // -10-5: CF-METHODOLOGY-V3-IMPLEMENT-01 (issue #499) added derived
+    // operating income and a capex candidate; neither touches the bridge.
+    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-5");
   });
 
   it("NVDA: no finance-lease liability reported, so the bridge carries the same-date upper bound and computes", () => {

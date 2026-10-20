@@ -12,9 +12,17 @@ describe("POLICY", () => {
     expect(POLICY.discountRate.verdictCheckOffset.toString()).toBe("0.005");
   });
 
-  it("carries D2's approved moat credits — +0 / +1 / +3pp, bull = base + 1.5pp", () => {
-    expect([POLICY.moatCredit.none, POLICY.moatCredit.narrow, POLICY.moatCredit.wide].map((v) => v.toString())).toEqual(["0", "0.01", "0.03"]);
-    expect(POLICY.bullMoatCreditUplift.toString()).toBe("0.015");
+  it("carries v3 D2′'s return runways — 10 / 15 / 20 years — and bull's terminal return at the rate + 1.5pp", () => {
+    expect([POLICY.returnRunwayYears.none, POLICY.returnRunwayYears.narrow, POLICY.returnRunwayYears.wide]).toEqual([10, 15, 20]);
+    expect(POLICY.bullTerminalReturnUplift.toString()).toBe("0.015");
+  });
+
+  it("carries v3 D5's driver constants — 5-yr ramp, 3-yr average tax (normal band 0–50%, ≥ 2 normal years), 15pp coherence flag", () => {
+    expect(POLICY.driverRampYears).toBe(5);
+    expect(POLICY.taxAverageYears).toBe(3);
+    expect(POLICY.taxNormalRateBand.map((v) => v.toString())).toEqual(["0", "0.5"]);
+    expect(POLICY.taxMinimumNormalYears).toBe(2);
+    expect(POLICY.reinvestmentCoherenceGapPoints.toString()).toBe("0.15");
   });
 
   it("fixes the leverage threshold at 10%", () => {

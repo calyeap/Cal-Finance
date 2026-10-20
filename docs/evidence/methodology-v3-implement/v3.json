@@ -1,0 +1,979 @@
+{
+  "MSFT": {
+    "price": "533.52",
+    "moat": "wide",
+    "rate": "0.09",
+    "band": "stable",
+    "tax": "0.18530607930579743701",
+    "evCause": null,
+    "values": {
+      "bear": "184.17038496877555289",
+      "base": "334.26967002686377383",
+      "bull": "448.50702234019069096"
+    },
+    "baseAt": {
+      "lower": "363.75120582995959039",
+      "rate": "334.26967002686377383",
+      "upper": "308.31370254793711103"
+    },
+    "baseAtCause": null,
+    "flatGrowthBaseAt": {
+      "lower": "341.87531993575898079",
+      "rate": "314.92487880154018062",
+      "upper": "291.19428600709773666"
+    },
+    "terminalShare": "0.394295402668950476",
+    "verdict": {
+      "status": "PENDING",
+      "state": "PENDING ADOPTION",
+      "draftZone": "SELL",
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): wide moat — the return on new capital fades to the rate by year 20 (bear by year 10); the terminal return is the rate (bull the rate + 1.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": {
+      "tax": {
+        "rate": "0.18530607930579743701",
+        "basis": "FILED 3-YR AVERAGE",
+        "years": [
+          {
+            "fiscalYear": 2024,
+            "incomeTax": "19651000000",
+            "pretaxIncome": "107787000000",
+            "rate": "0.1823132659782719623",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2025,
+            "incomeTax": "21795000000",
+            "pretaxIncome": "123627000000",
+            "rate": "0.17629644009803683661",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2026,
+            "incomeTax": "32185000000",
+            "pretaxIncome": "165934000000",
+            "rate": "0.19396265985271252426",
+            "excluded": null
+          }
+        ],
+        "label": "NOPAT tax rate 18.5%: filed effective rate, FY2024–FY2026"
+      },
+      "baseDrivers": {
+        "growthPath": [
+          "0.1612397915820203",
+          "0.150929843686515225",
+          "0.14061989579101015",
+          "0.130309947895505075",
+          "0.12",
+          "0.102",
+          "0.084",
+          "0.066",
+          "0.048",
+          "0.03"
+        ],
+        "marginPath": [
+          "0.46780818408927220731",
+          "0.46460613806695415548",
+          "0.46140409204463610366",
+          "0.45820204602231805183",
+          "0.455",
+          "0.455",
+          "0.455",
+          "0.455",
+          "0.455",
+          "0.455"
+        ],
+        "growthRamped": true,
+        "marginRamped": true,
+        "notes": [
+          "growth: year 1 at 16.1%, the lower of TTM growth 17.8% and the 3-yr CAGR 16.1%, linear to the drafted 12.0% by year 5",
+          "margin: year 1 at the TTM 46.8%, linear to the drafted 45.5% by year 5, then held"
+        ]
+      },
+      "yearOneFunding": {
+        "nopat0": "126470640166.80592327",
+        "available": {
+          "formed": false,
+          "fiscalYear": 2026,
+          "missing": [
+            "acquisitions (no cash-paid-for-businesses element filed)"
+          ]
+        },
+        "byScenario": {
+          "bear": {
+            "required": "80481316469.785587535",
+            "available": null,
+            "shortfall": "80481316469.785587535",
+            "perShare": "10.591686638389190436"
+          },
+          "base": {
+            "required": "113289442565.22484521",
+            "available": null,
+            "shortfall": "113289442565.22484521",
+            "perShare": "15.517922824666687498"
+          },
+          "bull": {
+            "required": "91978647394.040671468",
+            "available": null,
+            "shortfall": "91978647394.040671468",
+            "perShare": "12.996716237112595817"
+          }
+        },
+        "label": "net reinvestment can't be formed from filings (acquisitions (no cash-paid-for-businesses element filed)) — the whole year-1 requirement is charged"
+      },
+      "reinvestmentCoherence": {
+        "model": "0.7153996526367005",
+        "actual": null,
+        "gap": null,
+        "flagged": false,
+        "statement": "model reinvestment is 71.5% of NOPAT in years 1–5; the trailing actual is not formed from filings (FY2024 acquisitions (no cash-paid-for-businesses element filed), FY2025 acquisitions (no cash-paid-for-businesses element filed), FY2026 acquisitions (no cash-paid-for-businesses element filed))"
+      },
+      "impliedDrivers": {
+        "growth": {
+          "state": "SOLVED",
+          "value": "0.25558639986087877687",
+          "values": [
+            "0.25558639986087877687"
+          ],
+          "bracket": [
+            "-0.5",
+            "1"
+          ],
+          "history": "filed: TTM growth 17.8%, 3-yr CAGR 16.1%",
+          "statement": "the price implies constant growth in years 1–5 of 25.6%; filed: TTM growth 17.8%, 3-yr CAGR 16.1%"
+        },
+        "margin": {
+          "state": "SOLVED",
+          "value": "0.7154711427625757407",
+          "values": [
+            "0.7154711427625757407"
+          ],
+          "bracket": [
+            "-1",
+            "0.9"
+          ],
+          "history": "filed: TTM operating margin 46.8%",
+          "statement": "the price implies flat operating margin of 71.5%; filed: TTM operating margin 46.8%"
+        },
+        "returnOnNewCapital": {
+          "state": "NO SOLUTION IN RANGE",
+          "value": null,
+          "values": [],
+          "bracket": [
+            "0.001",
+            "2"
+          ],
+          "history": "filed: latest ROIC incl. goodwill 26.8% (FY2026), 3-yr incremental ROIC 17.4% (FY2023–FY2026)",
+          "statement": "no return on new capital in years 1–5 from 0.1% to 200.0% makes Base equal the price; filed: latest ROIC incl. goodwill 26.8% (FY2026), 3-yr incremental ROIC 17.4% (FY2023–FY2026)"
+        }
+      },
+      "dilutionFallback": null
+    }
+  },
+  "COST": {
+    "price": "995.53",
+    "moat": "wide",
+    "rate": "0.09",
+    "band": "stable",
+    "tax": "0.24740162760218232802",
+    "evCause": null,
+    "values": {
+      "bear": "251.53598866225337935",
+      "base": "393.96854196686826902",
+      "bull": "534.67147070645584322"
+    },
+    "baseAt": {
+      "lower": "420.6389848500500459",
+      "rate": "393.96854196686826902",
+      "upper": "370.39228416461397051"
+    },
+    "baseAtCause": null,
+    "flatGrowthBaseAt": {
+      "lower": "422.42448889855813979",
+      "rate": "395.60441045684224526",
+      "upper": "371.89602154943717855"
+    },
+    "terminalShare": "0.29857113339866699443",
+    "verdict": {
+      "status": "PENDING",
+      "state": "PENDING ADOPTION",
+      "draftZone": "SELL",
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): wide moat — the return on new capital fades to the rate by year 20 (bear by year 10); the terminal return is the rate (bull the rate + 1.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": {
+      "tax": {
+        "rate": "0.24740162760218232802",
+        "basis": "FILED 3-YR AVERAGE",
+        "years": [
+          {
+            "fiscalYear": 2024,
+            "incomeTax": "2373000000",
+            "pretaxIncome": "9740000000",
+            "rate": "0.24363449691991786448",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2025,
+            "incomeTax": "2719000000",
+            "pretaxIncome": "10818000000",
+            "rate": "0.25134035866149010908",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2026,
+            "incomeTax": "3025000000",
+            "pretaxIncome": "12251000000",
+            "rate": "0.24691861888825402008",
+            "excluded": null
+          }
+        ],
+        "label": "NOPAT tax rate 24.7%: filed effective rate, FY2024–FY2026"
+      },
+      "baseDrivers": {
+        "growthPath": [
+          "0.077562835315093",
+          "0.07817212648631975",
+          "0.0787814176575465",
+          "0.07939070882877325",
+          "0.08",
+          "0.07",
+          "0.06",
+          "0.05",
+          "0.04",
+          "0.03"
+        ],
+        "marginPath": [
+          "0.038544766026507979443",
+          "0.038658574519880984582",
+          "0.038772383013253989722",
+          "0.038886191506626994861",
+          "0.039",
+          "0.039",
+          "0.039",
+          "0.039",
+          "0.039",
+          "0.039"
+        ],
+        "growthRamped": true,
+        "marginRamped": true,
+        "notes": [
+          "growth: year 1 at 7.8%, the lower of TTM growth 10.1% and the 3-yr CAGR 7.8%, linear to the drafted 8.0% by year 5",
+          "margin: year 1 at the TTM 3.9%, linear to the drafted 3.9% by year 5, then held"
+        ]
+      },
+      "yearOneFunding": {
+        "nopat0": "8794111981.4684994971",
+        "available": {
+          "formed": false,
+          "fiscalYear": 2026,
+          "missing": [
+            "acquisitions (no cash-paid-for-businesses element filed)"
+          ]
+        },
+        "byScenario": {
+          "bear": {
+            "required": "2931370660.4894998324",
+            "available": null,
+            "shortfall": "2931370660.4894998324",
+            "perShare": "6.4785191787955609778"
+          },
+          "base": {
+            "required": "1948846455.3175068879",
+            "available": null,
+            "shortfall": "1948846455.3175068879",
+            "perShare": "4.3932185356822157082"
+          },
+          "bull": {
+            "required": "2149671817.6922998771",
+            "available": null,
+            "shortfall": "2149671817.6922998771",
+            "perShare": "4.944828924669607459"
+          }
+        },
+        "label": "net reinvestment can't be formed from filings (acquisitions (no cash-paid-for-businesses element filed)) — the whole year-1 requirement is charged"
+      },
+      "reinvestmentCoherence": {
+        "model": "0.220768144555794",
+        "actual": null,
+        "gap": null,
+        "flagged": false,
+        "statement": "model reinvestment is 22.1% of NOPAT in years 1–5; the trailing actual is not formed from filings (FY2024 acquisitions (no cash-paid-for-businesses element filed), FY2025 acquisitions (no cash-paid-for-businesses element filed), FY2026 acquisitions (no cash-paid-for-businesses element filed))"
+      },
+      "impliedDrivers": {
+        "growth": {
+          "state": "SOLVED",
+          "value": "0.28682363232839608318",
+          "values": [
+            "0.28682363232839608318"
+          ],
+          "bracket": [
+            "-0.5",
+            "1"
+          ],
+          "history": "filed: TTM growth 10.1%, 3-yr CAGR 7.8%",
+          "statement": "the price implies constant growth in years 1–5 of 28.7%; filed: TTM growth 10.1%, 3-yr CAGR 7.8%"
+        },
+        "margin": {
+          "state": "SOLVED",
+          "value": "0.10272207869662499292",
+          "values": [
+            "0.10272207869662499292"
+          ],
+          "bracket": [
+            "-1",
+            "0.9"
+          ],
+          "history": "filed: TTM operating margin 3.9%",
+          "statement": "the price implies flat operating margin of 10.3%; filed: TTM operating margin 3.9%"
+        },
+        "returnOnNewCapital": {
+          "state": "NO SOLUTION IN RANGE",
+          "value": null,
+          "values": [],
+          "bracket": [
+            "0.001",
+            "2"
+          ],
+          "history": "filed: latest ROIC incl. goodwill 39.8% (FY2026), 3-yr incremental ROIC 46.4% (FY2023–FY2026)",
+          "statement": "no return on new capital in years 1–5 from 0.1% to 200.0% makes Base equal the price; filed: latest ROIC incl. goodwill 39.8% (FY2026), 3-yr incremental ROIC 46.4% (FY2023–FY2026)"
+        }
+      },
+      "dilutionFallback": null
+    }
+  },
+  "NVDA": {
+    "price": "217.09",
+    "moat": "wide",
+    "rate": "0.11",
+    "band": "cyclical",
+    "tax": "0.14110237799563429929",
+    "evCause": null,
+    "values": {
+      "bear": "34.474873475467504311",
+      "base": "132.13799756142939043",
+      "bull": "296.79016906468261673"
+    },
+    "baseAt": {
+      "lower": "141.14783229655642274",
+      "rate": "132.13799756142939043",
+      "upper": "124.0225057146561889"
+    },
+    "baseAtCause": null,
+    "flatGrowthBaseAt": null,
+    "terminalShare": "0.25492382212953560576",
+    "verdict": {
+      "status": "PENDING",
+      "state": "PENDING ADOPTION",
+      "draftZone": "SELL",
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): wide moat — the return on new capital fades to the rate by year 20 (bear by year 10); the terminal return is the rate (bull the rate + 1.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": {
+      "tax": {
+        "rate": "0.14110237799563429929",
+        "basis": "FILED 3-YR AVERAGE",
+        "years": [
+          {
+            "fiscalYear": 2024,
+            "incomeTax": "4058000000",
+            "pretaxIncome": "33818000000",
+            "rate": "0.11999526879176769768",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2025,
+            "incomeTax": "11146000000",
+            "pretaxIncome": "84026000000",
+            "rate": "0.13264941803727417704",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2026,
+            "incomeTax": "21383000000",
+            "pretaxIncome": "141450000000",
+            "rate": "0.15117002474372569813",
+            "excluded": null
+          }
+        ],
+        "label": "NOPAT tax rate 14.1%: filed effective rate, FY2024–FY2026"
+      },
+      "baseDrivers": {
+        "growthPath": [
+          "0.18",
+          "0.18",
+          "0.18",
+          "0.18",
+          "0.18",
+          "0.15",
+          "0.12",
+          "0.09",
+          "0.06",
+          "0.03"
+        ],
+        "marginPath": [
+          "0.65214262845373619083",
+          "0.62660697134030214312",
+          "0.60107131422686809542",
+          "0.57553565711343404771",
+          "0.55",
+          "0.55",
+          "0.55",
+          "0.55",
+          "0.55",
+          "0.55"
+        ],
+        "growthRamped": false,
+        "marginRamped": true,
+        "notes": [
+          "growth: drafted 18.0% from year 1 — cyclical by the D1 test, so no TTM anchor",
+          "margin: year 1 at the TTM 65.2%, linear to the drafted 55.0% by year 5, then held"
+        ]
+      },
+      "yearOneFunding": {
+        "nopat0": "169700133258.00057078",
+        "available": {
+          "formed": true,
+          "fiscalYear": 2026,
+          "capexLessDa": "3199000000",
+          "deltaNwc": "15949000000",
+          "acquisitions": "14535000000",
+          "total": "33683000000"
+        },
+        "byScenario": {
+          "bear": {
+            "required": "24242876179.714367254",
+            "available": "33683000000",
+            "shortfall": "0",
+            "perShare": "0"
+          },
+          "base": {
+            "required": "76365059966.10025685",
+            "available": "33683000000",
+            "shortfall": "42682059966.10025685",
+            "perShare": "1.7363135613904587442"
+          },
+          "bull": {
+            "required": "78323138426.769494206",
+            "available": "33683000000",
+            "shortfall": "44640138426.769494206",
+            "perShare": "1.8522879015257051538"
+          }
+        },
+        "label": "FY2026 filed net reinvestment (capex − D&A + ΔNWC + acquisitions) funds year-1 growth; any shortfall is charged at the valuation date"
+      },
+      "reinvestmentCoherence": {
+        "model": "0.435",
+        "actual": "0.23213659131783955461",
+        "gap": "0.20286340868216044539",
+        "flagged": true,
+        "statement": "model reinvestment is 43.5% of NOPAT in years 1–5 against 23.2% filed in FY2024–FY2026 — a gap of 20.3pp, above the 15pp flag"
+      },
+      "impliedDrivers": {
+        "growth": {
+          "state": "SOLVED",
+          "value": "0.29034965156849584793",
+          "values": [
+            "0.29034965156849584793"
+          ],
+          "bracket": [
+            "-0.5",
+            "1"
+          ],
+          "history": "filed: TTM growth 83.4%, 3-yr CAGR 100.0%",
+          "statement": "the price implies constant growth in years 1–5 of 29.0%; filed: TTM growth 83.4%, 3-yr CAGR 100.0%"
+        },
+        "margin": {
+          "state": "NO SOLUTION IN RANGE",
+          "value": null,
+          "values": [],
+          "bracket": [
+            "-1",
+            "0.9"
+          ],
+          "history": "filed: TTM operating margin 65.2%",
+          "statement": "no flat operating margin from -100.0% to 90.0% makes Base equal the price; filed: TTM operating margin 65.2%"
+        },
+        "returnOnNewCapital": {
+          "state": "NO SOLUTION IN RANGE",
+          "value": null,
+          "values": [],
+          "bracket": [
+            "0.001",
+            "2"
+          ],
+          "history": "filed: latest ROIC incl. goodwill 72.2% (FY2026), 3-yr incremental ROIC 86.3% (FY2023–FY2026)",
+          "statement": "no return on new capital in years 1–5 from 0.1% to 200.0% makes Base equal the price; filed: latest ROIC incl. goodwill 72.2% (FY2026), 3-yr incremental ROIC 86.3% (FY2023–FY2026)"
+        }
+      },
+      "dilutionFallback": "treasury-method dilution 155.0m = diluted − basic weighted-average shares, 10-K 0001045810-26-000021 (fiscal year ending 2026-01-25); no convertibles in that filing (Methodology v3 D8 fallback)"
+    }
+  },
+  "NUE": {
+    "price": "260.73",
+    "moat": "none",
+    "rate": "0.11",
+    "band": "cyclical",
+    "tax": "0.21059354509069232734",
+    "evCause": null,
+    "values": {
+      "bear": "48.576807874114548413",
+      "base": "101.90586349777227454",
+      "bull": "181.82235199785455964"
+    },
+    "baseAt": {
+      "lower": "108.48352225949958435",
+      "rate": "101.90586349777227454",
+      "upper": "95.933503873043989868"
+    },
+    "baseAtCause": null,
+    "flatGrowthBaseAt": null,
+    "terminalShare": "0.48620481176609424606",
+    "verdict": {
+      "status": "PENDING",
+      "state": "PENDING ADOPTION",
+      "draftZone": "SELL",
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): none moat — the return on new capital fades to the rate by year 10 (bear by year 10); the terminal return is the rate (bull the rate + 1.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": {
+      "tax": {
+        "rate": "0.21059354509069232734",
+        "basis": "FILED 3-YR AVERAGE",
+        "years": [
+          {
+            "fiscalYear": 2023,
+            "incomeTax": "1360000000",
+            "pretaxIncome": "6273000000",
+            "rate": "0.2168021680216802168",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2024,
+            "incomeTax": "583000000",
+            "pretaxIncome": "2902000000",
+            "rate": "0.20089593383873190903",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2025,
+            "incomeTax": "530000000",
+            "pretaxIncome": "2568000000",
+            "rate": "0.20638629283489096573",
+            "excluded": null
+          }
+        ],
+        "label": "NOPAT tax rate 21.1%: filed effective rate, FY2023–FY2025"
+      },
+      "baseDrivers": {
+        "growthPath": [
+          "0.04",
+          "0.04",
+          "0.04",
+          "0.04",
+          "0.04",
+          "0.038",
+          "0.036",
+          "0.034",
+          "0.032",
+          "0.03"
+        ],
+        "marginPath": [
+          "0.11528766516162987175",
+          "0.11021574887122240381",
+          "0.10514383258081493588",
+          "0.10007191629040746794",
+          "0.095",
+          "0.095",
+          "0.095",
+          "0.095",
+          "0.095",
+          "0.095"
+        ],
+        "growthRamped": false,
+        "marginRamped": true,
+        "notes": [
+          "growth: drafted 4.0% from year 1 — cyclical by the D1 test, so no TTM anchor",
+          "margin: year 1 at the TTM 11.5%, linear to the drafted 9.5% by year 5, then held"
+        ]
+      },
+      "yearOneFunding": {
+        "nopat0": "3285509665.3325385336",
+        "available": {
+          "formed": true,
+          "fiscalYear": 2025,
+          "capexLessDa": "1942000000",
+          "deltaNwc": "636000000",
+          "acquisitions": "2000000",
+          "total": "2580000000"
+        },
+        "byScenario": {
+          "bear": {
+            "required": "0",
+            "available": "2580000000",
+            "shortfall": "0",
+            "perShare": "0"
+          },
+          "base": {
+            "required": "1194730787.3936503758",
+            "available": "2580000000",
+            "shortfall": "0",
+            "perShare": "0"
+          },
+          "bull": {
+            "required": "2021852101.7431006361",
+            "available": "2580000000",
+            "shortfall": "0",
+            "perShare": "0"
+          }
+        },
+        "label": "FY2025 filed net reinvestment (capex − D&A + ΔNWC + acquisitions) funds year-1 growth; any shortfall is charged at the valuation date"
+      },
+      "reinvestmentCoherence": {
+        "model": "0.36000000000000000002",
+        "actual": "0.56714646268376715712",
+        "gap": "-0.2071464626837671571",
+        "flagged": true,
+        "statement": "model reinvestment is 36.0% of NOPAT in years 1–5 against 56.7% filed in FY2023–FY2025 — a gap of 20.7pp, above the 15pp flag"
+      },
+      "impliedDrivers": {
+        "growth": {
+          "state": "NO SOLUTION IN RANGE",
+          "value": null,
+          "values": [],
+          "bracket": [
+            "-0.5",
+            "1"
+          ],
+          "history": "filed: TTM growth 17.2%, 3-yr CAGR -7.8%",
+          "statement": "no constant growth in years 1–5 from -50.0% to 100.0% makes Base equal the price; filed: TTM growth 17.2%, 3-yr CAGR -7.8%"
+        },
+        "margin": {
+          "state": "SOLVED",
+          "value": "0.2211163922045622399",
+          "values": [
+            "0.2211163922045622399"
+          ],
+          "bracket": [
+            "-1",
+            "0.9"
+          ],
+          "history": "filed: TTM operating margin 11.5%",
+          "statement": "the price implies flat operating margin of 22.1%; filed: TTM operating margin 11.5%"
+        },
+        "returnOnNewCapital": {
+          "state": "NO SOLUTION IN RANGE",
+          "value": null,
+          "values": [],
+          "bracket": [
+            "0.001",
+            "2"
+          ],
+          "history": "filed: latest ROIC incl. goodwill 8.2% (FY2025), 3-yr incremental ROIC -120.3% (FY2022–FY2025)",
+          "statement": "no return on new capital in years 1–5 from 0.1% to 200.0% makes Base equal the price; filed: latest ROIC incl. goodwill 8.2% (FY2025), 3-yr incremental ROIC -120.3% (FY2022–FY2025)"
+        }
+      },
+      "dilutionFallback": "treasury-method dilution 0.3m = diluted − basic weighted-average shares, 10-K 0001193125-26-071575 (fiscal year ending 2025-12-31); no convertibles in that filing (Methodology v3 D8 fallback)"
+    }
+  },
+  "KO": {
+    "price": "93.42",
+    "moat": "wide",
+    "rate": "0.09",
+    "band": "stable",
+    "tax": "0.17953658768674469502",
+    "evCause": "INCOMPLETE — missing REQUIRED input(s): financeLeaseLiabilities",
+    "values": {
+      "bear": "NaN",
+      "base": "NaN",
+      "bull": "NaN"
+    },
+    "baseAt": null,
+    "baseAtCause": "enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply",
+    "flatGrowthBaseAt": null,
+    "terminalShare": "0.30987685563671035734",
+    "verdict": {
+      "status": "INCOMPLETE",
+      "state": "CANNOT BOUND VALUE",
+      "draftZone": null,
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): wide moat — the return on new capital fades to the rate by year 20 (bear by year 10); the terminal return is the rate (bull the rate + 1.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": {
+      "tax": {
+        "rate": "0.17953658768674469502",
+        "basis": "FILED 3-YR AVERAGE",
+        "years": [
+          {
+            "fiscalYear": 2023,
+            "incomeTax": "2249000000",
+            "pretaxIncome": "12952000000",
+            "rate": "0.17364113650401482397",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2024,
+            "incomeTax": "2437000000",
+            "pretaxIncome": "13086000000",
+            "rate": "0.18622955830658719242",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2025,
+            "incomeTax": "2861000000",
+            "pretaxIncome": "15998000000",
+            "rate": "0.17883485435679459932",
+            "excluded": null
+          }
+        ],
+        "label": "NOPAT tax rate 18.0%: filed effective rate, FY2023–FY2025"
+      },
+      "baseDrivers": {
+        "growthPath": [
+          "0.03689014114187783",
+          "0.0389176058564083725",
+          "0.040945070570938915",
+          "0.0429725352854694575",
+          "0.045",
+          "0.042",
+          "0.039",
+          "0.036",
+          "0.033",
+          "0.03"
+        ],
+        "marginPath": [
+          "0.29344209073938803669",
+          "0.28883156805454102752",
+          "0.28422104536969401835",
+          "0.27961052268484700917",
+          "0.275",
+          "0.275",
+          "0.275",
+          "0.275",
+          "0.275",
+          "0.275"
+        ],
+        "growthRamped": true,
+        "marginRamped": true,
+        "notes": [
+          "growth: year 1 at 3.7%, the lower of TTM growth 5.1% and the 3-yr CAGR 3.7%, linear to the drafted 4.5% by year 5",
+          "margin: year 1 at the TTM 29.3%, linear to the drafted 27.5% by year 5, then held"
+        ]
+      },
+      "yearOneFunding": {
+        "nopat0": "11865541868.874298221",
+        "available": {
+          "formed": false,
+          "fiscalYear": 2025,
+          "missing": [
+            "acquisitions (no cash-paid-for-businesses element filed)"
+          ]
+        },
+        "byScenario": {
+          "bear": {
+            "required": "2373108373.7748596442",
+            "available": null,
+            "shortfall": "2373108373.7748596442",
+            "perShare": "0.55156724495762010205"
+          },
+          "base": {
+            "required": "2918143428.4508913652",
+            "available": null,
+            "shortfall": "2918143428.4508913652",
+            "perShare": "0.69208821476143004296"
+          },
+          "bull": {
+            "required": "4059264323.5622599177",
+            "available": null,
+            "shortfall": "4059264323.5622599177",
+            "perShare": "0.98278154947027731612"
+          }
+        },
+        "label": "net reinvestment can't be formed from filings (acquisitions (no cash-paid-for-businesses element filed)) — the whole year-1 requirement is charged"
+      },
+      "reinvestmentCoherence": {
+        "model": "0.27978028228375566",
+        "actual": null,
+        "gap": null,
+        "flagged": false,
+        "statement": "model reinvestment is 28.0% of NOPAT in years 1–5; the trailing actual is not formed from filings (FY2023 acquisitions (no cash-paid-for-businesses element filed), FY2024 acquisitions (no cash-paid-for-businesses element filed), FY2025 acquisitions (no cash-paid-for-businesses element filed))"
+      },
+      "impliedDrivers": null,
+      "dilutionFallback": "treasury-method dilution 10.0m = diluted − basic weighted-average shares, 10-K 0001628280-26-010047 (fiscal year ending 2025-12-31); no convertibles in that filing (Methodology v3 D8 fallback)"
+    }
+  },
+  "LLY": {
+    "price": "1240.34",
+    "moat": "narrow",
+    "rate": "0.09",
+    "band": "stable",
+    "tax": "0.188924719226064717",
+    "evCause": null,
+    "values": {
+      "bear": "138.06677428340512364",
+      "base": "372.8704447470242927",
+      "bull": "636.956156807708776"
+    },
+    "baseAt": {
+      "lower": "418.41381467198052067",
+      "rate": "372.8704447470242927",
+      "upper": "332.74482990304649832"
+    },
+    "baseAtCause": null,
+    "flatGrowthBaseAt": {
+      "lower": "343.70713926183479624",
+      "rate": "311.2588526021515272",
+      "upper": "282.65155171023469087"
+    },
+    "terminalShare": "0.70097553151337036121",
+    "verdict": {
+      "status": "PENDING",
+      "state": "PENDING ADOPTION",
+      "draftZone": "SELL",
+      "rampDependent": null
+    },
+    "d2": "Draft (assumption sheet version 1, not yet adopted): narrow moat — the return on new capital fades to the rate by year 15 (bear by year 10); the terminal return is the rate (bull the rate + 1.5pp). The valuation is computed from the draft; the final verdict waits for adoption.",
+    "v3": {
+      "tax": {
+        "rate": "0.188924719226064717",
+        "basis": "FILED 3-YR AVERAGE",
+        "years": [
+          {
+            "fiscalYear": 2023,
+            "incomeTax": "1314000000",
+            "pretaxIncome": "6554000000",
+            "rate": "0.20048825144949649069",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2024,
+            "incomeTax": "2090000000",
+            "pretaxIncome": "12680000000",
+            "rate": "0.16482649842271293375",
+            "excluded": null
+          },
+          {
+            "fiscalYear": 2025,
+            "incomeTax": "5091000000",
+            "pretaxIncome": "25731000000",
+            "rate": "0.19785472776028914539",
+            "excluded": null
+          }
+        ],
+        "label": "NOPAT tax rate 18.9%: filed effective rate, FY2023–FY2025"
+      },
+      "baseDrivers": {
+        "growthPath": [
+          "0.31687374880620434",
+          "0.275155311604653255",
+          "0.23343687440310217",
+          "0.191718437201551085",
+          "0.15",
+          "0.126",
+          "0.102",
+          "0.078",
+          "0.054",
+          "0.03"
+        ],
+        "marginPath": [
+          "0.42218038034268499341",
+          "0.38413528525701374506",
+          "0.34609019017134249671",
+          "0.30804509508567124835",
+          "0.27",
+          "0.27",
+          "0.27",
+          "0.27",
+          "0.27",
+          "0.27"
+        ],
+        "growthRamped": true,
+        "marginRamped": true,
+        "notes": [
+          "growth: year 1 at 31.7%, the lower of TTM growth 49.6% and the 3-yr CAGR 31.7%, linear to the drafted 15.0% by year 5",
+          "margin: year 1 at the TTM 42.2%, linear to the drafted 27.0% by year 5, then held"
+        ]
+      },
+      "yearOneFunding": {
+        "nopat0": "27278894918.269765373",
+        "available": {
+          "formed": true,
+          "fiscalYear": 2025,
+          "capexLessDa": "5844000000",
+          "deltaNwc": "8093000000",
+          "acquisitions": "661000000",
+          "total": "14598000000"
+        },
+        "byScenario": {
+          "bear": {
+            "required": "10911557967.307906149",
+            "available": "14598000000",
+            "shortfall": "0",
+            "perShare": "0"
+          },
+          "base": {
+            "required": "54024785600.266610639",
+            "available": "14598000000",
+            "shortfall": "39426785600.266610639",
+            "perShare": "41.468240716961530813"
+          },
+          "bull": {
+            "required": "27278894918.269765373",
+            "available": "14598000000",
+            "shortfall": "12680894918.269765373",
+            "perShare": "13.470866039837673469"
+          }
+        },
+        "label": "FY2025 filed net reinvestment (capex − D&A + ΔNWC + acquisitions) funds year-1 growth; any shortfall is charged at the valuation date"
+      },
+      "reinvestmentCoherence": {
+        "model": "1.2203882790116331375",
+        "actual": "0.90987069576056594541",
+        "gap": "0.31051758325106719209",
+        "flagged": true,
+        "statement": "model reinvestment is 122.0% of NOPAT in years 1–5 against 91.0% filed in FY2023–FY2025 — a gap of 31.1pp, above the 15pp flag"
+      },
+      "impliedDrivers": {
+        "growth": {
+          "state": "SOLVED",
+          "value": "0.50856996962115058625",
+          "values": [
+            "0.50856996962115058625"
+          ],
+          "bracket": [
+            "-0.5",
+            "1"
+          ],
+          "history": "filed: TTM growth 49.6%, 3-yr CAGR 31.7%",
+          "statement": "the price implies constant growth in years 1–5 of 50.9%; filed: TTM growth 49.6%, 3-yr CAGR 31.7%"
+        },
+        "margin": {
+          "state": "SOLVED",
+          "value": "0.74951683474352068465",
+          "values": [
+            "0.74951683474352068465"
+          ],
+          "bracket": [
+            "-1",
+            "0.9"
+          ],
+          "history": "filed: TTM operating margin 42.2%",
+          "statement": "the price implies flat operating margin of 75.0%; filed: TTM operating margin 42.2%"
+        },
+        "returnOnNewCapital": {
+          "state": "NO SOLUTION IN RANGE",
+          "value": null,
+          "values": [],
+          "bracket": [
+            "0.001",
+            "2"
+          ],
+          "history": "filed: latest ROIC incl. goodwill 34.5% (FY2025), 3-yr incremental ROIC 41.9% (FY2022–FY2025)",
+          "statement": "no return on new capital in years 1–5 from 0.1% to 200.0% makes Base equal the price; filed: latest ROIC incl. goodwill 34.5% (FY2025), 3-yr incremental ROIC 41.9% (FY2022–FY2025)"
+        }
+      },
+      "dilutionFallback": "treasury-method dilution 2.0m = diluted − basic weighted-average shares, 10-K 0000059478-26-000013 (fiscal year ending 2025-12-31); no convertibles in that filing (Methodology v3 D8 fallback)"
+    }
+  }
+}

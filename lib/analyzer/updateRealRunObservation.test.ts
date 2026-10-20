@@ -71,8 +71,10 @@ describe("CF-UPDATE-REALRUN-PROOF-01 — the re-look's report against the first 
       expectedAnalysisResultRunId: "acquired-oklo",
       expectedPriceValue: "41.27",
       expectedPriceTimestamp: "2026-09-04",
-      expectedEnterpriseValueCause:
-        "missing REQUIRED input(s): treasuryMethodDilution, nonOperatingEquityInvestmentsAtBook",
+      // Methodology v3 D8 (CF-METHODOLOGY-V3-IMPLEMENT-01, #499) now fills
+      // treasuryMethodDilution from the same 10-K's diluted − basic shares,
+      // so the cause the document quoted loses that input.
+      expectedEnterpriseValueCause: "missing REQUIRED input(s): nonOperatingEquityInvestmentsAtBook",
       expectedFactIds: ["price"],
     },
   ])(

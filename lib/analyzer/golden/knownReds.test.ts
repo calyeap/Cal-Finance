@@ -195,8 +195,8 @@ describe("GREEN (AR4) — no silent r + 3pp terminal (D2 / AR0-2, AR0-3)", () =>
   it("the engine values the terminal at exactly the return it is given — r, r + 1pp and r + 3pp give three different values", () => {
     const at = (terminal: Decimal) => computeScenarioEnterpriseValue(BASE_REVENUE, flatPath(g), MARGIN, D("0.2"), terminal, RATE, TAX, tg);
     const none = at(RATE);
-    const narrow = at(RATE.plus(POLICY.moatCredit.narrow));
-    const wide = at(RATE.plus(POLICY.moatCredit.wide));
+    const narrow = at(RATE.plus(D("0.01")));
+    const wide = at(RATE.plus(D("0.03")));
     expect(none.lessThan(narrow) && narrow.lessThan(wide)).toBe(true);
   });
 

@@ -16,6 +16,7 @@ import type { AcquisitionResult } from "./acquire";
 import type { CompanyFactsDocument } from "./secClient";
 import type { CompanyFixture, ValuationBase } from "../assemble";
 import type { FactRecord, ProvenanceTokens, SourcedValue } from "../types";
+import { v3FiledInputs } from "./v3Inputs";
 
 // ---------------------------------------------------------------------------
 // Acquisition -> the assembly seam.
@@ -97,6 +98,12 @@ export interface AnalystInputs {
   sheet?: CompanyFixture["sheet"];
   revalueBaseCaseAtRate: CompanyFixture["revalueBaseCaseAtRate"];
   configuredConstants: CompanyFixture["configuredConstants"];
+  /**
+   * CF-METHODOLOGY-V3-IMPLEMENT-01 — a NOPAT tax rate Calvin set at adoption.
+   * Absent or null: the engine uses the filed 3-yr average (Methodology v3
+   * D5), and the configured rate only where filings support no average.
+   */
+  taxRateOverride?: Decimal | null;
   preRevenue: CompanyFixture["preRevenue"];
   /** Gate 0's classification lookups, from the SEC submissions record. */
   gate0: CompanyFixture["gate0"];
@@ -344,6 +351,25 @@ export function buildCompanyInputs(
   const quartersWithQ4 = quarterlySeriesWithDerivedQ4(companyFacts, revenueTags);
   const valuationBase = valuationBaseFrom(byId.get("current-revenue"), quartersWithQ4);
 
+  // CF-METHODOLOGY-V3-IMPLEMENT-01 — Methodology v3's filed inputs: the D5
+  // anchors and 3-yr average tax, D2.1's last-year net reinvestment, the
+  // coherence check's trailing actual, the ROIC anchor and D8's fallback.
+  // The filed tax rate replaces the sheet's own on every sheet unless Calvin
+  // set one at adoption; it is the single rate every NOPAT below uses.
+  const treasuryDilutionTagged = get("treasury-method-dilution") !== null;
+  const v3Inputs = v3FiledInputs(companyFacts, {
+    basePeriodEnd: valuationBase?.base.periodEnd ?? null,
+    baseKind: valuationBase?.base.kind ?? null,
+    investedCapitalAt: (fy) =>
+      investedCapitalAt(fy, totalEquityAnnualSeries, totalDebtAnnualSeries, investedCapitalLeaseSeries, cashAndMarketableDebtSecuritiesAnnualSeries),
+    taxRateOverride: analyst.taxRateOverride ?? null,
+    treasuryDilutionTagged,
+  });
+  const configuredConstants: CompanyFixture["configuredConstants"] = {
+    ...analyst.configuredConstants,
+    nopatTaxRate: v3Inputs.tax.rate,
+  };
+
   const nonOp = analyst.nonOperatingInvestments;
   const nonOpSourced: SourcedValue<Decimal> | null =
     nonOp === null ? null : { value: nonOp.value, provenance: CLEAN_PROVENANCE };
@@ -465,7 +491,18 @@ export function buildCompanyInputs(
 
     enterpriseValue: {
       sharesOutstanding: track("sharesOutstanding", sharesOutstandingSourced),
-      treasuryMethodDilution: track("treasuryMethodDilution", get("treasury-method-dilution")),
+      // Methodology v3 D8 — where the incremental-shares tag is absent, the
+      // same 10-K's diluted − basic weighted-average shares, only when that
+      // filing shows no convertibles (v3Inputs.ts dilutionFallback); else
+      // the input stays missing and EV is INCOMPLETE. Labelled on the
+      // valuation basis.
+      treasuryMethodDilution: track(
+        "treasuryMethodDilution",
+        get("treasury-method-dilution") ??
+          (v3Inputs.dilutionFallback?.applied === true && v3Inputs.dilutionFallback.value !== null
+            ? { value: v3Inputs.dilutionFallback.value, provenance: sharesOutstandingSourced?.provenance ?? CLEAN_PROVENANCE }
+            : null)
+      ),
       // CF-NOPRICE-HONESTY-RECON-01. The only one of these seven REQUIRED
       // inputs that used to reach computeEnterpriseValue as a flattened $0
       // instead of the missing input it actually was — EnterpriseValueInput
@@ -607,7 +644,7 @@ export function buildCompanyInputs(
       ),
       // NOPAT needs the §7.1 NOPAT tax rate, which is one of the four
       // undefined policy constants. Derived only where the run configures one.
-      nopat: track("nopat", nopatFrom(get("operating-income"), analyst.configuredConstants.nopatTaxRate)),
+      nopat: track("nopat", nopatFrom(get("operating-income"), configuredConstants.nopatTaxRate)),
       depreciationAndAmortization: track(
         "depreciationAndAmortization",
         get("depreciation-and-amortisation")
@@ -660,7 +697,7 @@ export function buildCompanyInputs(
         "fiveYearDeltaNopat",
         fiveYearNopatDelta(
           operatingIncomeAnnualSeries,
-          analyst.configuredConstants.nopatTaxRate,
+          configuredConstants.nopatTaxRate,
           get("operating-income")?.provenance ?? null
         )
       ),
@@ -687,8 +724,8 @@ export function buildCompanyInputs(
       targetEnterpriseValue: null,
       currentMargin: get("current-operating-margin"),
       medianMargin: track("medianMargin", medianOf(marginDecimals)),
-      configuredStressMarginLevel: analyst.configuredConstants.stressMarginLevel,
-      configuredNopatTaxRate: analyst.configuredConstants.nopatTaxRate,
+      configuredStressMarginLevel: configuredConstants.stressMarginLevel,
+      configuredNopatTaxRate: configuredConstants.nopatTaxRate,
     } as CompanyFixture["reverseDcf"],
 
     fcfYieldGrowth: {
@@ -723,7 +760,7 @@ export function buildCompanyInputs(
     // invested capital (goodwill included) RONIC already reads.
     roicHistory: roicHistoryFrom(
       operatingIncomeAnnualSeries,
-      analyst.configuredConstants.nopatTaxRate,
+      configuredConstants.nopatTaxRate,
       totalEquityAnnualSeries,
       totalDebtAnnualSeries,
       investedCapitalLeaseSeries,
@@ -733,7 +770,8 @@ export function buildCompanyInputs(
     recordedScenarioValuesComputeFromDrivers: analyst.recordedScenarioValuesComputeFromDrivers,
     sheet: analyst.sheet ?? null,
     revalueBaseCaseAtRate: analyst.revalueBaseCaseAtRate,
-    configuredConstants: analyst.configuredConstants,
+    configuredConstants,
+    v3Inputs,
     achievedRevenueCagr: achievedRevenueCagrResult,
     preRevenue,
     valuationBase: valuationBase?.base ?? null,

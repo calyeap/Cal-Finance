@@ -6,6 +6,12 @@ export const DEFAULT_BASE_URL = "http://127.0.0.1:3000";
 
 /** Frozen artefacts, byte-exact. A missing file is a STOP, never a hash. */
 export const FROZEN_HASHES: Readonly<Record<string, string>> = {
+  // Re-derived for amendment V3 (spec §14.10, CF-METHODOLOGY-V3-IMPLEMENT-01,
+  // issue #499, 20 October 2026) — the consequences of Calvin's approved
+  // Methodology v3 amendments D2′, D2.1, D5, D6, D8. Previous value, verified
+  // byte-exact before this edit (amendment AR0, below):
+  // cc803bffb05b3d323fbb2b859f3ba269502e630b9f19ab098bdb5f6be00de5c6.
+  //
   // Re-derived for amendment CF-AR0-SPEC-AMEND-01 (spec §14.9, 17 October
   // 2026) — the consequences of Calvin's approved Analyzer Reset decisions
   // D1–D6 recorded where the spec contradicted them (issue #448). Previous
@@ -15,7 +21,7 @@ export const FROZEN_HASHES: Readonly<Record<string, string>> = {
   // No other entry in this table changes: this amendment touches one
   // frozen file.
   "calboard-stock-analyzer-v1-spec.md":
-    "cc803bffb05b3d323fbb2b859f3ba269502e630b9f19ab098bdb5f6be00de5c6",
+    "eb0021fa76ac1581dab33e947449a2c0fcf25967b6a948d77b36f5d99e692c57",
   "calboard-stock-analyzer-v1-design.md":
     "7535c6b6551b0ebf27ba10417733e5780a1cdc4634f5a5b7e4b91f121425a774",
   "mock-screen1-entry.html":

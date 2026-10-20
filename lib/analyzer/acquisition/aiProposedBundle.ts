@@ -1,4 +1,5 @@
 import Decimal from "decimal.js";
+import { US_FEDERAL_STATUTORY_TAX_RATE } from "../policy";
 import type { AcquiredCompany } from "./provider";
 import type { SecClient } from "./secClient";
 import { writeAnalystLog, type AnalystCall } from "../ai/analystCall";
@@ -185,6 +186,8 @@ function cannotConcludeContent(reason: string, currentRevenue: Decimal | null, r
     operatingMarginRange: null,
     roicRange: null,
     incrementalReturn: null,
+    incrementalReturn3: null,
+    tax: { rate: US_FEDERAL_STATUTORY_TAX_RATE, basis: "STATUTORY", years: [], label: "no filed history was read" },
     medianNetReinvestmentShare: null,
     latestQuarter: null,
   };

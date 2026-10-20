@@ -82,8 +82,7 @@ describe("INVARIANT — single-stage Gordon equivalence for constant growth from
     const baseRevenue = D(1000);
     const taxRate = D("0.2");
     const g = D("0.05");
-    for (const credit of [POLICY.moatCredit.none, POLICY.moatCredit.narrow, POLICY.moatCredit.wide]) {
-      const terminal = rate.plus(credit);
+    for (const terminal of [rate, rate.plus(POLICY.bullTerminalReturnUplift), rate.plus(D("0.03"))]) {
       const engine = projectReverseDcfValue(g, margin, terminal, terminal, rate, baseRevenue, taxRate, g);
       const nopat1 = baseRevenue.mul(D(1).plus(g)).mul(margin).mul(D(1).minus(taxRate));
       const gordonEv = nopat1.mul(D(1).minus(g.dividedBy(terminal))).dividedBy(rate.minus(g)).mul(D(1).plus(rate).sqrt());
@@ -170,9 +169,11 @@ describe("INVARIANT — terminal ÷ year-10 FCF within 0.95-1.10 (DO item 2)", (
 
   it.each(["0.085", "0.09", "0.095", "0.11"])("rate %s, every moat class: ratio = 1.03, inside [0.95, 1.10]", (rateText) => {
     const rate = D(rateText);
-    for (const credit of [POLICY.moatCredit.none, POLICY.moatCredit.narrow, POLICY.moatCredit.wide]) {
-      const v = computeScenarioValuation(baseRevenueBillions, buildFixedShapeGrowthPath(D("0.10")), margin, ronic, rate.plus(credit), rate, taxRate);
-      const ratio = v.terminalFcf.dividedBy(v.year10Fcf).toNumber();
+    for (const runwayYears of [POLICY.returnRunwayYears.none, POLICY.returnRunwayYears.narrow, POLICY.returnRunwayYears.wide]) {
+      const v = computeScenarioValuation(baseRevenueBillions, buildFixedShapeGrowthPath(D("0.10")), margin, ronic, rate, rate, taxRate, POLICY.terminalGrowth, D(0), {
+        runwayYears,
+      });
+      const ratio = v.terminalFcf.dividedBy(v.finalYearFcf).toNumber();
       expect(ratio).toBeGreaterThanOrEqual(0.95);
       expect(ratio).toBeLessThanOrEqual(1.1);
       expect(ratio).toBeCloseTo(1 + POLICY.terminalGrowth.toNumber(), 12);

@@ -58,9 +58,20 @@ describe("assembly — the run is dated by its TTM base and its price", () => {
   it("records the valuation date, base period and stub, and terminal share does not move with the stub (both parts roll forward together)", () => {
     // STATED D2 test inputs (AR4): without them the sheet is pending adoption
     // and there is no terminal share to compare.
-    const adopted = withStatedD2Inputs(MSFT_FIXTURE);
+    const charged = withStatedD2Inputs(MSFT_FIXTURE);
+    // v3 D2.1's year-1 charge is a dollar amount at the valuation date — it
+    // does not roll forward with the stub (asserted below). The roll-forward
+    // invariant is on the discounted flows, so it is checked with no charge:
+    // no TTM margin, so no year-0 NOPAT to fund from.
+    const adopted = { ...charged, reverseDcf: { ...charged.reverseDcf, currentMargin: null } };
     const undated = assembleAnalysisResult(adopted);
     const dated = assembleAnalysisResult({ ...adopted, valuationBase: { periodEnd: "2026-06-30", kind: "TTM" } });
+    expect(undated.valuationBasis?.v3?.yearOneFunding.byScenario.base).toBeNull();
+    const chargeUndated = assembleAnalysisResult(charged).valuationBasis!.v3!.yearOneFunding.byScenario.base!;
+    const chargeDated = assembleAnalysisResult({ ...charged, valuationBase: { periodEnd: "2026-06-30", kind: "TTM" } }).valuationBasis!.v3!
+      .yearOneFunding.byScenario.base!;
+    expect(chargeUndated.shortfall.greaterThan(0)).toBe(true);
+    expect(chargeDated.shortfall.toString()).toBe(chargeUndated.shortfall.toString());
     expect(undated.diagnostics.terminal.terminalShareOfValue.isFinite()).toBe(true);
 
     expect(dated.runIdentity?.valuationTiming).toEqual({

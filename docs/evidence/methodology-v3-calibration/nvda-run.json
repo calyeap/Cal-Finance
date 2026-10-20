@@ -1,0 +1,1331 @@
+{
+  "capture": {
+    "note": "CF-METHODOLOGY-V3-CALIBRATION-01 (#495): one median-of-three DRAFT sheet from the committed 19 Oct SEC capture, valued unadopted, read-only. Frozen: the calibration varies methodology only.",
+    "exportedAt": "2026-10-20T04:53:10.706Z",
+    "ticker": "NVDA",
+    "secCapture": "lib/analyzer/acquisition/captures/ar6-2026-10-19/nvda-companyfacts.json",
+    "research": "filed XBRL history only — no SEC endpoint called (no earnings-release text; no 10-K Item 1 in the capture)",
+    "price": {
+      "value": "217.09",
+      "timestamp": "2026-10-19",
+      "source": "YAHOO latest close"
+    },
+    "nonOperatingSelection": "None of these are non-operating",
+    "model": "claude-opus-5",
+    "usage": {
+      "calls": 3,
+      "inputTokens": 11544,
+      "outputTokens": 13802,
+      "costUsd": 0.40277
+    }
+  },
+  "engineInputs": {
+    "baseRevenue": "302969000000",
+    "baseRevenueVerification": "SPOT-CHECK NOT REQUIRED",
+    "valuationBase": {
+      "periodEnd": "2026-07-26",
+      "kind": "TTM"
+    }
+  },
+  "sheet": {
+    "id": -1,
+    "ticker": "NVDA",
+    "version": 1,
+    "status": "DRAFT",
+    "origin": "AI DRAFT",
+    "content": {
+      "profile": "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY",
+      "classificationInputs": {
+        "revenueScale": "large",
+        "fcfCharacter": "positive_stable",
+        "revenueGrowthBand": ">30%",
+        "capitalIntensity": "0.02",
+        "cyclicality": {
+          "tenYearMarginRange": "0.46758002853636813313",
+          "worstSingleYearChange": "0.21648196902696129861"
+        },
+        "balanceSheetNature": "asset-light"
+      },
+      "scenarios": {
+        "bear": {
+          "revenueGrowthOrPath": "0.02",
+          "operatingMargin": "0.35",
+          "reinvestmentCapitalIntensity": "0.01",
+          "returnOnNewInvestment": "0.14",
+          "shareCount": "25064000000",
+          "writtenAnchor": "The AI build-out that drove revenue from 60.9bn in FY2024 to 215.9bn in FY2026 proves to be a pull-forward: hyperscale customers digest the capacity they have bought, and NVIDIA's own filed history shows how fast this business can stall — revenue grew 0.2% in FY2023 and operating margin collapsed to 15.7% that year (H:revenue, H:margin). Growth flattens to low single digits off a very large base, pricing concessions and a heavier mix of lower-margin systems pull margin back toward the mid-30s, and the capital already deployed (invested capital rose from 45.4bn to 155.2bn in two years) earns far less than the 66-81% returns of the boom (H:returns). Stock compensation of 6.4bn a year keeps leaking share count (H:cashflow).",
+          "anchors": {
+            "revenueGrowthOrPath": {
+              "text": "NVIDIA's own filed history contains a flat year: revenue grew 0.2% in FY2023 after the prior cycle peaked (H:revenue). The bear case repeats that digestion year as the steady rate off the much larger 215.9bn FY2026 base, inside the filed single-year range of 0.2% to 125.9%.",
+              "cites": [
+                "H:revenue"
+              ]
+            },
+            "operatingMargin": {
+              "text": "Pricing pressure and a heavier systems mix pull margin back near the 33.0% long-run median and the 37.3% of FY2022, well above the 15.7% FY2023 trough but far below the 60.4% current level (H:margin). This is inside the permitted band of 5.7% to 67.4% around the filed 15.7%-62.4% range.",
+              "cites": [
+                "H:margin"
+              ]
+            },
+            "reinvestmentCapitalIntensity": {
+              "text": "With growth stalled the company spends little net new capital, reverting to the filed median net reinvestment of 1.1% of revenue (capex less depreciation), close to FY2024 when capex of 1,069m was below D&A of 1,508m (H:capex).",
+              "cites": [
+                "H:capex"
+              ]
+            },
+            "returnOnNewInvestment": {
+              "text": "If the cycle turns, new capital earns closer to the weak years of the filed record — ROIC was 11.2% in FY2023 and 15.6% in FY2021 (H:returns). A 14% return on new dollars is below the base and bull terminal returns and is permitted to sit near the discount rate in the bear case.",
+              "cites": [
+                "H:returns"
+              ]
+            },
+            "shareCount": {
+              "text": "Stock-based compensation has risen every year to 6,386m in FY2026; with no buyback figure in the supplied sources, the bear assumes grants are not offset and the diluted count creeps up about 4% over the forecast. (1.04× today's diluted count)",
+              "cites": [
+                "H:cashflow"
+              ]
+            }
+          }
+        },
+        "base": {
+          "revenueGrowthOrPath": "0.18",
+          "operatingMargin": "0.55",
+          "reinvestmentCapitalIntensity": "0.02",
+          "returnOnNewInvestment": "0.4",
+          "shareCount": "24582000000",
+          "writtenAnchor": "Demand stays strong but normalises off an enormous base. The July 2026 quarter was still running 105.9% ahead of the year-ago quarter with trailing revenue of 303.0bn, so the near-term run-rate is well above the FY2026 reported year (H:quarter, H:revenue); growth then decelerates sharply as the base compounds, settling at a high-teens constant rate for years 1-5. Operating margin holds in the mid-50s — below the 62.4% peak of FY2025 and the 60.4% of FY2026, reflecting mix shift into full systems and networking, but far above the 33.0% median of the longer history (H:margin). New capital keeps earning well: the last five years' incremental return on new capital was 75.2%, and the base case assumes roughly half of that persists before fading to the terminal return (H:returns). Net reinvestment stays light relative to revenue, as capex of 6.0bn against 2.8bn of depreciation on 215.9bn of revenue shows (H:capex).",
+          "anchors": {
+            "revenueGrowthOrPath": {
+              "text": "The latest quarter was 105.9% above the year-ago quarter and trailing revenue is 303.0bn against a FY2026 reported 215.9bn, so the entry run-rate is still accelerating (H:quarter, H:revenue); growth then decelerates hard on a base this size, and 18% a year for years 1-5 sits well inside the filed 0.2%-125.9% single-year range.",
+              "cites": [
+                "H:quarter",
+                "H:revenue"
+              ]
+            },
+            "operatingMargin": {
+              "text": "Margin settles between the FY2024 level of 54.1% and the FY2026 level of 60.4%, giving back some of the peak 62.4% to mix and cost of full-system shipments while staying far above the 33.0% median (H:margin).",
+              "cites": [
+                "H:margin"
+              ]
+            },
+            "reinvestmentCapitalIntensity": {
+              "text": "FY2026 capex of 6,042m less D&A of 2,843m is about 1.5% of 215,938m of revenue, up from the 1.1% median, as capacity and supply commitments scale (H:capex, H:revenue); the base lifts this modestly to 2.0% for the growth assumed.",
+              "cites": [
+                "H:capex",
+                "H:revenue"
+              ]
+            },
+            "returnOnNewInvestment": {
+              "text": "The incremental return on new capital over the last five years was 75.2% and FY2026 ROIC was 66.4%; the base assumes roughly half of that incremental return persists on new dollars before fading to the 14.0% terminal return (H:returns). It is well under the 1.5x cap on the 81.2% best filed return.",
+              "cites": [
+                "H:returns"
+              ]
+            },
+            "shareCount": {
+              "text": "Annual stock-based compensation of 6,386m keeps issuing shares, but operating cash flow of 102,718m in FY2026 funds repurchases that absorb most of it, leaving a small net increase (H:cashflow). (1.02× today's diluted count)",
+              "cites": [
+                "H:cashflow"
+              ]
+            }
+          }
+        },
+        "bull": {
+          "revenueGrowthOrPath": "0.3",
+          "operatingMargin": "0.62",
+          "reinvestmentCapitalIntensity": "0.03",
+          "returnOnNewInvestment": "0.65",
+          "shareCount": "24100000000",
+          "writtenAnchor": "Accelerated computing keeps absorbing a growing share of global data-centre spend and NVIDIA holds its position across silicon, networking and software. Revenue compounds near 30% a year off a base that already grew 105.9% year-on-year in the latest quarter (H:quarter), operating margin returns toward the FY2025 peak of 62.4% as scale and software mix offset system costs (H:margin), and incremental capital keeps earning close to the 75.2% incremental return of the last five years and the 81.2% peak ROIC (H:returns). Operating cash flow of 102.7bn funds growth internally and lets repurchases absorb the 6.4bn annual stock-compensation charge, holding share count flat (H:cashflow).",
+          "anchors": {
+            "revenueGrowthOrPath": {
+              "text": "Sustained demand keeps the compound rate near 30%, far below the 46.6% nine-year window CAGR and the 125.9% best filed year, and supported by the 105.9% year-on-year growth in the quarter ended 2026-07-26 (H:revenue, H:quarter).",
+              "cites": [
+                "H:revenue",
+                "H:quarter"
+              ]
+            },
+            "operatingMargin": {
+              "text": "Margin returns to the filed peak of 62.4% achieved in FY2025 and just above the 60.4% of FY2026, which is within the filed range and below the 67.4% ceiling allowed (H:margin).",
+              "cites": [
+                "H:margin"
+              ]
+            },
+            "reinvestmentCapitalIntensity": {
+              "text": "Faster growth needs more net capital than the 1.5% of revenue implied by FY2026 capex of 6,042m against D&A of 2,843m on 215,938m of revenue, so net reinvestment runs at 3.0% of revenue (H:capex, H:revenue).",
+              "cites": [
+                "H:capex",
+                "H:revenue"
+              ]
+            },
+            "returnOnNewInvestment": {
+              "text": "New capital keeps earning near the FY2026 realised ROIC of 66.4% and below the 75.2% five-year incremental return and the 81.2% peak, so it stays inside the 1.5x cap and above the 15.5% bull terminal return (H:returns).",
+              "cites": [
+                "H:returns"
+              ]
+            },
+            "shareCount": {
+              "text": "Operating cash flow of 102,718m in FY2026 is more than fifteen times the 6,386m stock-compensation charge, so buybacks fully offset issuance and share count is flat (H:cashflow). (1× today's diluted count)",
+              "cites": [
+                "H:cashflow"
+              ]
+            }
+          }
+        }
+      },
+      "moatClass": "wide",
+      "moatAnchor": {
+        "text": "Intangible assets — the accelerated-computing platform and its software stack — reinforced by customer switching costs once workloads are written for it. The filed returns support the credit: ROIC was 57.4% in FY2024, 81.2% in FY2025 and 66.4% in FY2026, with an incremental return on new capital of 75.2% over the last five years, all far above the 11.0% discount rate and above the 14.0% terminal return the wide credit implies (H:returns). Revenue rising from 26,974m in FY2023 to 215,938m in FY2026 while operating margin went from 15.7% to 60.4% shows pricing power rather than volume-only expansion (H:revenue, H:margin).",
+        "cites": [
+          "H:returns",
+          "H:revenue",
+          "H:margin"
+        ]
+      },
+      "configuredConstants": {
+        "nopatTaxRate": "0.21",
+        "stressMarginLevel": "0.25",
+        "preRevenueUnleveredRate": null,
+        "projectDebtCost": null
+      },
+      "constantsAnchor": {
+        "text": "No company tax disclosure was supplied, so NOPAT uses the general US federal statutory rate of 21.0% (STATUTORY), which is also the rate used to build the filed NOPAT and ROIC series (H:returns). The stress margin of 25% is below both the current 60.4% and the 33.0% median, and sits between the FY2023 trough of 15.7% and the FY2020 level of 26.1% (H:margin).",
+        "cites": [
+          "STATUTORY",
+          "H:returns",
+          "H:margin"
+        ]
+      },
+      "sources": [
+        {
+          "id": "H:revenue",
+          "kind": "HISTORY",
+          "label": "Revenue, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001045810-26-000021",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 6910m; FY2018 9714m; FY2019 n/a; FY2020 10918m; FY2021 16675m; FY2022 26914m; FY2023 26974m; FY2024 60922m; FY2025 130497m; FY2026 215938m. Window CAGR 46.6% over 9 years; single-year growth ranged 0.2% to 125.9%."
+        },
+        {
+          "id": "H:margin",
+          "kind": "HISTORY",
+          "label": "Operating income and operating margin, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001045810-26-000021",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 1934m (28.0%); FY2018 3210m (33.0%); FY2019 3804m (n/a); FY2020 2846m (26.1%); FY2021 4532m (27.2%); FY2022 10041m (37.3%); FY2023 4224m (15.7%); FY2024 32972m (54.1%); FY2025 81453m (62.4%); FY2026 130387m (60.4%). Margin ranged 15.7% to 62.4%."
+        },
+        {
+          "id": "H:capex",
+          "kind": "HISTORY",
+          "label": "Capital expenditure and depreciation & amortisation, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001045810-26-000021",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 capex n/a, D&A n/a; FY2018 capex n/a, D&A n/a; FY2019 capex n/a, D&A n/a; FY2020 capex n/a, D&A 381m; FY2021 capex n/a, D&A 1098m; FY2022 capex 976m, D&A 1174m; FY2023 capex 1833m, D&A 1544m; FY2024 capex 1069m, D&A 1508m; FY2025 capex 3236m, D&A 1864m; FY2026 capex 6042m, D&A 2843m. Median net reinvestment (capex − D&A) ÷ revenue 1.1%."
+        },
+        {
+          "id": "H:cashflow",
+          "kind": "HISTORY",
+          "label": "Operating cash flow and stock-based compensation, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001045810-26-000021",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 operating cash flow 1672m, SBC 247m; FY2018 operating cash flow 3502m, SBC 391m; FY2019 operating cash flow 3743m, SBC 557m; FY2020 operating cash flow 4761m, SBC 844m; FY2021 operating cash flow 5822m, SBC 1397m; FY2022 operating cash flow 9108m, SBC 2004m; FY2023 operating cash flow 5641m, SBC 2709m; FY2024 operating cash flow 28090m, SBC 3549m; FY2025 operating cash flow 64089m, SBC 4737m; FY2026 operating cash flow 102718m, SBC 6386m."
+        },
+        {
+          "id": "H:returns",
+          "kind": "HISTORY",
+          "label": "NOPAT (operating income at the 21.0% statutory rate), invested capital and return on invested capital, by fiscal year",
+          "form": "XBRL company facts",
+          "accession": "0001045810-26-000021",
+          "filed": null,
+          "url": null,
+          "excerpt": "FY2017 NOPAT 1528m, invested capital 5979m, ROIC 25.6%; FY2018 NOPAT 2536m, invested capital 5454m, ROIC 46.5%; FY2019 NOPAT 3005m, invested capital 10548m, ROIC 28.5%; FY2020 NOPAT 2248m, invested capital 3299m, ROIC 68.2%; FY2021 NOPAT 3580m, invested capital 23009m, ROIC 15.6%; FY2022 NOPAT 7932m, invested capital 35568m, ROIC 22.3%; FY2023 NOPAT 3337m, invested capital 29665m, ROIC 11.2%; FY2024 NOPAT 26048m, invested capital 45407m, ROIC 57.4%; FY2025 NOPAT 64348m, invested capital 79201m, ROIC 81.2%; FY2026 NOPAT 103006m, invested capital 155156m, ROIC 66.4%. ROIC ranged 11.2% to 81.2%; incremental return on new capital over the latest five years (ΔNOPAT ÷ Δinvested capital) 75.2%."
+        },
+        {
+          "id": "H:quarter",
+          "kind": "HISTORY",
+          "label": "Latest reported quarter (revenue, from the quarterly filings)",
+          "form": "XBRL company facts",
+          "accession": null,
+          "filed": null,
+          "url": null,
+          "excerpt": "Quarter ended 2026-07-26: revenue 96221m, 105.9% on the year-ago quarter; trailing twelve months 302969m."
+        },
+        {
+          "id": "STATUTORY",
+          "kind": "REFERENCE",
+          "label": "General US federal statutory corporate income tax rate",
+          "form": null,
+          "accession": null,
+          "filed": null,
+          "url": null,
+          "excerpt": "21.0% — a general reference rate, not a disclosure from this company's filings."
+        }
+      ],
+      "basis": {
+        "latestFiscalYear": "2026",
+        "latestQuarterEnd": "2026-07-26",
+        "ttmRevenue": "302969000000",
+        "dilutedShares": "24100000000"
+      },
+      "cannotConclude": null,
+      "drafting": "per-driver median of 3 drafts"
+    },
+    "adoptedFrom": null,
+    "model": "claude-opus-5",
+    "recordedAt": "2026-10-20T04:53:10.536Z"
+  },
+  "verdict": {
+    "status": "INCOMPLETE",
+    "state": "CANNOT BOUND VALUE",
+    "reason": "Can't bound value — decision-critical analysis is incomplete: LEVERAGE UNSUPPORTED IN v1 — inputs missing — the ratio could not be computed, so the precondition fails closed",
+    "check": null,
+    "rates": null,
+    "basis": null,
+    "qualityBar": null,
+    "closeCallBinding": null
+  },
+  "result": {
+    "schemaVersion": "v1.0.2",
+    "runId": "acquired-nvda",
+    "ticker": "NVDA",
+    "companyName": "NVIDIA CORP",
+    "price": {
+      "value": "217.09",
+      "timestamp": "2026-10-19"
+    },
+    "facts": [
+      {
+        "id": "shares-outstanding",
+        "name": "Shares outstanding",
+        "type": "FACT",
+        "value": "24100000000",
+        "source": "10-Q 2026-08-21 (accession 0001045810-26-000075) · XBRL dei:EntityCommonStockSharesOutstanding",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-08-21",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "total-debt",
+        "name": "Total debt",
+        "type": "FACT",
+        "value": "33366000000",
+        "source": "10-Q 2026-07-26 (accession 0001045810-26-000075) · XBRL us-gaap:LongTermDebt · not tagged at this period: us-gaap:CommercialPaper, us-gaap:ShortTermBorrowings",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-07-26",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "total-equity",
+        "name": "Total equity",
+        "type": "FACT",
+        "value": "228984000000",
+        "source": "10-Q 2026-07-26 (accession 0001045810-26-000075) · XBRL us-gaap:StockholdersEquity",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-07-26",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "cash-and-marketable-debt-securities",
+        "name": "Cash and marketable debt securities",
+        "type": "FACT",
+        "value": "22443000000",
+        "source": "10-Q 2026-07-26 (accession 0001045810-26-000075) · XBRL us-gaap:CashAndCashEquivalentsAtCarryingValue · not tagged at this period: us-gaap:ShortTermInvestments",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-07-26",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "operating-lease-liabilities",
+        "name": "Operating lease liabilities (memo only)",
+        "type": "FACT",
+        "value": "5494000000",
+        "source": "10-Q 2026-07-26 (accession 0001045810-26-000075) · XBRL us-gaap:OperatingLeaseLiability",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-07-26",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "current-revenue",
+        "name": "Current-period revenue",
+        "type": "FACT",
+        "value": "215938000000",
+        "source": "10-K 2026-01-25 (accession 0001045810-26-000021) · XBRL us-gaap:Revenues",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/0001045810-26-000021-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-01-27 to 2026-01-25",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "operating-income",
+        "name": "Operating income",
+        "type": "FACT",
+        "value": "130387000000",
+        "source": "10-K 2026-01-25 (accession 0001045810-26-000021) · XBRL us-gaap:OperatingIncomeLoss",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/0001045810-26-000021-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-01-27 to 2026-01-25",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "capex",
+        "name": "Capital expenditure (cash)",
+        "type": "FACT",
+        "value": "6042000000",
+        "source": "10-K 2026-01-25 (accession 0001045810-26-000021) · XBRL us-gaap:PaymentsToAcquireProductiveAssets",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/0001045810-26-000021-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-01-27 to 2026-01-25",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "operating-cash-flow",
+        "name": "Operating cash flow",
+        "type": "FACT",
+        "value": "102718000000",
+        "source": "10-K 2026-01-25 (accession 0001045810-26-000021) · XBRL us-gaap:NetCashProvidedByUsedInOperatingActivities",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/0001045810-26-000021-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-01-27 to 2026-01-25",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "sbc",
+        "name": "Share-based compensation",
+        "type": "FACT",
+        "value": "6386000000",
+        "source": "10-K 2026-01-25 (accession 0001045810-26-000021) · XBRL us-gaap:ShareBasedCompensation",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/0001045810-26-000021-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-01-27 to 2026-01-25",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "depreciation-and-amortisation",
+        "name": "Depreciation and amortisation",
+        "type": "FACT",
+        "value": "2843000000",
+        "source": "10-K 2026-01-25 (accession 0001045810-26-000021) · XBRL us-gaap:DepreciationDepletionAndAmortization",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/0001045810-26-000021-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2025-01-27 to 2026-01-25",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "cash-balance",
+        "name": "Cash balance",
+        "type": "FACT",
+        "value": "22443000000",
+        "source": "10-Q 2026-07-26 (accession 0001045810-26-000075) · XBRL us-gaap:CashAndCashEquivalentsAtCarryingValue",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-07-26",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "quarterly-burn",
+        "name": "Operating cash flow, latest single quarter (burn where negative)",
+        "type": "FACT",
+        "value": "50344000000",
+        "source": "10-Q 2026-04-26 (accession 0001045810-26-000052) · XBRL us-gaap:NetCashProvidedByUsedInOperatingActivities",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000052/0001045810-26-000052-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-01-26 to 2026-04-26",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "convertible-debt",
+        "name": "Convertible debt (memo — inside total debt)",
+        "type": "FACT",
+        "value": "0",
+        "source": "10-K 2019-01-27 (accession 0001045810-19-000023) · XBRL us-gaap:ConvertibleDebt",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581019000023/0001045810-19-000023-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2019-01-27",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "unrecognized-tax-benefits",
+        "name": "Unrecognized tax benefits (contingent — memo)",
+        "type": "FACT",
+        "value": "4420000000",
+        "source": "10-K 2026-01-25 (accession 0001045810-26-000021) · XBRL us-gaap:UnrecognizedTaxBenefits",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000021/0001045810-26-000021-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-01-25",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "guarantee-maximum-exposure",
+        "name": "Guarantee obligations — maximum exposure (contingent — memo)",
+        "type": "FACT",
+        "value": "108500000000",
+        "source": "10-Q 2026-07-26 (accession 0001045810-26-000075) · XBRL us-gaap:GuaranteeObligationsMaximumExposure",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-07-26",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "total-liabilities",
+        "name": "Total liabilities (memo — finance-lease upper bound only)",
+        "type": "FACT",
+        "value": "91288000000",
+        "source": "10-Q 2026-07-26 (accession 0001045810-26-000075) · XBRL us-gaap:Liabilities",
+        "sourceUrl": "https://www.sec.gov/Archives/edgar/data/1045810/000104581026000075/0001045810-26-000075-index.htm",
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK NOT REQUIRED",
+        "asOfDate": "2026-07-26",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": "calboard-secmap-2026-10-4",
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "price",
+        "name": "Price",
+        "type": "FACT",
+        "value": "217.09",
+        "source": "YAHOO latest close",
+        "sourceUrl": null,
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK PENDING",
+        "asOfDate": "2026-10-19",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": null,
+        "derivedFrom": null,
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "current-operating-margin",
+        "name": "Current operating margin",
+        "type": "FACT",
+        "value": "0.60381683631412720318",
+        "source": "Computed from operating-income, current-revenue, each acquired for this run",
+        "sourceUrl": null,
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK PENDING",
+        "asOfDate": "2026-01-25",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": null,
+        "derivedFrom": [
+          "operating-income",
+          "current-revenue"
+        ],
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      },
+      {
+        "id": "cash-fcf",
+        "name": "Cash FCF",
+        "type": "FACT",
+        "value": "96676000000",
+        "source": "Computed from operating-cash-flow, capex, each acquired for this run",
+        "sourceUrl": null,
+        "sourceClass": "PRIMARY",
+        "extractionType": "DETERMINISTIC/STRUCTURED",
+        "verificationState": "SPOT-CHECK PENDING",
+        "asOfDate": "2026-01-25",
+        "retrievalTimestamp": "2026-10-20T04:53:10.664Z",
+        "supersedesFactId": null,
+        "tagMappingVersion": null,
+        "derivedFrom": [
+          "operating-cash-flow",
+          "capex"
+        ],
+        "verificationOrigin": null,
+        "verificationReasonCode": null
+      }
+    ],
+    "provenance": [],
+    "gates": {
+      "gate0": {
+        "result": "PASS",
+        "evaluatedTests": {
+          "sectorClassification": "Semiconductors & Related Devices",
+          "interestIncomeOverRevenue": "0",
+          "hasInsurancePremiumOrReserveLineItems": false,
+          "industryClassification": "Semiconductors & Related Devices"
+        },
+        "override": null
+      },
+      "gate1": {
+        "filedYearsCount": 13,
+        "state": null
+      },
+      "leverage": {
+        "netDebtRatio": null,
+        "operatingLeaseInclusiveMemo": null,
+        "result": "LEVERAGE UNSUPPORTED IN v1",
+        "leveredResidualExceptionApplies": false
+      },
+      "triggerA": {
+        "fired": false,
+        "evidence": "current margin 0.6038168363141272, window max 0.6241752683969747, window range 0.50407841609673257"
+      },
+      "triggerB": {
+        "fired": true,
+        "evidence": "worst single-year decline 0.2164819690269613"
+      }
+    },
+    "profile": {
+      "recommended": "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY",
+      "confirmedOrOverridden": "HIGH_GROWTH_PROFITABLE_UNCERTAIN_DURABILITY",
+      "override": null,
+      "classificationInputs": {
+        "revenueScale": "large",
+        "fcfCharacter": "positive_stable",
+        "revenueGrowthBand": ">30%",
+        "capitalIntensity": "0.02",
+        "cyclicality": {
+          "tenYearMarginRange": "0.46758002853636813313",
+          "worstSingleYearChange": "0.21648196902696129861"
+        },
+        "balanceSheetNature": "asset-light"
+      }
+    },
+    "states": {
+      "suppressing": [
+        {
+          "state": "LEVERAGE UNSUPPORTED IN v1",
+          "appliesTo": "every rate-dependent output"
+        },
+        {
+          "state": "PRECONDITION FAILED",
+          "appliesTo": "FCF yield + growth"
+        },
+        {
+          "state": "INCOMPLETE",
+          "appliesTo": "the reverse-DCF solve"
+        },
+        {
+          "state": "INCOMPLETE",
+          "appliesTo": "±1% rate sensitivity — missing REQUIRED input: the base case revalued at a discount rate one point higher and one point lower — none was supplied for this run"
+        },
+        {
+          "state": "INCOMPLETE",
+          "appliesTo": "the discount rate at which the base case equals the price — missing REQUIRED input: enterprise value, which is INCOMPLETE on this run, so the base case has no per-share value to solve for"
+        },
+        {
+          "state": "INCOMPLETE",
+          "appliesTo": "the current price's location within the scenario range — enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply"
+        },
+        {
+          "state": "INCOMPLETE",
+          "appliesTo": "the analyst scenario values — enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply"
+        },
+        {
+          "state": "LEVERAGE UNSUPPORTED IN v1",
+          "appliesTo": "the fair-value range"
+        }
+      ],
+      "qualifying": [
+        {
+          "flag": "CAPITAL-LIGHT",
+          "appliesTo": "reinvestment/RONIC"
+        }
+      ]
+    },
+    "diagnostics": {
+      "enterpriseValue": {
+        "suppressed": true,
+        "state": "INCOMPLETE",
+        "cause": "missing REQUIRED input(s): treasuryMethodDilution"
+      },
+      "multiples": {
+        "peTrailing": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s) for P/E trailing"
+        },
+        "peForward": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s) for P/E forward"
+        },
+        "evToEbit": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s) for EV/EBIT"
+        },
+        "evToEbitda": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s) for EV/EBITDA"
+        },
+        "fcfYieldOnMarketCap": {
+          "suppressed": false,
+          "value": "0.018478291409819320782",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK PENDING"
+            },
+            "analyticFlags": []
+          }
+        },
+        "priceToBook": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s) for P/B"
+        },
+        "evToRevenue": {
+          "value": {
+            "suppressed": true,
+            "state": "INCOMPLETE",
+            "cause": "missing REQUIRED input(s) for EV/Revenue"
+          },
+          "impliedMarginForNormalMultiple": "0.2"
+        },
+        "peBasis": {
+          "gaapEps": "0",
+          "nonOperatingItemAfterTax": null,
+          "nopatBasisShown": false
+        },
+        "ownHistoryPercentile": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): current value or historical window"
+        }
+      },
+      "marginHistory": {
+        "suppressed": true,
+        "state": "INCOMPLETE",
+        "cause": "missing REQUIRED input(s): fiftyTwoWeekLow, fiftyTwoWeekHigh"
+      },
+      "fcf": {
+        "cashFcf": {
+          "suppressed": false,
+          "value": "96676000000",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK NOT REQUIRED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "fcfAfterLeaseFundedCapacity": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): financeLeaseRouAdditions"
+        },
+        "unleveredFcf": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): financeLeaseRouAdditions, deltaNwc"
+        },
+        "sbc": "6386000000",
+        "workingCapitalSwing": null,
+        "fcfYield": {
+          "cashFcf": {
+            "suppressed": false,
+            "value": "96676000000",
+            "qualification": {
+              "provenanceTokens": {
+                "sourceClass": "PRIMARY",
+                "extractionType": "DETERMINISTIC/STRUCTURED",
+                "verificationState": "SPOT-CHECK NOT REQUIRED"
+              },
+              "analyticFlags": []
+            }
+          },
+          "cashFcfLessSbc": {
+            "suppressed": false,
+            "value": "90290000000",
+            "qualification": {
+              "provenanceTokens": {
+                "sourceClass": "PRIMARY",
+                "extractionType": "DETERMINISTIC/STRUCTURED",
+                "verificationState": "SPOT-CHECK NOT REQUIRED"
+              },
+              "analyticFlags": []
+            }
+          }
+        }
+      },
+      "reinvestmentRonic": {
+        "reinvestment": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): acquisitions, financeLeaseRouAdditions, deltaNwc"
+        },
+        "ronic": {
+          "suppressed": false,
+          "value": {
+            "cells": [
+              {
+                "rate": "0.11",
+                "state": "CLEAN",
+                "value": "0.75238522251734810476"
+              }
+            ]
+          },
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "SPOT-CHECK NOT REQUIRED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "capitalLight": true,
+        "workingCapitalIntensity": null,
+        "lagBiasDirection": "conservative"
+      },
+      "impliedReturnOnNewCapital": {
+        "value": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): capex, acquisitions, financeLeaseRouAdditions, depreciationAndAmortization, deltaNwc"
+        },
+        "period": "current fiscal year (year-over-year)"
+      },
+      "terminal": {
+        "terminalShareOfValue": "0.5959162921471412375",
+        "terminalFcfConsistencyApplied": true
+      },
+      "impliedExitMultiple": {
+        "value": {
+          "suppressed": false,
+          "value": "7.9916964285714285715",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "CONFIRMED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "dividesMetric": "year-10 operating income (EBIT), base scenario"
+      },
+      "rateSensitivity": {
+        "plusOnePoint": "NaN",
+        "minusOnePoint": "NaN",
+        "closeToDeterministicFunctionOfTerminalShare": true
+      },
+      "fcfYieldGrowth": {
+        "precondition": "PRECONDITION FAILED",
+        "output": null
+      },
+      "runRate": {
+        "seasonalityTestResult": "SEASONAL — RUN-RATE SUPPRESSED",
+        "ttm": "302969000000",
+        "runRate": null,
+        "triggeringQuarterGrowth": {
+          "thisYear": "0.17896220057587453287",
+          "priorYear1": "0.25597172339091271877",
+          "priorYear2": "0.34152661582882949582"
+        }
+      },
+      "shapeMismatch": {
+        "fired": false,
+        "gapPoints": null
+      },
+      "sensitivity": {
+        "tornado": [
+          {
+            "driver": "growth",
+            "available": false,
+            "cause": "missing REQUIRED analyst-supplied range: growth"
+          },
+          {
+            "driver": "operatingMargin",
+            "available": false,
+            "cause": "missing REQUIRED analyst-supplied range: operatingMargin"
+          },
+          {
+            "driver": "discountRate",
+            "available": true,
+            "displayed": true,
+            "fullRangeValueImpact": "0.13041196565615260704",
+            "values": [
+              "3184605609067.7587198",
+              "2979128480606.9605902",
+              "2796091607969.5776773"
+            ]
+          },
+          {
+            "driver": "terminalGrowth",
+            "available": false,
+            "cause": "missing REQUIRED analyst-supplied range: terminalGrowth"
+          },
+          {
+            "driver": "ronic",
+            "available": true,
+            "displayed": true,
+            "fullRangeValueImpact": "0.37453729438985284111",
+            "values": [
+              "2072097495114.951306",
+              "2979128480606.9605902",
+              "3187892215881.2355052"
+            ]
+          },
+          {
+            "driver": "moat",
+            "available": true,
+            "displayed": false,
+            "fullRangeValueImpact": "0.051761650103722980421",
+            "values": [
+              "2824923874579.7472235",
+              "2884454670893.7603099",
+              "2979128480606.9605902"
+            ]
+          }
+        ],
+        "twoWayGrowthMargin": {
+          "available": false,
+          "cause": "missing REQUIRED analyst-supplied range: growth"
+        },
+        "twoWayRateTerminalGrowth": {
+          "available": false,
+          "cause": "missing REQUIRED analyst-supplied range: terminalGrowth"
+        },
+        "debtShareRemoved": true
+      }
+    },
+    "scenarios": {
+      "bear": {
+        "revenueGrowthOrPath": "0.02",
+        "operatingMargin": "0.35",
+        "reinvestmentCapitalIntensity": "0.01",
+        "shareCount": "25064000000",
+        "writtenAnchor": "The AI build-out that drove revenue from 60.9bn in FY2024 to 215.9bn in FY2026 proves to be a pull-forward: hyperscale customers digest the capacity they have bought, and NVIDIA's own filed history shows how fast this business can stall — revenue grew 0.2% in FY2023 and operating margin collapsed to 15.7% that year (H:revenue, H:margin). Growth flattens to low single digits off a very large base, pricing concessions and a heavier mix of lower-margin systems pull margin back toward the mid-30s, and the capital already deployed (invested capital rose from 45.4bn to 155.2bn in two years) earns far less than the 66-81% returns of the boom (H:returns). Stock compensation of 6.4bn a year keeps leaking share count (H:cashflow).",
+        "returnOnNewInvestment": "0.14"
+      },
+      "base": {
+        "revenueGrowthOrPath": "0.18",
+        "operatingMargin": "0.55",
+        "reinvestmentCapitalIntensity": "0.02",
+        "shareCount": "24582000000",
+        "writtenAnchor": "Demand stays strong but normalises off an enormous base. The July 2026 quarter was still running 105.9% ahead of the year-ago quarter with trailing revenue of 303.0bn, so the near-term run-rate is well above the FY2026 reported year (H:quarter, H:revenue); growth then decelerates sharply as the base compounds, settling at a high-teens constant rate for years 1-5. Operating margin holds in the mid-50s — below the 62.4% peak of FY2025 and the 60.4% of FY2026, reflecting mix shift into full systems and networking, but far above the 33.0% median of the longer history (H:margin). New capital keeps earning well: the last five years' incremental return on new capital was 75.2%, and the base case assumes roughly half of that persists before fading to the terminal return (H:returns). Net reinvestment stays light relative to revenue, as capex of 6.0bn against 2.8bn of depreciation on 215.9bn of revenue shows (H:capex).",
+        "returnOnNewInvestment": "0.4"
+      },
+      "bull": {
+        "revenueGrowthOrPath": "0.3",
+        "operatingMargin": "0.62",
+        "reinvestmentCapitalIntensity": "0.03",
+        "shareCount": "24100000000",
+        "writtenAnchor": "Accelerated computing keeps absorbing a growing share of global data-centre spend and NVIDIA holds its position across silicon, networking and software. Revenue compounds near 30% a year off a base that already grew 105.9% year-on-year in the latest quarter (H:quarter), operating margin returns toward the FY2025 peak of 62.4% as scale and software mix offset system costs (H:margin), and incremental capital keeps earning close to the 75.2% incremental return of the last five years and the 81.2% peak ROIC (H:returns). Operating cash flow of 102.7bn funds growth internally and lets repurchases absorb the 6.4bn annual stock-compensation charge, holding share count flat (H:cashflow).",
+        "returnOnNewInvestment": "0.65"
+      }
+    },
+    "scenarioOutputs": {
+      "values": {
+        "bear": "NaN",
+        "base": "NaN",
+        "bull": "NaN"
+      },
+      "weightedDistribution": "NaN",
+      "priceLocationWithinRange": "NaN",
+      "rateAtWhichBaseEqualsPrice": null,
+      "sensitivity": {
+        "tornado": [],
+        "twoWayGrowthMargin": [],
+        "twoWayRateTerminalGrowth": [],
+        "debtShareRemoved": true
+      }
+    },
+    "priceImplied": {
+      "steadyStateEv": {
+        "suppressed": true,
+        "state": "LEVERAGE UNSUPPORTED IN v1",
+        "cause": "leverage precondition failed (§6.5)"
+      },
+      "pvgo": {
+        "suppressed": true,
+        "state": "LEVERAGE UNSUPPORTED IN v1",
+        "cause": "leverage precondition failed (§6.5)"
+      },
+      "pvgoShareOfEv": {
+        "suppressed": true,
+        "state": "LEVERAGE UNSUPPORTED IN v1",
+        "cause": "leverage precondition failed (§6.5)"
+      },
+      "nopatGap": null,
+      "reverseDcf": {
+        "rate": "0.11",
+        "fiveYearGrowth": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): targetEnterpriseValue"
+        },
+        "tenYearCagr": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): targetEnterpriseValue"
+        },
+        "year10Revenue": {
+          "suppressed": true,
+          "state": "INCOMPLETE",
+          "cause": "missing REQUIRED input(s): targetEnterpriseValue"
+        },
+        "heldAt": {
+          "operatingMargin": "0.55",
+          "returnOnNewInvestment": "0.4",
+          "terminalReturnOnNewCapital": "0.14"
+        }
+      },
+      "impliedExitMultiple": {
+        "value": {
+          "suppressed": false,
+          "value": "7.9916964285714285715",
+          "qualification": {
+            "provenanceTokens": {
+              "sourceClass": "PRIMARY",
+              "extractionType": "DETERMINISTIC/STRUCTURED",
+              "verificationState": "CONFIRMED"
+            },
+            "analyticFlags": []
+          }
+        },
+        "dividesMetric": "year-10 operating income (EBIT), base scenario"
+      }
+    },
+    "fairValueRange": {
+      "kind": "suppressed",
+      "state": "LEVERAGE UNSUPPORTED IN v1",
+      "cause": "inputs missing — the ratio could not be computed, so the precondition fails closed"
+    },
+    "trust": {
+      "status": "UNUSABLE",
+      "determinedBy": [
+        {
+          "kind": "suppressing state",
+          "detail": "LEVERAGE UNSUPPORTED IN v1 — inputs missing — the ratio could not be computed, so the precondition fails closed"
+        }
+      ]
+    },
+    "achievedRevenueCagr": {
+      "value": {
+        "tag": "us-gaap:Revenues",
+        "horizonYears": 10,
+        "fromValue": "5010000000",
+        "toValue": "215938000000",
+        "cagr": "0.4569650531400831023",
+        "window": {
+          "tag": "us-gaap:Revenues",
+          "horizonYears": 10,
+          "fromFiscalYear": 2016,
+          "toFiscalYear": 2026,
+          "currentFiscalYear": 2026,
+          "yearsStale": 0
+        },
+        "staleWindowDisclosure": null
+      },
+      "blockedBy": []
+    },
+    "preRevenue": null,
+    "challenger": null,
+    "interpretation": {
+      "statements": [],
+      "pageOne": null
+    },
+    "business": {
+      "narrative": null,
+      "unavailableReason": "10-K Item 1 excerpts are not part of the committed SEC capture — this run reads captured XBRL facts only, and the extraction rule requires a live EDGAR filing-document fetch."
+    },
+    "marketContext": {
+      "sic": "3674",
+      "sicDescription": "Semiconductors & Related Devices"
+    },
+    "latestFiling": null,
+    "policy": {
+      "version": "policy-sha256:b3e69cf751f770c0",
+      "constants": {
+        "terminalGrowth": "0.03",
+        "discountRate": {
+          "table": [
+            {
+              "effectiveFrom": "2026-10-17",
+              "stable": "0.09",
+              "cyclicalOrPreRevenue": "0.11",
+              "provenance": {
+                "approval": "Approved values, Calvin, 17 Oct 2026 (Methodology v2.1 D1; docs/product-decisions.md item 26).",
+                "evidence": "At approval: 10-yr Treasury 5.09% + Damodaran implied equity premium 3.7–4.2% — 9.0% either way.",
+                "measurementConvention": "Yearly reset measured as Damodaran's published implied expected return on the S&P 500 (8.99% in his October 2026 update), rounded to the nearest 0.5% — an AI DEFAULT inside the D1 rule, reconciled 17 Oct 2026; the annual methodology review may change it. Provenance, not a rule value."
+              }
+            }
+          ],
+          "verdictCheckOffset": "0.005"
+        },
+        "moatCredit": {
+          "none": "0",
+          "narrow": "0.01",
+          "wide": "0.03"
+        },
+        "bullMoatCreditUplift": "0.015",
+        "preRevenueConstructionLeadYears": 2,
+        "leveredCostOfEquityCap": "0.3",
+        "leverageThreshold": "0.1",
+        "gate0InterestIncomeOverRevenueThreshold": "0.5",
+        "gate1HistoryInsufficientYears": 5,
+        "gate1ShortHistoryYears": 9,
+        "triggerAMarginProximityPoints": "0.02",
+        "triggerAWindowRangePoints": "0.15",
+        "triggerBDeclinePoints": "0.1",
+        "historyInsufficientStressMarginRelativeReductions": [
+          "0.25",
+          "0.5"
+        ],
+        "peBasisNonOperatingThresholdOfPretaxIncome": "0.05",
+        "runRateSequentialGrowthTrigger": "0.1",
+        "seasonalityPriorYearThreshold": "0.1",
+        "capitalLightRonicFloor": "0.6",
+        "ronicCap": "2",
+        "shapeMismatchGapPoints": "0.15",
+        "sensitivityDisplayThreshold": "0.1",
+        "fcfYieldGrowthPreconditionBand": [
+          "0.8",
+          "1.5"
+        ],
+        "verdictSynthesisV1Buy": {
+          "low": "0.9",
+          "medium": "0.8",
+          "high": "0.7"
+        },
+        "verdictSynthesisV1Sell": {
+          "low": "1.2",
+          "medium": "1.3",
+          "high": "1.45"
+        }
+      },
+      "undefinedConstants": {
+        "nopatTaxRate": "0.21",
+        "stressMarginLevel": "0.25",
+        "preRevenueUnleveredRate": null,
+        "projectDebtCost": null
+      },
+      "provisionalLabels": {
+        "preRevenueConstructionLeadYears": "First-order estimate; worth $27/share on OKLO's 8 GW case (§7.1).",
+        "leveredCostOfEquityCap": "No observations behind the 30% level itself; capped cells are labelled RATE CAPPED — VALUE IS AN UPPER BOUND (I12, §7.1).",
+        "gate0InterestIncomeOverRevenueThreshold": "No observations behind it (Appendix B); the other three Gate 0 tests are classification lookups, not thresholds (§6.1).",
+        "gate1HistoryInsufficientYears": "Red-team judgment with no observations (Appendix B). Direction of error is suppression, so a wrong threshold shows less rather than something false (§6.2).",
+        "gate1ShortHistoryYears": "Red-team judgment with no observations (Appendix B), same basis as the <5-year threshold (§6.2).",
+        "historyInsufficientStressMarginRelativeReductions": "No observations; substitutes for a median that does not exist under HISTORY INSUFFICIENT (§6.2).",
+        "runRateSequentialGrowthTrigger": "Calibrated on NVIDIA only (Appendix B) (§7.2 M12).",
+        "seasonalityPriorYearThreshold": "Comes from I4 and has no observations behind it (§7.2 M12)."
+      }
+    },
+    "runIdentity": {
+      "codeVersion": "4f00521c37359cfdebdaf77b4930f5abba15e5ef",
+      "inputsFingerprint": "inputs-sha256:94c368a14d2e2907",
+      "factSnapshot": "facts-sha256:ecba66326c80fd64",
+      "sheetVersion": "sheet-sha256:da8797e61ea6059a",
+      "priceSnapshot": {
+        "value": "217.09",
+        "timestamp": "2026-10-19"
+      },
+      "valuationTiming": {
+        "convention": "MID-YEAR",
+        "valuationDate": "2026-10-19",
+        "basePeriodEnd": "2026-07-26",
+        "basePeriodKind": "TTM",
+        "stubYears": "0.23271731690622861054"
+      }
+    },
+    "valuationBasis": {
+      "discountRate": {
+        "rate": "0.11",
+        "band": "cyclical",
+        "basis": "cyclical industry by SEC SIC code 3674 (Electronic Components & Accessories (incl. semiconductors)) — market + 2pp",
+        "effectiveFrom": "2026-10-17",
+        "provenance": {
+          "approval": "Approved values, Calvin, 17 Oct 2026 (Methodology v2.1 D1; docs/product-decisions.md item 26).",
+          "evidence": "At approval: 10-yr Treasury 5.09% + Damodaran implied equity premium 3.7–4.2% — 9.0% either way.",
+          "measurementConvention": "Yearly reset measured as Damodaran's published implied expected return on the S&P 500 (8.99% in his October 2026 update), rounded to the nearest 0.5% — an AI DEFAULT inside the D1 rule, reconciled 17 Oct 2026; the annual methodology review may change it. Provenance, not a rule value."
+        },
+        "checkRates": {
+          "lower": "0.105",
+          "upper": "0.115"
+        },
+        "validatedDomain": "NOT MEASURED"
+      },
+      "d2": {
+        "status": "DRAFT",
+        "missing": [],
+        "moatClass": "wide",
+        "terminalReturnOnNewCapital": {
+          "bear": "0.11",
+          "base": "0.14",
+          "bull": "0.155"
+        },
+        "statement": "Draft (assumption sheet version 1, not yet adopted): wide moat — terminal return on new capital is the rate plus 3.0pp (bear +0pp; bull +4.5pp). The valuation is computed from the draft; the final verdict waits for adoption."
+      },
+      "sheet": {
+        "id": -1,
+        "version": 1,
+        "status": "DRAFT",
+        "origin": "AI DRAFT",
+        "recordedAt": "2026-10-20T04:53:10.536Z",
+        "cannotConclude": null
+      }
+    },
+    "verdictInputs": {
+      "baseAtCheckRates": null,
+      "baseAtCheckRatesCause": "enterprise value is INCOMPLETE on this run, so there is no debt/cash bridge to apply",
+      "roicFloor": {
+        "status": "PASS",
+        "average": "0.47710194135640909016",
+        "years": [
+          {
+            "fiscalYear": 2026,
+            "roic": "0.66388492871690427699"
+          },
+          {
+            "fiscalYear": 2025,
+            "roic": "0.81246284769131702883"
+          },
+          {
+            "fiscalYear": 2024,
+            "roic": "0.57365340145792498954"
+          },
+          {
+            "fiscalYear": 2023,
+            "roic": "0.11248811730996123378"
+          },
+          {
+            "fiscalYear": 2022,
+            "roic": "0.22302041160593792173"
+          }
+        ],
+        "rate": "0.11",
+        "reason": "Average return on invested capital, goodwill included, over FY2022–FY2026 is 47.7%, above the 11.0% rate."
+      }
+    }
+  }
+}
