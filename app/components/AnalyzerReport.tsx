@@ -815,7 +815,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                       one of the forbidden banners, so it still renders
                       as-is; the raw code reaches Evidence via
                       `states.suppressing` regardless. */}
-                  <span className="v">{gates.leverage.result === "PASS" ? "Within range" : leverageUnavailableLine(gates.leverage)}</span>
+                  <span className="v">{gates.leverage.result === "PASS" ? "Within range" : leverageUnavailableLine(gates.leverage, diagnostics.enterpriseValue)}</span>
                   {gates.leverage.netDebtRatio !== null && <div className="sub">net debt ratio {pct(gates.leverage.netDebtRatio)}</div>}
                   {gates.leverage.operatingLeaseInclusiveMemo !== null && (
                     <div className="sub">operating-lease-inclusive memo {pct(gates.leverage.operatingLeaseInclusiveMemo)}</div>

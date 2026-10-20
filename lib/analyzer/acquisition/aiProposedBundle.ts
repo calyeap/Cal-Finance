@@ -3,6 +3,8 @@ import { US_FEDERAL_STATUTORY_TAX_RATE } from "../policy";
 import type { AcquiredCompany } from "./provider";
 import type { SecClient } from "./secClient";
 import { dilutionTagIsStale, latestAnnualDilutedSharesEnd } from "./v3Inputs";
+import { gate0InputsFrom } from "./gate0Inputs";
+import { evaluateGate0 } from "../gates";
 import { writeAnalystLog, type AnalystCall } from "../ai/analystCall";
 import {
   runScenarioProposal,
@@ -306,6 +308,18 @@ export async function draftAssumptionSheet(
 ): Promise<DraftOutcome> {
   const currentRevenue = factDecimal(acquired, "current-revenue");
   const dilutedShares = dilutedSharesOf(acquired);
+
+  // AR8 follow-up F5 (#458): a company Gate 0 already proves asset-based (a
+  // bank or an insurer) is refused by the report whatever its sheet says, so
+  // it is settled here without a paid draft. An unavailable classification
+  // (possibly a transient lookup failure) is not settled — it drafts as before.
+  if (evaluateGate0(gate0InputsFrom(acquired)).result === "UNSUPPORTED PROFILE — ASSET-BASED ROW NOT VALIDATED IN v1") {
+    const research = await researchFor(acquired, null);
+    const reason =
+      "this version of the model does not value asset-based businesses such as banks and insurers (Gate 0), " +
+      "so no assumption sheet is drafted for it";
+    return { kind: "CANNOT CONCLUDE", content: cannotConcludeContent(reason, currentRevenue, research, dilutedShares) };
+  }
 
   if (currentRevenue === null || !currentRevenue.greaterThan(0)) {
     const research = await researchFor(acquired, null);

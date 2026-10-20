@@ -3,12 +3,7 @@ import { acquireCompany, type AcquiredCompany, type AcquisitionSource } from "./
 import { buildCompanyInputs, type NonOperatingInvestmentSelection } from "./acquisition/companyInputs";
 import { analystInputsFor, type AnalystInputBundle } from "./acquisition/analystInputs";
 import type { CandidateInvestment } from "./acquisition/acquire";
-import {
-  sectorClassificationFromSic,
-  industryClassificationFromSic,
-  interestIncomeOverRevenue,
-  hasInsurancePremiumOrReserveLineItems,
-} from "./acquisition/gate0Inputs";
+import { gate0InputsFrom } from "./acquisition/gate0Inputs";
 import type { CompanyFixture } from "./assemble";
 import { financialHistoryFrom } from "./sheets/research";
 import type { BusinessSectionContent, FactRecord, MarketContextSectionContent } from "./types";
@@ -62,47 +57,6 @@ export async function nonOperatingInvestmentsFallbackCandidate(
 // validation bundle, and analystInputs.ts is where that is stated plainly.
 // ---------------------------------------------------------------------------
 
-/**
- * §6.1's five REQUIRED inputs, all four testable ones acquired.
- *
- * THE DEFECT THIS REPLACES had two halves, and fixing either alone would have
- * been worse than fixing neither:
- *
- *  1. `interestIncomeOverRevenue` and `hasInsurancePremiumOrReserveLineItems`
- *     were hard-coded null, so Gate 0 failed closed on every run for every
- *     company.
- *  2. Both classification fields were the SIC DESCRIPTION, which is never the
- *     vocabulary §6.1 tests against — so once the two nulls were filled, the
- *     sector and industry tests would still never fire and a bank would pass
- *     Gate 0. Supplying the nulls without fixing the lookup would have turned a
- *     gate that refused everything into a gate that refused nothing.
- */
-function gate0InputsFrom(acquired: AcquiredCompany): CompanyFixture["gate0"] {
-  const revenueFact = acquired.acquisition.facts.find((f) => f.id === "current-revenue");
-  const revenue =
-    revenueFact?.value instanceof Decimal
-      ? revenueFact.value
-      : revenueFact?.value != null
-        ? new Decimal(String(revenueFact.value))
-        : null;
-
-  return {
-    // Looked up from the SIC CODE. A company with a code has a classification,
-    // so only a failed submissions lookup leaves these null — and then Gate 0
-    // fails closed, which is §6.1's instruction rather than a gap.
-    sectorClassification: sectorClassificationFromSic(acquired.sic, acquired.sicDescription),
-    industryClassification: industryClassificationFromSic(acquired.sic, acquired.sicDescription),
-    // Zero where no operating interest-income line appears; null only where
-    // revenue is unavailable, which leaves the test genuinely unevaluable.
-    interestIncomeOverRevenue: interestIncomeOverRevenue(acquired.companyFacts, revenue),
-    // Read off the company's own reported elements. Null only where the fact
-    // document itself is missing.
-    hasInsurancePremiumOrReserveLineItems: hasInsurancePremiumOrReserveLineItems(
-      acquired.companyFacts
-    ),
-    override: null,
-  };
-}
 
 export class AnalystInputsUnavailableError extends Error {
   constructor(ticker: string) {

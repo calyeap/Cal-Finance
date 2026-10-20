@@ -128,7 +128,7 @@ export function AnalyzerRightRail({ result }: { result: AnalysisResult }) {
               {gates.leverage.result === "PASS" && gates.leverage.netDebtRatio !== null ? (
                 netDebtOrCashLine(gates.leverage.netDebtRatio)
               ) : (
-                <span className="cause">{leverageUnavailableLine(gates.leverage)}</span>
+                <span className="cause">{leverageUnavailableLine(gates.leverage, diagnostics.enterpriseValue)}</span>
               )}
             </dd>
           </div>
