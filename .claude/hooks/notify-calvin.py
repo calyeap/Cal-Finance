@@ -44,8 +44,13 @@ LOG_PATH = "/tmp/notify-calvin.log"
 # nothing needs Calvin, so it stays silent. A message that says it needs Calvin
 # always alerts, even if it also mentions waiting.
 NEEDS_CALVIN = re.compile(
-    r"NEED(S)? YOU|CALVIN REQUIRED|BLOCKED:|need(s)? your (input|decision|approval|call|go)"
-    r"|your call|approve|\?\s*$",
+    r"CALVIN REQUIRED|\bcalvin\b|\byou(r|rs)?\b|\bblocked\b|\bapprov|\bconfirm|\bdecision\b"
+    r"|\bneed(s|ed)?\b|\bcredentials?\b|\bgo-ahead\b|\?",
+    re.IGNORECASE,
+)
+# Courtesy promises to update Calvin later are still waiting, not a request.
+COURTESY = re.compile(
+    r"\b(let|keep) you (know|posted|updated)\b|\b(ping|update|notify|tell|message) you (when|once|after|if)\b",
     re.IGNORECASE,
 )
 WAITING_ON_SELF = re.compile(
@@ -60,9 +65,20 @@ WAITING_ON_SELF = re.compile(
 )
 
 
+DONE_START = re.compile(
+    r"^\W*(all done|done|complete[d]?|finished|merged|shipped)\b", re.IGNORECASE
+)
+
+
 def only_waiting_on_self(message):
-    text = str(message or "")
-    return bool(WAITING_ON_SELF.search(text)) and not NEEDS_CALVIN.search(text)
+    """True only if the final paragraph says it is waiting and nothing asks Calvin."""
+    text = message if isinstance(message, str) else ""
+    if DONE_START.search(text):
+        return False  # a finished build reporting back is a real stop
+    paragraphs = [p for p in re.split(r"\n\s*\n", text.strip()) if p.strip()]
+    if not paragraphs or not WAITING_ON_SELF.search(paragraphs[-1]):
+        return False
+    return not NEEDS_CALVIN.search(COURTESY.sub(" ", text))
 
 STATUS = {
     "Stop": "STOPPED",
