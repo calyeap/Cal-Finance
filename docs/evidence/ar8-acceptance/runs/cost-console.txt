@@ -1,0 +1,30 @@
+  [spend] COST in 6603, out 4005, $0.1331; total $0.4573 of $5
+  [spend] COST in 8035, out 5618, $0.1806; total $0.6379 of $5
+### COST — PASS (complete, or explained in plain English)
+Run `c6f42a5d-036b-4048-89bb-3da7b1ba0c00`
+
+| # | Section | Status | What the reader sees / why |
+|---|---|---|---|
+| 1 | Company, current price and as-of date | CONTENT | COSTCO WHOLESALE CORP /NEW · $995.53 as of 2026-10-19 |
+| 2 | 30-second view / bottom line | EXPLAINED | What matters most: This run did not produce a value for Costco. The model could not build the bridge from business value to a per-share figure, so the scenario values, the fair-v… / Bottom line: No valuation verdict for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: no price-vs-range position for this run] |
+| 3 | What the company does | CONTENT | Costco Wholesale Corporation, together with its subsidiaries, engages in the operation of membership warehouses in the United States, Puerto Rico, Canada, Mexi… [source: YAHOO company summary; 10-K Item 1 not used because: The Item 1 extraction rule (item1-2026-10-1) could not locate the section in the filing: found 2 standalone "Item 1. Business" heading lines — expected exactly one.] |
+| 4 | Key financial metrics | EXPLAINED | Market cap: Not computed for this company yet — it needs a decision on which of its investments are non-operating, which is not available for this company. [engine: INCOMPLETE: missing REQUIRED input(s): nonOperatingEquityInvestmentsAtBook] / P/E (trailing) 47.9542 / FCF yield 0.0212672 / 52-week range 850–1094.32 / Leverage: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1, net debt ratio not computed] |
+| 5 | Bear / Base / Bull and price context | EXPLAINED | Fair-value range: No fair-value range for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: inputs missing — the ratio could not be computed, so the precondition fails closed] |
+| 6 | Why own it | CONTENT | The operating record is unusually steady: across a history window of 11 years the operating margin moved within a total range of 0.8%, the worst single-year ch… |
+| 7 | Why be cautious / biggest risks | CONTENT | The price carries a trailing price/earnings of 48.0x and a free-cash-flow yield of 2.1%, far below the 9.0% return the model requires, so today's cash generati… / Biggest risk: The operating margin is the assumption most capable of changing the answer: it is already at the highest level in the filed window, the analyst's middle case h… |
+| 8 | What today's price assumes | EXPLAINED | Steady-state EV: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: leverage precondition failed (§6.5)] / PVGO share of EV: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: leverage precondition failed (§6.5)] / Implied growth, yrs 1-5 at r = 9.0%: Not computed for this company yet — it needs the company's enterprise value, which is not available for this company. [engine: INCOMPLETE: missing REQUIRED input(s): targetEnterpriseValue] |
+| 9 | Latest material development | CONTENT | 8-K filed 2026-10-16 |
+| 10 | What would change the view | CONTENT | largest driver ronic, full-range impact 20.3% |
+
+## Stage timings
+- acquisition + automatic decisions (advanceRunAutomatically): 2183ms
+- deterministic computation: 538ms
+- AI layer (interpretation + challenger): 74810ms
+- render the normal Overview: 22ms
+- **total measured:** 77553ms
+
+### AI model calls (one row per physical call)
+- challenger attempt 1: 54171ms
+- interpretation attempt 1: 74784ms
+
+ACCEPTANCE PASS — COST

@@ -1,0 +1,6 @@
+MSFT seeded v2 DRAFT AI DRAFT from docs/evidence/ar7-prototype/msft-run.json (frozen 2026-10-20T03:15:47.806Z)
+COST seeded v1 DRAFT AI DRAFT from docs/evidence/methodology-v3-calibration/cost-run.json (frozen 2026-10-20T04:50:11.085Z)
+NVDA seeded v2 DRAFT AI DRAFT from docs/evidence/methodology-v3-calibration/nvda-run.json (frozen 2026-10-20T04:53:10.536Z)
+NUE seeded v1 DRAFT AI DRAFT from docs/evidence/methodology-v3-calibration/nue-run.json (frozen 2026-10-20T04:56:52.812Z)
+KO seeded v1 DRAFT AI DRAFT from docs/evidence/methodology-v3-calibration/ko-run.json (frozen 2026-10-20T04:59:23.635Z)
+LLY seeded v1 DRAFT AI DRAFT from docs/evidence/methodology-v3-calibration/lly-run.json (frozen 2026-10-20T05:03:08.674Z)

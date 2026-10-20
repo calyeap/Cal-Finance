@@ -1,0 +1,2 @@
+Usage: acceptance-run.ts <MSFT|NVDA|COST>
+exit=1

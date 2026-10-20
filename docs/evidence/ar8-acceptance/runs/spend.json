@@ -1,0 +1,37 @@
+{
+  "capUsd": 5,
+  "calls": 4,
+  "inputTokens": 28371,
+  "outputTokens": 19842,
+  "costUsd": 0.637905,
+  "rows": [
+    {
+      "ticker": "MSFT",
+      "preflight": false,
+      "inputTokens": 5949,
+      "outputTokens": 2970,
+      "costUsd": 0.10399500000000002
+    },
+    {
+      "ticker": "MSFT",
+      "preflight": false,
+      "inputTokens": 7784,
+      "outputTokens": 7249,
+      "costUsd": 0.220145
+    },
+    {
+      "ticker": "COST",
+      "preflight": false,
+      "inputTokens": 6603,
+      "outputTokens": 4005,
+      "costUsd": 0.13314
+    },
+    {
+      "ticker": "COST",
+      "preflight": false,
+      "inputTokens": 8035,
+      "outputTokens": 5618,
+      "costUsd": 0.18062500000000004
+    }
+  ]
+}
