@@ -97,12 +97,16 @@ export function applyAdjustments(draft: SheetContent, adj: SheetAdjustments): { 
     };
   }
   const constants = { ...draft.configuredConstants };
+  let taxRateOverride = draft.taxRateOverride ?? null;
   for (const k of ["nopatTaxRate", "stressMarginLevel"] as const) {
     const next = adj[k];
     if (next === undefined || same(next, constants[k])) continue;
     const value = next === null || next.trim() === "" ? null : requireDecimalText(next, k);
     changes.push(`${k} ${constants[k] ?? "unset"} → ${value ?? "unset"}`);
     constants[k] = value;
+    // Methodology v3 D5: the engine applies the filed 3-yr average tax rate
+    // to every sheet; a rate Calvin sets here is the one override of it.
+    if (k === "nopatTaxRate") taxRateOverride = value;
   }
   return {
     content: {
@@ -111,6 +115,7 @@ export function applyAdjustments(draft: SheetContent, adj: SheetAdjustments): { 
       moatClass,
       moatAnchor,
       configuredConstants: constants,
+      taxRateOverride,
       // Adoption values from the drivers under the approved rules; a migrated
       // bundle's typed dollar figures never travel past it.
       legacyScenarioValues: null,

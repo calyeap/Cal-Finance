@@ -285,9 +285,10 @@ describe("CF-NVDA-RUN-OBSERVE-01 — NVDA's approved bundle recorded and run thr
     const ev = result.diagnostics.enterpriseValue;
     expect(ev.suppressed).toBe(true);
     if (ev.suppressed) {
-      expect(ev.cause).toBe(
-        "missing REQUIRED input(s): treasuryMethodDilution, price, financeLeaseLiabilities, nonOperatingEquityInvestmentsAtBook"
-      );
+      // Methodology v3 D8 (CF-METHODOLOGY-V3-IMPLEMENT-01, #499) closed the
+      // treasuryMethodDilution gap: the same 10-K's diluted − basic shares,
+      // no convertibles filed. The other three stay.
+      expect(ev.cause).toBe("missing REQUIRED input(s): price, financeLeaseLiabilities, nonOperatingEquityInvestmentsAtBook");
     }
 
     // That cascades to leverage, the fair-value range, and trust — the same

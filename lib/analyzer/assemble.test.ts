@@ -5,7 +5,7 @@ import { MSFT_FIXTURE } from "./fixtures/msft";
 import { OKLO_FIXTURE } from "./fixtures/oklo";
 import { computeUnitExitBreakEvenPrice } from "./modules/preRevenue";
 import { computeScenarioEnterpriseValue, computeScenarioValuation } from "./modules/scenarioOutputs";
-import { terminalReturnOnNewCapital } from "./discountRate";
+import { returnRunwayYears, terminalReturnOnNewCapital } from "./discountRate";
 import { withStatedD2Inputs } from "./fixtures/statedD2Inputs";
 import { buildFixedShapeGrowthPath } from "./growthPath";
 import { projectReverseDcfValue } from "./modules/reverseDcf";
@@ -249,8 +249,15 @@ describe("assembleAnalysisResult — MSFT fixture", () => {
       adopted.heldAt.terminalReturnOnNewCapital,
       adopted.rate,
       MSFT_FIXTURE.reverseDcf.baseYearRevenue!.value,
-      MSFT_FIXTURE.configuredConstants.nopatTaxRate!
+      MSFT_FIXTURE.configuredConstants.nopatTaxRate!,
+      POLICY.terminalGrowth,
+      undefined,
+      { runwayYears: adopted.heldAt.runwayYears, yearOne: adopted.heldAt.yearOne ?? null },
+      adopted.heldAt.marginPath
     ).ev;
+    // v3: the solve holds the Base's own runway (narrow: 15 years) and year-1 charge.
+    expect(adopted.heldAt.runwayYears).toBe(15);
+    expect(adopted.heldAt.yearOne).not.toBeNull();
     expect(ev.minus(target).abs().dividedBy(target).toNumber()).toBeLessThan(1e-9);
   });
 
@@ -867,6 +874,12 @@ describe("assembleAnalysisResult — dynamic scenario values (null fixture.scena
       .minus(ev.nonOperatingEquityInvestmentsAtBook!.value);
     const netDebtBridge = enterpriseValue.minus(marketCap);
 
+    // Methodology v3 on a hand-authored fixture: no filed anchors, so every
+    // scenario keeps its drafted drivers from year 1; the D2′ runway by moat
+    // class; and, with no filed reinvestment read, D2.1 charges the whole
+    // year-1 requirement on NOPAT at the fixture's current margin.
+    const tax = fixture.configuredConstants.nopatTaxRate!;
+    const nopat0 = fixture.reverseDcf.baseYearRevenue!.value.mul(fixture.reverseDcf.currentMargin!.value).mul(new Decimal(1).minus(tax));
     for (const key of ["bear", "base", "bull"] as const) {
       const driver = fixture.scenarios[key];
       const rate = result.valuationBasis!.discountRate.rate;
@@ -875,9 +888,12 @@ describe("assembleAnalysisResult — dynamic scenario values (null fixture.scena
         buildFixedShapeGrowthPath(driver.revenueGrowthOrPath as Decimal),
         driver.operatingMargin!,
         driver.returnOnNewInvestment!,
-        terminalReturnOnNewCapital(rate, "narrow", key),
+        terminalReturnOnNewCapital(rate, key),
         rate,
-        fixture.configuredConstants.nopatTaxRate!
+        tax,
+        POLICY.terminalGrowth,
+        result.runIdentity!.valuationTiming.stubYears,
+        { runwayYears: returnRunwayYears("narrow", key), yearOne: { nopat0, available: null } }
       );
       const expectedPerShare = expectedEv.minus(netDebtBridge).dividedBy(driver.shareCount);
       expect(result.scenarioOutputs.values[key].toString()).toBe(expectedPerShare.toString());
@@ -1002,7 +1018,7 @@ describe("assembleAnalysisResult — implied exit multiple divides terminal valu
     }
   });
 
-  it("computes from the base DCF's own terminal value over its own year-10 operating income — today's EV never substituted in", () => {
+  it("computes from the base DCF's own terminal value over its own final-year operating income — today's EV never substituted in", () => {
     const fixture = withStatedD2Inputs(MSFT_FIXTURE);
     const result = assembleAnalysisResult(fixture);
     const rate = result.valuationBasis!.discountRate.rate;
@@ -1012,17 +1028,21 @@ describe("assembleAnalysisResult — implied exit multiple divides terminal valu
       buildFixedShapeGrowthPath(base.revenueGrowthOrPath as Decimal),
       base.operatingMargin!,
       base.returnOnNewInvestment!,
-      terminalReturnOnNewCapital(rate, "narrow", "base"),
+      terminalReturnOnNewCapital(rate, "base"),
       rate,
-      fixture.configuredConstants.nopatTaxRate!
+      fixture.configuredConstants.nopatTaxRate!,
+      POLICY.terminalGrowth,
+      result.runIdentity!.valuationTiming.stubYears,
+      { runwayYears: returnRunwayYears("narrow", "base") }
     );
     const m9 = result.diagnostics.impliedExitMultiple;
-    expect(m9.dividesMetric).toBe("year-10 operating income (EBIT), base scenario");
+    // Narrow moat: the explicit period runs to the D2′ runway's last fade year.
+    expect(m9.dividesMetric).toBe("final-year (year 15) operating income (EBIT), base scenario");
     expect(m9.value.suppressed).toBe(false);
     if (m9.value.suppressed || result.diagnostics.enterpriseValue.suppressed) return;
-    expect(m9.value.value.toString()).toBe(valuation.terminalValue.dividedBy(valuation.year10OperatingIncome).toString());
+    expect(m9.value.value.toString()).toBe(valuation.terminalValue.dividedBy(valuation.finalYearOperatingIncome).toString());
     expect(m9.value.value.toString()).not.toBe(
-      result.diagnostics.enterpriseValue.value.enterpriseValue.dividedBy(valuation.year10OperatingIncome).toString()
+      result.diagnostics.enterpriseValue.value.enterpriseValue.dividedBy(valuation.finalYearOperatingIncome).toString()
     );
   });
 });

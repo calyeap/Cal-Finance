@@ -5,8 +5,8 @@ import { assembleAnalysisResult } from "../assemble";
 import { __resetAcquisitionCache } from "./provider";
 import { withStatedD2Inputs, STATED_D2_TEST_INPUTS } from "../fixtures/statedD2Inputs";
 import { computeScenarioEnterpriseValue } from "../modules/scenarioOutputs";
-import { buildFixedShapeGrowthPath } from "../growthPath";
-import { terminalReturnOnNewCapital } from "../discountRate";
+import { buildFixedShapeGrowthPath, buildMarginRampPath, buildRampedGrowthPath } from "../growthPath";
+import { returnRunwayYears, terminalReturnOnNewCapital } from "../discountRate";
 import { POLICY } from "../policy";
 
 // ---------------------------------------------------------------------------
@@ -54,18 +54,32 @@ describe("MSFT on the real pathway — an adopted D2 sheet values through the on
     const rate = result.valuationBasis!.discountRate.rate;
     const netDebt = bridge.value.enterpriseValue.minus(bridge.value.marketCap);
     const stub = result.runIdentity!.valuationTiming.stubYears;
+    // Methodology v3, from this run's own filed inputs: Base ramps from the
+    // TTM margin and the lower of TTM growth and the 3-yr CAGR (MSFT is
+    // stable by D1, so growth ramps too); every scenario is charged its
+    // unfunded year-1 growth.
+    const v3 = fixture.v3Inputs!;
+    const tax = fixture.configuredConstants.nopatTaxRate!;
+    expect(tax.toString()).toBe(v3.tax.rate.toString());
+    const revenue = fixture.reverseDcf.baseYearRevenue!.value;
+    const nopat0 = revenue.mul(v3.ttmMargin.value!).mul(new Decimal(1).minus(tax));
+    const available = v3.lastFyNetReinvestment.formed ? v3.lastFyNetReinvestment.total : null;
     for (const key of ["bear", "base", "bull"] as const) {
       const driver = fixture.scenarios[key];
+      const growth = driver.revenueGrowthOrPath as Decimal;
       const ev = computeScenarioEnterpriseValue(
-        fixture.reverseDcf.baseYearRevenue!.value,
-        buildFixedShapeGrowthPath(driver.revenueGrowthOrPath as Decimal),
-        driver.operatingMargin!,
+        revenue,
+        key === "base"
+          ? buildRampedGrowthPath(Decimal.min(v3.ttmRevenueGrowth.value!, v3.revenueCagr3.value!), growth)
+          : buildFixedShapeGrowthPath(growth),
+        key === "base" ? buildMarginRampPath(v3.ttmMargin.value!, driver.operatingMargin!) : driver.operatingMargin!,
         STATED_D2_TEST_INPUTS.returnOnNewInvestment[key],
-        terminalReturnOnNewCapital(rate, STATED_D2_TEST_INPUTS.moatClass, key),
+        terminalReturnOnNewCapital(rate, key),
         rate,
-        fixture.configuredConstants.nopatTaxRate!,
+        tax,
         POLICY.terminalGrowth,
-        stub
+        stub,
+        { runwayYears: returnRunwayYears(STATED_D2_TEST_INPUTS.moatClass, key), yearOne: { nopat0, available } }
       );
       const perShare = ev.minus(netDebt).dividedBy(driver.shareCount);
       expect(result.scenarioOutputs.values[key].toString()).toBe(perShare.toString());

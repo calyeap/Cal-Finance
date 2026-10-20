@@ -178,9 +178,8 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
 
     expect(result.diagnostics.enterpriseValue.suppressed).toBe(true);
     if (result.diagnostics.enterpriseValue.suppressed) {
-      expect(result.diagnostics.enterpriseValue.cause).toBe(
-        "missing REQUIRED input(s): treasuryMethodDilution, nonOperatingEquityInvestmentsAtBook"
-      );
+      // v3 D8 (#499) fills treasuryMethodDilution from the same 10-K.
+      expect(result.diagnostics.enterpriseValue.cause).toBe("missing REQUIRED input(s): nonOperatingEquityInvestmentsAtBook");
     }
 
     expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");
@@ -224,8 +223,10 @@ describe("CF-ANALYZER-V2-FINAL-REALRUN-PROOF-01 — the consolidated final real-
     // reading, not the prior document's three-input figure.
     expect(result.diagnostics.enterpriseValue.suppressed).toBe(true);
     if (result.diagnostics.enterpriseValue.suppressed) {
+      // v3 D8 (#499) fills treasuryMethodDilution from the same 10-K; the
+      // other three stay.
       expect(result.diagnostics.enterpriseValue.cause).toBe(
-        "missing REQUIRED input(s): treasuryMethodDilution, price, financeLeaseLiabilities, nonOperatingEquityInvestmentsAtBook"
+        "missing REQUIRED input(s): price, financeLeaseLiabilities, nonOperatingEquityInvestmentsAtBook"
       );
     }
 

@@ -4,7 +4,7 @@ import { computeScenarioValuation, computeScenarioEnterpriseValue, solveRateForT
 import { solveReverseDcf } from "../modules/reverseDcf";
 import { computeEnterpriseValue, type EnterpriseValueInput } from "../modules/enterpriseValue";
 import { buildFixedShapeGrowthPath } from "../growthPath";
-import { selectDiscountRate, terminalReturnOnNewCapital } from "../discountRate";
+import { returnRunwayYears, selectDiscountRate, terminalReturnOnNewCapital } from "../discountRate";
 import { stubYearsBetween } from "../valuationTiming";
 import { POLICY } from "../policy";
 import { CLEAN_PROVENANCE } from "../provenance";
@@ -43,7 +43,9 @@ function D(n: string | number): Decimal {
 // FY26 revenue $331.839B (TTM to 30 Jun 2026), base margin 45%, tax 19%,
 // growth 14% for years 1–5 fading to 3%, return on new investment 21.5%
 // (FY21→26 incremental return ex-Activision), narrow moat (terminal return =
-// rate + 1pp), net cash $6.303B, 7,449,545,491 diluted shares, valued at
+// rate + 1pp — Part 4.4's own stated input, the v2.1 credit; v3 retired the
+// credit, so it is stated here as the input it was, not read from policy),
+// net cash $6.303B, 7,449,545,491 diluted shares, valued at
 // 16 Oct 2026. Every value comes from computeScenarioValuation — the engine.
 const PART_44 = {
   revenue: D("331.839e9"),
@@ -57,13 +59,15 @@ const PART_44 = {
   price: D("529.05"),
 };
 
+const PART_44_TERMINAL = (rate: Decimal) => rate.plus(D("0.01"));
+
 function msftPerShare(rate: Decimal, { terminalRoic, ronic }: { terminalRoic?: Decimal; ronic?: Decimal } = {}): Decimal {
   const ev = computeScenarioEnterpriseValue(
     PART_44.revenue,
     buildFixedShapeGrowthPath(PART_44.growth),
     PART_44.margin,
     ronic ?? PART_44.ronic,
-    terminalRoic ?? terminalReturnOnNewCapital(rate, "narrow", "base"),
+    terminalRoic ?? PART_44_TERMINAL(rate),
     rate,
     PART_44.tax,
     POLICY.terminalGrowth,
@@ -105,7 +109,7 @@ describe("Part 4.4 — the MSFT rate table is reproduced from its stated 16 Oct 
         heldDrivers: {
           operatingMargin: PART_44.margin,
           returnOnNewInvestment: PART_44.ronic,
-          terminalReturnOnNewCapital: terminalReturnOnNewCapital(rate, "narrow", "base"),
+          terminalReturnOnNewCapital: PART_44_TERMINAL(rate),
         },
         heldDriversMissing: null,
         stubYears: PART_44.stub,
@@ -121,7 +125,7 @@ describe("Part 4.4 — the MSFT rate table is reproduced from its stated 16 Oct 
       buildFixedShapeGrowthPath(at9.value),
       PART_44.margin,
       PART_44.ronic,
-      terminalReturnOnNewCapital(D("0.09"), "narrow", "base"),
+      PART_44_TERMINAL(D("0.09")),
       D("0.09"),
       PART_44.tax,
       POLICY.terminalGrowth,
@@ -131,7 +135,7 @@ describe("Part 4.4 — the MSFT rate table is reproduced from its stated 16 Oct 
   });
 
   it("expected return at today's price: ~7% a year, the base case's own cash flows held fixed", () => {
-    const terminal = terminalReturnOnNewCapital(D("0.09"), "narrow", "base");
+    const terminal = PART_44_TERMINAL(D("0.09"));
     const irr = solveRateForTargetValue((r) => msftPerShare(r, { terminalRoic: terminal }), PART_44.price, D("0.0325"));
     expect(irr).not.toBeNull();
     expect(irr!.toDecimalPlaces(2).toNumber()).toBe(0.07);
@@ -144,7 +148,12 @@ describe("Part 4.4 — the MSFT rate table is reproduced from its stated 16 Oct 
 // engine and taking a different algebraic route to reinvestment: the
 // increment in NOPAT a year's investment funds, divided by that year's return
 // on new investment, rather than NOPAT × next-year growth ÷ return. The two
-// agree only if the engine's D2 mechanics are right.
+// agree only if the engine's mechanics are right — Methodology v3 D2′'s
+// runway (the return on new capital fades from year 5 to the rate by year
+// 10 / 15 / 20, the explicit period running to the last fade year and the
+// terminal value placed half a year before its end) and D2.1's year-1
+// funding charge (year 1's NOPAT increment over its return, less what was
+// reinvested last year, charged at the valuation date).
 interface OracleInput {
   revenue: number;
   margin: number;
@@ -154,43 +163,49 @@ interface OracleInput {
   terminalRoic: number;
   rate: number;
   stub: number;
+  runway: number;
+  available: number;
 }
 
-function oracleValue(i: OracleInput): { ev: number; terminalOverYear10Fcf: number } {
+function oracleValue(i: OracleInput): { ev: number; terminalOverFinalYearFcf: number; shortfall: number } {
   const g = 0.03;
+  const horizon = Math.max(10, i.runway);
   const growthIn = (t: number) => (t <= 5 ? i.growth : t <= 10 ? i.growth - ((i.growth - g) * (t - 5)) / 5 : g);
-  const ronicIn = (t: number) => (t <= 5 ? i.ronic : i.ronic - ((i.ronic - i.terminalRoic) * (t - 5)) / 5);
-  const nopat: number[] = [];
+  const ronicIn = (t: number) =>
+    t <= 5 ? i.ronic : t <= i.runway ? i.ronic - ((i.ronic - i.terminalRoic) * (t - 5)) / (i.runway - 5) : i.terminalRoic;
+  const nopat: number[] = [i.revenue * i.margin * (1 - i.tax)];
   let revenue = i.revenue;
-  for (let t = 1; t <= 11; t++) {
+  for (let t = 1; t <= horizon + 1; t++) {
     revenue *= 1 + growthIn(t);
     nopat[t] = revenue * i.margin * (1 - i.tax);
   }
   let ev = 0;
-  let fcf10 = 0;
-  for (let t = 1; t <= 10; t++) {
+  let fcfLast = 0;
+  for (let t = 1; t <= horizon; t++) {
     const fcf = nopat[t] - (nopat[t + 1] - nopat[t]) / ronicIn(t);
-    if (t === 10) fcf10 = fcf;
+    if (t === horizon) fcfLast = fcf;
     ev += fcf / Math.pow(1 + i.rate, t - 0.5 - i.stub);
   }
-  const terminalFcf = nopat[11] * (1 - g / i.terminalRoic);
-  ev += terminalFcf / (i.rate - g) / Math.pow(1 + i.rate, 9.5 - i.stub);
-  return { ev, terminalOverYear10Fcf: terminalFcf / fcf10 };
+  const terminalFcf = nopat[horizon + 1] * (1 - g / i.terminalRoic);
+  ev += terminalFcf / (i.rate - g) / Math.pow(1 + i.rate, horizon - 0.5 - i.stub);
+  const shortfall = Math.max(0, (nopat[1] - nopat[0]) / ronicIn(1) - i.available);
+  return { ev: ev - shortfall, terminalOverFinalYearFcf: terminalFcf / fcfLast, shortfall };
 }
 
 // Stated harness inputs: growth is a test choice; the return on new
 // investment is each company's five-year incremental-return history the
 // master plan records (MSFT 21.5% ex-Activision, COST 46%, NVDA 74%); the
-// moat class is a test choice. The rate is the engine's own D1 selection
-// from the company's real SIC code.
-const ORACLE_CASES: { name: string; golden: typeof msft; growth: string; ronic: string; moat: MoatClass }[] = [
-  { name: "MSFT", golden: msft, growth: "0.14", ronic: "0.215", moat: "narrow" },
-  { name: "COST", golden: cost as unknown as typeof msft, growth: "0.08", ronic: "0.46", moat: "wide" },
-  { name: "NVDA", golden: nvda as unknown as typeof msft, growth: "0.20", ronic: "0.74", moat: "narrow" },
+// moat class and last year's net reinvestment (a share of year-0 NOPAT) are
+// test choices. The rate is the engine's own D1 selection from the company's
+// real SIC code.
+const ORACLE_CASES: { name: string; golden: typeof msft; growth: string; ronic: string; moat: MoatClass; reinvestedShare: number }[] = [
+  { name: "MSFT", golden: msft, growth: "0.14", ronic: "0.215", moat: "narrow", reinvestedShare: 0.2 },
+  { name: "COST", golden: cost as unknown as typeof msft, growth: "0.08", ronic: "0.46", moat: "wide", reinvestedShare: 0.05 },
+  { name: "NVDA", golden: nvda as unknown as typeof msft, growth: "0.20", ronic: "0.74", moat: "none", reinvestedShare: 0 },
 ];
 
 describe("an independent oracle reproduces the engine for MSFT, COST and NVDA", () => {
-  it.each(ORACLE_CASES)("$name", ({ golden, growth, ronic, moat }) => {
+  it.each(ORACLE_CASES)("$name", ({ golden, growth, ronic, moat, reinvestedShare }) => {
     const f = golden.facts;
     const revenue = D(f.revenue!.value!);
     const margin = D(f.operatingIncome!.value!).dividedBy(revenue);
@@ -202,8 +217,11 @@ describe("an independent oracle reproduces the engine for MSFT, COST and NVDA", 
       leverage: LEVERAGE_PASS,
       priceDate: "2026-10-16",
     }).rate;
-    const terminalRoic = terminalReturnOnNewCapital(rate, moat, "base");
+    const terminalRoic = terminalReturnOnNewCapital(rate, "base");
+    const runway = returnRunwayYears(moat, "base");
     const stub = stubYearsBetween(f.revenue!.periodEnd, "2026-10-16");
+    const nopat0 = revenue.mul(margin).mul(D(1).minus(tax));
+    const available = nopat0.mul(reinvestedShare);
 
     const engine = computeScenarioValuation(
       revenue,
@@ -214,7 +232,8 @@ describe("an independent oracle reproduces the engine for MSFT, COST and NVDA", 
       rate,
       tax,
       POLICY.terminalGrowth,
-      stub
+      stub,
+      { runwayYears: runway, yearOne: { nopat0, available } }
     );
     const oracle = oracleValue({
       revenue: revenue.toNumber(),
@@ -225,14 +244,18 @@ describe("an independent oracle reproduces the engine for MSFT, COST and NVDA", 
       terminalRoic: terminalRoic.toNumber(),
       rate: rate.toNumber(),
       stub: stub.toNumber(),
+      runway,
+      available: available.toNumber(),
     });
 
+    expect(engine.horizonYears).toBe(Math.max(10, runway));
     expect(Math.abs(engine.enterpriseValue.toNumber() / oracle.ev - 1)).toBeLessThan(1e-9);
-    // AR2's terminal ÷ year-10 FCF band, on both implementations.
-    const ratio = engine.terminalFcf.dividedBy(engine.year10Fcf).toNumber();
+    expect(Math.abs(engine.yearOneFunding!.shortfall.toNumber() - oracle.shortfall)).toBeLessThan(1e-3);
+    // AR2's terminal ÷ final-year FCF band, on both implementations.
+    const ratio = engine.terminalFcf.dividedBy(engine.finalYearFcf).toNumber();
     expect(ratio).toBeGreaterThanOrEqual(0.95);
     expect(ratio).toBeLessThanOrEqual(1.1);
-    expect(Math.abs(ratio - oracle.terminalOverYear10Fcf)).toBeLessThan(1e-9);
+    expect(Math.abs(ratio - oracle.terminalOverFinalYearFcf)).toBeLessThan(1e-9);
   });
 });
 
@@ -295,22 +318,26 @@ describe("D1 — the dated rate in use, by the approved two-band rule", () => {
   });
 });
 
-// --- D2 — terminal returns ----------------------------------------------
+// --- D2′ — terminal returns and runways (Methodology v3) ----------------------
 
-describe("D2 — the terminal return on new capital is the rate plus the moat credit", () => {
+describe("D2′ — the terminal return on new capital is the rate; the moat sets the runway to it", () => {
   const r = D("0.09");
-  it.each([
-    ["none", "0.09", "0.09", "0.105"],
-    ["narrow", "0.09", "0.1", "0.115"],
-    ["wide", "0.09", "0.12", "0.135"],
-  ] as const)("%s moat → bear %s, base %s, bull %s", (moat, bear, base, bull) => {
-    expect(terminalReturnOnNewCapital(r, moat, "bear").toString()).toBe(D(bear).toString());
-    expect(terminalReturnOnNewCapital(r, moat, "base").toString()).toBe(D(base).toString());
-    expect(terminalReturnOnNewCapital(r, moat, "bull").toString()).toBe(D(bull).toString());
+  it("terminal return: bear and base the rate, bull the rate + 1.5pp — whatever the moat", () => {
+    expect(terminalReturnOnNewCapital(r, "bear").toString()).toBe("0.09");
+    expect(terminalReturnOnNewCapital(r, "base").toString()).toBe("0.09");
+    expect(terminalReturnOnNewCapital(r, "bull").toString()).toBe("0.105");
   });
 
-  it("with no moat input the default is the rate", () => {
-    expect(terminalReturnOnNewCapital(r, null, "base").toString()).toBe("0.09");
+  it.each([
+    ["none", 10, 10, 10],
+    ["narrow", 10, 15, 15],
+    ["wide", 10, 20, 20],
+  ] as const)("%s moat → runway bear %i, base %i, bull %i years", (moat, bear, base, bull) => {
+    expect([returnRunwayYears(moat, "bear"), returnRunwayYears(moat, "base"), returnRunwayYears(moat, "bull")]).toEqual([bear, base, bull]);
+  });
+
+  it("with no moat input the runway is ten years", () => {
+    expect(returnRunwayYears(null, "base")).toBe(10);
   });
 });
 

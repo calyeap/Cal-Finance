@@ -39,13 +39,30 @@ export const POLICY: PolicyConstants = {
     // reads; also the rate-band ends M14's sensitivity varies (AR0-2).
     verdictCheckOffset: new Decimal("0.005"),
   },
-  // Methodology v2.1 D2 (frozen spec §14.9 AR0-3), replacing the r + 3pp
-  // terminal ROIC: the terminal return on new capital after year 10 is the
-  // rate plus this credit for Calvin's moat class (a JUDGEMENT input on the
-  // assumption sheet). Bear takes +0 whatever the class; bull takes the
-  // base scenario's credit plus `bullMoatCreditUplift`.
-  moatCredit: { none: new Decimal("0"), narrow: new Decimal("0.01"), wide: new Decimal("0.03") },
-  bullMoatCreditUplift: new Decimal("0.015"),
+  // Methodology v3 D2′ (approved 20 Oct 2026; frozen spec §14.10 V3-1),
+  // replacing v2.1 D2's permanent moat credit: the return on new capital
+  // fades linearly from its year-5 value to THE RATE by this year for
+  // Calvin's moat class (a JUDGEMENT input on the assumption sheet), and the
+  // terminal value is taken from (that year − 0.5). Growth still reaches
+  // terminal growth by year 10 for everyone. Bear uses the no-moat runway;
+  // Bull uses the company's runway with the terminal return at the rate plus
+  // `bullTerminalReturnUplift`.
+  returnRunwayYears: { none: 10, narrow: 15, wide: 20 },
+  bullTerminalReturnUplift: new Decimal("0.015"),
+  // Methodology v3 D5 (Calvin, 20 Oct 2026, #499): the NOPAT tax rate is the
+  // 3-year average effective rate from filings (Σ tax ÷ Σ pre-tax income); a
+  // year with pre-tax income ≤ 0 or a rate outside this band is abnormal and
+  // excluded (and shown); with fewer than `taxMinimumNormalYears` normal years
+  // the statutory rate applies, labelled. Margin and growth ramp from TTM to
+  // the drafted value over `driverRampYears` (Base only).
+  taxAverageYears: 3,
+  taxNormalRateBand: [new Decimal("0"), new Decimal("0.5")],
+  taxMinimumNormalYears: 2,
+  driverRampYears: 5,
+  // Methodology v3 D5 coherence display: model reinvestment ÷ NOPAT in years
+  // 1–5 against the filed trailing 3-year actual; a gap above this needs a
+  // cited reason.
+  reinvestmentCoherenceGapPoints: new Decimal("0.15"),
   // PROVISIONAL — first-order, worth $27/share on OKLO's 8 GW case (§7.1).
   preRevenueConstructionLeadYears: 2,
   // PROVISIONAL — capped cells labelled RATE CAPPED (I12).
@@ -103,6 +120,13 @@ export const POLICY: PolicyConstants = {
   verdictSynthesisV1Buy: { low: new Decimal("0.90"), medium: new Decimal("0.80"), high: new Decimal("0.70") },
   verdictSynthesisV1Sell: { low: new Decimal("1.20"), medium: new Decimal("1.30"), high: new Decimal("1.45") },
 };
+
+/**
+ * The general US federal statutory corporate income tax rate — a reference
+ * rate, not a company disclosure. Methodology v3 D5 uses it only where a
+ * company's filings cannot support an effective rate, and labels it.
+ */
+export const US_FEDERAL_STATUTORY_TAX_RATE = new Decimal("0.21");
 
 // The four constants the register records as LATER (§7.1). Left null rather
 // than guessed so every consumer is forced to handle "unset" explicitly —

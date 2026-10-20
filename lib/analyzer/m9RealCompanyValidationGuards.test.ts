@@ -59,6 +59,13 @@ import path from "node:path";
 // reads "Can't bound value" after any upstream cause. No cut-point, band,
 // threshold or verdict rule changes: the check, the zones and the quality
 // bar are read exactly as before.
+//
+// PIN UPDATED by CF-METHODOLOGY-V3-IMPLEMENT-01, 20 Oct 2026 (issue #499):
+// Methodology v3 D5 (approved by Calvin 20 Oct 2026) adds the "ramp-dependent"
+// label to a BUY that the same nine-point reading would not give with Base
+// growth flat at the drafted rate (`rampDependent`). A label only: no
+// cut-point, band, threshold or verdict rule changes, and the status a BUY
+// resolves to is exactly as before.
 // ---------------------------------------------------------------------------
 
 const ROOT = path.resolve(__dirname, "..", "..");
@@ -67,10 +74,10 @@ function readRepoFile(relPath: string): string {
   return readFileSync(path.join(ROOT, relPath), "utf8");
 }
 
-describe("verdict.ts is untouched since CF-AR6-ANY-TICKER-DRAFTS-01's own authorised change", () => {
+describe("verdict.ts is untouched since CF-METHODOLOGY-V3-IMPLEMENT-01's own authorised change", () => {
   it("hashes to the content this outcome left it at — no cut-point, band or threshold beyond the Methodology's own already-approved V1 numbers", () => {
     const hash = createHash("sha256").update(readRepoFile("lib/analyzer/verdict.ts")).digest("hex");
-    expect(hash).toBe("a698fa7a42b98fc809f64c99d1cfc6714edadd039e9f3d3f09926cf665e1348a");
+    expect(hash).toBe("8a021cfe92ebf1d954e1e099dbf40995d0a49a5a9144bff5fce39abe4e4542e1");
   });
 });
 

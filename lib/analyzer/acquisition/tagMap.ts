@@ -93,11 +93,29 @@
  * As with -09-3 and -10-1, a new factId cannot change which candidate any
  * existing entry resolves to, so no previously-acquired fact moves across the
  * §3.8.1 exempt/queued boundary (docs/tag-mapping-version-review.md §12).
+ *
+ * -10-5 (20 October 2026) — CF-METHODOLOGY-V3-IMPLEMENT-01 (issue #499),
+ * Methodology v3. Two existing entries gain later candidates, no selection
+ * rule touched:
+ *   1. `operating-income`: two derived elements (derivedFacts.ts) for filers
+ *      that tag no OperatingIncomeLoss — Eli Lilly (pre-tax − non-operating)
+ *      and Nucor (pre-tax + net interest). OperatingIncomeLoss stays first.
+ *   2. `capex`: us-gaap:PaymentsToAcquireOtherPropertyPlantAndEquipment, the
+ *      element Eli Lilly files its purchases of property and equipment under
+ *      from FY2022 (its mapped elements stop before then).
+ * Plus the series-only inputs v3 reads (V3_SERIES_INPUTS, below): income tax,
+ * pre-tax income, acquisitions and the cash-flow working-capital lines. Review
+ * (docs/tag-mapping-version-review.md §13): only NUE and LLY move
+ * (operating income now acquired; LLY capex now current); every other
+ * captured filer resolves byte-identically; no fact moves between the §3.8.1
+ * exempt and queued sides.
  */
-export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-4";
+export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-5";
 
 export interface TagRef {
-  ns: "us-gaap" | "dei";
+  // "cf-derived": an element constructed from the filer's own tagged lines in
+  // the same filing (derivedFacts.ts), listed below only as a later candidate.
+  ns: "us-gaap" | "dei" | "cf-derived";
   tag: string;
 }
 
@@ -155,6 +173,7 @@ export interface TagMapEntry {
 
 const usGaap = (tag: string): TagRef => ({ ns: "us-gaap", tag });
 const dei = (tag: string): TagRef => ({ ns: "dei", tag });
+const derived = (tag: string): TagRef => ({ ns: "cf-derived", tag });
 
 /** A candidate taking one tag alone. */
 const only = (ref: TagRef): TagCandidate => ({ ref });
@@ -361,7 +380,13 @@ export const TAG_MAP: readonly TagMapEntry[] = [
     period: "duration",
     duration: "annual",
     unit: "USD",
-    candidates: [only(usGaap("OperatingIncomeLoss"))],
+    // -10-5: the derived elements reach only a filer that tags no current
+    // OperatingIncomeLoss (derivedFacts.ts states each construction).
+    candidates: [
+      only(usGaap("OperatingIncomeLoss")),
+      only(derived("OperatingIncomeLossFromPretaxLessNonoperating")),
+      only(derived("OperatingIncomeLossFromPretaxAddBackNetInterest")),
+    ],
     basis:
       "The numerator of the operating margin (§3.8). Acquired as its own tagged fact so the margin is a derived figure whose inputs are themselves recorded (§3.1), never a figure read off a feed.",
   },
@@ -374,6 +399,8 @@ export const TAG_MAP: readonly TagMapEntry[] = [
     candidates: [
       only(usGaap("PaymentsToAcquirePropertyPlantAndEquipment")),
       only(usGaap("PaymentsToAcquireProductiveAssets")),
+      // -10-5: Eli Lilly's purchases of property and equipment from FY2022.
+      only(usGaap("PaymentsToAcquireOtherPropertyPlantAndEquipment")),
     ],
     basis:
       "§3.5 — 'cash capex' in all three FCF definitions. The cash-flow-statement payment line, not the property note's additions.",
@@ -609,3 +636,58 @@ export const FINANCE_LEASES_INSIDE_TOTAL_DEBT: Readonly<Record<string, { ticker:
       'obligations due after one year" (docs/evidence/nue-fy2025-finance-lease-classification-capture.md)',
   },
 };
+
+// ---------------------------------------------------------------------------
+// -10-5 (CF-METHODOLOGY-V3-IMPLEMENT-01, issue #499) — the annual series
+// Methodology v3 reads beside the facts above. Series-only: each is read as a
+// fiscal-year history (history.annualSeries), never acquired as a current
+// fact, so none enters the §3.8.1 queue.
+//
+//   - incomeTax / pretaxIncome: D5's 3-year average effective tax rate.
+//   - acquisitions: D2.1's "acquisitions" in last year's net reinvestment —
+//     cash paid for businesses, net of cash acquired. Nvidia tags a second
+//     business separately; Eli Lilly files under "other payments to acquire
+//     businesses" from FY2023. A filer tagging none of these has not formed
+//     the figure (Calvin, 20 Oct 2026: an absent tag is never zero).
+//   - workingCapitalLines: D2.1's change in net working capital, from the
+//     cash-flow statement's own lines. A positive asset-side value is an
+//     increase in the asset (cash used); a positive liability-side value is
+//     an increase in the liability (cash provided). Deferred and other
+//     income-tax movements are not working capital and are not listed.
+// ---------------------------------------------------------------------------
+
+const wc = (...tags: string[]) => tags.map((t) => usGaap(`IncreaseDecreaseIn${t}`));
+
+export const V3_SERIES_INPUTS = {
+  incomeTax: [only(usGaap("IncomeTaxExpenseBenefit"))],
+  pretaxIncome: [
+    only(usGaap("IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest")),
+    only(usGaap("IncomeLossFromContinuingOperationsBeforeIncomeTaxesMinorityInterestAndIncomeLossFromEquityMethodInvestments")),
+  ],
+  acquisitions: [
+    withPlus(usGaap("PaymentsToAcquireBusinessesNetOfCashAcquired"), usGaap("PaymentsToAcquireBusinessTwoNetOfCashAcquired")),
+    only(usGaap("OtherPaymentsToAcquireBusinesses")),
+  ],
+  workingCapitalLines: {
+    asset: wc(
+      "AccountsReceivable",
+      "AccountsAndOtherReceivables",
+      "Inventories",
+      "OtherCurrentAssets",
+      "PrepaidDeferredExpenseAndOtherAssets",
+      "OtherOperatingAssets",
+      "OtherNoncurrentAssets",
+      "OtherOperatingCapitalNet"
+    ),
+    liability: wc(
+      "AccountsPayable",
+      "AccountsPayableAndAccruedLiabilities",
+      "AccruedLiabilitiesAndOtherOperatingLiabilities",
+      "AccruedIncomeTaxesPayable",
+      "ContractWithCustomerLiability",
+      "OtherCurrentLiabilities",
+      "OtherNoncurrentLiabilities",
+      "EmployeeRelatedLiabilities"
+    ),
+  },
+} as const;

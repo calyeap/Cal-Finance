@@ -16,6 +16,8 @@ const MEASURES: HistoryMeasures = {
   operatingMarginRange: { low: new Decimal("0.25"), high: new Decimal("0.45") },
   roicRange: { low: new Decimal("0.18"), high: new Decimal("0.30") },
   incrementalReturn: new Decimal("0.22"),
+  incrementalReturn3: new Decimal("0.24"),
+  tax: { rate: new Decimal("0.19"), basis: "FILED 3-YR AVERAGE", years: [], label: "NOPAT tax rate 19.0%: filed effective rate" },
   medianNetReinvestmentShare: new Decimal("0.04"),
   latestQuarter: { periodEnd: "2026-06-30", revenue: new Decimal("80"), yearOnYearGrowth: new Decimal("0.15"), ttmRevenue: new Decimal("300") },
 };
@@ -111,15 +113,29 @@ describe("validateSheet", () => {
   });
 
   it("RONIC PATH — base and bull fade down to their terminal return, never up into it", () => {
-    // narrow: base terminal 10%, bull 11.5%.
-    expect(checks(sheet((c) => (c.scenarios.base.returnOnNewInvestment = "0.095")))).toContain("ERROR RONIC PATH");
+    // v3 D2′: base terminal is the rate (9%), bull the rate + 1.5pp (10.5%), whatever the moat.
+    const lowBase = (c: SheetContent) => {
+      c.scenarios.bear.returnOnNewInvestment = "0.08";
+      c.scenarios.base.returnOnNewInvestment = "0.085";
+    };
+    expect(checks(sheet(lowBase))).toContain("ERROR RONIC PATH");
+    expect(checks(sheet((c) => (c.scenarios.base.returnOnNewInvestment = "0.095")))).not.toContain("ERROR RONIC PATH");
+    const lowBull = (c: SheetContent) => {
+      c.scenarios.bear.returnOnNewInvestment = "0.08";
+      c.scenarios.base.returnOnNewInvestment = "0.10";
+      c.scenarios.bull.returnOnNewInvestment = "0.10";
+    };
+    expect(checks(sheet(lowBull))).toContain("ERROR RONIC PATH");
     expect(checks(sheet((c) => (c.scenarios.bull.returnOnNewInvestment = "0.21")))).not.toContain("ERROR RONIC PATH");
     expect(checks(sheet((c) => (c.scenarios.bear.returnOnNewInvestment = "0.08")))).toContain("WARNING RONIC PATH");
   });
 
   it("TERMINAL CONSISTENCY — no perpetual return above any return the company has filed", () => {
-    const lowReturns = { ...MEASURES, roicRange: { low: new Decimal("0.05"), high: new Decimal("0.11") }, incrementalReturn: null };
-    expect(checks(sheet((c) => (c.moatClass = "wide")), { ...CTX, measures: lowReturns })).toContain("ERROR TERMINAL CONSISTENCY");
+    // v3: new capital earns the rate in perpetuity, so a filed best ROIC below 9% fails, whatever the moat.
+    const lowReturns = { ...MEASURES, roicRange: { low: new Decimal("0.05"), high: new Decimal("0.085") }, incrementalReturn: null };
+    expect(checks(sheet((c) => (c.moatClass = "none")), { ...CTX, measures: lowReturns })).toContain("ERROR TERMINAL CONSISTENCY");
+    const aboveRate = { ...MEASURES, roicRange: { low: new Decimal("0.05"), high: new Decimal("0.11") }, incrementalReturn: null };
+    expect(checks(sheet((c) => (c.moatClass = "wide")), { ...CTX, measures: aboveRate })).not.toContain("ERROR TERMINAL CONSISTENCY");
     const belowRate = { ...MEASURES, roicRange: { low: new Decimal("0.03"), high: new Decimal("0.08") }, incrementalReturn: null };
     expect(checks(sheet(), { ...CTX, measures: belowRate })).toContain("ERROR TERMINAL CONSISTENCY");
   });

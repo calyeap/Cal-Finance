@@ -15,7 +15,7 @@ import { evaluateRoicFloor, type RoicYearInput } from "./roicFloor";
 import type { VerdictJudgements } from "./verdictJudgements";
 import { computeSteadyStateEvPvgo } from "./modules/steadyStateEvPvgo";
 import { solveReverseDcf, type ReverseDcfFacts } from "./modules/reverseDcf";
-import { selectDiscountRate, terminalReturnOnNewCapital } from "./discountRate";
+import { formatRate, returnRunwayYears, selectDiscountRate, terminalReturnOnNewCapital } from "./discountRate";
 import { computeTerminalDiagnostics } from "./modules/terminalDiagnostics";
 import { computeImpliedExitMultiple } from "./modules/impliedExitMultiple";
 import { computeRateSensitivity, rateSensitivityNotModelled } from "./modules/rateSensitivity";
@@ -35,7 +35,7 @@ import {
   rateSearchBracket,
   type ScenarioValuation,
 } from "./modules/scenarioOutputs";
-import { buildFixedShapeGrowthPath } from "./growthPath";
+import { buildFixedShapeGrowthPath, buildMarginRampPath, buildRampedGrowthPath, buildRonicPath } from "./growthPath";
 import { sensitivityRangesFor } from "./acquisition/analystInputs";
 import { notComputed, NOT_COMPUTED_BINDING } from "./notComputed";
 import {
@@ -71,6 +71,7 @@ import type {
   D2Inputs,
   LatestFiling,
   FinancialHistory,
+  ImpliedDriverLine,
   MarketContextSectionContent,
   MoatClass,
   OverrideRecord,
@@ -87,7 +88,12 @@ import type {
   SuccessDefinitionState,
   SuppressingState,
   UndefinedPolicyConstants,
+  V3FiledInputs,
+  V3ValuationBasis,
+  YearOneFundingResult,
 } from "./types";
+
+const pct = formatRate;
 
 // ---------------------------------------------------------------------------
 // Milestone 5 — Analysis Result assembly.
@@ -279,6 +285,15 @@ export interface CompanyFixture {
 
   // Populated only for the pre-revenue profile.
   preRevenue: PreRevenueFixture | null;
+
+  // CF-METHODOLOGY-V3-IMPLEMENT-01 — Methodology v3's filed inputs
+  // (acquisition/v3Inputs.ts): the D5 anchors and tax, D2.1's last-year net
+  // reinvestment, the coherence check's trailing actual, the ROIC anchor and
+  // D8's dilution fallback. Absent on a hand-authored fixture: Base drivers
+  // then stay flat (labelled "no TTM anchor"), the tax is the configured one,
+  // and D2.1 charges the whole year-1 requirement because no filed
+  // reinvestment was read.
+  v3Inputs?: V3FiledInputs | null;
 
   // CF-AR3-REPRODUCIBLE-RUNS-01 — Methodology v2.1 D2's TTM base: the twelve
   // months `reverseDcf.baseYearRevenue` covers and when they end, so both
@@ -539,15 +554,68 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   const d2 = resolveD2Inputs(fixture, rate);
   const cannotConclude = fixture.sheet?.cannotConclude ? `Can't conclude: ${fixture.sheet.cannotConclude}` : null;
 
-  // Every value below — M7, M8, M9, M14, M15 and the expected return — is
-  // this one function: the scenario's growth (fixed path shape), margin and
-  // return on new investment, the D2 terminal, the D1 rate and D2 timing.
-  // `cause` names the first missing input where it cannot run.
+  // --- Methodology v3 D5 / D2.1 — the Base driver paths and year-1 funding --
+  //
+  // CF-METHODOLOGY-V3-IMPLEMENT-01 (frozen spec §14.10). Base only (Calvin,
+  // 20 Oct 2026, #499): the operating margin starts at the TTM margin and
+  // moves linearly to the drafted year-5 margin, then holds; revenue growth
+  // starts at the lower of TTM growth and the 3-yr CAGR and moves linearly to
+  // the drafted year-5 rate — except for a D1-cyclical company, which uses
+  // the drafted rate from year 1. A missing anchor holds the drafted value
+  // from year 1, labelled "no TTM anchor". Bear and Bull keep flat drafted
+  // drivers. Year-1 growth is funded (D2.1) in every scenario.
+  const v3 = fixture.v3Inputs ?? null;
+  const baseDraft = fixture.scenarios.base;
+  const d5Notes: string[] = [];
+  const draftGrowth = baseDraft.revenueGrowthOrPath instanceof Decimal ? baseDraft.revenueGrowthOrPath : null;
+  const draftMargin = baseDraft.operatingMargin;
+  const growthAnchor: Decimal | null = (() => {
+    if (draftGrowth === null) return null;
+    if (discountRate.band === "cyclical") {
+      d5Notes.push(`growth: drafted ${pct(draftGrowth)} from year 1 — cyclical by the D1 test, so no TTM anchor`);
+      return null;
+    }
+    const ttmG = v3?.ttmRevenueGrowth.value ?? null;
+    const cagr3 = v3?.revenueCagr3.value ?? null;
+    if (ttmG === null || cagr3 === null) {
+      const why = v3 === null ? "no filed history on this run" : ttmG === null ? v3.ttmRevenueGrowth.basis : v3.revenueCagr3.basis;
+      d5Notes.push(`growth: drafted ${pct(draftGrowth)} from year 1 — no TTM anchor (${why})`);
+      return null;
+    }
+    const start = Decimal.min(ttmG, cagr3);
+    d5Notes.push(
+      `growth: year 1 at ${pct(start)}, the lower of TTM growth ${pct(ttmG)} and the 3-yr CAGR ${pct(cagr3)}, linear to the drafted ${pct(draftGrowth)} by year 5`
+    );
+    return start;
+  })();
+  const marginAnchor: Decimal | null = (() => {
+    if (draftMargin === null) return null;
+    const ttm = v3?.ttmMargin.value ?? null;
+    if (ttm === null) {
+      d5Notes.push(`margin: drafted ${pct(draftMargin)} from year 1 — no TTM anchor (${v3 === null ? "no filed history on this run" : v3.ttmMargin.basis})`);
+      return null;
+    }
+    d5Notes.push(`margin: year 1 at the TTM ${pct(ttm)}, linear to the drafted ${pct(draftMargin)} by year 5, then held`);
+    return ttm;
+  })();
+  // D2.1 — NOPAT over the TTM base, and last fiscal year's filed net
+  // reinvestment (null: not formed, so the whole requirement is charged).
+  const ttmMarginForFunding = v3?.ttmMargin.value ?? fixture.reverseDcf.currentMargin?.value ?? null;
+  const nopat0: Decimal | null =
+    baseRevenueSourced !== null && ttmMarginForFunding !== null && nopatTaxRateForRun !== null
+      ? baseRevenueSourced.value.mul(ttmMarginForFunding).mul(new Decimal(1).minus(nopatTaxRateForRun))
+      : null;
+  const availableReinvestment = v3?.lastFyNetReinvestment ?? null;
+  const availableAmount = availableReinvestment?.formed === true ? availableReinvestment.total : null;
+
+  // Every value below — M7, M8, M9, M14, M15, D6 and the expected return —
+  // is this one function: the scenario's growth and margin paths and return
+  // on new investment, the D2′ runway and terminal, the D1 rate, D2 timing
+  // and the D2.1 year-1 charge. An override replaces that driver with a flat
+  // value (no ramp). `cause` names the first missing input where it cannot run.
   type ScenarioRun = { valuation: ScenarioValuation; cause: null } | { valuation: null; cause: string };
-  const valueScenario = (
-    key: keyof ScenarioSet,
-    overrides: { growth?: Decimal; margin?: Decimal; ronic?: Decimal; terminalRoic?: Decimal; rate?: Decimal } = {}
-  ): ScenarioRun => {
+  type ScenarioOverrides = { growth?: Decimal; margin?: Decimal; ronic?: Decimal; terminalRoic?: Decimal; rate?: Decimal; runwayYears?: number };
+  const valueScenario = (key: keyof ScenarioSet, overrides: ScenarioOverrides = {}): ScenarioRun => {
     const driver = fixture.scenarios[key];
     // CF-AR6-ANY-TICKER-DRAFTS-01 — a sheet that could not be drafted from
     // filed history values nothing, and says why.
@@ -558,7 +626,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     if (nopatTaxRateForRun === null) {
       return { valuation: null, cause: "missing REQUIRED input: the NOPAT tax rate (§7.1), not configured for this run" };
     }
-    if (d2.terminal === null) return { valuation: null, cause: d2.statement };
+    if (d2.terminal === null || d2.runway === null) return { valuation: null, cause: d2.statement };
     const growth = overrides.growth ?? (driver.revenueGrowthOrPath instanceof Decimal ? driver.revenueGrowthOrPath : null);
     const margin = overrides.margin ?? driver.operatingMargin;
     if (growth === null || margin === null) {
@@ -567,16 +635,25 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         cause: `missing REQUIRED input: the ${key} scenario's growth and margin are not both authored as single rates for this run`,
       };
     }
+    const isBase = key === "base";
+    const growthPath =
+      isBase && overrides.growth === undefined && growthAnchor !== null ? buildRampedGrowthPath(growthAnchor, growth) : buildFixedShapeGrowthPath(growth);
+    const marginPath: Decimal | Decimal[] =
+      isBase && overrides.margin === undefined && marginAnchor !== null ? buildMarginRampPath(marginAnchor, margin) : margin;
     const valuation = computeScenarioValuation(
       baseRevenueSourced.value,
-      buildFixedShapeGrowthPath(growth),
-      margin,
+      growthPath,
+      marginPath,
       overrides.ronic ?? (driver.returnOnNewInvestment as Decimal),
       overrides.terminalRoic ?? d2.terminal[key],
       overrides.rate ?? rate,
       nopatTaxRateForRun,
       POLICY.terminalGrowth,
-      stubYears
+      stubYears,
+      {
+        runwayYears: overrides.runwayYears ?? d2.runway[key],
+        yearOne: nopat0 === null ? null : { nopat0, available: availableAmount },
+      }
     );
     return { valuation, cause: null };
   };
@@ -596,11 +673,16 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     rate,
     nopatTaxRate: nopatTaxRateForRun,
     heldDrivers:
-      d2.terminal !== null && baseDriver.operatingMargin !== null
+      d2.terminal !== null && d2.runway !== null && baseDriver.operatingMargin !== null
         ? {
             operatingMargin: baseDriver.operatingMargin,
             returnOnNewInvestment: baseDriver.returnOnNewInvestment as Decimal,
             terminalReturnOnNewCapital: d2.terminal.base,
+            // v3: the solve holds the Base margin path, runway and year-1
+            // funding the valuation itself uses; only growth is solved.
+            marginPath: marginAnchor !== null ? buildMarginRampPath(marginAnchor, baseDriver.operatingMargin) : undefined,
+            runwayYears: d2.runway.base,
+            yearOne: nopat0 === null ? null : { nopat0, available: availableAmount },
           }
         : null,
     heldDriversMissing: d2.terminal === null ? d2.statement : "missing REQUIRED input: the base scenario's operating margin",
@@ -620,14 +702,15 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
 
   // --- M9 — implied exit multiple, labelled by the metric it actually divides
   //
-  // The base scenario's own terminal value (undiscounted, at year 10) over
-  // its own year-10 operating income — both from the valuation M8 reads.
+  // The base scenario's own terminal value (undiscounted, at the end of the
+  // explicit period — year 10, or the v3 D2′ runway's last fade year) over
+  // its own final-year operating income — both from the valuation M8 reads.
   // CF-AR4-RATE-REINVESTMENT-TERMINAL-01 deleted the fixture-supplied
   // terminal-value placeholder this used to read (null on every run).
   const impliedExitMultiple = computeImpliedExitMultiple(
     baseRun.valuation !== null ? sourced(baseRun.valuation.terminalValue) : null,
-    baseRun.valuation !== null ? sourced(baseRun.valuation.year10OperatingIncome) : null,
-    "year-10 operating income (EBIT), base scenario"
+    baseRun.valuation !== null ? sourced(baseRun.valuation.finalYearOperatingIncome) : null,
+    `final-year (year ${baseRun.valuation?.horizonYears ?? 10}) operating income (EBIT), base scenario`
   );
 
   // --- M10 — rate sensitivity ------------------------------------------------
@@ -671,10 +754,10 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   //   (sensitivityRangesFor — MSFT only, CALVIN RULING — A); absent ranges
   //   report the module's own "missing REQUIRED analyst-supplied range";
   // - discount rate: D1's own ±0.5pp check points, the terminal return
-  //   moving with the rate as D2 defines it (rate + moat credit);
+  //   moving with the rate as D2′ defines it (the rate itself);
   // - return on new investment: the adopted sheet's own bear / base / bull
   //   values;
-  // - moat: D2's three credits;
+  // - moat: D2′'s three return runways (10 / 15 / 20 years);
   // - terminal growth: no range is approved, so it stays unavailable.
   const sensitivityRanges = sensitivityRangesFor(fixture.ticker);
   const sensitivity: SensitivityResult =
@@ -682,7 +765,6 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
       ? buildSensitivityResult()
       : (() => {
           const baseCaseValue = baseRun.valuation.enterpriseValue;
-          const terminalCredit = d2.terminal.base.minus(rate);
           const at = (overrides: Parameters<typeof valueScenario>[1]): Decimal => {
             const run = valueScenario("base", overrides);
             return run.valuation === null ? new Decimal(NaN) : run.valuation.enterpriseValue;
@@ -700,16 +782,16 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
             rationale: "the adopted sheet's bear / base / bull return on new investment",
           };
           const moatRange: AnalystSuppliedRange = {
-            values: [POLICY.moatCredit.none, POLICY.moatCredit.narrow, POLICY.moatCredit.wide],
-            rationale: "Methodology v2.1 D2: the moat credit for none / narrow / wide",
+            values: [new Decimal(POLICY.returnRunwayYears.none), new Decimal(POLICY.returnRunwayYears.narrow), new Decimal(POLICY.returnRunwayYears.wide)],
+            rationale: "Methodology v3 D2′: the return runway in years for none / narrow / wide",
           };
           const tornado = computeTornado(baseCaseValue, {
             growth: { range: sensitivityRanges?.growth ?? null, valuationFunction: (g) => at({ growth: g }) },
             operatingMargin: { range: sensitivityRanges?.operatingMargin ?? null, valuationFunction: (m) => at({ margin: m }) },
-            discountRate: { range: checkRange, valuationFunction: (r) => at({ rate: r, terminalRoic: r.plus(terminalCredit) }) },
+            discountRate: { range: checkRange, valuationFunction: (r) => at({ rate: r, terminalRoic: r }) },
             terminalGrowth: { range: null, valuationFunction: () => baseCaseValue },
             ronic: { range: ronicRange, valuationFunction: (x) => at({ ronic: x }) },
-            moat: { range: moatRange, valuationFunction: (credit) => at({ terminalRoic: rate.plus(credit) }) },
+            moat: { range: moatRange, valuationFunction: (years) => at({ runwayYears: years.toNumber() }) },
           });
           const twoWayGrowthMargin = computeGrowthMarginTable(
             sensitivityRanges?.growth ?? null,
@@ -863,8 +945,8 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
   }
 
   // Expected return at today's price: the discount rate at which the base
-  // case's own cash flows — terminal return held at the D1 rate plus the
-  // moat credit — are worth exactly the price. Searched above terminal
+  // case's own cash flows — terminal return held at the D1 rate (D2′) — are
+  // worth exactly the price. Searched above terminal
   // growth, where the Gordon terminal value is defined. Only where the base
   // value shown IS the engine's (a typed figure cannot be revalued).
   const revalueBaseCaseAtRate =
@@ -885,12 +967,19 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
 
   // CF-AR5-VERDICT-CONSOLIDATION-01 — the Base at the D1 rate's ±0.5pp check
   // points (Methodology v2.1 D1/D3). The terminal return moves with the rate
-  // as D2 defines it (rate + moat credit), exactly as M14's rate row above
+  // as D2′ defines it (the rate itself), exactly as M14's rate row above
   // revalues it. Only where the Base shown is the engine's own: a typed
   // figure cannot be revalued, and the check never mixes the two.
+  const basePerShareAt = (overrides: ScenarioOverrides): Decimal => {
+    const run = valueScenario("base", overrides);
+    return run.valuation === null
+      ? new Decimal(NaN)
+      : ((perShare(run.valuation.enterpriseValue, fixture.scenarios.base.shareCount) as Decimal | null) ?? new Decimal(NaN));
+  };
+  const engineBaseShown = dynamicScenarioValues !== null && !dynamicScenarioValues.base.isNaN();
   const baseAtCheckRates: { baseAtCheckRates: { lower: Decimal; rate: Decimal; upper: Decimal } | null; baseAtCheckRatesCause: string | null } =
     (() => {
-      if (dynamicScenarioValues === null || dynamicScenarioValues.base.isNaN()) {
+      if (!engineBaseShown) {
         return {
           baseAtCheckRates: null,
           baseAtCheckRatesCause:
@@ -898,18 +987,121 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         };
       }
       if (d2.terminal === null) return { baseAtCheckRates: null, baseAtCheckRatesCause: d2.statement };
-      const terminalCredit = d2.terminal.base.minus(rate);
-      const at = (r: Decimal): Decimal => {
-        const run = valueScenario("base", { rate: r, terminalRoic: r.plus(terminalCredit) });
-        return run.valuation === null
-          ? new Decimal(NaN)
-          : ((perShare(run.valuation.enterpriseValue, fixture.scenarios.base.shareCount) as Decimal | null) ?? new Decimal(NaN));
-      };
+      const at = (r: Decimal): Decimal => basePerShareAt({ rate: r, terminalRoic: r });
       return {
-        baseAtCheckRates: { lower: at(discountRate.checkRates.lower), rate: dynamicScenarioValues.base, upper: at(discountRate.checkRates.upper) },
+        baseAtCheckRates: { lower: at(discountRate.checkRates.lower), rate: dynamicScenarioValues!.base, upper: at(discountRate.checkRates.upper) },
         baseAtCheckRatesCause: null,
       };
     })();
+  // v3 D5 — the same check with growth flat at the drafted rate from year 1
+  // (margin ramp kept), only where the growth ramp moved Base. A BUY this
+  // does not also issue is labelled ramp-dependent (verdict.ts).
+  const flatGrowthBaseAtCheckRates =
+    baseAtCheckRates.baseAtCheckRates !== null && growthAnchor !== null && draftGrowth !== null
+      ? (() => {
+          const at = (r: Decimal): Decimal => basePerShareAt({ rate: r, terminalRoic: r, growth: draftGrowth });
+          return { lower: at(discountRate.checkRates.lower), rate: at(rate), upper: at(discountRate.checkRates.upper) };
+        })()
+      : null;
+
+  // --- Methodology v3 D2.1 / D5 / D6 / D8 — the valuation basis record -------
+  const yearOneFor = (key: keyof ScenarioSet): YearOneFundingResult | null => {
+    const run = key === "base" ? baseRun : valueScenario(key);
+    const f = run.valuation?.yearOneFunding ?? null;
+    if (f === null) return null;
+    return { ...f, perShare: f.shortfall.dividedBy(fixture.scenarios[key].shareCount) };
+  };
+  const baseGrowthPathShown: Decimal[] =
+    draftGrowth === null ? [] : growthAnchor !== null ? buildRampedGrowthPath(growthAnchor, draftGrowth) : buildFixedShapeGrowthPath(draftGrowth);
+  const baseMarginPathShown: Decimal[] =
+    draftMargin === null ? [] : marginAnchor !== null ? buildMarginRampPath(marginAnchor, draftMargin) : Array.from({ length: 10 }, () => draftMargin);
+  // D5 coherence: the model's reinvestment ÷ NOPAT in years 1–5 (growth of
+  // the next year over that year's return on new capital) against the filed
+  // trailing 3-yr actual; a gap above the policy's points is flagged.
+  const reinvestmentCoherence: V3ValuationBasis["reinvestmentCoherence"] = (() => {
+    const ronic = fixture.scenarios.base.returnOnNewInvestment ?? null;
+    if (baseGrowthPathShown.length === 0 || ronic === null || !ronic.greaterThan(0) || d2.terminal === null || d2.runway === null) return null;
+    const ronicPath = buildRonicPath(ronic, d2.terminal.base, d2.runway.base);
+    let sum = new Decimal(0);
+    for (let t = 1; t <= 5; t++) sum = sum.plus(baseGrowthPathShown[t].dividedBy(ronicPath[t - 1]));
+    const model = sum.dividedBy(5);
+    const trailing = v3?.trailingNetReinvestment ?? null;
+    if (trailing === null || !trailing.formed) {
+      const why = trailing === null ? "no filed history on this run" : `not formed from filings (${trailing.missing.join(", ")})`;
+      return { model, actual: null, gap: null, flagged: false, statement: `model reinvestment is ${pct(model)} of NOPAT in years 1–5; the trailing actual is ${why}` };
+    }
+    const gap = model.minus(trailing.ratioToNopat);
+    const flagged = gap.abs().greaterThan(POLICY.reinvestmentCoherenceGapPoints);
+    return {
+      model,
+      actual: trailing.ratioToNopat,
+      gap,
+      flagged,
+      statement:
+        `model reinvestment is ${pct(model)} of NOPAT in years 1–5 against ${pct(trailing.ratioToNopat)} filed in FY${trailing.fromFiscalYear}–FY${trailing.toFiscalYear}` +
+        (flagged ? ` — a gap of ${gap.abs().mul(100).toFixed(1)}pp, above the ${POLICY.reinvestmentCoherenceGapPoints.mul(100).toFixed(0)}pp flag` : ""),
+    };
+  })();
+  // D6 — the single driver the price implies, the others at sheet values.
+  const impliedDrivers: V3ValuationBasis["impliedDrivers"] =
+    engineBaseShown && currentPrice !== null && draftGrowth !== null && draftMargin !== null
+      ? (() => {
+          const anchorText = (a: { value: Decimal | null; basis: string } | undefined, label: string) =>
+            a?.value != null ? `${label} ${pct(a.value)}` : `${label} not filed (${a?.basis ?? "no filed history on this run"})`;
+          const roicLatest = v3?.roic.latest ?? null;
+          const roicInc = v3?.roic.incremental3 ?? null;
+          return {
+            growth: solveImpliedDriver(
+              (g) => basePerShareAt({ growth: g }),
+              currentPrice,
+              [new Decimal("-0.5"), new Decimal("1")],
+              `filed: ${anchorText(v3?.ttmRevenueGrowth, "TTM growth")}, ${anchorText(v3?.revenueCagr3, "3-yr CAGR")}`,
+              "constant growth in years 1–5"
+            ),
+            margin: solveImpliedDriver(
+              (m) => basePerShareAt({ margin: m }),
+              currentPrice,
+              [new Decimal("-1"), new Decimal("0.9")],
+              `filed: ${anchorText(v3?.ttmMargin, "TTM operating margin")}`,
+              "flat operating margin"
+            ),
+            returnOnNewCapital: solveImpliedDriver(
+              (x) => basePerShareAt({ ronic: x }),
+              currentPrice,
+              [new Decimal("0.001"), new Decimal("2")],
+              `filed: latest ROIC incl. goodwill ${roicLatest === null ? "not filed" : `${pct(roicLatest.value)} (FY${roicLatest.fiscalYear})`}, ` +
+                `3-yr incremental ROIC ${roicInc === null ? "not filed" : `${pct(roicInc.value)} (FY${roicInc.fromFiscalYear}–FY${roicInc.toFiscalYear})`}`,
+              "return on new capital in years 1–5"
+            ),
+          };
+        })()
+      : null;
+  const v3Basis: V3ValuationBasis = {
+    tax: v3?.tax ?? null,
+    baseDrivers: {
+      growthPath: baseGrowthPathShown,
+      marginPath: baseMarginPathShown,
+      growthRamped: growthAnchor !== null,
+      marginRamped: marginAnchor !== null,
+      notes: d5Notes,
+    },
+    yearOneFunding: {
+      nopat0,
+      available: availableReinvestment,
+      byScenario: { bear: yearOneFor("bear"), base: yearOneFor("base"), bull: yearOneFor("bull") },
+      label:
+        nopat0 === null
+          ? "year-1 funding not checked: NOPAT over the TTM base cannot be formed on this run (no operating margin for it)"
+          : availableReinvestment === null
+          ? "no filed net reinvestment on this run — the whole year-1 requirement is charged"
+          : availableReinvestment.formed
+            ? `FY${availableReinvestment.fiscalYear} filed net reinvestment (capex − D&A + ΔNWC + acquisitions) funds year-1 growth; any shortfall is charged at the valuation date`
+            : `net reinvestment can't be formed from filings (${availableReinvestment.missing.join(", ")}) — the whole year-1 requirement is charged`,
+    },
+    reinvestmentCoherence,
+    impliedDrivers,
+    dilutionFallback: v3?.dilutionFallback?.label ?? null,
+  };
 
   // A recorded sheet (recordedBundles.ts sets the flag either way) pending
   // adoption never falls back to its typed dollar figures either: they were
@@ -1488,10 +1680,11 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
         stubYears,
       },
     },
-    valuationBasis: { discountRate, d2: d2.public, ...(fixture.sheet === undefined ? {} : { sheet: fixture.sheet }) },
+    valuationBasis: { discountRate, d2: d2.public, ...(fixture.sheet === undefined ? {} : { sheet: fixture.sheet }), v3: v3Basis },
     ...(fixture.verdictJudgements === undefined ? {} : { verdictJudgements: fixture.verdictJudgements }),
     verdictInputs: {
       ...baseAtCheckRates,
+      ...(flatGrowthBaseAtCheckRates === null ? {} : { flatGrowthBaseAtCheckRates }),
       roicFloor:
         fixture.roicHistory == null
           ? { status: "UNAVAILABLE", average: null, years: [], rate, reason: "no return-on-capital history was acquired for this run" }
@@ -1517,15 +1710,24 @@ export const PRICE_NOT_CONFIRMED_CAUSE =
 const SCENARIO_KEYS = ["bear", "base", "bull"] as const;
 
 /**
- * Methodology v2.1 D2 on this sheet: ADOPTED only with a moat class and a
- * return on new investment for every scenario. The terminal return on new
- * capital is the rate plus the moat credit — bear +0, base the class's
- * credit, bull the base credit + 1.5pp.
+ * Methodology v3 D2′ (amends v2.1 D2) on this sheet: ADOPTED only with a moat
+ * class and a return on new investment for every scenario. The terminal
+ * return on new capital is the rate for every class (bull: the rate +
+ * 1.5pp); the moat class sets the runway over which the return on new
+ * capital fades to it — 10 / 15 / 20 years for none / narrow / wide, bear on
+ * the no-moat runway.
  */
 function resolveD2Inputs(
   fixture: CompanyFixture,
   rate: Decimal
-): { status: D2Inputs["status"]; moatClass: MoatClass | null; terminal: Record<keyof ScenarioSet, Decimal> | null; statement: string; public: D2Inputs } {
+): {
+  status: D2Inputs["status"];
+  moatClass: MoatClass | null;
+  terminal: Record<keyof ScenarioSet, Decimal> | null;
+  runway: Record<keyof ScenarioSet, number> | null;
+  statement: string;
+  public: D2Inputs;
+} {
   const moatClass = fixture.moatClass ?? null;
   const missing: string[] = [];
   if (moatClass === null) missing.push("moat class");
@@ -1536,19 +1738,24 @@ function resolveD2Inputs(
   if (missing.length > 0 || moatClass === null) {
     const statement =
       `Pending adoption: this assumption sheet has no ${missing.join(", ")}, so its valuation under the approved rules ` +
-      "(Methodology v2.1 D2 — reinvestment from the return on new investment, terminal return from the moat class) is not " +
+      "(Methodology v3 D2′ — reinvestment from the return on new investment, its runway to the rate from the moat class) is not " +
       "computed. Calvin adopts the sheet with those inputs set — his own, or a cited draft's.";
-    const d2: D2Inputs = { status: "PENDING ADOPTION", missing, moatClass, terminalReturnOnNewCapital: null, statement };
-    return { status: d2.status, moatClass, terminal: null, statement, public: d2 };
+    const d2: D2Inputs = { status: "PENDING ADOPTION", missing, moatClass, terminalReturnOnNewCapital: null, returnRunwayYears: null, statement };
+    return { status: d2.status, moatClass, terminal: null, runway: null, statement, public: d2 };
   }
   const terminal = {
-    bear: terminalReturnOnNewCapital(rate, moatClass, "bear"),
-    base: terminalReturnOnNewCapital(rate, moatClass, "base"),
-    bull: terminalReturnOnNewCapital(rate, moatClass, "bull"),
+    bear: terminalReturnOnNewCapital(rate, "bear"),
+    base: terminalReturnOnNewCapital(rate, "base"),
+    bull: terminalReturnOnNewCapital(rate, "bull"),
   };
-  const credit = `${moatClass} moat — terminal return on new capital is the rate plus ${POLICY.moatCredit[moatClass]
-    .mul(100)
-    .toFixed(1)}pp (bear +0pp; bull +${POLICY.moatCredit[moatClass].plus(POLICY.bullMoatCreditUplift).mul(100).toFixed(1)}pp).`;
+  const runway = {
+    bear: returnRunwayYears(moatClass, "bear"),
+    base: returnRunwayYears(moatClass, "base"),
+    bull: returnRunwayYears(moatClass, "bull"),
+  };
+  const credit =
+    `${moatClass} moat — the return on new capital fades to the rate by year ${runway.base} ` +
+    `(bear by year ${runway.bear}); the terminal return is the rate (bull the rate + ${POLICY.bullTerminalReturnUplift.mul(100).toFixed(1)}pp).`;
   // CF-AR6-ANY-TICKER-DRAFTS-01 — a complete sheet not yet adopted values
   // exactly as an adopted one; only the final verdict waits (verdict.ts).
   // A hand-authored fixture carries no sheet and is read as adopted.
@@ -1556,6 +1763,72 @@ function resolveD2Inputs(
   const statement = draft
     ? `Draft (assumption sheet version ${fixture.sheet!.version}, not yet adopted): ${credit} The valuation is computed from the draft; the final verdict waits for adoption.`
     : `Adopted: ${credit}`;
-  const d2: D2Inputs = { status: draft ? "DRAFT" : "ADOPTED", missing: [], moatClass, terminalReturnOnNewCapital: terminal, statement };
-  return { status: d2.status, moatClass, terminal, statement, public: d2 };
+  const d2: D2Inputs = {
+    status: draft ? "DRAFT" : "ADOPTED",
+    missing: [],
+    moatClass,
+    terminalReturnOnNewCapital: terminal,
+    returnRunwayYears: runway,
+    statement,
+  };
+  return { status: d2.status, moatClass, terminal, runway, statement, public: d2 };
+}
+
+/**
+ * Methodology v3 D6 — the one value of a driver at which `valueAt` equals
+ * `target`, every other driver at its sheet value. A scan over the bracket
+ * finds each crossing; each is bisected. Display only.
+ */
+function solveImpliedDriver(
+  valueAt: (x: Decimal) => Decimal,
+  target: Decimal,
+  bracket: [Decimal, Decimal],
+  history: string,
+  name: string
+): ImpliedDriverLine {
+  const SAMPLES = 48;
+  const ITERATIONS = 48;
+  const [lo, hi] = bracket;
+  const xs = Array.from({ length: SAMPLES + 1 }, (_, i) => lo.plus(hi.minus(lo).mul(i).dividedBy(SAMPLES)));
+  const diffs = xs.map((x) => valueAt(x).minus(target));
+  const roots: Decimal[] = [];
+  for (let i = 1; i < xs.length; i++) {
+    const a = diffs[i - 1];
+    const b = diffs[i];
+    if (a.isNaN() || b.isNaN()) continue;
+    if (a.isZero()) {
+      roots.push(xs[i - 1]);
+      continue;
+    }
+    if (a.mul(b).greaterThan(0)) continue;
+    let l = xs[i - 1];
+    let h = xs[i];
+    let dl = a;
+    for (let k = 0; k < ITERATIONS; k++) {
+      const m = l.plus(h).dividedBy(2);
+      const dm = valueAt(m).minus(target);
+      if (dm.isNaN()) break;
+      if (dl.mul(dm).lessThanOrEqualTo(0)) h = m;
+      else {
+        l = m;
+        dl = dm;
+      }
+    }
+    roots.push(l.plus(h).dividedBy(2));
+  }
+  const range = `${pct(lo)} to ${pct(hi)}`;
+  if (roots.length === 0) {
+    return { state: "NO SOLUTION IN RANGE", value: null, values: [], bracket, history, statement: `no ${name} from ${range} makes Base equal the price; ${history}` };
+  }
+  if (roots.length > 1) {
+    return {
+      state: "NON-UNIQUE",
+      value: null,
+      values: roots,
+      bracket,
+      history,
+      statement: `Base equals the price at more than one value of ${name} (${roots.map(pct).join(", ")}); ${history}`,
+    };
+  }
+  return { state: "SOLVED", value: roots[0], values: roots, bracket, history, statement: `the price implies ${name} of ${pct(roots[0])}; ${history}` };
 }

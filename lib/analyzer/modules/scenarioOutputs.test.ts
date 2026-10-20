@@ -50,7 +50,7 @@ describe("computeScenarioEnterpriseValue", () => {
     const expected = explicit.plus(tv.dividedBy(D("1.1").pow("9.5")));
 
     expect(v.enterpriseValue.toDecimalPlaces(8).toString()).toBe(expected.toDecimalPlaces(8).toString());
-    expect(v.year10Fcf.toDecimalPlaces(10).toString()).toBe(fcf10.toDecimalPlaces(10).toString());
+    expect(v.finalYearFcf.toDecimalPlaces(10).toString()).toBe(fcf10.toDecimalPlaces(10).toString());
   });
 
   it("accepts a broadcast constant or an explicit per-year path for margin equivalently", () => {

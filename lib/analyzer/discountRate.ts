@@ -108,15 +108,24 @@ export function formatRate(rate: Decimal): string {
 }
 
 /**
- * Methodology v2.1 D2 — the terminal return on new capital after year 10:
- * the rate plus the moat credit (+0 / +1 / +3pp for none / narrow / wide).
- * Bear takes +0 whatever the class; bull takes the base credit + 1.5pp.
- * With no moat input the credit is +0 — the rate (DO 3). A recorded sheet
- * without a moat class is still pending adoption (assemble.ts
- * resolveD2Inputs), so that default never values a sheet on its own.
+ * Methodology v3 D2′ (amends v2.1 D2) — the terminal return on new capital is
+ * the rate for every moat class; Bull takes the rate + 1.5pp. The moat class
+ * no longer sets a permanent credit: it sets how long the return on new
+ * capital takes to reach the rate (`returnRunwayYears`).
  */
-export function terminalReturnOnNewCapital(rate: Decimal, moatClass: MoatClass | null, scenario: "bear" | "base" | "bull"): Decimal {
-  if (scenario === "bear") return rate;
-  const baseCredit = moatClass === null ? new Decimal(0) : POLICY.moatCredit[moatClass];
-  return rate.plus(baseCredit).plus(scenario === "bull" ? POLICY.bullMoatCreditUplift : 0);
+export function terminalReturnOnNewCapital(rate: Decimal, scenario: "bear" | "base" | "bull"): Decimal {
+  return scenario === "bull" ? rate.plus(POLICY.bullTerminalReturnUplift) : rate;
+}
+
+/**
+ * Methodology v3 D2′ — the year the return on new capital reaches the
+ * terminal return: 10 / 15 / 20 for none / narrow / wide moat. Bear uses the
+ * no-moat runway whatever the class. With no moat input the runway is ten
+ * years; a recorded sheet without a moat class is still pending adoption
+ * (assemble.ts resolveD2Inputs), so that default never values a sheet on its
+ * own.
+ */
+export function returnRunwayYears(moatClass: MoatClass | null, scenario: "bear" | "base" | "bull"): number {
+  if (scenario === "bear" || moatClass === null) return POLICY.returnRunwayYears.none;
+  return POLICY.returnRunwayYears[moatClass];
 }

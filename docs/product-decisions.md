@@ -111,7 +111,14 @@ update, not a semantic conflict.
     The moat class (none / narrow / wide) is Calvin's per-company judgement
     in the assumption sheet; MSFT and NVDA re-adopt once under item 30.
     Finance semantics (reinvestment formula, timing, moat credit):
-    Methodology v2.1, D2.
+    Methodology v2.1, D2. **Amended 20 Oct 2026** (Calvin's approval of
+    Methodology v3; `CF-METHODOLOGY-V3-IMPLEMENT-01`,
+    [#499](https://github.com/calyeap/Cal-Finance/issues/499)): the moat
+    class now sets how long returns on new capital take to reach the rate
+    (10 / 15 / 20 years), not a permanent credit; year-1 growth is funded,
+    Base ramps from the filed TTM anchors, and the price-implied single
+    driver is shown. Finance semantics: Methodology v3 (D2′, D2.1, D5, D6,
+    D8).
 28. **Analyzer Reset D3 — verdict mechanics** (same authority as item 26).
     V1 (Methodology) is the only verdict rule; CHEAP/FAIR/EXPENSIVE labels
     are removed from the product, and items 22–24 are retired. Routing: when all

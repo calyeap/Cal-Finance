@@ -3,7 +3,7 @@ import { POLICY } from "../policy";
 import { buildFixedShapeGrowthPath } from "../growthPath";
 import { combineProvenance } from "../provenance";
 import { computedValue, suppressedValue } from "../figures";
-import { computeScenarioValuation } from "./scenarioOutputs";
+import { computeScenarioValuation, type ScenarioValuationOptions, type YearOneFundingInput } from "./scenarioOutputs";
 import type { Figure, ReverseDcfSolve, SourcedValue } from "../types";
 
 // M7 — the reverse DCF (§7.2), as amended by AR0-2 (frozen spec §14.9,
@@ -45,6 +45,12 @@ export interface ReverseDcfHeldDrivers {
   operatingMargin: Decimal;
   returnOnNewInvestment: Decimal;
   terminalReturnOnNewCapital: Decimal;
+  // CF-METHODOLOGY-V3-IMPLEMENT-01 — the Base valuation's own v3 shape, held
+  // while growth is solved: the D5 margin path (else the flat margin), the
+  // D2′ return runway (else 10 years) and the D2.1 year-1 funding charge.
+  marginPath?: Decimal[];
+  runwayYears?: number;
+  yearOne?: YearOneFundingInput | null;
 }
 
 export interface ReverseDcfInput {
@@ -93,7 +99,9 @@ export function solveReverseDcf(input: ReverseDcfInput): ReverseDcfSolve {
       baseRevenue.value,
       input.nopatTaxRate as Decimal,
       POLICY.terminalGrowth,
-      input.stubYears ?? new Decimal(0)
+      input.stubYears ?? new Decimal(0),
+      { runwayYears: held.runwayYears, yearOne: held.yearOne ?? null },
+      held.marginPath
     );
   const provenance = combineProvenance(baseRevenue.provenance, target.provenance);
 
@@ -143,18 +151,21 @@ export function projectReverseDcfValue(
   baseRevenue: Decimal,
   nopatTaxRate: Decimal,
   terminalGrowth: Decimal = POLICY.terminalGrowth,
-  stubYears: Decimal = new Decimal(0)
+  stubYears: Decimal = new Decimal(0),
+  options: ScenarioValuationOptions = {},
+  marginPath?: Decimal[]
 ): ReverseDcfProjection {
   const valuation = computeScenarioValuation(
     baseRevenue,
     buildFixedShapeGrowthPath(growth, terminalGrowth),
-    margin,
+    marginPath ?? margin,
     returnOnNewInvestment,
     terminalReturnOnNewCapital,
     rate,
     nopatTaxRate,
     terminalGrowth,
-    stubYears
+    stubYears,
+    options
   );
   const tenYearCagr = valuation.year10Revenue.dividedBy(baseRevenue).pow(new Decimal(1).dividedBy(10)).minus(1);
   return {

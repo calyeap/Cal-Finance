@@ -823,7 +823,7 @@ const TORNADO_WORDS: Record<TornadoRowResult["driver"], string> = {
   discountRate: "Discount rate (the ±0.5pp check)",
   terminalGrowth: "Terminal growth",
   ronic: "Return on new investment (bear / base / bull)",
-  moat: "Moat credit (none / narrow / wide)",
+  moat: "Return runway (none / narrow / wide: 10 / 15 / 20 years)",
 };
 
 function usdCompact(value: Decimal): string {

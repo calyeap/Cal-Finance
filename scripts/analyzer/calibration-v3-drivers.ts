@@ -98,7 +98,7 @@ export function valueEv(c: Company, d: Drivers, tax: Decimal, rate: Decimal, r: 
 export function scenarioRow(design: (typeof DESIGNS)[number], cls: MoatClass, s: Scenario): Row {
   if (s === "bear") return { ...design.rows.none, S: new Decimal(0) };
   const r = design.rows[cls];
-  return s === "bull" ? { ...r, S: r.S.plus(POLICY.bullMoatCreditUplift) } : r;
+  return s === "bull" ? { ...r, S: r.S.plus(POLICY.bullTerminalReturnUplift) } : r;
 }
 
 export function value(c: Company, drivers: Record<Scenario, Drivers>, tax: Decimal, design: (typeof DESIGNS)[number]) {

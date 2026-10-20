@@ -5,7 +5,9 @@ import { secClientFromEnv, cikForTicker } from "../../lib/analyzer/acquisition/s
 import {
   TAG_MAP,
   CANDIDATE_NON_OPERATING_INVESTMENT_TAGS,
+  V3_SERIES_INPUTS,
 } from "../../lib/analyzer/acquisition/tagMap";
+import { DERIVATION_INPUT_TAGS } from "../../lib/analyzer/acquisition/derivedFacts";
 import { INSURANCE_PREMIUM_OR_RESERVE_TAGS } from "../../lib/analyzer/acquisition/gate0Inputs";
 import type { CompanyFactsDocument } from "../../lib/analyzer/acquisition/secClient";
 
@@ -68,6 +70,12 @@ function wantedTags(): Set<string> {
   }
   for (const ref of CANDIDATE_NON_OPERATING_INVESTMENT_TAGS) wanted.add(`${ref.ns}:${ref.tag}`);
   for (const ref of EXTRA_TAGS) wanted.add(`${ref.ns}:${ref.tag}`);
+  // -10-5: Methodology v3's series inputs and the operating-income derivations' components.
+  const { incomeTax, pretaxIncome, acquisitions, workingCapitalLines } = V3_SERIES_INPUTS;
+  for (const c of [...incomeTax, ...pretaxIncome, ...acquisitions]) {
+    for (const ref of [c.ref, ...(c.plus ?? [])]) wanted.add(`${ref.ns}:${ref.tag}`);
+  }
+  for (const ref of [...workingCapitalLines.asset, ...workingCapitalLines.liability, ...DERIVATION_INPUT_TAGS]) wanted.add(`${ref.ns}:${ref.tag}`);
   return wanted;
 }
 

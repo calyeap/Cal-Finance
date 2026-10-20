@@ -1,14 +1,16 @@
 import Decimal from "decimal.js";
+import { US_FEDERAL_STATUTORY_TAX_RATE } from "../policy";
 import type { AcquiredCompany } from "../acquisition/provider";
 import type { CompanyFactsDocument, SecClient, SubmissionsDocument } from "../acquisition/secClient";
 import { filingDocumentUrl } from "../acquisition/secClient";
 import { annualSeries, instantAnnualSeries, quarterlySeriesWithDerivedQ4, type AnnualSeries } from "../acquisition/history";
 import { TAG_MAP, type TagCandidate } from "../acquisition/tagMap";
 import { investedCapitalAt } from "../acquisition/companyInputs";
+import { resolveTax } from "../acquisition/v3Inputs";
 import { htmlToPlainText } from "../acquisition/item1Extraction";
 import { isMaterialFilingForm } from "../materialFilings";
 import type { SheetBasis, SheetSource } from "./sheet";
-import type { FinancialHistory, FinancialHistoryLine, FiledFigure } from "../types";
+import type { FinancialHistory, FinancialHistoryLine, FiledFigure, TaxResolution } from "../types";
 
 // ---------------------------------------------------------------------------
 // CF-AR6-ANY-TICKER-DRAFTS-01 — the research a draft is written from
@@ -39,7 +41,7 @@ import type { FinancialHistory, FinancialHistoryLine, FiledFigure } from "../typ
 // ---------------------------------------------------------------------------
 
 /** The general statutory rate the history's NOPAT is stated at — the same reference the drafting call cites. */
-export const STATUTORY_TAX_RATE = new Decimal("0.21");
+export const STATUTORY_TAX_RATE = US_FEDERAL_STATUTORY_TAX_RATE;
 
 const HISTORY_YEARS = 10;
 const RECENT_EARNINGS_RELEASES = 2;
@@ -80,6 +82,10 @@ export interface HistoryMeasures {
   roicRange: { low: Decimal; high: Decimal } | null;
   /** ΔNOPAT ÷ Δinvested capital over the latest five years, where both moved. */
   incrementalReturn: Decimal | null;
+  /** Methodology v3 D5's anchor: ΔNOPAT ÷ Δinvested capital over the latest three years. */
+  incrementalReturn3: Decimal | null;
+  /** Methodology v3 D5 — the NOPAT tax rate: the filed 3-yr average, else statutory (labelled). */
+  tax: TaxResolution;
   /** Median (capex − D&A) ÷ revenue — net reinvestment share. */
   medianNetReinvestmentShare: Decimal | null;
   latestQuarter: LatestQuarter | null;
@@ -151,6 +157,9 @@ export function historyFrom(doc: CompanyFactsDocument): { measures: HistoryMeasu
   const leases = instantAnnualSeries(doc, candidatesFor("finance-lease-liabilities"));
   const cash = instantAnnualSeries(doc, candidatesFor("cash-and-marketable-debt-securities"));
   const backlog = seriesMap(instantAnnualSeries(doc, BACKLOG_CANDIDATES));
+  // v3 D5: NOPAT at the filed 3-yr average effective rate, the rate the
+  // engine values at (statutory only where filings support no average).
+  const tax = resolveTax(doc, null);
 
   const latestYear = Math.max(...[...revenue.keys(), ...operatingIncome.keys()], -Infinity);
   const years: HistoryYear[] = [];
@@ -166,7 +175,7 @@ export function historyFrom(doc: CompanyFactsDocument): { measures: HistoryMeasu
         depreciationAndAmortisation: da.get(fy)?.value ?? null,
         operatingCashFlow: ocf.get(fy)?.value ?? null,
         stockBasedCompensation: sbc.get(fy)?.value ?? null,
-        nopat: oi === null ? null : oi.mul(new Decimal(1).minus(STATUTORY_TAX_RATE)),
+        nopat: oi === null ? null : oi.mul(new Decimal(1).minus(tax.rate)),
         investedCapital: ic === null ? null : new Decimal(ic),
         backlog: backlog.get(fy)?.value ?? null,
       };
@@ -199,11 +208,14 @@ export function historyFrom(doc: CompanyFactsDocument): { measures: HistoryMeasu
   const withReturns = years.filter((y) => y.nopat !== null && y.investedCapital !== null);
   let incrementalReturn: Decimal | null = null;
   const to = withReturns[withReturns.length - 1];
-  const from = to === undefined ? undefined : withReturns.find((y) => y.fiscalYear === to.fiscalYear - 5);
-  if (to !== undefined && from !== undefined) {
+  const incrementalOver = (span: number): Decimal | null => {
+    const from = to === undefined ? undefined : withReturns.find((y) => y.fiscalYear === to.fiscalYear - span);
+    if (to === undefined || from === undefined) return null;
     const deltaIc = to.investedCapital!.minus(from.investedCapital!);
-    if (deltaIc.greaterThan(0)) incrementalReturn = to.nopat!.minus(from.nopat!).dividedBy(deltaIc);
-  }
+    return deltaIc.greaterThan(0) ? to.nopat!.minus(from.nopat!).dividedBy(deltaIc) : null;
+  };
+  incrementalReturn = incrementalOver(5);
+  const incrementalReturn3 = incrementalOver(3);
 
   const netShares = years
     .filter((y) => y.capex !== null && y.depreciationAndAmortisation !== null && y.revenue !== null && y.revenue.greaterThan(0))
@@ -239,6 +251,8 @@ export function historyFrom(doc: CompanyFactsDocument): { measures: HistoryMeasu
       operatingMarginRange: range(margins),
       roicRange: range(roics),
       incrementalReturn,
+      incrementalReturn3,
+      tax,
       medianNetReinvestmentShare: median(netShares),
       latestQuarter,
     },
@@ -341,11 +355,19 @@ export function historySources(measures: HistoryMeasures, accessions: Record<str
     ),
     historySource(
       "H:returns",
-      `NOPAT (operating income at the ${pct(STATUTORY_TAX_RATE)} statutory rate), invested capital and return on invested capital, by fiscal year`,
+      `NOPAT (operating income at the ${pct(measures.tax.rate)} ${measures.tax.basis === "STATUTORY" ? "statutory" : "filed 3-yr average"} tax rate), invested capital (goodwill included) and return on invested capital, by fiscal year`,
       accessions.returns,
       `${line(y, (r) => `NOPAT ${millions(r.nopat)}, invested capital ${millions(r.investedCapital)}, ROIC ${pct(r.nopat !== null && r.investedCapital !== null && r.investedCapital.greaterThan(0) ? r.nopat.dividedBy(r.investedCapital) : null)}`)}. ROIC ranged ${
         measures.roicRange === null ? "n/a" : `${pct(measures.roicRange.low)} to ${pct(measures.roicRange.high)}`
-      }; incremental return on new capital over the latest five years (ΔNOPAT ÷ Δinvested capital) ${pct(measures.incrementalReturn)}.`
+      }; incremental return on new capital (ΔNOPAT ÷ Δinvested capital) over the latest three years ${pct(measures.incrementalReturn3)}, five years ${pct(measures.incrementalReturn)}.`
+    ),
+    historySource(
+      "H:tax",
+      "Income tax expense, pre-tax income and effective tax rate, by fiscal year",
+      null,
+      `${measures.tax.years.length === 0 ? "No income-tax and pre-tax income history is filed" : measures.tax.years
+        .map((t) => `FY${t.fiscalYear} tax ${millions(t.incomeTax)} on pre-tax ${millions(t.pretaxIncome)} (${pct(t.rate)}${t.excluded === null ? "" : `, excluded: ${t.excluded}`})`)
+        .join("; ")}. ${measures.tax.label}.`
     ),
   ];
   if (y.some((r) => r.backlog !== null)) {

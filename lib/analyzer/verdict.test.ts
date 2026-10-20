@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import Decimal from "decimal.js";
-import { deriveVerdict, BUY_CANDIDATE_LABEL, type VerdictResult } from "./verdict";
+import { deriveVerdict, BUY_CANDIDATE_LABEL, RAMP_DEPENDENT_LABEL, type VerdictResult } from "./verdict";
 import { assembleAnalysisResult } from "./assemble";
 import { MSFT_FIXTURE } from "./fixtures/msft";
 import { OKLO_FIXTURE } from "./fixtures/oklo";
@@ -53,6 +53,8 @@ interface Case {
   moat?: MoatClass | null;
   roic?: RoicFloorResult;
   judgements?: Partial<VerdictJudgements>;
+  /** v3 D5 — price ÷ Base with growth flat at the drafted rate, where the growth ramp moved Base. */
+  flatRatios?: [string, string, string];
 }
 
 function resultFor(c: Case): AnalysisResult {
@@ -63,7 +65,14 @@ function resultFor(c: Case): AnalysisResult {
     price: { ...ENGINE.price, value: PRICE },
     scenarioOutputs: { ...ENGINE.scenarioOutputs, values: { ...ENGINE.scenarioOutputs.values, base: baseAt.rate } },
     valuationBasis: { ...ENGINE.valuationBasis!, d2: { ...ENGINE.valuationBasis!.d2, moatClass: c.moat === undefined ? "narrow" : c.moat } },
-    verdictInputs: { baseAtCheckRates: baseAt, baseAtCheckRatesCause: null, roicFloor: c.roic ?? ROIC_PASS },
+    verdictInputs: {
+      baseAtCheckRates: baseAt,
+      baseAtCheckRatesCause: null,
+      roicFloor: c.roic ?? ROIC_PASS,
+      ...(c.flatRatios === undefined
+        ? {}
+        : { flatGrowthBaseAtCheckRates: { lower: base(c.flatRatios[0]), rate: base(c.flatRatios[1]), upper: base(c.flatRatios[2]) } }),
+    },
     verdictJudgements: { ...NO_VERDICT_JUDGEMENTS, ...c.judgements },
   };
 }
@@ -324,5 +333,34 @@ describe("deriveVerdict — templated reasons from computed numbers", () => {
   it("the same result always gives the same verdict (AR0-5)", () => {
     const c: Case = { ratios: CLOSE_HOLD_OR_SELL, judgements: QUALITY_MET };
     expect(deriveVerdict(resultFor(c))).toEqual(deriveVerdict(resultFor(c)));
+  });
+});
+
+// CF-METHODOLOGY-V3-IMPLEMENT-01 — Methodology v3 D5's "ramp-dependent" label.
+describe("ramp-dependent — a BUY the same reading would not give with Base growth flat at the drafted rate", () => {
+  it("labels an automatic BUY whose flat-growth Base is HOLD; the status stays BUY", () => {
+    const v = verdictFor({ ratios: AUTO_BUY, flatRatios: AUTO_HOLD, judgements: QUALITY_MET });
+    expect(v.status).toBe("BUY");
+    expect(v.rampDependent).toMatch(new RegExp(`^${RAMP_DEPENDENT_LABEL}:`));
+    expect(v.reason).toContain(RAMP_DEPENDENT_LABEL);
+  });
+
+  it("labels a BUY candidate too", () => {
+    const v = verdictFor({ ratios: AUTO_BUY, flatRatios: AUTO_SELL });
+    expect(v.state).toBe("BUY CANDIDATE");
+    expect(v.rampDependent).toMatch(new RegExp(`^${RAMP_DEPENDENT_LABEL}:`));
+  });
+
+  it("no label where flat growth also gives BUY, where no ramp moved Base, or on a HOLD", () => {
+    expect(verdictFor({ ratios: AUTO_BUY, flatRatios: AUTO_BUY, judgements: QUALITY_MET }).rampDependent).toBeUndefined();
+    expect(verdictFor({ ratios: AUTO_BUY, judgements: QUALITY_MET }).rampDependent).toBeUndefined();
+    expect(verdictFor({ ratios: AUTO_HOLD, flatRatios: AUTO_SELL }).rampDependent).toBeUndefined();
+  });
+
+  it("reads an uncertainty answer the same way: flat growth must still be BUY at that level", () => {
+    const low = { ...QUALITY_MET, uncertainty: rec("Low" as const) };
+    const v = verdictFor({ ratios: QUESTION_BUY_OR_HOLD, flatRatios: ["0.95", "0.95", "0.95"], judgements: low });
+    expect(v.status).toBe("BUY");
+    expect(v.rampDependent).toMatch(new RegExp(`^${RAMP_DEPENDENT_LABEL}:`));
   });
 });

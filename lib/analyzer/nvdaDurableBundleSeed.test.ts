@@ -80,7 +80,9 @@ describe("NVDA's durably recorded scenario bundle (migration 008)", () => {
     const ev = result.diagnostics.enterpriseValue;
     expect(ev.suppressed).toBe(true);
     if (ev.suppressed) {
-      expect(ev.cause).toContain("treasuryMethodDilution");
+      // Methodology v3 D8 (#499) now fills treasuryMethodDilution from the
+      // same 10-K; financeLeaseLiabilities stays a gap.
+      expect(ev.cause).not.toContain("treasuryMethodDilution");
       expect(ev.cause).toContain("financeLeaseLiabilities");
     }
     expect(result.gates.leverage.result).toBe("LEVERAGE UNSUPPORTED IN v1");

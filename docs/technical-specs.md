@@ -8,8 +8,8 @@ This file is the repo-owned authority for **which implementation contracts are c
 
 - **Artefact:** [`docs/frozen/calboard-stock-analyzer-v1-spec.md`](frozen/calboard-stock-analyzer-v1-spec.md)
 - **Status:** current approved implementation contract
-- **Effective revision:** amendment AR0 (§14.9, `CF-AR0-SPEC-AMEND-01`) — consequences of Calvin's approved Analyzer Reset decisions D1–D6, 17 Oct 2026
-- **SHA-256:** `cc803bffb05b3d323fbb2b859f3ba269502e630b9f19ab098bdb5f6be00de5c6`
+- **Effective revision:** amendment V3 (§14.10, `CF-METHODOLOGY-V3-IMPLEMENT-01`) — consequences of Calvin's approved Methodology v3 amendments D2′, D2.1, D5, D6, D8, 20 Oct 2026; on amendment AR0 (§14.9, `CF-AR0-SPEC-AMEND-01`), 17 Oct 2026
+- **SHA-256:** `eb0021fa76ac1581dab33e947449a2c0fcf25967b6a948d77b36f5d99e692c57`
 - **Integrity source:** `scripts/evidence/config.ts` (`FROZEN_HASHES`) and the bidirectional frozen-artefact gate
 
 This contract remains subordinate on semantic conflicts to the current Product Decisions and Cal Finance Methodology. A later explicit Calvin ruling or current semantic authority wins; this file selects the implementation contract, it does not create product or finance semantics.

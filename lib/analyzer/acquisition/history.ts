@@ -134,6 +134,29 @@ export function annualSeries(
 }
 
 /**
+ * `annualSeries` with each winning candidate's `plus` components summed at
+ * every observation — the duration twin of `instantAnnualSeries`. For flows
+ * whose mapping assembles a total from parts (Microsoft's depreciation plus
+ * amortisation; Nvidia's two business-acquisition lines). A component absent
+ * at one period contributes nothing to that period only, exactly as
+ * `resolveEntry` sums the current fact (CF-METHODOLOGY-V3-IMPLEMENT-01).
+ */
+export function annualSeriesWithComponents(
+  doc: CompanyFactsDocument,
+  candidates: readonly TagCandidate[]
+): AnnualSeries | null {
+  return buildAnnualSeries(
+    doc,
+    candidates,
+    (row) => {
+      const d = days(row);
+      return d !== null && d >= ANNUAL_DAYS.min && d <= ANNUAL_DAYS.max;
+    },
+    true
+  );
+}
+
+/**
  * The instant counterpart to `annualSeries` — a balance-sheet position's
  * value at each fiscal year-end, rather than a duration's total over the
  * year. Needed for RONIC's invested-capital denominator (`CALVIN RULING —

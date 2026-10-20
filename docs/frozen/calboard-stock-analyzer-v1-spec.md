@@ -4,6 +4,8 @@
 
 **Amendment AR0 — 17 October 2026 (Analyzer Reset).** Records the consequences of Calvin's approved decisions D1–D6 for this contract: discount rate, one reverse-DCF solve, terminal returns, the verdict, judgements as versioned inputs, scenario authorship and recent analyses. See §14.9; finance semantics live in Cal Finance Methodology v2.1.
 
+**Amendment V3 — 20 October 2026 (Methodology v3).** Records the consequences of Calvin's approved Methodology v3 amendments D2′, D2.1, D5, D6 and D8 for this contract: the return-on-new-capital runway, year-1 growth funding, Base driver construction, the implied-driver display and the dilution fallback. See §14.10.
+
 **Amendment M7 — APPROVED by Command Center, 7 September 2026.** This document carries the M7 amendment: eighteen changes across this spec, the interaction design and `mock-human-steps.html`, of which twelve land here. The amendment implements **Calvin's recorded override of 6 September 2026** on the no-verdict boundary, together with eleven further changes to Step 1, Step 2, the step numbering, the trust vocabulary and the page-one contract. **§14 is the amendment record.** It lists every change, every reading the amendment had to make, and the follow-ups it deliberately did not fix. **This amended text is the operative contract.** Command Center approved the amendment on 6 September 2026 and recorded it on the Product Decision Log, but the approval was not written into the artefacts until 7 September. For a day both documents declared themselves not in force while every dispatch assumed they were. Amendments M7-b and M7-c were applied during that window; both stand, and both are recorded in §14.
 
 **Date:** 5 September 2026. Amendment M7 drafted 6 September 2026.
@@ -1712,6 +1714,31 @@ The other seven frozen artefacts (`calfinance-methodology-v2.md`, `calboard-valu
 **Reading AR0-b — amended by marker, not rewritten.** Each touched clause carries a short marker pointing here; the frozen text beside it is otherwise left as written, so the diff stays reviewable. Where a marker and the old text differ, the marker and this record govern.
 
 **Not in this amendment.** No §9.3 or §9.4 vocabulary change. No change to the V1 bands or cut-points, which live in the Methodology; the rule values AR0-1 and AR0-3 carry are the Methodology's, restated. M9, M10 (its ±1% display sensitivity, separate from AR0-1's ±0.5pp verdict check), M11, M13 and the required-versus-achieved comparator are unchanged and stay. No design-document or mock change. No methodology-document change — the repo snapshot `calfinance-methodology-v2.md` predates v2.1, as `docs/technical-specs.md` records. No application code. A later milestone that needs this spec changed beyond these rows does so by its own amendment, never by reading one into this record.
+
+### 14.10 Amendment V3 — Methodology v3, 20 October 2026
+
+**One file.** Drafted 20 October 2026 against this artefact, whose SHA-256 was verified byte-exact before any edit:
+
+| File | SHA-256 verified before edit |
+|---|---|
+| `calboard-stock-analyzer-v1-spec.md` | `cc803bffb05b3d323fbb2b859f3ba269502e630b9f19ab098bdb5f6be00de5c6` |
+
+The other seven frozen artefacts are **untouched**.
+
+**The authority.** Calvin approved the Cal Finance Methodology "v3 amendments" (D2′, D2.1, D5, D6, D8) on 20 October 2026, on the calibration evidence of issues #495, #496 and #498. This amendment is `CF-METHODOLOGY-V3-IMPLEMENT-01`, issue #499, built in the same change. **It records their consequences for this contract; it decides nothing.** Where this record and the Methodology differ, the Methodology governs.
+
+| # | Change | Authority | Sections touched |
+|---|---|---|---|
+| V3-1 | **Runway, not credit.** AR0-3's terminal return "the rate plus the D2 moat credit" is replaced: growth fades to terminal growth by year 10 for every company; the return on new capital fades from year 5 to the rate by year 10 / 15 / 20 (none / narrow / wide); the terminal return is the rate for every class (bull: the rate + 1.5pp); bear uses the no-moat runway. The explicit period runs to the last fade year and the terminal value sits at that year − 0.5. M14's moat row varies the runway | D2′ | §7.1, §7.2 M8, M9 (final-year operating income), M14, §14.9 AR0-3 |
+| V3-2 | **Year-1 funding.** Each scenario is charged, at the valuation date, max(0, NOPAT₀ × g₁ ÷ RONIC₁ − last fiscal year's filed net reinvestment), net reinvestment being capex − D&A + ΔNWC + acquisitions from the cash-flow statement. Where it cannot be formed from filings, the whole requirement is charged and labelled | D2.1 | §7.2 M15 |
+| V3-3 | **Base driver construction.** Base only: margin starts at the TTM margin and moves linearly to the drafted year-5 margin, then holds; growth starts at the lower of TTM growth and the 3-yr CAGR and moves linearly to the drafted year-5 rate (a D1-cyclical company uses the drafted rate from year 1). A missing anchor holds the drafted value from year 1, labelled. The NOPAT tax rate is the 3-yr average effective rate from filings (loss years and rates outside 0–50% excluded; fewer than two normal years → statutory, labelled; an adoption override wins). A BUY that flat growth at the drafted rate would not give is labelled "ramp-dependent" — a label, not a different verdict. The report shows model reinvestment ÷ NOPAT in years 1–5 against the trailing 3-yr actual and flags a gap above 15pp. The drafting call's rules ask for year-5 values and a return-on-new-capital anchor stating latest ROIC incl. goodwill and the 3-yr incremental ROIC | D5 | §2 Step 7, §7.1, §7.2 M15, §8.2 drafting call, §10.2 |
+| V3-4 | **Implied-driver line.** Display only: the one growth (years 1–5), flat margin or return on new capital (years 1–5) at which Base equals the price, the others at sheet values, shown against filed history — or the solver state (no solution in range, non-unique) | D6 | §10.2 E |
+| V3-5 | **Dilution fallback.** Where the incremental-shares tag is absent, treasury-method dilution is diluted − basic weighted-average shares from the same 10-K, only where that filing shows no convertible debt; labelled; otherwise the input stays missing and M1 is INCOMPLETE | D8 | §4, §7.2 M1 |
+| V3-6 | This record, the header line | — | header, §14.10 |
+
+**Build defects routed with it** (not methodology): operating income for filers that tag none (Eli Lilly, Nucor) is a derived element from the same filing's own lines (`cf-derived`, TAG_MAPPING_VERSION `calboard-secmap-2026-10-5`, `docs/tag-mapping-version-review.md` §13); Eli Lilly's capex tag is added; the research pack carries the tax series.
+
+**Not in this amendment.** No change to the D1 rate, D3, D4 or the V1 bands. No vocabulary change. No design-document or mock change. The repo Methodology snapshot is not edited.
 
 ---
 ## APPENDIX — TRACEABILITY

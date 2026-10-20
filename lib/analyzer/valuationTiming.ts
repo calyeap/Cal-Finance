@@ -23,7 +23,10 @@ import Decimal from "decimal.js";
 // reader can see it.
 
 export const MID_YEAR_OFFSET = new Decimal("0.5");
-export const TERMINAL_DISCOUNT_YEARS = new Decimal("9.5");
+// Methodology v3 D2′: the terminal value is taken from (last fade year − 0.5)
+// — 9.5 years for a ten-year horizon, 14.5 / 19.5 for the narrow / wide
+// return runways. The ten-year default is v2.1's timing, unchanged.
+export const DEFAULT_HORIZON_YEARS = 10;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const DAYS_PER_YEAR = new Decimal("365.25");
@@ -33,9 +36,9 @@ export function explicitYearDiscountTime(t: number, stubYears: Decimal): Decimal
   return new Decimal(t).minus(MID_YEAR_OFFSET).minus(stubYears);
 }
 
-/** Discount time, in years from the price date, of the terminal value. */
-export function terminalDiscountTime(stubYears: Decimal): Decimal {
-  return TERMINAL_DISCOUNT_YEARS.minus(stubYears);
+/** Discount time, in years from the price date, of the terminal value at the end of a `horizonYears` explicit period. */
+export function terminalDiscountTime(stubYears: Decimal, horizonYears: number = DEFAULT_HORIZON_YEARS): Decimal {
+  return new Decimal(horizonYears).minus(MID_YEAR_OFFSET).minus(stubYears);
 }
 
 /**

@@ -79,7 +79,16 @@ export interface VerdictResult {
    * (product-decisions item 30). Absent otherwise.
    */
   draftZone?: string | null;
+  /**
+   * CF-METHODOLOGY-V3-IMPLEMENT-01 — Methodology v3 D5: on a BUY (issued or
+   * candidate) that the same check would not give with Base growth flat at
+   * the drafted rate from year 1, the label saying so. A label, not a
+   * different verdict. Absent otherwise.
+   */
+  rampDependent?: string | null;
 }
+
+export const RAMP_DEPENDENT_LABEL = "Ramp-dependent";
 
 /** A verdict as a saved version records it (snapshotStore.ts). */
 export type StoredVerdict = Pick<VerdictResult, "status" | "state" | "reason">;
@@ -292,16 +301,51 @@ function deriveVerdictOnSheet(result: AnalysisResult): VerdictResult {
     ...common,
   };
 
+  // v3 D5 — would the same reading give BUY with Base growth flat at the
+  // drafted rate? Read the way the BUY itself was: all nine points for an
+  // automatic BUY, the three rates at the recorded level for an uncertainty
+  // answer, any point for a close call. Null where the growth ramp did not
+  // move Base (no flat check is recorded).
+  function rampDependence(basis: VerdictBasis): string | null {
+    const flat = inputs?.flatGrowthBaseAtCheckRates ?? null;
+    if (flat === null || flat === undefined) return null;
+    const label = (detail: string) =>
+      `${RAMP_DEPENDENT_LABEL}: with Base growth flat at the drafted rate from year 1, Base is ${CHECK_RATES.map((r) => money(flat[r])).join(" / ")} — ${detail}.`;
+    if (CHECK_RATES.some((r) => !flat[r].isFinite() || flat[r].lessThanOrEqualTo(0))) return label("not a positive value at every check rate");
+    const flatCheck = evaluateVerdictCheck({ price, baseAt: flat });
+    const cells = CHECK_RATES.flatMap((r) => UNCERTAINTY_LEVELS.map((u) => flatCheck.grid[r][u]));
+    const level = basis === "YOUR UNCERTAINTY ANSWER" ? judgements.uncertainty?.answer : undefined;
+    const buys =
+      basis === "ALL NINE CHECKS AGREE"
+        ? cells.every((z) => z === "BUY")
+        : level !== undefined && level !== NOT_SURE
+          ? CHECK_RATES.every((r) => flatCheck.grid[r][level] === "BUY")
+          : cells.includes("BUY");
+    return buys ? null : label(`${checkLine(price, flatCheck, flat, rates)}, which is not BUY read the same way`);
+  }
+
   // 5 — HOLD and SELL issue; a BUY zone needs D4's bar.
   function resolveZone(zone: V1Zone, basis: VerdictBasis, why: string): VerdictResult {
     if (zone !== "BUY") return { status: zone, state: "ISSUED", reason: `${zone} — ${why}`, ...EMPTY, ...common, basis };
+    const ramp = rampDependence(basis);
+    const rampText = ramp === null ? "" : ` ${ramp}`;
+    const rampField = ramp === null ? {} : { rampDependent: ramp };
     const bar = evaluateQualityBar({
       moatClass: d2?.moatClass ?? null,
       roicFloor: inputs?.roicFloor ?? null,
       judgements,
     });
     if (bar.status === "PASS") {
-      return { status: "BUY", state: "ISSUED", reason: `BUY — ${why} The quality bar passes: ${bar.met.join("; ")}.`, ...EMPTY, ...common, basis, qualityBar: bar };
+      return {
+        status: "BUY",
+        state: "ISSUED",
+        reason: `BUY — ${why} The quality bar passes: ${bar.met.join("; ")}.${rampText}`,
+        ...EMPTY,
+        ...common,
+        basis,
+        qualityBar: bar,
+        ...rampField,
+      };
     }
     if (bar.status === "FAIL") {
       return {
@@ -317,11 +361,12 @@ function deriveVerdictOnSheet(result: AnalysisResult): VerdictResult {
     return {
       status: "PENDING",
       state: "BUY CANDIDATE",
-      reason: `${BUY_CANDIDATE_LABEL} — ${why} Still open: ${bar.open.join("; ")}.`,
+      reason: `${BUY_CANDIDATE_LABEL} — ${why} Still open: ${bar.open.join("; ")}.${rampText}`,
       ...EMPTY,
       ...common,
       basis,
       qualityBar: bar,
+      ...rampField,
     };
   }
 }

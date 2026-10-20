@@ -802,3 +802,66 @@ Compared tag by tag with `ar6-2026-10-18`, the only difference is the newly mapp
   - with no bound, the bridge stays INCOMPLETE, never zero.
 - **RED on `-10-3`** (8 failed); **GREEN on `-10-4`**.
 - Evaluator changes are called out separately: only the version pins (`-10-3` → `-10-4`) are re-pinned. No value or composition pin is changed.
+
+## 13. TAG_MAPPING_VERSION review — `calboard-secmap-2026-10-4` → `-10-5`
+
+**Outcome:** `CF-METHODOLOGY-V3-IMPLEMENT-01` (issue #499), the build defects
+Methodology v3 routed (Calvin, 20 Oct 2026): LLY's margin proxy (operating
+income untagged), NUE's return-on-capital input, LLY's capex tag gap, and the
+tax series missing from the research pack.
+
+### 13.1 The change
+
+- `operating-income` gains two later candidates, each a **derived element**
+  in namespace `cf-derived`, built once at acquisition (`derivedFacts.ts`,
+  `provider.ts`) only where every component is filed for the same period in
+  the same accession:
+  - `OperatingIncomeLossFromPretaxLessNonoperating` = pre-tax income −
+    `NonoperatingIncomeExpense` (LLY);
+  - `OperatingIncomeLossFromPretaxAddBackNetInterest` = pre-tax income +
+    interest expense − `InvestmentIncomeInterest` (NUE).
+  A filer's own `OperatingIncomeLoss` stays the first candidate and always
+  wins. The first derivation reproduces MSFT's and NVDA's tagged value in
+  every filed 10-K year (`methodologyV3.test.ts`).
+- `capex` gains `PaymentsToAcquireOtherPropertyPlantAndEquipment` (LLY's
+  only capex tag since FY2023).
+- No existing candidate or selection rule is changed.
+- New series read for Methodology v3 only (`V3_SERIES_INPUTS`): income tax,
+  pre-tax income, acquisitions and the cash-flow working-capital lines. They
+  feed `v3Inputs.ts` (D5 tax, D2.1 net reinvestment) and are not facts.
+
+### 13.2 Captures
+
+`captures/v3-2026-10-20` was taken from live data.sec.gov companyfacts on
+20 Oct 2026 by `capture-companyfacts.ts --out=v3-2026-10-20` (MSFT, COST,
+NVDA, NUE, KO, LLY, OKLO). Every row the 19 Oct captures carried is
+byte-identical; only the new tags' rows are added.
+
+### 13.3 The §3.8.1 boundary
+
+`acquire()` was run on the 20 Oct captures under `-10-4` (origin/master) and
+`-10-5`, and every fact's id, value, date and `verificationState` compared.
+
+| Company | Facts changed | Facts added |
+|---|---|---|
+| MSFT, COST, NVDA, KO, OKLO | 0 | 0 |
+| NUE | 0 | `operating-income` 2,627M FY2025 (`SPOT-CHECK NOT REQUIRED`), `current-operating-margin` 8.1% (`SPOT-CHECK PENDING`) |
+| LLY | 0 | `operating-income` 26,302M FY2025, `capex` 7,841M FY2025 (both `SPOT-CHECK NOT REQUIRED`), `current-operating-margin` 40.4%, `cash-fcf` 8,972M (both `SPOT-CHECK PENDING`) |
+
+Facts removed: **0**. No exempt or queued state changes.
+
+### 13.4 Correction
+
+Issue #496 listed "LLY debt" as a tag gap. It is not: `instantAnnualSeries`
+already sums `LongTermDebtNoncurrent`; the correction is posted on #496. No
+debt candidate is changed.
+
+### 13.5 Verification
+
+- `methodologyV3.test.ts`: LLY and NUE operating income are absent on the raw
+  facts (RED) and resolve to the values above once derived (GREEN); LLY capex
+  resolves; the derivation is idempotent and leaves the filer's facts
+  untouched.
+- Evaluator changes: only the version pins in `bridgeInputRecovery.test.ts`
+  and `financeLeaseUpperBound.test.ts` (`-10-4` → `-10-5`). No value or
+  composition pin is changed.
