@@ -167,6 +167,6 @@ update, not a semantic conflict.
     `master` at `03176d1` (PR #502 + PR #505), Methodology v3. Replaces item
     25's superseded Analyzer V2 freeze. Known limitations accepted with it:
     §4.4 non-operating answers are Calvin's, per company; KO is "can't bound
-    value" at D7's conservative bound (12.5% net debt ≥ 10%); OKLO "can't
-    conclude"; banks refused. Per-company timed-review times were not
+    value" at D7's conservative bound (12.5% net debt ≥ 10%, shown with §4.4
+    "none" as a what-if); OKLO "can't conclude"; banks refused. Per-company timed-review times were not
     supplied. Record: `docs/analyzer-reset-acceptance-freeze.md`.

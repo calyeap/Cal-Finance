@@ -19,7 +19,7 @@ The Analyzer as it stands at `03176d1`, run as the real app (ticker → report) 
 |---|---|---|
 | MSFT | Valued: Bear / Base / Bull $184 / $334 / $449 at the 19 Oct close $533.52; draft points to SELL; final verdict waits for adoption | `docs/evidence/ar8-acceptance/` |
 | COST, NVDA, NUE, LLY | The report completes; valuation waits on Calvin's one-time §4.4 non-operating-investments answer, which the bottom line names. Once given, every draft points to SELL (what-if with "none") | `…/corrections/README.md` |
-| KO | "Can't bound value": at D7's conservative lease bound (total liabilities by identity, Calvin's #504 ruling) net debt is 12.5% of EV, above the 10% domain | `…/corrections/README.md` |
+| KO | The report completes; valuation waits on the §4.4 answer, as for the four above. With "none" (what-if), D7's conservative lease bound (total liabilities by identity, Calvin's #504 ruling) puts net debt at 12.5% of EV, above the 10% domain, so KO reads "can't bound value" | `…/corrections/README.md` |
 | OKLO | "Can't conclude": no filed revenue | `…/runs/oklo-overview.txt` |
 | JPM | Refused: banks are not valued | `…/runs/jpm-overview.txt` |
 
@@ -34,7 +34,7 @@ The checks recorded in #457 DO 3:
 ## Known limitations accepted with it
 
 - **§4.4 is per company and Calvin's.** A company without a recorded non-operating-investments answer shows an INCOMPLETE valuation with that cause named (frozen spec §4.4, M9-1).
-- **KO is not valued under the current D7 bound and 10% gate.** Revisiting either is a methodology question, not a defect.
+- **KO is not valued under the current D7 bound and 10% gate** (shown with §4.4 "none" as a what-if). Revisiting either is a methodology question, not a defect.
 - **Open follow-ups from the AR8 evidence:**
   - F5: a bank is drafted, at cost, before Gate 0 refuses it.
   - F6: the RM-brief evaluator predates adopt-to-finalize; this needs a reviewed evaluator change.
