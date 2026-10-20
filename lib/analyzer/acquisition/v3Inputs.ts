@@ -265,15 +265,30 @@ type Row = { val: number; end: string; start?: string; form?: string; fp?: strin
  * shows no convertible debt outstanding; otherwise refused (the bridge stays
  * INCOMPLETE).
  */
-export function dilutionFallback(doc: CompanyFactsDocument): { applied: boolean; value: Decimal | null; label: string } {
+function latestAnnual10KShares(doc: CompanyFactsDocument, tag: string): Row | null {
   const g = doc.facts?.["us-gaap"] ?? {};
-  const annual10K = (tag: string): Row | null =>
+  return (
     ((g[tag]?.units?.shares ?? []) as Row[])
       .filter((r) => r.form === "10-K" && r.start !== undefined && (Date.parse(r.end) - Date.parse(r.start)) / DAY_MS >= 300)
       .sort((a, b) => a.end.localeCompare(b.end))
-      .at(-1) ?? null;
-  const diluted = annual10K("WeightedAverageNumberOfDilutedSharesOutstanding");
-  const basic = annual10K("WeightedAverageNumberOfSharesOutstandingBasic");
+      .at(-1) ?? null
+  );
+}
+
+/**
+ * v3 D8 — the period end of the latest 10-K's diluted weighted-average
+ * shares: the share period a treasury-method dilution figure must speak for.
+ * An incremental-shares tag last filed before it (LLY's ends at FY2011) is
+ * absent for today's bridge, so D8's fallback applies (AR8, #457).
+ */
+export function latestAnnualDilutedSharesEnd(doc: CompanyFactsDocument): string | null {
+  return latestAnnual10KShares(doc, "WeightedAverageNumberOfDilutedSharesOutstanding")?.end ?? null;
+}
+
+export function dilutionFallback(doc: CompanyFactsDocument): { applied: boolean; value: Decimal | null; label: string } {
+  const g = doc.facts?.["us-gaap"] ?? {};
+  const diluted = latestAnnual10KShares(doc, "WeightedAverageNumberOfDilutedSharesOutstanding");
+  const basic = latestAnnual10KShares(doc, "WeightedAverageNumberOfSharesOutstandingBasic");
   if (diluted === null || basic === null || diluted.end !== basic.end) {
     return { applied: false, value: null, label: "dilution fallback not formed: no same-period diluted and basic weighted-average shares in a 10-K" };
   }
