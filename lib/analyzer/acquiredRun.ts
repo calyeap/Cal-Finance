@@ -10,6 +10,7 @@ import {
   hasInsurancePremiumOrReserveLineItems,
 } from "./acquisition/gate0Inputs";
 import type { CompanyFixture } from "./assemble";
+import { financialHistoryFrom } from "./sheets/research";
 import type { BusinessSectionContent, FactRecord, MarketContextSectionContent } from "./types";
 import { activeProvider } from "../marketdata";
 
@@ -286,7 +287,13 @@ export async function buildAcquiredRun(
     );
   }
 
-  const fixture: CompanyFixture = { ...fixtureWithoutSourceContent, business, marketContext, latestFiling };
+  const fixture: CompanyFixture = {
+    ...fixtureWithoutSourceContent,
+    business,
+    marketContext,
+    latestFiling,
+    financialHistory: financialHistoryFrom(acquired.companyFacts, acquired.acquisition.cik),
+  };
 
   return { fixture, acquired, absentInputs, disclosures };
 }

@@ -8,6 +8,7 @@ import { investedCapitalAt } from "../acquisition/companyInputs";
 import { htmlToPlainText } from "../acquisition/item1Extraction";
 import { isMaterialFilingForm } from "../materialFilings";
 import type { SheetBasis, SheetSource } from "./sheet";
+import type { FinancialHistory, FinancialHistoryLine, FiledFigure } from "../types";
 
 // ---------------------------------------------------------------------------
 // CF-AR6-ANY-TICKER-DRAFTS-01 — the research a draft is written from
@@ -252,6 +253,42 @@ export function historyFrom(doc: CompanyFactsDocument): { measures: HistoryMeasu
       returns: equity?.observations.at(-1)?.accession ?? null,
     },
   };
+}
+
+function filingIndexUrl(cik: string, accession: string | null): string | null {
+  if (accession === null) return null;
+  return `https://www.sec.gov/Archives/edgar/data/${Number(cik)}/${accession.replace(/-/g, "")}/${accession}-index.htm`;
+}
+
+/**
+ * CF-AR7-REPORT-CONTENT-01 — the Financials tab's ten-year statements: the
+ * same filed series historyFrom reads (same tags, same `plus` components),
+ * kept per year with the filing each figure came from, so every number on
+ * the tab links to its source. Display only.
+ */
+export function financialHistoryFrom(doc: CompanyFactsDocument, cik: string): FinancialHistory {
+  const series: Record<FinancialHistoryLine, Map<number, { value: Decimal; accession: string | null }>> = {
+    revenue: annualWithPlus(doc, "current-revenue"),
+    operatingIncome: annualWithPlus(doc, "operating-income"),
+    operatingCashFlow: annualWithPlus(doc, "operating-cash-flow"),
+    capex: annualWithPlus(doc, "capex"),
+    depreciationAndAmortisation: annualWithPlus(doc, "depreciation-and-amortisation"),
+    stockBasedCompensation: annualWithPlus(doc, "sbc"),
+    backlog: seriesMap(instantAnnualSeries(doc, BACKLOG_CANDIDATES)),
+  };
+  const latestYear = Math.max(...[...series.revenue.keys(), ...series.operatingIncome.keys()], -Infinity);
+  const years: FinancialHistory["years"] = [];
+  if (Number.isFinite(latestYear)) {
+    for (let fy = latestYear - HISTORY_YEARS + 1; fy <= latestYear; fy++) {
+      const lines = {} as Record<FinancialHistoryLine, FiledFigure | null>;
+      for (const line of Object.keys(series) as FinancialHistoryLine[]) {
+        const held = series[line].get(fy);
+        lines[line] = held === undefined ? null : { value: held.value, url: filingIndexUrl(cik, held.accession) };
+      }
+      if (Object.values(lines).some((v) => v !== null)) years.push({ fiscalYear: fy, lines });
+    }
+  }
+  return { years, source: "SEC XBRL company facts" };
 }
 
 function millions(v: Decimal | null): string {
