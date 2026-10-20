@@ -18,6 +18,9 @@ Rules:
 - Never prints the webhook URL.
 - One alert per stop: a Stop that lands within DEDUPE_SECONDS of another alert
   in the same session is skipped (e.g. question raised, then the turn ends).
+- A Stop whose last message only says it is waiting on its own work (background
+  jobs, CI, a reviewer, a check-in) is skipped; one that says it needs Calvin
+  still alerts.
 - PostToolUse[AskUserQuestion] sends nothing; it records when Calvin answered.
   A Stop within ANSWERED_SECONDS of his answer is skipped: he is at the screen.
 - Python 3 standard library only.
@@ -25,6 +28,7 @@ Rules:
 
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -34,6 +38,47 @@ DEDUPE_SECONDS = 30
 ANSWERED_SECONDS = 120
 TIMEOUT_SECONDS = 5
 LOG_PATH = "/tmp/notify-calvin.log"
+
+# A Stop whose last message says the session is only waiting on its own work
+# (background jobs, CI, a reviewer, a scheduled check-in) is not a real stop:
+# nothing needs Calvin, so it stays silent. A message that says it needs Calvin
+# always alerts, even if it also mentions waiting.
+NEEDS_CALVIN = re.compile(
+    r"CALVIN REQUIRED|\bcalvin\b|\byou(r|rs)?\b|\bblocked\b|\bapprov|\bconfirm|\bdecision\b"
+    r"|\bneed(s|ed)?\b|\bcredentials?\b|\bgo-ahead\b|\?",
+    re.IGNORECASE,
+)
+# Courtesy promises to update Calvin later are still waiting, not a request.
+COURTESY = re.compile(
+    r"\b(let|keep) you (know|posted|updated)\b|\b(ping|update|notify|tell|message) you (when|once|after|if)\b",
+    re.IGNORECASE,
+)
+WAITING_ON_SELF = re.compile(
+    r"\bwaiting\b|\bwait (for|on|until)\b|still running|in the background|background (job|task|run|check)"
+    r"|\bi'?ll (continue|resume|check|report|be back|pick (it|this) up|follow up)"
+    r"|\bi will (continue|resume|check|report)"
+    r"|\bwill (continue|resume|report back) (when|once|after)"
+    r"|\bonce (ci|the (ci|checks?|run|reviewer|review|build|jobs?|tests?))"
+    r"|\b(ci|checks?|tests?|reviewer|review|build) (is|are) (still )?(running|pending|in progress)"
+    r"|check(ing)? back|check-in|scheduled (a )?(wake|check)|\bpolling\b|\bmonitoring\b",
+    re.IGNORECASE,
+)
+
+
+DONE_START = re.compile(
+    r"^\W*(all done|done|complete[d]?|finished|merged|shipped)\b", re.IGNORECASE
+)
+
+
+def only_waiting_on_self(message):
+    """True only if the final paragraph says it is waiting and nothing asks Calvin."""
+    text = message if isinstance(message, str) else ""
+    if DONE_START.search(text):
+        return False  # a finished build reporting back is a real stop
+    paragraphs = [p for p in re.split(r"\n\s*\n", text.strip()) if p.strip()]
+    if not paragraphs or not WAITING_ON_SELF.search(paragraphs[-1]):
+        return False
+    return not NEEDS_CALVIN.search(COURTESY.sub(" ", text))
 
 STATUS = {
     "Stop": "STOPPED",
@@ -145,6 +190,9 @@ def main():
         return 0  # the question itself already alerted as NEEDS INPUT
     if event == "Stop" and payload.get("stop_hook_active"):
         return 0  # another Stop hook kept the agent going; it has not really stopped
+    if event == "Stop" and only_waiting_on_self(payload.get("last_assistant_message")):
+        log("event=Stop skipped=waiting-on-self")
+        return 0
 
     log(f"event={event} keys={sorted(payload.keys())}")
 
