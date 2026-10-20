@@ -33,7 +33,7 @@ import urllib.request
 DEDUPE_SECONDS = 30
 ANSWERED_SECONDS = 120
 TIMEOUT_SECONDS = 5
-LOG_PATH = os.path.expanduser("~/.claude/notify-calvin.log")
+LOG_PATH = "/tmp/notify-calvin.log"
 
 STATUS = {
     "Stop": "STOPPED",
