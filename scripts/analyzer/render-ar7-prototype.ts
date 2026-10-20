@@ -112,19 +112,20 @@ function scenarioStrip(values: Json, price: Decimal | null, location: unknown): 
   const lo = vals[0];
   const hi = vals[2];
   let marker = "";
+  let where = "";
   if (price && lo && hi && hi.greaterThan(lo)) {
     const raw = price.minus(lo).dividedBy(hi.minus(lo)).toNumber();
     const clamped = Math.max(0, Math.min(1, raw));
     const label = raw > 1 ? "price above Bull" : raw < 0 ? "price below Bear" : "price";
-    const side = clamped > 0.7 ? "end" : clamped < 0.3 ? "start" : "mid";
-    marker = `<div class="marker" style="left:${(clamped * 100).toFixed(1)}%"><span class="${side}">${esc(label)}</span></div>`;
+    marker = `<div class="marker" style="left:${(clamped * 100).toFixed(1)}%" title="${esc(label)}"></div>`;
+    where = ` — ${label}`;
   }
   const cells = SCENARIOS.map(
     (k, i) => `<div class="sc sc-${k}"><div class="sc-label">${k[0].toUpperCase() + k.slice(1)}</div><div class="sc-value num">${usd(vals[i]?.toString())}</div></div>`
   ).join("");
   return `<div class="strip">${cells}<div class="sc sc-unc"><div class="sc-label">Uncertainty</div><div class="sc-value">Set on adoption</div></div></div>
   <div class="bar"><div class="bar-fill"></div>${marker}</div>
-  <div class="muted small">Price location within Bear–Bull: ${esc(dec(location)?.toFixed(2) ?? "—")} (0 = Bear, 1 = Bull).</div>`;
+  <div class="muted small">Price location within Bear–Bull: ${esc(dec(location)?.toFixed(2) ?? "—")} (0 = Bear, 1 = Bull)${esc(where)}.</div>`;
 }
 
 function render(run: Json, runFile: string): string {
@@ -207,6 +208,18 @@ function render(run: Json, runFile: string): string {
   const tabInputs = tabs.map((t, i) => `<input type="radio" name="tab" id="t${i}" ${i === 0 ? "checked" : ""}>`).join("");
   const tabLabels = tabs.map((t, i) => `<label for="t${i}">${esc(t)}</label>`).join("");
 
+  // Which of the conditional prompts this run would raise (item 28 routing, item 29 BUY bar).
+  const zoneNow = String(v.draftZone ?? v.status ?? "");
+  const routingKind = v.check?.routing?.kind;
+  const judgeNote =
+    routingKind === "CLOSE CALL"
+      ? "a close call across the rate check — the report would ask you to decide."
+      : routingKind === "UNCERTAINTY QUESTION"
+        ? "the verdict depends on the uncertainty level — the report would ask that one question."
+        : zoneNow === "BUY"
+          ? "a BUY candidate — the report would ask the quality questions before a BUY issues."
+          : `no prompt — the ${zoneNow || "verdict"} issues automatically (all nine checks agree) once the sheet is adopted. Prompts are drawn here for review only.`;
+
   const quickRead = `
   <section class="qr">
     <div class="qr-item span-6"><h3>What today's price assumes</h3><p>${priceAssumes}</p><p class="muted">${history}</p></div>
@@ -221,6 +234,7 @@ function render(run: Json, runFile: string): string {
   </section>
   <section class="judge">
     <h3>Your judgement <span class="muted small">— shown only for a BUY, a close call, or to record a broken thesis</span></h3>
+    <p class="small"><b>This run:</b> ${esc(judgeNote)}</p>
     <div class="q"><span>The price needs the growth above. You expect:</span><button disabled>more</button><button disabled>about that</button><button disabled>less</button><button disabled>not sure</button></div>
     <div class="q"><span>How durable is the moat?</span><button disabled>wide — excess returns for decades</button><button disabled>narrow</button><button disabled>none</button><button disabled>not sure</button></div>
     <div class="q"><span>Is your thesis broken?</span><button disabled>no</button><button disabled>yes → SELL</button><button disabled>not sure</button></div>
@@ -230,7 +244,7 @@ function render(run: Json, runFile: string): string {
   const valuation = `
   <section>
     <h3>Assumption sheet <span class="pill">version ${esc(run.sheet?.version)} · ${esc(run.sheet?.status)} · ${esc(run.sheet?.origin)}</span></h3>
-    <p class="muted small">${esc(sheet.drafting ?? "")}. Price-blind: the draft never saw the share price. Every driver cites its source.</p>
+    <p class="muted small">${esc(String(sheet.drafting ?? "").replace(/^./, (c) => c.toUpperCase()))}. Price-blind: the draft never saw the share price. Every driver cites its source.</p>
     <div class="scroll"><table class="sheet"><thead><tr><th>Driver</th><th>Bear</th><th>Base</th><th>Bull</th><th></th></tr></thead><tbody>${sheetRows}</tbody></table></div>
     <p><b>Moat:</b> ${esc(sheet.moatClass)} — ${esc(sheet.moatAnchor?.text ?? "")}</p>
     <p><b>Discount rate:</b> ${pct(r.valuationBasis?.discountRate?.rate)} — ${esc(r.valuationBasis?.discountRate?.basis)}</p>
@@ -256,9 +270,9 @@ a{color:var(--ink)}button{font:inherit;color:var(--muted);background:var(--field
 .verdict{border:1px solid var(--line-strong);border-radius:8px;padding:16px}.v-head{font-size:20px;font-weight:600}.v-sub{margin-top:8px}.v-unc{margin-top:8px;color:var(--muted);font-size:13px}
 .zone{font-weight:600;padding:0 6px}.z-sell{color:var(--loss)}.z-buy{color:var(--gain)}.z-hold{color:var(--ink)}
 .pricebox{border:1px solid var(--hairline);border-radius:8px;padding:16px}.pricebox .p{font-size:28px;font-weight:500}
-.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.sc{border:1px solid var(--hairline);border-radius:6px;padding:8px 12px}.sc-label{font-size:13px;color:var(--muted)}.sc-value{font-size:17px}
+.strip{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}.sc{border:1px solid var(--hairline);border-radius:6px;padding:8px 12px}.sc-label{font-size:13px;color:var(--muted)}.sc-value{font-size:20px}
 .bar{position:relative;height:6px;background:var(--field);border-radius:3px;margin:16px 0 8px}.bar-fill{position:absolute;inset:0;border:1px solid var(--line-strong);border-radius:3px}
-.marker{position:absolute;top:-6px;width:2px;height:18px;background:var(--ink)}.marker span{position:absolute;top:20px;font-size:13px;white-space:nowrap;color:var(--muted)}.marker .end{right:0}.marker .start{left:0}.marker .mid{left:-24px}
+.marker{position:absolute;top:-6px;width:2px;height:18px;background:var(--ink)}
 .tabs input{display:none}.tabrail{display:flex;gap:4px;border-bottom:1px solid var(--hairline);margin:32px 0 24px;overflow-x:auto}
 .tabrail label{padding:8px 12px;color:var(--muted);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent}
 .panel{display:none}
@@ -270,7 +284,7 @@ h3{font-size:15px;font-weight:600;margin:0 0 8px}h4{font-size:15px;margin:0 0 4p
 table{border-collapse:collapse;width:100%}th,td{text-align:left;padding:8px;border-bottom:1px solid var(--hairline);vertical-align:top}thead th{color:var(--muted);font-size:13px;font-weight:500}
 .grid{margin-top:8px}.zone-cell.z-sell{color:var(--loss)}.zone-cell.z-buy{color:var(--gain)}
 .anchor{font-size:13px;color:var(--muted);margin-top:4px}.cites a,.cites{font-size:13px;color:var(--muted)}
-.pill{font-size:13px;color:var(--muted);border:1px solid var(--line-strong);border-radius:999px;padding:2px 8px;font-weight:400}
+.pill{font-size:13px;color:var(--muted);border:1px solid var(--line-strong);border-radius:999px;padding:4px 8px;font-weight:400}
 .scroll{overflow-x:auto}.card{border:1px solid var(--hairline);border-radius:8px;padding:16px;margin-bottom:16px}
 .rail h4{font-size:13px;color:var(--muted);font-weight:500;text-transform:uppercase;letter-spacing:.04em;margin:16px 0 8px}.kv{display:flex;justify-content:space-between;gap:8px;padding:4px 0;font-size:13px}
 footer{margin-top:48px;color:var(--muted);font-size:13px;border-top:1px solid var(--hairline);padding-top:16px}
