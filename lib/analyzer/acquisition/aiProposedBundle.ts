@@ -2,6 +2,7 @@ import Decimal from "decimal.js";
 import { US_FEDERAL_STATUTORY_TAX_RATE } from "../policy";
 import type { AcquiredCompany } from "./provider";
 import type { SecClient } from "./secClient";
+import { dilutionTagIsStale, latestAnnualDilutedSharesEnd } from "./v3Inputs";
 import { writeAnalystLog, type AnalystCall } from "../ai/analystCall";
 import {
   runScenarioProposal,
@@ -125,10 +126,18 @@ const STATUTORY_SOURCE: SheetSource = {
   excerpt: `${US_FEDERAL_STATUTORY_CORPORATE_TAX_RATE.mul(100).toFixed(1)}% — a general reference rate, not a disclosure from this company's filings.`,
 };
 
-function dilutedSharesOf(acquired: AcquiredCompany): Decimal | null {
+/**
+ * The draft's diluted share count. CF-AR8-CORRECTIONS-01 (#504): an
+ * incremental-shares tag last filed before the latest 10-K's share period
+ * (LLY's ends at FY2011) is absent, as it is for the bridge (PR #502, D8).
+ */
+export function dilutedSharesOf(acquired: AcquiredCompany): Decimal | null {
   const outstanding = factDecimal(acquired, "shares-outstanding");
   if (outstanding === null) return null;
-  return outstanding.plus(factDecimal(acquired, "treasury-method-dilution") ?? new Decimal(0));
+  const tagged = acquired.acquisition.facts.find((f) => f.id === "treasury-method-dilution");
+  const sharePeriodEnd = latestAnnualDilutedSharesEnd(acquired.companyFacts);
+  const stale = dilutionTagIsStale(tagged?.asOfDate, sharePeriodEnd);
+  return outstanding.plus((stale ? null : factDecimal(acquired, "treasury-method-dilution")) ?? new Decimal(0));
 }
 
 /** The proposal as sheet content — share-count multiples applied to the diluted count. */
