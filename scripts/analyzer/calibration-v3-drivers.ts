@@ -137,10 +137,101 @@ const median = (v: Decimal[]) => {
   return s.length === 0 ? null : s.length % 2 ? s[(s.length - 1) / 2] : s[s.length / 2 - 1].plus(s[s.length / 2]).div(2);
 };
 
-function filedData(ticker: string, tax: Decimal) {
+// --- supplementary SEC facts (fresh pull, 20 Oct 2026) ----------------------------
+//
+// The frozen 19 Oct captures carry no tax, pre-tax, working-capital or
+// acquisition tags, and NUE and LLY tag no operating income. Calvin approved
+// one free companyfacts pull to fill those gaps (#496, 20 Oct 2026); the
+// facts are extracted verbatim by calibration-v3-sec-extract.py into
+// docs/evidence/methodology-v3-drivers/sec-2026-10-20. The frozen sheets,
+// prices and captures are unchanged.
+
+const SEC = path.join(OUT, "sec-2026-10-20");
+type Dated = Record<string, { val: number; accn: string; tag?: string }>;
+// Cash-flow working-capital lines (us-gaap IncreaseDecreaseIn*): a positive
+// asset-side value is an increase in the asset (cash used); a positive
+// liability-side value is an increase in the liability (cash provided).
+// Deferred and current income-tax movements other than accrued taxes payable
+// are not working capital and are left out.
+const WC_ASSET = ["AccountsReceivable", "AccountsAndOtherReceivables", "Inventories", "OtherCurrentAssets", "PrepaidDeferredExpenseAndOtherAssets", "OtherOperatingAssets", "OtherNoncurrentAssets", "OtherOperatingCapitalNet"];
+const WC_LIABILITY = ["AccountsPayable", "AccountsPayableAndAccruedLiabilities", "AccruedLiabilitiesAndOtherOperatingLiabilities", "AccruedIncomeTaxesPayable", "ContractWithCustomerLiability", "OtherCurrentLiabilities", "OtherNoncurrentLiabilities", "EmployeeRelatedLiabilities"];
+
+function supplement(ticker: string) {
+  const s = JSON.parse(readFileSync(path.join(SEC, `${ticker.toLowerCase()}-supplementary-facts.json`), "utf8"));
+  const a = s.annual as Record<string, Dated>;
+  const byFy = (m: Dated | undefined) => new Map(Object.entries(m ?? {}).map(([end, v]) => [Number(end.slice(0, 4)), D(v.val)]));
+  const pretax = byFy(a.pretax);
+  const tax = byFy(a.tax);
+  const nonop = byFy(a.nonoperating);
+  const intExp = byFy(a.interestExpense);
+  const intInc = byFy(a.interestIncome);
+  const eq = byFy(a.equityMethodIncome);
+  // Operating income where the filer tags none: LLY = pre-tax income − non-operating income (expense), the
+  // construction that reproduces MSFT's and NVDA's tagged operating income exactly; NUE (no non-operating
+  // total tagged) = pre-tax income + interest expense − interest income − equity-method earnings.
+  const construction = ticker === "LLY" ? "pre-tax income − non-operating income (expense)" : ticker === "NUE" ? "pre-tax income + interest expense − interest income − equity-method earnings" : null;
+  const construct = (fy: number, get: (k: string) => Decimal | undefined): Decimal | null => {
+    const p = get("pretax");
+    if (p === undefined) return null;
+    if (ticker === "LLY") return get("nonoperating") === undefined ? null : p.minus(get("nonoperating")!);
+    if (ticker === "NUE") return p.plus(get("interestExpense") ?? 0).minus(get("interestIncome") ?? 0).minus(get("equityMethodIncome") ?? 0);
+    return null;
+  };
+  const maps: Record<string, Map<number, Decimal>> = { pretax, nonoperating: nonop, interestExpense: intExp, interestIncome: intInc, equityMethodIncome: eq };
+  const constructedOi = new Map<number, Decimal>();
+  if (construction !== null) for (const fy of pretax.keys()) { const v = construct(fy, (k) => maps[k].get(fy)); if (v !== null) constructedOi.set(fy, v); }
+  const ttmOf = (k: string) => (s.ttm[k] ? D(s.ttm[k].val) : undefined);
+  const ttmOi = construction === null ? null : (() => { const v = construct(0, ttmOf); return v === null ? null : { value: v, end: s.ttm.pretax.end as string }; })();
+
+  // ΔNWC per fiscal year from the cash-flow statement; a value repeated under two tags of one side in the same year (LLY's duplicate prepaid / other-operating-assets) counts once.
+  const wc = s.workingCapitalCashFlow as Record<string, Dated>;
+  const unclassified: string[] = [];
+  const dNwc = new Map<number, Decimal>();
+  const seen = new Map<string, Set<string>>();
+  for (const [tag, rows] of Object.entries(wc)) {
+    const name = tag.replace(/^IncreaseDecreaseIn/, "");
+    const side = WC_ASSET.includes(name) ? 1 : WC_LIABILITY.includes(name) ? -1 : 0;
+    if (side === 0) { unclassified.push(name); continue; }
+    for (const [end, v] of Object.entries(rows)) {
+      const fy = Number(end.slice(0, 4));
+      const key = `${fy}:${side}`;
+      const vals = seen.get(key) ?? new Set<string>();
+      if (vals.has(String(v.val))) continue;
+      vals.add(String(v.val));
+      seen.set(key, vals);
+      dNwc.set(fy, (dNwc.get(fy) ?? new Decimal(0)).plus(new Decimal(v.val).mul(side)));
+    }
+  }
+  // Acquisitions per fiscal year: cash paid for businesses where tagged; MSFT tags no cash figure after FY2011, so
+  // goodwill + finite-lived intangibles acquired stands in (labelled); a filer with none of these tags in a year acquired nothing tagged.
+  const cashAcq = [a.acqBusinesses, a.acqBusinessTwo, a.acqOther].map(byFy);
+  const cashTagged = cashAcq.some((m) => [...m.keys()].some((fy) => fy >= 2022));
+  const acquisitions = new Map<number, Decimal>();
+  const acqBasis = cashTagged ? "cash paid for businesses, net of cash acquired" : ticker === "MSFT" ? "goodwill + finite-lived intangibles acquired (no cash tag after FY2011)" : "none tagged";
+  for (let fy = 2018; fy <= 2026; fy++) {
+    const parts = cashTagged ? cashAcq.map((m) => m.get(fy)) : ticker === "MSFT" ? [byFy(a.goodwillAcquired).get(fy), byFy(a.intangiblesAcquired).get(fy)] : [];
+    acquisitions.set(fy, parts.reduce<Decimal>((sum, v) => sum.plus(v ?? 0), new Decimal(0)));
+  }
+  const ltdNoncurrent = byFy(s.instant.longTermDebtNoncurrent);
+  const capex = byFy(a.capex);
+  return { capex, capexTag: Object.values(a.capex ?? {})[0]?.tag ?? null, pretax, tax, constructedOi, construction, ttmOi, dNwc, unclassified, acquisitions, acqBasis, ltdNoncurrent, source: s.source as string, fetchedAt: s.fetchedAt as string };
+}
+type Supplement = ReturnType<typeof supplement>;
+
+function filedData(ticker: string, tax: Decimal, sup: Supplement) {
   const doc = JSON.parse(readFileSync(path.join(CAPTURES, `${ticker.toLowerCase()}-companyfacts.json`), "utf8")) as CompanyFactsDocument;
   const { measures } = historyFrom(doc);
-  const years = measures.years;
+  // Fill operating income from the supplement where the capture has none (NUE, LLY), and correct LLY's invested
+  // capital: its mapped total-debt series is us-gaap:DebtCurrent alone, so long-term debt is added back.
+  const years = measures.years.map((y) => ({
+    ...y,
+    operatingIncome: y.operatingIncome ?? sup.constructedOi.get(y.fiscalYear) ?? null,
+    // LLY's mapped capex candidates are retired in its recent filings (it now tags
+    // PaymentsToAcquireOtherPropertyPlantAndEquipment), so the supplement fills the gap.
+    capex: y.capex ?? sup.capex.get(y.fiscalYear) ?? null,
+    investedCapital:
+      ticker === "LLY" && y.investedCapital !== null ? (sup.ltdNoncurrent.has(y.fiscalYear) ? y.investedCapital.plus(sup.ltdNoncurrent.get(y.fiscalYear)!) : null) : y.investedCapital,
+  }));
   const rev = quarterlySeriesWithDerivedQ4(doc, candidatesFor("current-revenue"));
   const oi = quarterlySeriesWithDerivedQ4(doc, candidatesFor("operating-income"));
   const li = rev.length - 1;
@@ -149,7 +240,7 @@ function filedData(ticker: string, tax: Decimal) {
   const ttmRevYearAgo = ya >= 0 ? ttm(rev, ya) : null;
   const lqYoY = ya >= 0 && rev[ya].value > 0 ? new Decimal(rev[li].value).div(rev[ya].value).minus(1) : null;
   const oiIdx = ttmRev === null ? -1 : oi.findIndex((q) => q.periodEnd === ttmRev.end);
-  const ttmOi = oiIdx >= 0 ? ttm(oi, oiIdx) : null;
+  const ttmOi = oiIdx >= 0 ? ttm(oi, oiIdx) : sup.ttmOi !== null && ttmRev !== null && sup.ttmOi.end === ttmRev.end ? sup.ttmOi : null;
 
   const withRev = years.filter((y) => y.revenue !== null && y.revenue.greaterThan(0));
   const lastFy = withRev.at(-1)!;
@@ -165,9 +256,17 @@ function filedData(ticker: string, tax: Decimal) {
   const last5 = roicYears.slice(-5);
   const incremental3 = latest && back3 && !latest.ic!.minus(back3.ic!).isZero() ? latest.nopat!.minus(back3.nopat!).div(latest.ic!.minus(back3.ic!)) : null;
   const last3 = years.filter((y) => y.operatingIncome !== null && y.capex !== null && y.depreciationAndAmortisation !== null).slice(-3);
-  const netReinvest3 =
-    last3.length === 3
-      ? last3.reduce((s, y) => s.plus(y.capex!.minus(y.depreciationAndAmortisation!)), new Decimal(0)).div(last3.reduce((s, y) => s.plus(y.operatingIncome!.mul(ONE.minus(tax))), new Decimal(0)))
+  const nopat3 = last3.reduce((s, y) => s.plus(y.operatingIncome!.mul(ONE.minus(tax))), new Decimal(0));
+  const sum3 = (f: (y: (typeof last3)[number]) => Decimal | null) => (last3.every((y) => f(y) !== null) ? last3.reduce((s, y) => s.plus(f(y)!), new Decimal(0)) : null);
+  const capexLessDa = sum3((y) => y.capex!.minus(y.depreciationAndAmortisation!));
+  const dNwc3 = sum3((y) => sup.dNwc.get(y.fiscalYear) ?? null);
+  const acq3 = sum3((y) => sup.acquisitions.get(y.fiscalYear) ?? null);
+  const netReinvest3 = last3.length === 3 && capexLessDa !== null ? capexLessDa.div(nopat3) : null;
+  const fullReinvest3 = last3.length === 3 && capexLessDa !== null && dNwc3 !== null && acq3 !== null ? capexLessDa.plus(dNwc3).plus(acq3).div(nopat3) : null;
+  const taxYears = [...sup.pretax.keys()].filter((fy) => sup.tax.has(fy)).sort((x, y) => x - y).slice(-3);
+  const tax3 =
+    taxYears.length === 3
+      ? { from: taxYears[0], to: taxYears[2], v: taxYears.reduce((s2, fy) => s2.plus(sup.tax.get(fy)!), new Decimal(0)).div(taxYears.reduce((s2, fy) => s2.plus(sup.pretax.get(fy)!), new Decimal(0))) }
       : null;
 
   return {
@@ -182,11 +281,19 @@ function filedData(ticker: string, tax: Decimal) {
     median5Margin: median(last5Margins),
     marginRange: margins.length ? { lo: Decimal.min(...margins.map((x) => x.m)), hi: Decimal.max(...margins.map((x) => x.m)) } : null,
     growthRange: measures.revenueGrowthRange,
-    roicRange: measures.roicRange,
+    // From the years above (operating income filled for NUE and LLY, LLY's invested capital corrected).
+    roicRange: roicYears.length ? { low: Decimal.min(...roicYears.map((y) => y.nopat!.div(y.ic!))), high: Decimal.max(...roicYears.map((y) => y.nopat!.div(y.ic!))) } : null,
     roicLatest: latest ? { fy: latest.fy, v: latest.nopat!.div(latest.ic!) } : null,
     roic5: last5.length === 5 ? last5.reduce((s, y) => s.plus(y.nopat!.div(y.ic!)), new Decimal(0)).div(5) : null,
     incremental3: incremental3 === null ? null : { from: back3!.fy, to: latest!.fy, v: incremental3 },
     netReinvest3: netReinvest3 === null ? null : { from: last3[0].fiscalYear, to: last3[2].fiscalYear, v: netReinvest3 },
+    fullReinvest3:
+      fullReinvest3 === null
+        ? null
+        : { from: last3[0].fiscalYear, to: last3[2].fiscalYear, v: fullReinvest3, capexLessDa: capexLessDa!.div(nopat3), dNwc: dNwc3!.div(nopat3), acquisitions: acq3!.div(nopat3), acqBasis: sup.acqBasis },
+    tax3,
+    operatingIncomeConstruction: sup.construction,
+    unclassifiedWorkingCapitalTags: sup.unclassified,
   };
 }
 
@@ -265,10 +372,10 @@ function main(): void {
   const prior = JSON.parse(readFileSync(path.join(EV3, "results.json"), "utf8")).results as { ticker: string; design: string; recorded: boolean; base: string; bear: string; bull: string }[];
 
   lines.push("# Methodology v3 calibration #2 — driver construction (TEST only, #496)", "");
-  lines.push("Frozen #495 sheets and 19 Oct captures; † = #495's dilution supplement (not engine output). Recorded moat class; CURRENT = 10/10/+moat credit, OPT1 = runway by moat (wide 10/20/0, narrow 10/15/0, none 10/10/0).", "");
+  lines.push("Frozen #495 sheets and 19 Oct captures, plus supplementary SEC facts pulled 20 Oct 2026 (tax, working capital, acquisitions, NUE/LLY operating income — `sec-2026-10-20/`). † = #495's dilution supplement (not engine output). ‡ = operating income constructed from tagged lines (the filer tags none). Recorded moat class; CURRENT = 10/10/+moat credit, OPT1 = runway by moat (wide 10/20/0, narrow 10/15/0, none 10/10/0).", "");
 
   const companies = RUNS.map(load);
-  const data = Object.fromEntries(companies.map((c) => [c.ticker, filedData(c.ticker, c.tax)]));
+  const data = Object.fromEntries(companies.map((c) => [c.ticker, filedData(c.ticker, c.tax, supplement(c.ticker))]));
   const taxes = Object.fromEntries(companies.map((c) => [c.ticker, goldenTax(c.ticker)]));
 
   // Reproduction of #495.
@@ -288,7 +395,7 @@ function main(): void {
   // 1. Data.
   lines.push("## 1. Filed data", "");
   lines.push(
-    "| Company | TTM rev growth | Latest-qtr YoY | 3-yr CAGR | 5-yr CAGR | Op margin TTM / 5-yr median / filed range | Eff. tax (latest FY) | ROIC latest / 5-yr avg | 3-yr incremental ROIC | Net reinvestment ÷ NOPAT, 3 yrs (capex − D&A only) | Model reinvestment ÷ NOPAT yrs 1–5 (g ÷ RONIC) | Drafted reinvestment share ÷ NOPAT |",
+    "| Company | TTM rev growth | Latest-qtr YoY | 3-yr CAGR | 5-yr CAGR | Op margin TTM / 5-yr median / filed range | Eff. tax 3-yr (latest FY) | ROIC latest / 5-yr avg | 3-yr incremental ROIC | Net reinvestment ÷ NOPAT, 3 yrs = capex − D&A + ΔNWC + acquisitions | Model reinvestment ÷ NOPAT yrs 1–5 (g ÷ RONIC) | Drafted reinvestment share ÷ NOPAT |",
     "|---|---|---|---|---|---|---|---|---|---|---|---|"
   );
   for (const c of companies) {
@@ -298,11 +405,13 @@ function main(): void {
     const draftedOverNopat = draftedShare.div(b.m[0].mul(ONE.minus(c.tax)));
     const t = taxes[c.ticker];
     lines.push(
-      `| ${c.label} | ${pct(d.ttmGrowth)} | ${pct(d.lqYoY)} (${d.latestQuarter}) | ${pct(d.cagr3)} | ${pct(d.cagr5)} (to FY${d.lastFy}) | ${pct(d.ttmMargin)} / ${pct(d.median5Margin)} / ${d.marginRange ? `${pct(d.marginRange.lo)}–${pct(d.marginRange.hi)}` : "n/a (operating income not tagged)"} | ${t ? `${pct(t.rate)} (FY${t.fy}; 3-yr not in frozen data)` : "n/a"} | ${d.roicLatest ? `${pct(d.roicLatest.v)} (FY${d.roicLatest.fy})` : "n/a"} / ${pct(d.roic5)} | ${d.incremental3 ? `${pct(d.incremental3.v)} (FY${d.incremental3.from}→${d.incremental3.to})` : "n/a"} | ${d.netReinvest3 ? `${pct(d.netReinvest3.v)} (FY${d.netReinvest3.from}–${d.netReinvest3.to})` : "n/a"} | ${pct(b.g[0].div(b.ronic))} | ${pct(draftedOverNopat)} (${pct(draftedShare)} of revenue) |`
+      `| ${c.label} | ${pct(d.ttmGrowth)} | ${pct(d.lqYoY)} (${d.latestQuarter}) | ${pct(d.cagr3)} | ${pct(d.cagr5)} (to FY${d.lastFy}) | ${pct(d.ttmMargin)} / ${pct(d.median5Margin)} / ${d.marginRange ? `${pct(d.marginRange.lo)}–${pct(d.marginRange.hi)}` : "n/a (operating income not tagged)"}${d.operatingIncomeConstruction ? " ‡" : ""} | ${d.tax3 ? `${pct(d.tax3.v)} (FY${d.tax3.from}–${d.tax3.to})` : "n/a"}${t ? ` (${pct(t.rate)} FY${t.fy})` : ""} | ${d.roicLatest ? `${pct(d.roicLatest.v)} (FY${d.roicLatest.fy})` : "n/a"} / ${pct(d.roic5)} | ${d.incremental3 ? `${pct(d.incremental3.v)} (FY${d.incremental3.from}→${d.incremental3.to})` : "n/a"} | ${d.fullReinvest3 ? `**${pct(d.fullReinvest3.v)}** = ${pct(d.fullReinvest3.capexLessDa)} + ${pct(d.fullReinvest3.dNwc)} + ${pct(d.fullReinvest3.acquisitions)} (FY${d.fullReinvest3.from}–${d.fullReinvest3.to}; acquisitions: ${d.fullReinvest3.acqBasis})` : "n/a"} | ${pct(b.g[0].div(b.ronic))} | ${pct(draftedOverNopat)} (${pct(draftedShare)} of revenue) |`
     );
     json[`data:${c.ticker}`] = { ...d, goldenTax: t, modelReinvestmentOverNopat: b.g[0].div(b.ronic), draftedShare, draftedOverNopat };
   }
   lines.push(
+    "",
+    "‡ NUE: pre-tax income + interest expense − interest income − equity-method earnings. LLY: pre-tax income − non-operating income (expense) — the construction reproduces MSFT's and NVDA's tagged operating income exactly in FY2023–26. LLY invested capital adds long-term debt back: its mapped total-debt series is us-gaap:DebtCurrent alone; LLY capex is us-gaap:PaymentsToAcquireOtherPropertyPlantAndEquipment (its mapped capex tags stop before FY2022). ΔNWC is the cash-flow statement's working-capital lines.",
     "",
     "**What drives FCF in the engine:** the return on new capital. Reinvestment_t = NOPAT_t × g_(t+1) ÷ RONIC_t (`lib/analyzer/modules/scenarioOutputs.ts:76`). The drafted reinvestment share (`reinvestmentCapitalIntensity`) is never read by the valuation — only displayed (`assemble.ts:951`) and used for the profile's capital-intensity classification (`aiProposedBundle.ts:160`).",
     ""
@@ -322,20 +431,20 @@ function main(): void {
     if (g === null) return "TTM revenue growth not computable";
     return Object.fromEntries((["bear", "base", "bull"] as Scenario[]).map((s) => [s, { ...drivers[s], g: ramp(g, drivers[s].g[4]) }])) as Record<Scenario, Drivers>;
   };
-  const T1 = (c: Company) => taxes[c.ticker]?.rate ?? null;
+  const T1 = (c: Company) => data[c.ticker].tax3?.v ?? null;
   const R = (c: Company, v: Decimal | null, why: string) =>
     v === null ? why : v.lessThanOrEqualTo(0) ? `not positive (${pct(v)})` : { drivers: { ...c.drivers, base: { ...c.drivers.base, ronic: v } }, tax: c.tax };
   const variants: Variant[] = [
     { key: "Drafted", build: d0 },
     { key: "M1 margin TTM→drafted", build: (c) => { const m = M1(c); return typeof m === "string" ? m : { drivers: m, tax: c.tax }; } },
     { key: "G1 growth TTM→drafted", build: (c) => { const g = G1(c); return typeof g === "string" ? g : { drivers: g, tax: c.tax }; } },
-    { key: "T1 effective tax (latest FY)", build: (c) => { const t = T1(c); return t === null ? "no effective tax rate" : { drivers: c.drivers, tax: t }; } },
+    { key: "T1 effective tax (3-yr)", build: (c) => { const t = T1(c); return t === null ? "no effective tax rate" : { drivers: c.drivers, tax: t }; } },
     { key: "R1 RONIC = latest ROIC", build: (c) => R(c, data[c.ticker].roicLatest?.v ?? null, "ROIC not computable (operating income not tagged)") },
     { key: "R2 RONIC = 3-yr incremental", build: (c) => R(c, data[c.ticker].incremental3?.v ?? null, "incremental ROIC not computable") },
     {
       key: "R3 RONIC = implied by actual reinvestment",
       build: (c) => {
-        const nr = data[c.ticker].netReinvest3?.v ?? null;
+        const nr = data[c.ticker].fullReinvest3?.v ?? null;
         if (nr === null) return "actual reinvestment not computable (no NOPAT)";
         if (!nr.greaterThan(0)) return `actual net reinvestment not positive (${pct(nr)} of NOPAT)`;
         return R(c, c.drivers.base.g[0].div(nr), "");

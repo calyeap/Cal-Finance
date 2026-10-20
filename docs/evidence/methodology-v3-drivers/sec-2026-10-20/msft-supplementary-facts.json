@@ -1,0 +1,906 @@
+{
+ "ticker": "MSFT",
+ "source": "https://data.sec.gov/api/xbrl/companyfacts/CIK0000789019.json",
+ "fetchedAt": "2026-10-20T06:32:03Z",
+ "note": "Supplementary facts for CF-METHODOLOGY-V3-DRIVERS-01 (#496), extracted verbatim from SEC XBRL company facts (latest-filed value per period). Not part of the frozen 19 Oct capture.",
+ "annual": {
+  "tax": {
+   "2020-06-30": {
+    "val": 8755000000,
+    "accn": "0001564590-22-026876",
+    "tag": "IncomeTaxExpenseBenefit"
+   },
+   "2021-06-30": {
+    "val": 9831000000,
+    "accn": "0000950170-23-035122",
+    "tag": "IncomeTaxExpenseBenefit"
+   },
+   "2022-06-30": {
+    "val": 10978000000,
+    "accn": "0000950170-24-087843",
+    "tag": "IncomeTaxExpenseBenefit"
+   },
+   "2023-06-30": {
+    "val": 16950000000,
+    "accn": "0000950170-25-100235",
+    "tag": "IncomeTaxExpenseBenefit"
+   },
+   "2024-06-30": {
+    "val": 19651000000,
+    "accn": "0001193125-26-323660",
+    "tag": "IncomeTaxExpenseBenefit"
+   },
+   "2025-06-30": {
+    "val": 21795000000,
+    "accn": "0001193125-26-323660",
+    "tag": "IncomeTaxExpenseBenefit"
+   },
+   "2026-06-30": {
+    "val": 32185000000,
+    "accn": "0001193125-26-323660",
+    "tag": "IncomeTaxExpenseBenefit"
+   }
+  },
+  "pretax": {
+   "2020-06-30": {
+    "val": 53036000000,
+    "accn": "0001564590-22-026876",
+    "tag": "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+   },
+   "2021-06-30": {
+    "val": 71102000000,
+    "accn": "0000950170-23-035122",
+    "tag": "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+   },
+   "2022-06-30": {
+    "val": 83716000000,
+    "accn": "0000950170-24-087843",
+    "tag": "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+   },
+   "2023-06-30": {
+    "val": 89311000000,
+    "accn": "0000950170-25-100235",
+    "tag": "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+   },
+   "2024-06-30": {
+    "val": 107787000000,
+    "accn": "0001193125-26-323660",
+    "tag": "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+   },
+   "2025-06-30": {
+    "val": 123627000000,
+    "accn": "0001193125-26-323660",
+    "tag": "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+   },
+   "2026-06-30": {
+    "val": 165934000000,
+    "accn": "0001193125-26-323660",
+    "tag": "IncomeLossFromContinuingOperationsBeforeIncomeTaxesExtraordinaryItemsNoncontrollingInterest"
+   }
+  },
+  "nonoperating": {
+   "2020-06-30": {
+    "val": 77000000,
+    "accn": "0001564590-22-026876",
+    "tag": "NonoperatingIncomeExpense"
+   },
+   "2021-06-30": {
+    "val": 1186000000,
+    "accn": "0000950170-23-035122",
+    "tag": "NonoperatingIncomeExpense"
+   },
+   "2022-06-30": {
+    "val": 333000000,
+    "accn": "0000950170-24-087843",
+    "tag": "NonoperatingIncomeExpense"
+   },
+   "2023-06-30": {
+    "val": 788000000,
+    "accn": "0000950170-25-100235",
+    "tag": "NonoperatingIncomeExpense"
+   },
+   "2024-06-30": {
+    "val": -1646000000,
+    "accn": "0001193125-26-323660",
+    "tag": "NonoperatingIncomeExpense"
+   },
+   "2025-06-30": {
+    "val": -4901000000,
+    "accn": "0001193125-26-323660",
+    "tag": "NonoperatingIncomeExpense"
+   },
+   "2026-06-30": {
+    "val": 10697000000,
+    "accn": "0001193125-26-323660",
+    "tag": "NonoperatingIncomeExpense"
+   }
+  },
+  "interestExpense": {
+   "2023-06-30": {
+    "val": 1968000000,
+    "accn": "0000950170-25-100235",
+    "tag": "InterestExpenseNonoperating"
+   },
+   "2024-06-30": {
+    "val": 2935000000,
+    "accn": "0001193125-26-323660",
+    "tag": "InterestExpenseNonoperating"
+   },
+   "2025-06-30": {
+    "val": 2385000000,
+    "accn": "0001193125-26-323660",
+    "tag": "InterestExpenseNonoperating"
+   },
+   "2026-06-30": {
+    "val": 3051000000,
+    "accn": "0001193125-26-323660",
+    "tag": "InterestExpenseNonoperating"
+   }
+  },
+  "acqBusinesses": {
+   "2008-06-30": {
+    "val": 8053000000,
+    "accn": "0001193125-10-171791",
+    "tag": "PaymentsToAcquireBusinessesNetOfCashAcquired"
+   },
+   "2009-06-30": {
+    "val": 868000000,
+    "accn": "0001193125-11-200680",
+    "tag": "PaymentsToAcquireBusinessesNetOfCashAcquired"
+   },
+   "2010-06-30": {
+    "val": 245000000,
+    "accn": "0001193125-11-200680",
+    "tag": "PaymentsToAcquireBusinessesNetOfCashAcquired"
+   },
+   "2011-06-30": {
+    "val": 71000000,
+    "accn": "0001193125-11-200680",
+    "tag": "PaymentsToAcquireBusinessesNetOfCashAcquired"
+   }
+  },
+  "goodwillAcquired": {
+   "2020-06-30": {
+    "val": 1454000000,
+    "accn": "0001564590-21-039151",
+    "tag": "GoodwillAcquiredDuringPeriod"
+   },
+   "2021-06-30": {
+    "val": 6061000000,
+    "accn": "0001564590-22-026876",
+    "tag": "GoodwillAcquiredDuringPeriod"
+   },
+   "2022-06-30": {
+    "val": 18126000000,
+    "accn": "0000950170-23-035122",
+    "tag": "GoodwillAcquiredDuringPeriod"
+   },
+   "2023-06-30": {
+    "val": 234000000,
+    "accn": "0000950170-24-087843",
+    "tag": "GoodwillAcquiredDuringPeriod"
+   },
+   "2024-06-30": {
+    "val": 51235000000,
+    "accn": "0000950170-25-100235",
+    "tag": "GoodwillAcquiredDuringPeriod"
+   },
+   "2025-06-30": {
+    "val": 0,
+    "accn": "0001193125-26-323660",
+    "tag": "GoodwillAcquiredDuringPeriod"
+   },
+   "2026-06-30": {
+    "val": 108000000,
+    "accn": "0001193125-26-323660",
+    "tag": "GoodwillAcquiredDuringPeriod"
+   }
+  },
+  "intangiblesAcquired": {
+   "2020-06-30": {
+    "val": 836000000,
+    "accn": "0001564590-21-039151",
+    "tag": "FinitelivedIntangibleAssetsAcquired1"
+   },
+   "2021-06-30": {
+    "val": 2359000000,
+    "accn": "0001564590-22-026876",
+    "tag": "FinitelivedIntangibleAssetsAcquired1"
+   },
+   "2022-06-30": {
+    "val": 5681000000,
+    "accn": "0000950170-23-035122",
+    "tag": "FinitelivedIntangibleAssetsAcquired1"
+   },
+   "2023-06-30": {
+    "val": 541000000,
+    "accn": "0000950170-24-087843",
+    "tag": "FinitelivedIntangibleAssetsAcquired1"
+   },
+   "2024-06-30": {
+    "val": 23264000000,
+    "accn": "0000950170-25-100235",
+    "tag": "FinitelivedIntangibleAssetsAcquired1"
+   },
+   "2025-06-30": {
+    "val": 1096000000,
+    "accn": "0001193125-26-323660",
+    "tag": "FinitelivedIntangibleAssetsAcquired1"
+   },
+   "2026-06-30": {
+    "val": 804000000,
+    "accn": "0001193125-26-323660",
+    "tag": "FinitelivedIntangibleAssetsAcquired1"
+   }
+  },
+  "capex": {
+   "2020-06-30": {
+    "val": 15441000000,
+    "accn": "0001564590-22-026876",
+    "tag": "PaymentsToAcquirePropertyPlantAndEquipment"
+   },
+   "2021-06-30": {
+    "val": 20622000000,
+    "accn": "0000950170-23-035122",
+    "tag": "PaymentsToAcquirePropertyPlantAndEquipment"
+   },
+   "2022-06-30": {
+    "val": 23886000000,
+    "accn": "0000950170-24-087843",
+    "tag": "PaymentsToAcquirePropertyPlantAndEquipment"
+   },
+   "2023-06-30": {
+    "val": 28107000000,
+    "accn": "0000950170-25-100235",
+    "tag": "PaymentsToAcquirePropertyPlantAndEquipment"
+   },
+   "2024-06-30": {
+    "val": 44477000000,
+    "accn": "0001193125-26-323660",
+    "tag": "PaymentsToAcquirePropertyPlantAndEquipment"
+   },
+   "2025-06-30": {
+    "val": 64551000000,
+    "accn": "0001193125-26-323660",
+    "tag": "PaymentsToAcquirePropertyPlantAndEquipment"
+   },
+   "2026-06-30": {
+    "val": 115948000000,
+    "accn": "0001193125-26-323660",
+    "tag": "PaymentsToAcquirePropertyPlantAndEquipment"
+   }
+  }
+ },
+ "instant": {
+  "assetsCurrent": {
+   "2019-06-30": {
+    "val": 175552000000,
+    "accn": "0001564590-20-034944",
+    "tag": "AssetsCurrent"
+   },
+   "2020-06-30": {
+    "val": 181915000000,
+    "accn": "0001564590-21-039151",
+    "tag": "AssetsCurrent"
+   },
+   "2021-06-30": {
+    "val": 184406000000,
+    "accn": "0001564590-22-026876",
+    "tag": "AssetsCurrent"
+   },
+   "2022-06-30": {
+    "val": 169684000000,
+    "accn": "0000950170-23-035122",
+    "tag": "AssetsCurrent"
+   },
+   "2023-06-30": {
+    "val": 184257000000,
+    "accn": "0000950170-24-087843",
+    "tag": "AssetsCurrent"
+   },
+   "2024-06-30": {
+    "val": 159734000000,
+    "accn": "0000950170-25-100235",
+    "tag": "AssetsCurrent"
+   },
+   "2025-06-30": {
+    "val": 191131000000,
+    "accn": "0001193125-26-323660",
+    "tag": "AssetsCurrent"
+   },
+   "2026-06-30": {
+    "val": 207710000000,
+    "accn": "0001193125-26-323660",
+    "tag": "AssetsCurrent"
+   }
+  },
+  "liabilitiesCurrent": {
+   "2019-06-30": {
+    "val": 69420000000,
+    "accn": "0001564590-20-034944",
+    "tag": "LiabilitiesCurrent"
+   },
+   "2020-06-30": {
+    "val": 72310000000,
+    "accn": "0001564590-21-039151",
+    "tag": "LiabilitiesCurrent"
+   },
+   "2021-06-30": {
+    "val": 88657000000,
+    "accn": "0001564590-22-026876",
+    "tag": "LiabilitiesCurrent"
+   },
+   "2022-06-30": {
+    "val": 95082000000,
+    "accn": "0000950170-23-035122",
+    "tag": "LiabilitiesCurrent"
+   },
+   "2023-06-30": {
+    "val": 104149000000,
+    "accn": "0000950170-24-087843",
+    "tag": "LiabilitiesCurrent"
+   },
+   "2024-06-30": {
+    "val": 125286000000,
+    "accn": "0000950170-25-100235",
+    "tag": "LiabilitiesCurrent"
+   },
+   "2025-06-30": {
+    "val": 141218000000,
+    "accn": "0001193125-26-323660",
+    "tag": "LiabilitiesCurrent"
+   },
+   "2026-06-30": {
+    "val": 168825000000,
+    "accn": "0001193125-26-323660",
+    "tag": "LiabilitiesCurrent"
+   }
+  },
+  "cash": {
+   "2019-06-30": {
+    "val": 11356000000,
+    "accn": "0001564590-20-034944",
+    "tag": "CashAndCashEquivalentsAtCarryingValue"
+   },
+   "2020-06-30": {
+    "val": 13576000000,
+    "accn": "0001564590-21-039151",
+    "tag": "CashAndCashEquivalentsAtCarryingValue"
+   },
+   "2021-06-30": {
+    "val": 14224000000,
+    "accn": "0001564590-22-026876",
+    "tag": "CashAndCashEquivalentsAtCarryingValue"
+   },
+   "2022-06-30": {
+    "val": 13931000000,
+    "accn": "0000950170-23-035122",
+    "tag": "CashAndCashEquivalentsAtCarryingValue"
+   },
+   "2023-06-30": {
+    "val": 34704000000,
+    "accn": "0000950170-24-087843",
+    "tag": "CashAndCashEquivalentsAtCarryingValue"
+   },
+   "2024-06-30": {
+    "val": 18315000000,
+    "accn": "0000950170-25-100235",
+    "tag": "CashAndCashEquivalentsAtCarryingValue"
+   },
+   "2025-06-30": {
+    "val": 30242000000,
+    "accn": "0001193125-26-323660",
+    "tag": "CashAndCashEquivalentsAtCarryingValue"
+   },
+   "2026-06-30": {
+    "val": 20935000000,
+    "accn": "0001193125-26-323660",
+    "tag": "CashAndCashEquivalentsAtCarryingValue"
+   }
+  },
+  "shortTermInvestments": {
+   "2019-06-30": {
+    "val": 122463000000,
+    "accn": "0001564590-20-034944",
+    "tag": "ShortTermInvestments"
+   },
+   "2020-06-30": {
+    "val": 122951000000,
+    "accn": "0001564590-21-039151",
+    "tag": "ShortTermInvestments"
+   },
+   "2021-06-30": {
+    "val": 116110000000,
+    "accn": "0001564590-22-026876",
+    "tag": "ShortTermInvestments"
+   },
+   "2022-06-30": {
+    "val": 90826000000,
+    "accn": "0000950170-23-035122",
+    "tag": "ShortTermInvestments"
+   },
+   "2023-06-30": {
+    "val": 76558000000,
+    "accn": "0000950170-24-087843",
+    "tag": "ShortTermInvestments"
+   },
+   "2024-06-30": {
+    "val": 57228000000,
+    "accn": "0000950170-25-100235",
+    "tag": "ShortTermInvestments"
+   },
+   "2025-06-30": {
+    "val": 64323000000,
+    "accn": "0001193125-26-323660",
+    "tag": "ShortTermInvestments"
+   },
+   "2026-06-30": {
+    "val": 55908000000,
+    "accn": "0001193125-26-323660",
+    "tag": "ShortTermInvestments"
+   }
+  },
+  "longTermDebtCurrent": {
+   "2019-06-30": {
+    "val": 5516000000,
+    "accn": "0001564590-20-034944",
+    "tag": "LongTermDebtCurrent"
+   },
+   "2020-06-30": {
+    "val": 3749000000,
+    "accn": "0001564590-21-039151",
+    "tag": "LongTermDebtCurrent"
+   },
+   "2021-06-30": {
+    "val": 8072000000,
+    "accn": "0001564590-22-026876",
+    "tag": "LongTermDebtCurrent"
+   },
+   "2022-06-30": {
+    "val": 2749000000,
+    "accn": "0000950170-23-035122",
+    "tag": "LongTermDebtCurrent"
+   },
+   "2023-06-30": {
+    "val": 5247000000,
+    "accn": "0000950170-24-087843",
+    "tag": "LongTermDebtCurrent"
+   },
+   "2024-06-30": {
+    "val": 2249000000,
+    "accn": "0000950170-25-100235",
+    "tag": "LongTermDebtCurrent"
+   },
+   "2025-06-30": {
+    "val": 2999000000,
+    "accn": "0001193125-26-323660",
+    "tag": "LongTermDebtCurrent"
+   },
+   "2026-06-30": {
+    "val": 9227000000,
+    "accn": "0001193125-26-323660",
+    "tag": "LongTermDebtCurrent"
+   }
+  },
+  "shortTermBorrowings": {
+   "2010-06-30": {
+    "val": 1000000000,
+    "accn": "0001193125-11-200680",
+    "tag": "ShortTermBorrowings"
+   },
+   "2011-06-30": {
+    "val": 0,
+    "accn": "0001193125-11-200680",
+    "tag": "ShortTermBorrowings"
+   },
+   "2013-06-30": {
+    "val": 0,
+    "accn": "0001193125-14-289961",
+    "tag": "ShortTermBorrowings"
+   },
+   "2014-06-30": {
+    "val": 2000000000,
+    "accn": "0001193125-15-272806",
+    "tag": "ShortTermBorrowings"
+   },
+   "2015-06-30": {
+    "val": 4985000000,
+    "accn": "0001193125-16-662209",
+    "tag": "ShortTermBorrowings"
+   },
+   "2016-06-30": {
+    "val": 12904000000,
+    "accn": "0001564590-17-014900",
+    "tag": "ShortTermBorrowings"
+   },
+   "2017-06-30": {
+    "val": 9072000000,
+    "accn": "0001564590-18-019062",
+    "tag": "ShortTermBorrowings"
+   },
+   "2018-06-30": {
+    "val": 0,
+    "accn": "0001564590-18-019062",
+    "tag": "ShortTermBorrowings"
+   }
+  },
+  "commercialPaper": {
+   "2015-06-30": {
+    "val": 5000000000,
+    "accn": "0001193125-16-662209",
+    "tag": "CommercialPaper"
+   },
+   "2016-06-30": {
+    "val": 12900000000,
+    "accn": "0001564590-17-014900",
+    "tag": "CommercialPaper"
+   },
+   "2017-06-30": {
+    "val": 9100000000,
+    "accn": "0001564590-18-019062",
+    "tag": "CommercialPaper"
+   },
+   "2018-06-30": {
+    "val": 0,
+    "accn": "0001564590-19-027952",
+    "tag": "CommercialPaper"
+   },
+   "2019-06-30": {
+    "val": 0,
+    "accn": "0001564590-19-027952",
+    "tag": "CommercialPaper"
+   },
+   "2023-06-30": {
+    "val": 0,
+    "accn": "0000950170-24-087843",
+    "tag": "CommercialPaper"
+   },
+   "2024-06-30": {
+    "val": 6693000000,
+    "accn": "0000950170-25-100235",
+    "tag": "CommercialPaper"
+   },
+   "2025-06-30": {
+    "val": 0,
+    "accn": "0000950170-25-100235",
+    "tag": "CommercialPaper"
+   }
+  },
+  "longTermDebtNoncurrent": {
+   "2019-06-30": {
+    "val": 66662000000,
+    "accn": "0001564590-20-034944",
+    "tag": "LongTermDebtNoncurrent"
+   },
+   "2020-06-30": {
+    "val": 59578000000,
+    "accn": "0001564590-21-039151",
+    "tag": "LongTermDebtNoncurrent"
+   },
+   "2021-06-30": {
+    "val": 50074000000,
+    "accn": "0001564590-22-026876",
+    "tag": "LongTermDebtNoncurrent"
+   },
+   "2022-06-30": {
+    "val": 47032000000,
+    "accn": "0000950170-23-035122",
+    "tag": "LongTermDebtNoncurrent"
+   },
+   "2023-06-30": {
+    "val": 41990000000,
+    "accn": "0000950170-24-087843",
+    "tag": "LongTermDebtNoncurrent"
+   },
+   "2024-06-30": {
+    "val": 42688000000,
+    "accn": "0000950170-25-100235",
+    "tag": "LongTermDebtNoncurrent"
+   },
+   "2025-06-30": {
+    "val": 40152000000,
+    "accn": "0001193125-26-323660",
+    "tag": "LongTermDebtNoncurrent"
+   },
+   "2026-06-30": {
+    "val": 31067000000,
+    "accn": "0001193125-26-323660",
+    "tag": "LongTermDebtNoncurrent"
+   }
+  }
+ },
+ "ttm": {
+  "pretax": {
+   "end": "2026-06-30",
+   "val": 165934000000,
+   "basis": "latest fiscal year (no later 10-Q)"
+  },
+  "nonoperating": {
+   "end": "2026-06-30",
+   "val": 10697000000,
+   "basis": "latest fiscal year (no later 10-Q)"
+  },
+  "interestExpense": {
+   "end": "2026-06-30",
+   "val": 3051000000,
+   "basis": "latest fiscal year (no later 10-Q)"
+  },
+  "tax": {
+   "end": "2026-06-30",
+   "val": 32185000000,
+   "basis": "latest fiscal year (no later 10-Q)"
+  }
+ },
+ "workingCapitalCashFlow": {
+  "IncreaseDecreaseInAccountsPayable": {
+   "2020-06-30": {
+    "val": 3018000000,
+    "accn": "0001564590-22-026876"
+   },
+   "2021-06-30": {
+    "val": 2798000000,
+    "accn": "0000950170-23-035122"
+   },
+   "2022-06-30": {
+    "val": 2943000000,
+    "accn": "0000950170-24-087843"
+   },
+   "2023-06-30": {
+    "val": -2721000000,
+    "accn": "0000950170-25-100235"
+   },
+   "2024-06-30": {
+    "val": 3545000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2025-06-30": {
+    "val": 569000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2026-06-30": {
+    "val": 5268000000,
+    "accn": "0001193125-26-323660"
+   }
+  },
+  "IncreaseDecreaseInAccountsReceivable": {
+   "2020-06-30": {
+    "val": 2577000000,
+    "accn": "0001564590-22-026876"
+   },
+   "2021-06-30": {
+    "val": 6481000000,
+    "accn": "0000950170-23-035122"
+   },
+   "2022-06-30": {
+    "val": 6834000000,
+    "accn": "0000950170-24-087843"
+   },
+   "2023-06-30": {
+    "val": 4087000000,
+    "accn": "0000950170-25-100235"
+   },
+   "2024-06-30": {
+    "val": 7191000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2025-06-30": {
+    "val": 10581000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2026-06-30": {
+    "val": 12737000000,
+    "accn": "0001193125-26-323660"
+   }
+  },
+  "IncreaseDecreaseInAccruedIncomeTaxesPayable": {
+   "2020-06-30": {
+    "val": -3631000000,
+    "accn": "0001564590-22-026876"
+   },
+   "2021-06-30": {
+    "val": -2309000000,
+    "accn": "0000950170-23-035122"
+   },
+   "2022-06-30": {
+    "val": 696000000,
+    "accn": "0000950170-24-087843"
+   },
+   "2023-06-30": {
+    "val": -358000000,
+    "accn": "0000950170-25-100235"
+   },
+   "2024-06-30": {
+    "val": 1687000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2025-06-30": {
+    "val": -38000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2026-06-30": {
+    "val": -1875000000,
+    "accn": "0001193125-26-323660"
+   }
+  },
+  "IncreaseDecreaseInContractWithCustomerLiability": {
+   "2020-06-30": {
+    "val": 2212000000,
+    "accn": "0001564590-22-026876"
+   },
+   "2021-06-30": {
+    "val": 4633000000,
+    "accn": "0000950170-23-035122"
+   },
+   "2022-06-30": {
+    "val": 5109000000,
+    "accn": "0000950170-24-087843"
+   },
+   "2023-06-30": {
+    "val": 5535000000,
+    "accn": "0000950170-25-100235"
+   },
+   "2024-06-30": {
+    "val": 5348000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2025-06-30": {
+    "val": 5438000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2026-06-30": {
+    "val": 9361000000,
+    "accn": "0001193125-26-323660"
+   }
+  },
+  "IncreaseDecreaseInInventories": {
+   "2020-06-30": {
+    "val": -168000000,
+    "accn": "0001564590-22-026876"
+   },
+   "2021-06-30": {
+    "val": 737000000,
+    "accn": "0000950170-23-035122"
+   },
+   "2022-06-30": {
+    "val": 1123000000,
+    "accn": "0000950170-24-087843"
+   },
+   "2023-06-30": {
+    "val": -1242000000,
+    "accn": "0000950170-25-100235"
+   },
+   "2024-06-30": {
+    "val": -1284000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2025-06-30": {
+    "val": -309000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2026-06-30": {
+    "val": 461000000,
+    "accn": "0001193125-26-323660"
+   }
+  },
+  "IncreaseDecreaseInOtherCurrentAssets": {
+   "2020-06-30": {
+    "val": 2330000000,
+    "accn": "0001564590-22-026876"
+   },
+   "2021-06-30": {
+    "val": 932000000,
+    "accn": "0000950170-23-035122"
+   },
+   "2022-06-30": {
+    "val": 709000000,
+    "accn": "0000950170-24-087843"
+   },
+   "2023-06-30": {
+    "val": 1991000000,
+    "accn": "0000950170-25-100235"
+   },
+   "2024-06-30": {
+    "val": 1648000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2025-06-30": {
+    "val": 3044000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2026-06-30": {
+    "val": 2627000000,
+    "accn": "0001193125-26-323660"
+   }
+  },
+  "IncreaseDecreaseInOtherCurrentLiabilities": {
+   "2020-06-30": {
+    "val": 1346000000,
+    "accn": "0001564590-22-026876"
+   },
+   "2021-06-30": {
+    "val": 4149000000,
+    "accn": "0000950170-23-035122"
+   },
+   "2022-06-30": {
+    "val": 2344000000,
+    "accn": "0000950170-24-087843"
+   },
+   "2023-06-30": {
+    "val": 2272000000,
+    "accn": "0000950170-25-100235"
+   },
+   "2024-06-30": {
+    "val": 4867000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2025-06-30": {
+    "val": 5922000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2026-06-30": {
+    "val": 6847000000,
+    "accn": "0001193125-26-323660"
+   }
+  },
+  "IncreaseDecreaseInOtherNoncurrentAssets": {
+   "2020-06-30": {
+    "val": 1037000000,
+    "accn": "0001564590-22-026876"
+   },
+   "2021-06-30": {
+    "val": 3459000000,
+    "accn": "0000950170-23-035122"
+   },
+   "2022-06-30": {
+    "val": 2805000000,
+    "accn": "0000950170-24-087843"
+   },
+   "2023-06-30": {
+    "val": 2833000000,
+    "accn": "0000950170-25-100235"
+   },
+   "2024-06-30": {
+    "val": 6817000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2025-06-30": {
+    "val": 2950000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2026-06-30": {
+    "val": 3964000000,
+    "accn": "0001193125-26-323660"
+   }
+  },
+  "IncreaseDecreaseInOtherNoncurrentLiabilities": {
+   "2020-06-30": {
+    "val": 1348000000,
+    "accn": "0001564590-22-026876"
+   },
+   "2021-06-30": {
+    "val": 1402000000,
+    "accn": "0000950170-23-035122"
+   },
+   "2022-06-30": {
+    "val": 825000000,
+    "accn": "0000950170-24-087843"
+   },
+   "2023-06-30": {
+    "val": 553000000,
+    "accn": "0000950170-25-100235"
+   },
+   "2024-06-30": {
+    "val": 749000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2025-06-30": {
+    "val": -975000000,
+    "accn": "0001193125-26-323660"
+   },
+   "2026-06-30": {
+    "val": -4707000000,
+    "accn": "0001193125-26-323660"
+   }
+  }
+ }
+}
