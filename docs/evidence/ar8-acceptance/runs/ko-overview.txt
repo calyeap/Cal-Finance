@@ -1,0 +1,67 @@
+COCA COLA CO
+KO
+No valuation verdict for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Uncertainty — not set
+$93.42
+2026-10-19
+No price history is in this analysis' fact set.
+Bear
+—
+Base
+—
+Bull
+—
+Current price
+$93.42
+No fair-value range for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Overview
+Business
+Financials
+Valuation
+Risks & Thesis
+Market Context
+Evidence
+Save this version
+Look at this company again
+What today's price assumes
+Not computed for this company yet — it needs the company's enterprise value, which is not available for this company.
+Steady-state EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+PVGO share of EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+How the price is read — Valuation
+If our Base case happens
+No break-even return is computed for this analysis.
+Scenario outputs — Valuation
+Why this verdict
+No valuation verdict for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+The sheet behind the Base value — Valuation
+Business quality
+Wide moat
+FY2022 is missing invested capital
+Returns by year — Financials
+Strongest argument against
+Full-year operating cash flow of $7.4B sits well below full-year operating income of $13.8B, despite depreciation and amortisation of $1.1B and share-based compensation of $279.0M being non-cash add-backs that should push cash flow above accounting profit rather than below it. The record contains no reconciliation of the gap and no prior-year cash flow figures against which to judge whether it is recurring.
+Challenger findings — Risks & Thesis
+Top risks
+The draft's own Bear case (AI draft, every driver cited):
+Coca-Cola's filed decade shows a top line that barely grew: 41.9bn in FY2016 against 47.9bn in FY2025, a 1.5% window CAGR, with outright declines in FY2017, FY2018 and FY2020 (H:revenue). The bear case assumes the recent step-up is mostly pricing that fades, volumes stay flat in developed markets, and currency and refranchising keep reported revenue growing about 2% a year. Margin gives back the FY2025 peak and settles near the FY2023-FY2024 zone, where impairment and legal charges pulled operating margin to 21.2% (H:margin). Net reinvestment runs above the filed median as capex continues its climb from 1,177m in FY2020 to 2,112m in FY2025 while D&A falls to 1,050m (H:capex), and each new dollar earns 10% \u2014 below the 9% discount rate plus moat credit, i.e. growth that barely pays for itself. Share count drifts up slightly with stock compensation of roughly 279m a year and no buyback disclosure in the supplied sources (H:cashflow).
+All three cases — Risks & Thesis
+What would change it
+The single largest driver of this valuation is RONIC, which can move the result by 14.7% across its tested range.
+Sensitivity — Valuation
+Key Stats (TTM)
+Market cap
+Not computed for this company yet — it needs finance-lease liabilities and a decision on which of its investments are non-operating, which are not available for this company.
+P/E (trailing)
+28.1
+Spot-check not required
+FCF yield
+1.3%
+Spot-check not required
+52-week range
+$67.54 – $93.90
+Leverage
+Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Market Context
+SIC 2080 · Beverages
+Upcoming Events
+No upcoming events are tracked for this company yet.

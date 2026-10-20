@@ -1,9 +1,9 @@
 {
   "capUsd": 5,
-  "calls": 7,
-  "inputTokens": 48576,
-  "outputTokens": 29359,
-  "costUsd": 0.9768550000000001,
+  "calls": 19,
+  "inputTokens": 140946,
+  "outputTokens": 93372,
+  "costUsd": 3.039030000000001,
   "rows": [
     {
       "ticker": "MSFT",
@@ -53,6 +53,90 @@
       "inputTokens": 6274,
       "outputTokens": 2654,
       "costUsd": 0.09772
+    },
+    {
+      "ticker": "NUE",
+      "preflight": false,
+      "inputTokens": 6460,
+      "outputTokens": 3062,
+      "costUsd": 0.10885
+    },
+    {
+      "ticker": "NUE",
+      "preflight": false,
+      "inputTokens": 7914,
+      "outputTokens": 8515,
+      "costUsd": 0.25244500000000003
+    },
+    {
+      "ticker": "KO",
+      "preflight": false,
+      "inputTokens": 5892,
+      "outputTokens": 4036,
+      "costUsd": 0.13036
+    },
+    {
+      "ticker": "KO",
+      "preflight": false,
+      "inputTokens": 8330,
+      "outputTokens": 7231,
+      "costUsd": 0.22242500000000004
+    },
+    {
+      "ticker": "KO",
+      "preflight": false,
+      "inputTokens": 8499,
+      "outputTokens": 6672,
+      "costUsd": 0.209295
+    },
+    {
+      "ticker": "LLY",
+      "preflight": false,
+      "inputTokens": 5652,
+      "outputTokens": 3630,
+      "costUsd": 0.11901000000000002
+    },
+    {
+      "ticker": "LLY",
+      "preflight": false,
+      "inputTokens": 5746,
+      "outputTokens": 4120,
+      "costUsd": 0.13173
+    },
+    {
+      "ticker": "LLY",
+      "preflight": false,
+      "inputTokens": 8072,
+      "outputTokens": 5829,
+      "costUsd": 0.186085
+    },
+    {
+      "ticker": "OKLO",
+      "preflight": false,
+      "inputTokens": 6064,
+      "outputTokens": 3735,
+      "costUsd": 0.123695
+    },
+    {
+      "ticker": "OKLO",
+      "preflight": false,
+      "inputTokens": 7860,
+      "outputTokens": 4403,
+      "costUsd": 0.149375
+    },
+    {
+      "ticker": "OKLO",
+      "preflight": false,
+      "inputTokens": 8157,
+      "outputTokens": 6630,
+      "costUsd": 0.20653500000000002
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 13724,
+      "outputTokens": 6150,
+      "costUsd": 0.22237
     }
   ]
 }
