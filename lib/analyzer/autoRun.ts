@@ -1,4 +1,4 @@
-import { loadGateState, type GateState } from "./gate";
+import { loadGateState, type GateState, type LoadGateStateOptions } from "./gate";
 import { automaticDecisionsFor } from "./autoVerify";
 import { recordAutomaticFactDecisions, recordAutomaticProfileResolution } from "./runStore";
 
@@ -44,8 +44,11 @@ import { recordAutomaticFactDecisions, recordAutomaticProfileResolution } from "
  * a locally patched copy would be this layer asserting a completion the store
  * has not confirmed.
  */
-export async function advanceRunAutomatically(runId: string): Promise<GateState> {
-  let state = await loadGateState(runId);
+export async function advanceRunAutomatically(runId: string, options: LoadGateStateOptions = {}): Promise<GateState> {
+  // `options` (the run's pinned market data, where it has one) lets the
+  // report route hand the returned state straight to the computation that
+  // follows in the same request (CF-AR7-REPORT-CONTENT-01).
+  let state = await loadGateState(runId, options);
   let changed = false;
 
   if (!state.spotCheckComplete) {
@@ -76,5 +79,5 @@ export async function advanceRunAutomatically(runId: string): Promise<GateState>
     changed = true;
   }
 
-  return changed ? loadGateState(runId) : state;
+  return changed ? loadGateState(runId, options) : state;
 }

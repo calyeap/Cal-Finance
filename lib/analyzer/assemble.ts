@@ -70,6 +70,7 @@ import type {
   Figure,
   D2Inputs,
   LatestFiling,
+  FinancialHistory,
   MarketContextSectionContent,
   MoatClass,
   OverrideRecord,
@@ -137,6 +138,8 @@ export interface CompanyFixture {
   // CF-ANALYZER-V1-SETTLE-01 — see `LatestFiling`'s own doc comment. Same
   // optionality reasoning as `business`/`marketContext` above.
   latestFiling?: LatestFiling | null;
+  // CF-AR7-REPORT-CONTENT-01 — display-only filed history (types.ts).
+  financialHistory?: FinancialHistory | null;
 
   gate0: Gate0Input;
   gate1: Gate1Input;
@@ -1455,6 +1458,7 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     },
     marketContext: fixture.marketContext ?? { sic: null, sicDescription: null },
     latestFiling: fixture.latestFiling ?? null,
+    financialHistory: fixture.financialHistory ?? null,
     policy: {
       version: fingerprint("policy", POLICY),
       constants: POLICY,

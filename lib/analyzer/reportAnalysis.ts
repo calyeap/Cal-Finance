@@ -1,4 +1,4 @@
-import { computeRunOutput, RunNotFoundError } from "./gate";
+import { computeRunOutput, RunNotFoundError, type GateState, type LoadGateStateOptions } from "./gate";
 import { getRecordedJudgementState, type RecordedJudgementState } from "./runStore";
 import { getRunOutput, getRunMarketSnapshot, saveRunOutput, type RunOutputSnapshot } from "./snapshotStore";
 import { fingerprint } from "./runIdentity";
@@ -84,13 +84,16 @@ export async function currentRunOutput(runId: string): Promise<{ result: Analysi
  * stored — read back after the write — so the first view and every later
  * one show the same thing.
  */
-async function storedRunOutput(runId: string): Promise<{ result: AnalysisResult; snapshot: RunOutputSnapshot }> {
+async function storedRunOutput(
+  runId: string,
+  preloadedState?: GateState
+): Promise<{ result: AnalysisResult; snapshot: RunOutputSnapshot }> {
   const { fingerprint: judgementsFingerprint, state } = await judgementsFingerprintFor(runId);
   const stored = await getRunOutput(runId, judgementsFingerprint);
   if (stored !== null) return { result: stored.result, snapshot: stored.snapshot };
 
   const pinnedMarket = await getRunMarketSnapshot(runId);
-  const computed = await computeRunOutput(runId, pinnedMarket === null ? {} : { market: pinnedMarket });
+  const computed = await computeRunOutput(runId, pinnedMarket === null ? {} : { market: pinnedMarket }, preloadedState);
   // CF-AR5-VERDICT-CONSOLIDATION-01 — the verdict judgements this output is
   // stored under travel with it, so the verdict (verdict.ts, a pure function
   // of the stored result) is the one these recorded answers give (AR0-5).
@@ -195,6 +198,31 @@ function generateOnce(
 }
 
 /**
+ * The run's market data as its report is valued on it: the pinned snapshot
+ * where an earlier output stored one, otherwise none (fetched on load). The
+ * report route loads the gate state with this so the same state can be
+ * handed on as `preloadedState` (CF-AR7-REPORT-CONTENT-01).
+ */
+export async function reportMarketOptions(runId: string): Promise<LoadGateStateOptions> {
+  const pinnedMarket = await getRunMarketSnapshot(runId);
+  return pinnedMarket === null ? {} : { market: pinnedMarket };
+}
+
+/**
+ * The deterministic analysis alone, for the report tabs that never show the
+ * AI layer's prose (Business, Financials, Valuation, Market Context) —
+ * CF-AR7-REPORT-CONTENT-01, the speed fix salvaged from closed PR #421. The
+ * same stored output analysisForReport reads; no model call is made, joined
+ * or waited on.
+ */
+export async function deterministicReport(
+  runId: string,
+  preloadedState?: GateState
+): Promise<{ result: AnalysisResult; snapshot: RunOutputSnapshot }> {
+  return storedRunOutput(runId, preloadedState);
+}
+
+/**
  * The analysis as the report renders it.
  *
  * The call is a parameter so tests can drive it without a network or a key,
@@ -211,12 +239,14 @@ function generateOnce(
 export async function analysisForReport(
   runId: string,
   call: AnalystCall | null = analystCallIfConfigured(),
-  onStage?: (stage: "compute" | "aiLayer", ms: number) => void
+  onStage?: (stage: "compute" | "aiLayer", ms: number) => void,
+  preloadedState?: GateState
 ): Promise<ReportAnalysis> {
   // First, and independently of everything below. A stored output is read,
-  // not recomputed; "compute" times whichever happened.
+  // not recomputed; "compute" times whichever happened. `preloadedState`:
+  // see computeRunOutput.
   const computeStarted = Date.now();
-  const { result, snapshot } = await storedRunOutput(runId);
+  const { result, snapshot } = await storedRunOutput(runId, preloadedState);
   onStage?.("compute", Date.now() - computeStarted);
 
   // Already run for this run. The words a report shows must not change under

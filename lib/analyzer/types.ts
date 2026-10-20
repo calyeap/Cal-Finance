@@ -1256,6 +1256,9 @@ export interface AnalysisResult {
   business: BusinessSectionContent;
   marketContext: MarketContextSectionContent;
   latestFiling: LatestFiling | null;
+  // CF-AR7-REPORT-CONTENT-01 — the Financials tab's filed ten-year lines.
+  // Optional: an output stored before AR7 carries none, and the tab says so.
+  financialHistory?: FinancialHistory | null;
   policy: {
     // CF-AR3-REPRODUCIBLE-RUNS-01 — a fingerprint of `constants` below, so a
     // result names the policy it was computed under (AR0-5).
@@ -1306,4 +1309,41 @@ export interface RunIdentity {
     /** Years from basePeriodEnd to valuationDate (0 where either is missing). */
     stubYears: Decimal;
   };
+}
+
+// ---------------------------------------------------------------------------
+// CF-AR7-REPORT-CONTENT-01 — the Financials tab's statements: each line as the
+// company filed it, by fiscal year, with the SEC filing each figure was read
+// from. Display only: nothing in the valuation reads this.
+// ---------------------------------------------------------------------------
+
+/** One filed figure and the filing it came from. */
+export interface FiledFigure {
+  value: Decimal;
+  /** The SEC filing index page for the accession the figure was reported in, where one is recorded. */
+  url: string | null;
+}
+
+export const FINANCIAL_HISTORY_LINES = [
+  "revenue",
+  "operatingIncome",
+  "operatingCashFlow",
+  "capex",
+  "depreciationAndAmortisation",
+  "stockBasedCompensation",
+  "backlog",
+] as const;
+
+export type FinancialHistoryLine = (typeof FINANCIAL_HISTORY_LINES)[number];
+
+export interface FinancialHistoryYear {
+  fiscalYear: number;
+  lines: Record<FinancialHistoryLine, FiledFigure | null>;
+}
+
+export interface FinancialHistory {
+  /** Oldest first, up to ten fiscal years. */
+  years: FinancialHistoryYear[];
+  /** Where the figures were read: the company's XBRL company-facts document. */
+  source: string;
 }

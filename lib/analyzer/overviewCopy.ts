@@ -247,6 +247,34 @@ export function overviewTextViolations(text: string): OverviewTextViolation[] {
 }
 
 /**
+ * CF-AR7-REPORT-CONTENT-01 — the forbidden-text evaluator for every reading
+ * tab (Overview, Business, Financials, Valuation, Risks & Thesis, Market
+ * Context). Evidence is the diagnostics surface and is not a reading tab.
+ * The Overview's list, plus the two classes closed issue #418 found on
+ * Financials and Valuation: a check's raw outcome code standing in for words,
+ * and an unformatted machine number (a filing accession, hyphenated, is a
+ * reference rather than a figure, and is allowed).
+ */
+export const READING_SURFACE_FORBIDDEN_TEXT: readonly { label: string; pattern: RegExp }[] = [
+  ...OVERVIEW_FORBIDDEN_TEXT,
+  { label: "raw check outcome code", pattern: /\b(?:PASS|FAIL|CLEAN|FIRED|NOT FIRED)\b/ },
+  { label: "unformatted machine number", pattern: /(?<![\d.,-])\d{10,}(?![\d-])/ },
+];
+
+/** Every reading-surface forbidden pattern present in `text` (first occurrence each). */
+export function readingSurfaceViolations(text: string): OverviewTextViolation[] {
+  const violations: OverviewTextViolation[] = [];
+  for (const { label, pattern } of READING_SURFACE_FORBIDDEN_TEXT) {
+    const match = pattern.exec(text);
+    if (match === null) continue;
+    const start = Math.max(0, match.index - 60);
+    const end = Math.min(text.length, match.index + match[0].length + 60);
+    violations.push({ label, context: text.slice(start, end).replace(/\s+/g, " ").trim() });
+  }
+  return violations;
+}
+
+/**
  * The Overview's own note beside a surfaced challenger point — the same
  * fixed selection rule Section I's note states (§17.7.1), in plain words.
  */

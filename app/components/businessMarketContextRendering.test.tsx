@@ -5,6 +5,7 @@ import { AnalyzerReport } from "./AnalyzerReport";
 import { assembleAnalysisResult } from "@/lib/analyzer/assemble";
 import { MSFT_FIXTURE } from "@/lib/analyzer/fixtures/msft";
 import type { AnalysisResult } from "@/lib/analyzer/types";
+import { NO_INDUSTRY_CLASSIFICATION_LINE } from "@/lib/analyzer/overviewCopy";
 
 afterEach(cleanup);
 
@@ -33,14 +34,18 @@ function sectionText(headingId: string, nextHeadingId: string): string {
 const base = assembleAnalysisResult(MSFT_FIXTURE);
 
 describe("Business section", () => {
-  it("renders 'not yet available' with the stated reason when no narrative was acquired", () => {
+  // CF-AR7-REPORT-CONTENT-01 — the empty state now leads with plain words
+  // ("Not yet available" is forbidden on every reading tab); the stated
+  // reason is still shown.
+  it("renders a plain empty state with the stated reason when no narrative was acquired", () => {
     const result: AnalysisResult = {
       ...base,
       business: { narrative: null, unavailableReason: "No 10-K filing appears in this company's recent SEC submissions." },
     };
     render(<AnalyzerReport result={result} />);
     const text = sectionText("business", "financials");
-    expect(text).toContain("Not yet available");
+    expect(text).toContain("No company description for this analysis");
+    expect(text).not.toContain("Not yet available");
     expect(text).toContain("No 10-K filing appears in this company's recent SEC submissions.");
   });
 
@@ -97,14 +102,15 @@ describe("Business section", () => {
 });
 
 describe("Market Context section", () => {
-  it("renders 'not yet available' when no SIC classification was acquired", () => {
+  it("renders the plain no-classification line when no SIC classification was acquired", () => {
     const result: AnalysisResult = {
       ...base,
       marketContext: { sic: null, sicDescription: null },
     };
     render(<AnalyzerReport result={result} />);
     const text = sectionText("market-context", "evidence");
-    expect(text).toContain("Not yet available");
+    expect(text).toContain(NO_INDUSTRY_CLASSIFICATION_LINE);
+    expect(text).not.toContain("Not yet available");
   });
 
   it("renders the acquired SIC classification as category framing, with an explicit no-peer-comparison disclaimer", () => {

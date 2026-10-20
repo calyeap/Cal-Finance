@@ -1,6 +1,8 @@
 import { AnalyzerShell } from "@/app/components/AnalyzerShell";
 import { AnalyzerTopBar } from "@/app/components/AnalyzerTopBar";
 import { AnalyzerEntry } from "@/app/components/AnalyzerEntry";
+import { RecentAnalyses } from "@/app/components/RecentAnalyses";
+import { listRecentRuns } from "@/lib/analyzer/runStore";
 
 // Analyzer Home (§2 Step 1's entry point) — ANALYZER-V2-PREREPORT-01.
 //
@@ -23,6 +25,8 @@ export default async function AnalyzerEntryPage({
     <AnalyzerShell>
       <AnalyzerTopBar variant="overview" />
       <AnalyzerEntry fixtureMissing={unavailablefixture} />
+      {/* CF-AR7-REPORT-CONTENT-01 — D6's compact recent-analyses list. */}
+      <RecentAnalyses runs={await listRecentRuns()} />
     </AnalyzerShell>
   );
 }

@@ -160,11 +160,16 @@ describe("MSFT — the full brief", () => {
     expect(acceptance.failures.join("\n")).toContain("latest filing 4 (2026-09-17) is not a material filing form");
   });
 
+  // CF-AR7-REPORT-CONTENT-01 — reviewed evaluator change: the AR7 Overview
+  // (#455) no longer quotes the interpretation's page-one sentences, so the
+  // forbidden text is injected through text it does quote verbatim — the
+  // Bear case as written ("Top risks"). Same property, same strength.
   it("forbidden vocabulary anywhere on the rendered Overview fails it, with the offending text quoted", () => {
-    const result = complete(assembleAnalysisResult(MSFT_FIXTURE), {
-      interpretation: {
-        ...assembleAnalysisResult(MSFT_FIXTURE).interpretation,
-        pageOne: { ...PAGE_ONE, biggestUncertainty: statement("The check that would size that effect is INCOMPLETE.") },
+    const base = assembleAnalysisResult(MSFT_FIXTURE);
+    const result = complete(base, {
+      scenarios: {
+        ...base.scenarios,
+        bear: { ...base.scenarios.bear, writtenAnchor: "The check that would size that effect is INCOMPLETE." },
       },
     });
     const acceptance = check("MSFT", "FULL_BRIEF", reportFor(result));

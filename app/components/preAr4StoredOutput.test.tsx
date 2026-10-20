@@ -5,8 +5,8 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { AnalyzerReport } from "./AnalyzerReport";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
-import { AnalyzerOverview } from "./AnalyzerOverview";
-import { QuickRead, OverviewQuickRead } from "./QuickRead";
+import { QuickReadGrid } from "./ReportContent";
+import { QuickRead } from "./QuickRead";
 import { overviewTabText } from "./overviewTabMarkup";
 import { fromStorable } from "@/lib/analyzer/storable";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
@@ -49,12 +49,12 @@ describe("a pre-AR4 stored output", () => {
 
   it("renders through AnalyzerReport, showing the ladder rates it was stored with", () => {
     const { container } = render(<AnalyzerReport result={storedPreAr4()} />);
-    expect(container.textContent).toMatch(/r=8\.0%: CLEAN/);
-    expect(container.textContent).toMatch(/r=10\.0%: CLEAN/);
-    expect(container.textContent).toMatch(/r=12\.0%: CLEAN/);
+    expect(container.textContent).toMatch(/r=8\.0%: value-creating growth/);
+    expect(container.textContent).toMatch(/r=10\.0%: value-creating growth/);
+    expect(container.textContent).toMatch(/r=12\.0%: value-creating growth/);
   });
 
-  it("renders through AnalyzerReportFrame, AnalyzerOverview and QuickRead", () => {
+  it("renders through AnalyzerReportFrame, the Overview Quick Read and QuickRead", () => {
     const result = storedPreAr4();
     render(
       <AnalyzerReportFrame
@@ -64,11 +64,10 @@ describe("a pre-AR4 stored output", () => {
         profileNotConfirmed={profileNotConfirmedFor(result)}
         activeTab="overview"
       >
-        <AnalyzerOverview result={result} />
+        <QuickReadGrid runId="run-pre-ar4" result={result} verdict={deriveVerdict(result)} sheet={null} />
       </AnalyzerReportFrame>
     );
     render(<QuickRead result={result} />);
-    render(<OverviewQuickRead result={result} />);
   });
 
   it("derives an INCOMPLETE verdict rather than issuing one", () => {

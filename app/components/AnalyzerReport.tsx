@@ -6,7 +6,13 @@ import { ValuationStrip } from "./ValuationStrip";
 import type { AiLayerReport } from "@/lib/analyzer/reportAnalysis";
 import { selectChallengerPoint } from "@/lib/analyzer/ai/challengerSelection";
 import { boundState, NOT_COMPUTED_BINDING, type BoundState } from "@/lib/analyzer/notComputed";
-import { fairValueRangeUnavailableLine, notComputedLine } from "@/lib/analyzer/overviewCopy";
+import {
+  fairValueRangeUnavailableLine,
+  leverageUnavailableLine,
+  notComputedLine,
+  plainReason,
+  NO_INDUSTRY_CLASSIFICATION_LINE,
+} from "@/lib/analyzer/overviewCopy";
 import { rateDomainSentence } from "@/lib/analyzer/trustCopy";
 import type {
   AnalysisResult,
@@ -645,7 +651,7 @@ export function BusinessSection({ result }: { result: AnalysisResult }) {
         <hr />
         {result.business.narrative === null ? (
           <p className="note">
-            Not yet available —{" "}
+            No company description for this analysis —{" "}
             {result.business.unavailableReason ?? "Business section content has not been built for this analysis."}
           </p>
         ) : result.business.narrative.source === "MARKET-DATA PROVIDER SUMMARY" ? (
@@ -672,6 +678,29 @@ export function BusinessSection({ result }: { result: AnalysisResult }) {
         )}
     </>
   );
+}
+
+// CF-AR7-REPORT-CONTENT-01 — the tab-level findings of closed issue #418:
+// Financials is a reading surface, so a check's outcome is said in words.
+// The raw codes still reach Evidence (Section A's state manifest).
+function gate1Words(gate1: AnalysisResult["gates"]["gate1"]): string {
+  const years = `${gate1.filedYearsCount} filed years`;
+  if (gate1.state === "HISTORY INSUFFICIENT") return `${years} — not enough history to value`;
+  if (gate1.state === "SHORT HISTORY") return `${years} — a short history`;
+  return years;
+}
+
+function ladderWords(state: string): string {
+  if (state === "CLEAN") return "value-creating growth";
+  if (state === "RONIC CAPPED AT 200%") return "capped at 200%";
+  const dash = state.indexOf(" — ");
+  return dash === -1 ? state.toLowerCase() : state.slice(dash + 3).toLowerCase();
+}
+
+function runRateWords(result: AnalysisResult["diagnostics"]["runRate"]["seasonalityTestResult"]): string {
+  if (result === "PASS") return "Not seasonal";
+  if (result === "SEASONAL — RUN-RATE SUPPRESSED") return `Not computed — ${plainReason(result, "")}`;
+  return "Not computed — the quarterly history it needs is not available";
 }
 
 export function FinancialsSections({ result }: { result: AnalysisResult }) {
@@ -707,13 +736,13 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
               <tr>
                 <th scope="row">Business classification check</th>
                 <td>
-                  <span className="v">{gates.gate0.result}</span>
+                  <span className="v">{gates.gate0.result === "PASS" ? "Supported" : `Not supported — ${plainReason(gates.gate0.result, "")}`}</span>
                 </td>
               </tr>
               <tr>
                 <th scope="row">Filing history sufficiency check</th>
                 <td>
-                  <span className="v">{gates.gate1.state ?? `${gates.gate1.filedYearsCount} filed years`}</span>
+                  <span className="v">{gate1Words(gates.gate1)}</span>
                 </td>
               </tr>
               <tr>
@@ -725,7 +754,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                       one of the forbidden banners, so it still renders
                       as-is; the raw code reaches Evidence via
                       `states.suppressing` regardless. */}
-                  <span className="v">{gates.leverage.result === "PASS" ? "PASS" : "Unavailable — see Evidence"}</span>
+                  <span className="v">{gates.leverage.result === "PASS" ? "Within range" : leverageUnavailableLine(gates.leverage)}</span>
                   {gates.leverage.netDebtRatio !== null && <div className="sub">net debt ratio {pct(gates.leverage.netDebtRatio)}</div>}
                   {gates.leverage.operatingLeaseInclusiveMemo !== null && (
                     <div className="sub">operating-lease-inclusive memo {pct(gates.leverage.operatingLeaseInclusiveMemo)}</div>
@@ -796,7 +825,7 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
                               </Disclosure>
                             </>
                           ) : (
-                            c.state
+                            ladderWords(c.state)
                           )}
                           {c.value !== null && ` (${pct(c.value)})`}
                         </span>
@@ -862,14 +891,14 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
               <tr>
                 <th scope="row">Run-rate comparison</th>
                 <td>
-                  <span className="v">{diagnostics.runRate.seasonalityTestResult}</span>
+                  <span className="v">{runRateWords(diagnostics.runRate.seasonalityTestResult)}</span>
                   {diagnostics.runRate.ttm !== null && <div className="sub">TTM ${formatCompactUsd(diagnostics.runRate.ttm)}</div>}
                 </td>
               </tr>
               <tr>
                 <th scope="row">Shape mismatch</th>
                 <td>
-                  <span className="v">{diagnostics.shapeMismatch.fired ? "FIRED" : "not fired"}</span>
+                  <span className="v">{diagnostics.shapeMismatch.fired ? "Flagged" : "Not flagged"}</span>
                   {diagnostics.shapeMismatch.gapPoints !== null && <div className="sub">gap {pct(diagnostics.shapeMismatch.gapPoints)}</div>}
                 </td>
               </tr>
@@ -1081,7 +1110,18 @@ export function FinancialsSections({ result }: { result: AnalysisResult }) {
   );
 }
 
-export function ValuationSections({ result }: { result: AnalysisResult }) {
+export function ValuationSections({
+  result,
+  withScenarios = true,
+}: {
+  result: AnalysisResult;
+  /**
+   * CF-AR7-REPORT-CONTENT-01 — the Valuation tab shows the assumption sheet
+   * (every driver with its cited anchor) in place of Section F; a saved
+   * version (AnalyzerReport) keeps Section F, since it has no sheet to read.
+   */
+  withScenarios?: boolean;
+}) {
   const { states, diagnostics, priceImplied, scenarios, scenarioOutputs, fairValueRange, preRevenue } = result;
   const rateSensitivityState = boundState(states, NOT_COMPUTED_BINDING.rateSensitivity);
   const rateAtWhichBaseEqualsPriceState = boundState(states, NOT_COMPUTED_BINDING.rateAtWhichBaseEqualsPrice);
@@ -1217,6 +1257,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
           </table>
         </section>
         {/* ============ F ============ */}
+        {withScenarios && (
         <section id="F">
           <div className="sechead">
             <h2>F — Analyst scenarios</h2>
@@ -1274,6 +1315,7 @@ export function ValuationSections({ result }: { result: AnalysisResult }) {
             </tbody>
           </table>
         </section>
+        )}
         {/* ============ G ============ */}
         <section id="G">
           <div className="sechead">
@@ -1589,7 +1631,7 @@ export function RisksThesisSections({ result, aiLayer }: { result: AnalysisResul
           </div>
           <hr />
           {result.interpretation.pageOne === null ? (
-            <p className="note">Not yet available — the interpretation call has not run for this analysis.</p>
+            <p className="note">The interpretation call has not run for this analysis.</p>
           ) : (
             <div className="sec-i">
               <StatesBearing states={states} leverage={result.gates.leverage} />
@@ -1649,7 +1691,7 @@ export function RisksThesisSections({ result, aiLayer }: { result: AnalysisResul
           </div>
           <hr />
           {result.challenger === null ? (
-            <p className="note">Not yet available — the independent challenger call has not completed for this analysis.</p>
+            <p className="note">The independent challenger call has not completed for this analysis.</p>
           ) : (
             <div className="sec-i">
               {/* §8.5.4 — "The merge is assembly, not synthesis — findings are
@@ -1726,7 +1768,7 @@ export function MarketContextSection({ result }: { result: AnalysisResult }) {
           index or sector-average comparison. No such comparison is being shown.
         </p>
         {result.marketContext.sic === null || result.marketContext.sicDescription === null ? (
-          <p className="note">Not yet available — no SEC industry classification was acquired for this analysis.</p>
+          <p className="note">{NO_INDUSTRY_CLASSIFICATION_LINE}</p>
         ) : (
           <p>
             SEC classification (SIC {result.marketContext.sic}): {result.marketContext.sicDescription}
