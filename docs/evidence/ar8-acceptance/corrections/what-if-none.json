@@ -1,0 +1,217 @@
+{
+  "selection": "None of these are non-operating",
+  "note": "WHAT-IF, not Calvin's answer; no model call",
+  "out": {
+    "MSFT": {
+      "runId": "b4e20245-8d2c-4733-a16a-498f74237435",
+      "candidates": [
+        {
+          "tag": "us-gaap:EquityMethodInvestments",
+          "value": "12000000000.00"
+        },
+        {
+          "tag": "us-gaap:EquitySecuritiesWithoutReadilyDeterminableFairValueAmount",
+          "value": "12400000000.00"
+        },
+        {
+          "tag": "us-gaap:LongTermInvestments",
+          "value": "36348000000.00"
+        }
+      ],
+      "price": "533.52",
+      "rate": "0.09",
+      "evState": "COMPUTED",
+      "bearBaseBull": {
+        "base": "329.29",
+        "bear": "179.39",
+        "bull": "443.37"
+      },
+      "baseAtCheckRates": {
+        "rate": "329.29",
+        "lower": "358.77",
+        "upper": "303.33"
+      },
+      "verdict": {
+        "status": "PENDING",
+        "state": "PENDING ADOPTION",
+        "draftZone": "SELL",
+        "rampDependent": null
+      }
+    },
+    "COST": {
+      "runId": "fd2be716-41cd-4da6-912b-68b36b9bbd0d",
+      "candidates": [
+        {
+          "tag": "us-gaap:EquityMethodInvestments",
+          "value": "0.00"
+        },
+        {
+          "tag": "us-gaap:LongTermInvestments",
+          "value": "0.00"
+        }
+      ],
+      "price": "995.53",
+      "rate": "0.09",
+      "evState": "COMPUTED",
+      "bearBaseBull": {
+        "base": "393.97",
+        "bear": "251.54",
+        "bull": "534.67"
+      },
+      "baseAtCheckRates": {
+        "rate": "393.97",
+        "lower": "420.64",
+        "upper": "370.39"
+      },
+      "verdict": {
+        "status": "PENDING",
+        "state": "PENDING ADOPTION",
+        "draftZone": "SELL",
+        "rampDependent": null
+      }
+    },
+    "NVDA": {
+      "runId": "7b2e72be-af3d-4321-b9b8-9011f4ec1f4d",
+      "candidates": [
+        {
+          "tag": "us-gaap:EquitySecuritiesWithoutReadilyDeterminableFairValueAmount",
+          "value": "47898000000.00"
+        }
+      ],
+      "price": "217.09",
+      "rate": "0.11",
+      "evState": "COMPUTED",
+      "bearBaseBull": {
+        "base": "133.53",
+        "bear": "35.84",
+        "bull": "298.21"
+      },
+      "baseAtCheckRates": {
+        "rate": "133.53",
+        "lower": "142.54",
+        "upper": "125.41"
+      },
+      "verdict": {
+        "status": "PENDING",
+        "state": "PENDING ADOPTION",
+        "draftZone": "SELL",
+        "rampDependent": null
+      }
+    },
+    "NUE": {
+      "runId": "28b22393-9474-451d-8845-8175e79e8c25",
+      "candidates": [
+        {
+          "tag": "us-gaap:EquityMethodInvestments",
+          "value": "473000000.00"
+        }
+      ],
+      "price": "260.73",
+      "rate": "0.11",
+      "evState": "COMPUTED",
+      "bearBaseBull": {
+        "base": "101.91",
+        "bear": "48.58",
+        "bull": "181.82"
+      },
+      "baseAtCheckRates": {
+        "rate": "101.91",
+        "lower": "108.48",
+        "upper": "95.93"
+      },
+      "verdict": {
+        "status": "PENDING",
+        "state": "PENDING ADOPTION",
+        "draftZone": "SELL",
+        "rampDependent": null
+      }
+    },
+    "KO": {
+      "runId": "eb95c551-d82f-4745-b78c-cef3d634c23a",
+      "candidates": [
+        {
+          "tag": "us-gaap:EquityMethodInvestments",
+          "value": "20403000000.00"
+        },
+        {
+          "tag": "us-gaap:EquitySecuritiesWithoutReadilyDeterminableFairValueAmount",
+          "value": "43000000.00"
+        },
+        {
+          "tag": "us-gaap:EquitySecuritiesFvNiCurrentAndNoncurrent",
+          "value": "2881000000.00"
+        }
+      ],
+      "price": "93.42",
+      "rate": "0.09",
+      "evState": "COMPUTED",
+      "bearBaseBull": {
+        "base": "23.04",
+        "bear": "13.80",
+        "bull": "32.82"
+      },
+      "baseAtCheckRates": {
+        "rate": "23.04",
+        "lower": "25.63",
+        "upper": "20.75"
+      },
+      "verdict": {
+        "status": "INCOMPLETE",
+        "state": "CANNOT BOUND VALUE",
+        "draftZone": null,
+        "rampDependent": null
+      }
+    },
+    "LLY": {
+      "runId": "3b0ac69c-db0d-4e46-b4f8-4990afa964ae",
+      "candidates": [
+        {
+          "tag": "us-gaap:EquitySecuritiesWithoutReadilyDeterminableFairValueAmount",
+          "value": "405000000.00"
+        },
+        {
+          "tag": "us-gaap:LongTermInvestments",
+          "value": "3856000000.00"
+        }
+      ],
+      "price": "1240.34",
+      "rate": "0.09",
+      "evState": "COMPUTED",
+      "bearBaseBull": {
+        "base": "372.87",
+        "bear": "138.07",
+        "bull": "636.96"
+      },
+      "baseAtCheckRates": {
+        "rate": "372.87",
+        "lower": "418.41",
+        "upper": "332.74"
+      },
+      "verdict": {
+        "status": "PENDING",
+        "state": "PENDING ADOPTION",
+        "draftZone": "SELL",
+        "rampDependent": null
+      }
+    },
+    "OKLO": {
+      "runId": "d174a4f7-4f94-4b5a-8160-70ecc73af65a",
+      "candidates": [],
+      "price": "27.24",
+      "rate": "0.11",
+      "evState": "COMPUTED",
+      "bearBaseBull": {
+        "base": "NaN",
+        "bear": "NaN",
+        "bull": "NaN"
+      },
+      "baseAtCheckRates": "Can't conclude: this company's filings report no revenue (pre-revenue, or none tagged), so there is no operating history to anchor growth, margin or returns to — the valuation cannot be concluded from filed history",
+      "verdict": {
+        "status": "INCOMPLETE",
+        "state": "CANNOT BOUND VALUE",
+        "draftZone": null,
+        "rampDependent": null
+      }
+    }
+  }
+}

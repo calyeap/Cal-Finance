@@ -16,7 +16,7 @@ import type { AcquisitionResult } from "./acquire";
 import type { CompanyFactsDocument } from "./secClient";
 import type { CompanyFixture, ValuationBase } from "../assemble";
 import type { FactRecord, ProvenanceTokens, SourcedValue } from "../types";
-import { latestAnnualDilutedSharesEnd, v3FiledInputs } from "./v3Inputs";
+import { dilutionTagIsStale, latestAnnualDilutedSharesEnd, v3FiledInputs } from "./v3Inputs";
 
 // ---------------------------------------------------------------------------
 // Acquisition -> the assembly seam.
@@ -361,7 +361,7 @@ export function buildCompanyInputs(
   // today's dilution — LLY last tagged it for FY2011.
   const taggedDilutionAsOf = byId.get("treasury-method-dilution")?.asOfDate ?? null;
   const dilutionSharePeriodEnd = latestAnnualDilutedSharesEnd(companyFacts);
-  const dilutionTagStale = taggedDilutionAsOf !== null && dilutionSharePeriodEnd !== null && taggedDilutionAsOf < dilutionSharePeriodEnd;
+  const dilutionTagStale = dilutionTagIsStale(taggedDilutionAsOf, dilutionSharePeriodEnd);
   const treasuryDilutionTagged = get("treasury-method-dilution") !== null && !dilutionTagStale;
   const v3Inputs = v3FiledInputs(companyFacts, {
     basePeriodEnd: valuationBase?.base.periodEnd ?? null,

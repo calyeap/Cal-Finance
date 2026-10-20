@@ -285,6 +285,18 @@ export function latestAnnualDilutedSharesEnd(doc: CompanyFactsDocument): string 
   return latestAnnual10KShares(doc, "WeightedAverageNumberOfDilutedSharesOutstanding")?.end ?? null;
 }
 
+/**
+ * Whether a dilution fact speaks for an earlier year than the latest 10-K's
+ * share period. A duration fact's `asOfDate` reads "start to end", so the
+ * comparison is on its end date (CF-AR8-CORRECTIONS-01, #504: comparing the
+ * whole string marked every current tag stale).
+ */
+export function dilutionTagIsStale(asOfDate: string | null | undefined, sharePeriodEnd: string | null): boolean {
+  if (asOfDate == null || sharePeriodEnd === null) return false;
+  const end = asOfDate.slice(-10);
+  return end < sharePeriodEnd;
+}
+
 export function dilutionFallback(doc: CompanyFactsDocument): { applied: boolean; value: Decimal | null; label: string } {
   const g = doc.facts?.["us-gaap"] ?? {};
   const diluted = latestAnnual10KShares(doc, "WeightedAverageNumberOfDilutedSharesOutstanding");

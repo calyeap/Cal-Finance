@@ -1186,10 +1186,17 @@ export function assembleAnalysisResult(fixture: CompanyFixture): AnalysisResult 
     qualifying.push({ flag: "SHORT HISTORY", appliesTo: `history statistics (${gate1.filedYearsCount}-year window)` });
   }
   if (leverage.result === "LEVERAGE UNSUPPORTED IN v1") {
+    // CF-AR8-CORRECTIONS-01 (#504, F4): where the ratio is missing only because
+    // M1 is, name M1's own missing inputs (e.g. the §4.4 non-operating
+    // decision), so the reader is told what is actually outstanding.
+    const evCause =
+      leverage.netDebtRatio === null && enterpriseValueBridge.suppressed && /missing REQUIRED input/.test(enterpriseValueBridge.cause)
+        ? ` — enterprise value: ${enterpriseValueBridge.cause}`
+        : "";
     suppressing.push({
       state: leverage.result,
       appliesTo: "every rate-dependent output",
-      cause: leverageCause(leverage),
+      cause: `${leverageCause(leverage)}${evCause}`,
     });
   }
   if (fcfYieldGrowth.precondition === "PRECONDITION FAILED") {

@@ -1,0 +1,108 @@
+MICROSOFT CORP
+MSFT
+Pending adoption
+Price is 1.47×–1.73× the Base fair value across the 8.5%–9.5% rate band: the draft assumption sheet points to SELL. No verdict until you adopt the sheet, as drafted or adjusted.
+Uncertainty — doesn't change this verdict
+$533.52
+2026-10-19
+No price history is in this analysis' fact set.
+Bear
+$184
+Base
+$334
+Bull
+$449
+Current price
+$533.52
+132% of the way from bear to bull
+Fair-value range
+$184
+$449
+Downside to bear 65.5% · Upside to bull -15.9%
+What the price assumes
+Restated from Section E
+Steady-state EV
+$1.25T
+PVGO share of EV
+68.5%
+Overview
+Business
+Financials
+Valuation
+Risks & Thesis
+Market Context
+Evidence
+Save this version
+Look at this company again
+Adopt the assumption sheet
+The report and valuation are computed from a price-blind draft; on it the verdict zone is SELL. Review its drivers and anchors, adjust any, and adopt it to issue the verdict.
+Review and adopt MSFT’s sheet
+What today's price assumes
+About
+26.1%/yr
+revenue growth for 5 years at a 45.5% operating margin (reverse DCF at 9.0%).
+MICROSOFT CORP grew revenue 13.8%/yr over 10 years (FY2016–FY2026).
+How the price is read — Valuation
+If our Base case happens
+You'd earn about
+7.0%/yr
+— the market rate in use is 9.0%.
+Scenario outputs — Valuation
+Why this verdict
+Price is 1.60× the Base value at 9.0%. A SELL starts at 1.20× / 1.30× / 1.45× at Low / Medium / High uncertainty; a BUY needs 0.90× / 0.80× / 0.70× or less.
+Checked at 8.5%, 9.0%, 9.5%, the price is 1.47× / 1.60× / 1.73× the Base value.
+The 5-year average return on invested capital (goodwill included) is 37.9%, above the 9.0% rate.
+Rate
+Low
+Medium
+High
+Price ÷ Base
+8.5%
+SELL
+SELL
+SELL
+1.47×
+9.0%
+SELL
+SELL
+SELL
+1.60×
+9.5%
+SELL
+SELL
+SELL
+1.73×
+The sheet behind the Base value — Valuation
+Business quality
+Wide moat
+5-year average return on invested capital 37.9%, above the 9.0% rate.
+Returns by year — Financials
+Strongest argument against
+The independent challenger has not run for this analysis, so no argument is shown.
+Challenger findings — Risks & Thesis
+Top risks
+The draft's own Bear case (AI draft, every driver cited):
+AI and cloud demand normalises faster than the current build-out assumes. Azure growth decelerates from the 43% posted in the June 2026 quarter toward the rate of the broader commercial base, Windows OEM, devices and Xbox keep shrinking, and revenue growth settles near the weakest year in the filed decade (6.9% in FY2023). The enormous capital programme — capex of $115.9bn in FY2026 against $34.3bn of depreciation — lands in the cost base as depreciation catches up, so operating margin gives back the recent gains and runs below the ten-year median rather than at the FY2026 peak of 46.8%. New capital earns roughly the discount rate: filed ROIC has already fallen from 94.0% in FY2018 to 26.0% in FY2026 as invested capital scaled, and the five-year incremental return of 17.3% compresses further in a capital-heavy AI regime. Rising stock-based compensation outpaces repurchases and share count drifts up slightly.
+All three cases — Risks & Thesis
+What would change it
+At a 7.0% required return the Base value equals today's price.
+Under Medium uncertainty the price would have to fall below $434.55 (Base × 1.3) to leave the SELL band.
+The single largest driver of this valuation is RONIC, which can move the result by 33.4% across its tested range.
+Sensitivity — Valuation
+Key Stats (TTM)
+Market cap
+$3.97T
+P/E (trailing)
+29.7
+Spot-check not required
+FCF yield
+1.7%
+Spot-check not required
+52-week range
+$352.83 – $543.45
+Leverage
+Net debt 0.8%
+Market Context
+SIC 7372 · Services-Prepackaged Software
+Upcoming Events
+No upcoming events are tracked for this company yet.
