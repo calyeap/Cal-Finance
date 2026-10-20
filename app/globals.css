@@ -4480,7 +4480,7 @@ h6 {
   color: var(--muted);
   font-size: 13px;
 }
-/* CF-AR7-REPORT-CONTENT-01 (#418: no overflow blockers across the seven
+/* CF-AR7-REPORT-CONTENT-01 (issue 418: no overflow blockers across the seven
    tabs) — the Evidence fact ledger is a wide analytical table; on narrow
    widths it scrolls inside its own section instead of widening the page. */
 .cb-analyzer section#B {
