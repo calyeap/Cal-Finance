@@ -88,6 +88,12 @@ export function plainReason(state: SuppressingState, cause: string, leverage?: L
       const inputsMissing =
         leverage !== undefined ? leverage.netDebtRatio === null : /inputs missing/.test(cause);
       if (inputsMissing) {
+        // CF-AR8-CORRECTIONS-01 (#504, F4): the ratio is missing because the
+        // enterprise value is — name what that value is waiting for.
+        const missing = missingInputsInPlainWords(cause);
+        if (missing.length > 0) {
+          return `its enterprise value needs ${joinList(missing)}, which ${missing.length === 1 ? "is" : "are"} not available yet, and the valuation depends on it`;
+        }
         return "the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure";
       }
       if (leverage !== undefined || /threshold/.test(cause)) {

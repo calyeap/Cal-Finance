@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildAcquiredRun } from "../acquiredRun";
 import { computeEnterpriseValue } from "../modules/enterpriseValue";
+import { assembleAnalysisResult } from "../assemble";
+import { verdictUnavailableLine } from "../overviewCopy";
 import { bundleFromSheet } from "../sheets/sheet";
 import { acquireCompany, __resetAcquisitionCache } from "./provider";
 
@@ -86,5 +88,28 @@ describe("F3 — D7's total liabilities from the balance-sheet identity where no
     expect(run.fixture.enterpriseValue.financeLeaseLiabilitiesUpperBound?.value.value.toString()).toBe("24675000000");
     const ev = computeEnterpriseValue(run.fixture.enterpriseValue);
     expect(ev.suppressed).toBe(false);
+  });
+});
+
+describe("F4 — the bottom line names the §4.4 decision when that is all enterprise value is waiting for", () => {
+  it("NVDA with no non-operating decision: the verdict line asks for it, not for 'balance-sheet inputs'", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const frozen: any = JSON.parse(readFileSync(join(REPO, "docs", "evidence", "methodology-v3-calibration", "nvda-run.json"), "utf8"));
+    process.chdir(stage());
+    __resetAcquisitionCache();
+    const run = await buildAcquiredRun({
+      ticker: "NVDA",
+      bundle: bundleFromSheet(frozen.sheet),
+      price: { value: new Decimal(frozen.capture.price.value), timestamp: frozen.capture.price.timestamp, source: frozen.capture.price.source },
+      nonOperatingInvestments: null,
+      profileHumanConfirmed: true,
+      source: "CAPTURE",
+    });
+    const result = assembleAnalysisResult(run.fixture);
+    expect(result.fairValueRange.kind).toBe("suppressed");
+    if (result.fairValueRange.kind !== "suppressed") return;
+    const line = verdictUnavailableLine(result.fairValueRange, result.gates.leverage);
+    expect(line).toContain("a decision on which of its investments are non-operating");
+    expect(line).not.toContain("balance-sheet inputs");
   });
 });
