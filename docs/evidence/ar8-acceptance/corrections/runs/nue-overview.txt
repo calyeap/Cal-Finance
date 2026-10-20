@@ -1,0 +1,67 @@
+NUCOR CORP
+NUE
+No valuation verdict for this company yet — its enterprise value needs a decision on which of its investments are non-operating, which is not available yet, and the valuation depends on it.
+Uncertainty — not set
+$260.73
+2026-10-19
+No price history is in this analysis' fact set.
+Bear
+—
+Base
+—
+Bull
+—
+Current price
+$260.73
+No fair-value range for this company yet — its enterprise value needs a decision on which of its investments are non-operating, which is not available yet, and the valuation depends on it.
+Overview
+Business
+Financials
+Valuation
+Risks & Thesis
+Market Context
+Evidence
+Save this version
+Look at this company again
+What today's price assumes
+Not computed for this company yet — it needs the company's enterprise value, which is not available for this company.
+Steady-state EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+PVGO share of EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+How the price is read — Valuation
+If our Base case happens
+No break-even return is computed for this analysis.
+Scenario outputs — Valuation
+Why this verdict
+No valuation verdict for this company yet — its enterprise value needs a decision on which of its investments are non-operating, which is not available yet, and the valuation depends on it.
+The sheet behind the Base value — Valuation
+Business quality
+No moat
+5-year average return on invested capital 25.1%, above the 11.0% rate.
+Returns by year — Financials
+Strongest argument against
+The independent challenger has not run for this analysis, so no argument is shown.
+Challenger findings — Risks & Thesis
+Top risks
+The draft's own Bear case (AI draft, every driver cited):
+Steel prices and volumes mean-revert after the 2021-2022 spike. Revenue drifts down about 2% a year from the 2025 base as imports and new domestic capacity press on pricing, and the cash margin proxy stays near the weak end of the filed decade (FY2017 and FY2025 levels). The large capital programme of FY2024-FY2025 keeps depreciation rising while contributing little incremental profit, so the return on new dollars sits below the 11% discount rate and stock compensation slowly lifts the share count. This is a case where the last five years of spending bought capacity into a softer market.
+All three cases — Risks & Thesis
+What would change it
+The single largest driver of this valuation is RONIC, which can move the result by 11.0% across its tested range.
+Sensitivity — Valuation
+Key Stats (TTM)
+Market cap
+Not computed for this company yet — it needs a decision on which of its investments are non-operating, which is not available for this company.
+P/E (trailing)
+20.4
+Spot-check not required
+FCF yield
+-0.3%
+Spot-check not required
+52-week range
+$136.61 – $274.74
+Leverage
+Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Market Context
+SIC 3312 · Steel Works, Blast Furnaces & Rolling Mills (Coke Ovens)
+Upcoming Events
+No upcoming events are tracked for this company yet.
