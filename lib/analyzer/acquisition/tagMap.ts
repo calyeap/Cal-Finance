@@ -109,8 +109,23 @@
  * (operating income now acquired; LLY capex now current); every other
  * captured filer resolves byte-identically; no fact moves between the §3.8.1
  * exempt and queued sides.
+ *
+ * -10-6 (20 October 2026) — CF-AR8-CORRECTIONS-01 (issue #504), found by AR8's
+ * live run (docs/evidence/ar8-acceptance/README.md F1, F3). Two existing
+ * entries gain a derived candidate (derivedFacts.ts), no selection rule
+ * touched:
+ *   1. `cash-and-marketable-debt-securities`: FIRST, cash + the balance-sheet
+ *      marketable-securities line for a filer that tags it as
+ *      MarketableSecuritiesCurrent / DebtSecuritiesCurrent and tags no
+ *      ShortTermInvestments for that date (NVDA, $34.1bn left out of its
+ *      bridge cash at 26 Jul 2026). The derived row is never formed where
+ *      ShortTermInvestments is tagged, so every such filer resolves as before.
+ *   2. `total-liabilities`: after us-gaap:Liabilities, total liabilities and
+ *      equity − total equity, only where Liabilities is not tagged for that
+ *      date (KO) — Calvin's ruling on #504 reading Methodology D7.
+ * Review: docs/tag-mapping-version-review.md §14.
  */
-export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-5";
+export const TAG_MAPPING_VERSION = "calboard-secmap-2026-10-6";
 
 export interface TagRef {
   // "cf-derived": an element constructed from the filer's own tagged lines in
@@ -339,7 +354,14 @@ export const TAG_MAP: readonly TagMapEntry[] = [
     name: "Cash and marketable debt securities",
     period: "instant",
     unit: "USD",
-    candidates: [withPlus(usGaap("CashAndCashEquivalentsAtCarryingValue"), usGaap("ShortTermInvestments"))],
+    candidates: [
+      // -10-6 (#504): a filer whose balance-sheet marketable-securities line is
+      // tagged MarketableSecuritiesCurrent / DebtSecuritiesCurrent and never
+      // ShortTermInvestments (NVDA). Not formed where ShortTermInvestments is
+      // tagged for the date, so it cannot double-count or displace the line below.
+      only(derived("CashAndMarketableSecuritiesWhereNoShortTermInvestments")),
+      withPlus(usGaap("CashAndCashEquivalentsAtCarryingValue"), usGaap("ShortTermInvestments")),
+    ],
     // THE ONE MAPPING WITH TWO LIVE READINGS, resolved from the frozen
     // contract rather than by preference. See the plan document for the
     // arithmetic. The alternative — cash + AvailableForSaleSecuritiesDebt-
@@ -538,16 +560,17 @@ export const TAG_MAP: readonly TagMapEntry[] = [
   // BOUND-01, issue #492). Read only to bound a finance-lease liability the
   // filer never reports: any such liability is on the balance sheet, so the
   // part outside the bridge's debt cannot exceed total liabilities less that
-  // debt. A filer that tags no single total (e.g. KO) has no bound — never a
-  // total derived by subtraction.
+  // debt. A filer that tags no single total (e.g. KO) is bounded by the
+  // balance-sheet identity of two filed same-date lines, total liabilities and
+  // equity − total equity (Calvin's ruling on #504, -10-6), labelled derived.
   {
     factId: "total-liabilities",
     name: "Total liabilities (memo — finance-lease upper bound only)",
     period: "instant",
     unit: "USD",
-    candidates: [only(usGaap("Liabilities"))],
+    candidates: [only(usGaap("Liabilities")), only(derived("LiabilitiesFromLiabilitiesAndEquityLessEquity"))],
     basis:
-      "Methodology v2.1 D7: an undisclosed finance-lease liability enters the EV bridge at a cited, same-date upper bound, total liabilities less the bridge's total debt. us-gaap:Liabilities is the balance-sheet total.",
+      "Methodology v2.1 D7: an undisclosed finance-lease liability enters the EV bridge at a cited, same-date upper bound, total liabilities less the bridge's total debt. us-gaap:Liabilities is the balance-sheet total; where a filer tags none, total liabilities and equity − total equity, both filed for the same date (Calvin's ruling on #504).",
   },
 ];
 

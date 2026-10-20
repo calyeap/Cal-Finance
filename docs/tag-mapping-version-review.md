@@ -865,3 +865,47 @@ debt candidate is changed.
 - Evaluator changes: only the version pins in `bridgeInputRecovery.test.ts`
   and `financeLeaseUpperBound.test.ts` (`-10-4` → `-10-5`). No value or
   composition pin is changed.
+
+## 14. TAG_MAPPING_VERSION review — `calboard-secmap-2026-10-5` → `-10-6`
+
+**Outcome:** `CF-AR8-CORRECTIONS-01` (issue #504). These are two bridge inputs that AR8's live run found missing (`docs/evidence/ar8-acceptance/README.md` F1, F3). The correction was routed by Calvin's answer on #458; F3's reading is Calvin's ruling on #504.
+
+### 14.1 The change
+
+Two existing entries gain one **derived element** each. Both are in namespace `cf-derived`, built once at acquisition (`derivedFacts.ts`), and now support balance-sheet instants. No selection rule is changed.
+
+- **`cash-and-marketable-debt-securities`**
+  - New first candidate: `CashAndMarketableSecuritiesWhereNoShortTermInvestments` = cash and equivalents + `MarketableSecuritiesCurrent` | `DebtSecuritiesCurrent` (first present).
+  - Formed only for a date on which the filer tags no `ShortTermInvestments`. A filer that tags `ShortTermInvestments` therefore keeps resolving to cash + `ShortTermInvestments` exactly as before, and the two can never double-count.
+  - NVDA files its balance-sheet "Marketable securities" line under these elements (`DebtSecuritiesCurrent` $34,143M at 26 Jul 2026), and its bridge cash had held cash alone.
+- **`total-liabilities`**
+  - New second candidate, after `Liabilities`: `LiabilitiesFromLiabilitiesAndEquityLessEquity` = `LiabilitiesAndStockholdersEquity` − `StockholdersEquityIncludingPortionAttributableToNoncontrollingInterest`. It falls back to `StockholdersEquity`, which can only overstate liabilities and so keeps D7's error toward lower value.
+  - Formed only for a date on which `Liabilities` is not tagged.
+
+### 14.2 Captures
+
+`captures/ar8-2026-10-20` was taken from live data.sec.gov companyfacts on 20 Oct 2026 by `capture-companyfacts.ts --out=ar8-2026-10-20` (MSFT, COST, NVDA, NUE, KO, LLY, OKLO). It also carries the stale LLY dilution tag that #502 fixed.
+
+### 14.3 The §3.8.1 boundary
+
+`acquire()` was run on the 20 Oct captures under `-10-5` (origin/master `f60e52d`) and `-10-6`, comparing every fact's id, value, date and `verificationState`.
+
+| Company | Facts changed | Facts added |
+|---|---|---|
+| MSFT, COST, NUE, OKLO | 0 | 0 |
+| NVDA | `cash-and-marketable-debt-securities` 22,443M → 56,586M at 2026-07-26 (`SPOT-CHECK NOT REQUIRED` before and after) | 0 |
+| KO | 0 | `total-liabilities` 68,483M at 2026-04-03 (`SPOT-CHECK NOT REQUIRED`) |
+| LLY | 0 | `total-liabilities` 108,404M (`SPOT-CHECK NOT REQUIRED`). Memo only: LLY's leases are nested in its debt (`FINANCE_LEASES_INSIDE_TOTAL_DEBT`), so D7's bound is never formed and its bridge does not move. |
+
+- Facts removed: **0**.
+- No fact moves between the exempt and queued sides.
+
+### 14.4 Verification
+
+- `ar8Corrections.test.ts`, on `captures/ar8-2026-10-20`:
+  - NVDA cash is 56,586M.
+  - KO total liabilities is 68,483M, labelled `cf-derived`.
+  - KO's bridge computes at the D7 bound of 24,675M.
+  - MSFT's cash still resolves through `ShortTermInvestments`.
+- On origin/master's code the first three fail (RED) and the MSFT invariant passes. On this branch all four pass (GREEN).
+- Evaluator changes: only the version pins in `bridgeInputRecovery.test.ts` and `financeLeaseUpperBound.test.ts` (`-10-5` → `-10-6`). No value or composition pin is changed.

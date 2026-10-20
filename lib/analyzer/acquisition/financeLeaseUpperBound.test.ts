@@ -89,7 +89,7 @@ describe("CF-AR6-FINANCE-LEASE-UPPER-BOUND-01 — Methodology D7 on six real cap
   it("runs under the bumped mapping version", () => {
     // -10-5: CF-METHODOLOGY-V3-IMPLEMENT-01 (issue #499) added derived
     // operating income and a capex candidate; neither touches the bridge.
-    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-5");
+    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-6");
   });
 
   it("NVDA: no finance-lease liability reported, so the bridge carries the same-date upper bound and computes", () => {

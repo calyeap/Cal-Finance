@@ -153,7 +153,7 @@ describe("CF-AR6-BRIDGE-INPUT-RECOVERY-01 — same-date debt inputs on six real 
     // 18 Oct captures predate (financeLeaseUpperBound.test.ts covers it).
     // -10-5: CF-METHODOLOGY-V3-IMPLEMENT-01 (issue #499) added derived
     // operating income and a capex candidate; neither touches the bridge.
-    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-5");
+    expect(TAG_MAPPING_VERSION).toBe("calboard-secmap-2026-10-6");
   });
 
   it("LLY: total debt is the latest presented balance sheet's, same date as cash, and EV and the leverage ratio compute", () => {
