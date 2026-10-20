@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { checkAnnualFilingHistory, __resetFilingHistoryCache } from "./filingHistoryCheck";
 import type { FilingHistoryDeps } from "./filingHistoryCheck";
 import type { CompanyTickerDirectory, SubmissionsDocument } from "./acquisition/secClient";
@@ -31,6 +31,10 @@ function deps(overrides: Partial<FilingHistoryDeps> = {}): FilingHistoryDeps {
 
 beforeEach(() => {
   __resetFilingHistoryCache();
+});
+
+afterEach(() => {
+  vi.unstubAllEnvs();
 });
 
 describe("checkAnnualFilingHistory", () => {
@@ -99,9 +103,11 @@ describe("checkAnnualFilingHistory", () => {
   });
 
   it("fails closed to UNAVAILABLE when no deps are injected and SEC_USER_AGENT is unset", async () => {
-    // No test in this suite sets SEC_USER_AGENT (vitest.setup.ts does not),
-    // so the production default path exercises the same fail-closed branch a
-    // real missing-configuration deployment would hit.
+    // Blank it here rather than trust the ambient environment: a shell or
+    // cloud session that exports SEC_USER_AGENT would otherwise send this
+    // down the live-EDGAR path. secClient reads `?? ""` and trims, so "" is
+    // the same fail-closed branch a real missing-configuration deployment hits.
+    vi.stubEnv("SEC_USER_AGENT", "");
     const result = await checkAnnualFilingHistory("AAPL");
     expect(result).toBe("UNAVAILABLE");
   });
