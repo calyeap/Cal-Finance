@@ -20,9 +20,15 @@ import {
 } from "@/app/components/AnalyzerReport";
 import { QuickRead } from "@/app/components/QuickRead";
 import { SourcesAndDetails } from "@/app/components/SourcesAndDetails";
-import { RunNotFoundError, SpotCheckIncompleteError } from "@/lib/analyzer/gate";
+import { RunNotFoundError, SpotCheckIncompleteError, type GateState } from "@/lib/analyzer/gate";
 import { advanceRunAutomatically } from "@/lib/analyzer/autoRun";
-import { analysisForReport, currentRunOutput, type AiLayerReport } from "@/lib/analyzer/reportAnalysis";
+import {
+  analysisForReport,
+  currentRunOutput,
+  deterministicReport,
+  reportMarketOptions,
+  type AiLayerReport,
+} from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
 import { uncertaintyProposalForRun } from "@/lib/analyzer/uncertaintyProposalStore";
 import { analystCallIfConfigured, ANALYST_MODEL } from "@/lib/analyzer/ai/anthropicCall";
@@ -100,16 +106,30 @@ export default async function ReportPage({
   // recorded on it, there is nothing to advance or compute: the automatic
   // pass below loads the filings and the price, and a run with a stored
   // output was already past it.
+  //
+  // CF-AR7-REPORT-CONTENT-01 (speed fix from closed PR #421) — the gate state
+  // the automatic pass loads is handed on to the computation, on the same
+  // pinned market data, so one view loads it once rather than twice.
+  let state: GateState | undefined;
   try {
-    if ((await currentRunOutput(runId)) === null) await advanceRunAutomatically(runId);
+    if ((await currentRunOutput(runId)) === null) {
+      state = await advanceRunAutomatically(runId, await reportMarketOptions(runId));
+    }
   } catch (err) {
     if (err instanceof RunNotFoundError) notFound();
     throw err;
   }
 
-  let report;
+  // Only Overview, Risks & Thesis and Evidence show the AI layer's prose; the
+  // other four tabs read the deterministic output alone, so they never wait
+  // on, start or pay for a model call (speed fix from closed PR #421).
+  const needsAiLayer = activeTab === "overview" || activeTab === "risks" || activeTab === "evidence";
+
+  let report: { result: AnalysisResult; aiLayer?: AiLayerReport };
   try {
-    report = await analysisForReport(runId);
+    report = needsAiLayer
+      ? await analysisForReport(runId, undefined, undefined, state)
+      : await deterministicReport(runId, state);
   } catch (err) {
     if (err instanceof SpotCheckIncompleteError) {
       // Unreachable in the normal path: the automatic pass above decides every

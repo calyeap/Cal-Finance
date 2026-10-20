@@ -2,7 +2,7 @@ import { readFileSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import Decimal from "decimal.js";
 import { secClientFromEnv, cikForTicker, type SecClient } from "./secClient";
-import type { CompanyFactsDocument, SubmissionsDocument } from "./secClient";
+import type { CompanyFactsDocument, CompanyTickerDirectory, SubmissionsDocument } from "./secClient";
 import { acquire, type AcquisitionResult, type PriceQuote } from "./acquire";
 import { runCrossChecks, assertEveryInputReported, type CrossCheckReport } from "../crosschecks/run";
 import { extractItem1 } from "./item1Extraction";
@@ -64,8 +64,24 @@ interface CacheEntry {
 const TTL_MS = 15 * 60 * 1000;
 const cache = new Map<string, CacheEntry>();
 
+// CF-AR7-REPORT-CONTENT-01 (speed fix salvaged from closed PR #421) — the
+// ticker->CIK directory is the same multi-MB document for every company, so
+// it is cached once per process under the same TTL rather than re-fetched in
+// full on every acquisition-cache miss.
+let tickerDirectoryCache: { at: number; value: CompanyTickerDirectory } | null = null;
+
+async function cachedCompanyTickers(client: SecClient): Promise<CompanyTickerDirectory> {
+  if (tickerDirectoryCache !== null && Date.now() - tickerDirectoryCache.at < TTL_MS) {
+    return tickerDirectoryCache.value;
+  }
+  const value = await client.companyTickers();
+  tickerDirectoryCache = { at: Date.now(), value };
+  return value;
+}
+
 /** Test seam and cache reset. Never called by application code. */
 export function __resetAcquisitionCache(): void {
+  tickerDirectoryCache = null;
   cache.clear();
 }
 
@@ -362,13 +378,22 @@ async function businessNarrativeFrom(
 
 async function fromEdgar(ticker: string, options: AcquireOptions): Promise<AcquiredCompany> {
   const client = secClientFromEnv();
-  const directory = await client.companyTickers();
+  const directory = await cachedCompanyTickers(client);
   const found = cikForTicker(directory, ticker);
   if (found === null) {
     throw new Error(`${ticker} is not in the SEC ticker directory`);
   }
 
-  const companyFacts = await client.companyFacts(found.cik);
+  // companyFacts and submissions each depend only on the CIK, so they are
+  // requested together. A companyFacts failure still propagates; a
+  // submissions failure is still the one handled below.
+  const [companyFacts, submissionsOutcome] = await Promise.all([
+    client.companyFacts(found.cik),
+    client.submissions(found.cik).then(
+      (submissions): { ok: true; submissions: SubmissionsDocument } => ({ ok: true, submissions }),
+      (): { ok: false } => ({ ok: false })
+    ),
+  ]);
 
   let classification: { sic: string | null; sicDescription: string | null } = {
     sic: null,
@@ -381,7 +406,8 @@ async function fromEdgar(ticker: string, options: AcquireOptions): Promise<Acqui
   };
   let latestFiling: LatestFiling | null = null;
   try {
-    const submissions: SubmissionsDocument = await client.submissions(found.cik);
+    if (!submissionsOutcome.ok) throw new Error("submissions lookup failed");
+    const submissions = submissionsOutcome.submissions;
     classification = {
       sic: submissions.sic ?? null,
       sicDescription: submissions.sicDescription ?? null,

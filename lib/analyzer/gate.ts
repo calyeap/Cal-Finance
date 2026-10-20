@@ -547,9 +547,14 @@ export async function computeAnalysisForRun(runId: string): Promise<AnalysisResu
  */
 export async function computeRunOutput(
   runId: string,
-  options: LoadGateStateOptions = {}
+  options: LoadGateStateOptions = {},
+  preloadedState?: GateState
 ): Promise<{ result: AnalysisResult; fixture: CompanyFixture; market: MarketSnapshot }> {
-  const state = await loadGateState(runId, options);
+  // CF-AR7-REPORT-CONTENT-01 (speed fix from closed PR #421) — a caller that
+  // already loaded this run's gate state earlier in the same request, on the
+  // same market data `options` names, passes it so the acquisition and
+  // market-data work is not repeated. Omitted, the state is loaded here.
+  const state = preloadedState ?? (await loadGateState(runId, options));
 
   if (!state.spotCheckComplete) {
     throw new SpotCheckIncompleteError(runId, state.outstandingFactIds);
