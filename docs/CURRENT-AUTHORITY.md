@@ -69,9 +69,12 @@ summarises.
   brand/design authority.
 - **Current acceptance state** (outcome → implementation proof →
   real-company validation → Calvin acceptance, per acceptance-relevant
-  outcome) → [`docs/acceptance-matrix.md`](acceptance-matrix.md). Analyzer
-  V2's final acceptance/freeze (26 Sep 2026, `CALVIN RULING — A`) is
-  recorded at [`docs/analyzer-v2-final-acceptance-freeze.md`](analyzer-v2-final-acceptance-freeze.md).
+  outcome) → [`docs/acceptance-matrix.md`](acceptance-matrix.md). The
+  Analyzer's current acceptance/freeze (Analyzer Reset, 20 Oct 2026,
+  product-decisions item 32) is recorded at
+  [`docs/analyzer-reset-acceptance-freeze.md`](analyzer-reset-acceptance-freeze.md);
+  the superseded Analyzer V2 freeze (26 Sep 2026) is history at
+  [`docs/analyzer-v2-final-acceptance-freeze.md`](analyzer-v2-final-acceptance-freeze.md).
 - **Code / runtime truth** (what the code currently does, what's tested,
   what's merged) → this repository directly: `git log`, the working tree,
   tests, CI, GitHub — never memory or a prior report.

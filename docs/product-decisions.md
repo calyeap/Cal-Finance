@@ -95,7 +95,8 @@ update, not a semantic conflict.
     [PR #332 comment 5842778329](https://github.com/calyeap/Cal-Finance/pull/332#issuecomment-5842778329))
     predates the V1 verdict now on `master` (#399, #445). Analyzer
     acceptance is re-established by Analyzer Reset AR8 (item 31). Historical
-    record: `docs/analyzer-v2-final-acceptance-freeze.md`.
+    record: `docs/analyzer-v2-final-acceptance-freeze.md`. **Replaced 20 Oct
+    2026 by item 32.**
 26. **Analyzer Reset D1 — discount rate** (Calvin, 17 Oct 2026: approval of
     the Analyzer Reset master plan, decisions D1–D6, and his explicit AR0
     go; recorded under `CF-AR0-RECORD-DECISIONS-01`,
@@ -159,3 +160,13 @@ update, not a semantic conflict.
     invariants, AI-only comparison and Calvin's timed review (Analyzer Reset
     AR8). Sequencing — including Portfolio Review, Screen and Holdings work
     parked until AR8: `docs/product-roadmap.md` §10.
+32. **Analyzer Reset accepted and frozen — 20 Oct 2026** (Calvin's answer
+    "1 — Accept" on #458,
+    [comment 6290477557](https://github.com/calyeap/Cal-Finance/issues/458#issuecomment-6290477557),
+    after "1 — Not yet: fix first" and the #504 correction). Frozen state:
+    `master` at `03176d1` (PR #502 + PR #505), Methodology v3. Replaces item
+    25's superseded Analyzer V2 freeze. Known limitations accepted with it:
+    §4.4 non-operating answers are Calvin's, per company; KO is "can't bound
+    value" at D7's conservative bound (12.5% net debt ≥ 10%, shown with §4.4
+    "none" as a what-if); OKLO "can't conclude"; banks refused. Per-company timed-review times were not
+    supplied. Record: `docs/analyzer-reset-acceptance-freeze.md`.
