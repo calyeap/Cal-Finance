@@ -18,6 +18,8 @@ Rules:
 - Never prints the webhook URL.
 - One alert per stop: a Stop that lands within DEDUPE_SECONDS of another alert
   in the same session is skipped (e.g. question raised, then the turn ends).
+- PostToolUse[AskUserQuestion] sends nothing; it records when Calvin answered.
+  A Stop within ANSWERED_SECONDS of his answer is skipped: he is at the screen.
 - Python 3 standard library only.
 """
 
@@ -29,6 +31,7 @@ import urllib.error
 import urllib.request
 
 DEDUPE_SECONDS = 30
+ANSWERED_SECONDS = 120
 TIMEOUT_SECONDS = 5
 LOG_PATH = os.path.expanduser("~/.claude/notify-calvin.log")
 
@@ -82,24 +85,38 @@ def detail(event, payload):
     return ""
 
 
-def is_duplicate(event, key):
-    """True if this Stop follows another alert in the same session too closely."""
-    state_path = f"/tmp/notify-calvin-{key}.json"
-    now = time.time()
-    last = {}
+def state_path(key):
+    return f"/tmp/notify-calvin-{key}.json"
+
+
+def load_state(key):
     try:
-        with open(state_path, encoding="utf-8") as fh:
-            last = json.load(fh)
+        with open(state_path(key), encoding="utf-8") as fh:
+            return json.load(fh)
     except (OSError, ValueError):
+        return {}
+
+
+def save_state(key, state):
+    try:
+        with open(state_path(key), "w", encoding="utf-8") as fh:
+            json.dump(state, fh)
+    except OSError:
         pass
-    dup = event == "Stop" and now - float(last.get("ts", 0)) < DEDUPE_SECONDS
-    if not dup:
-        try:
-            with open(state_path, "w", encoding="utf-8") as fh:
-                json.dump({"event": event, "ts": now}, fh)
-        except OSError:
-            pass
-    return dup
+
+
+def skip_reason(event, key):
+    """Why this alert should not be sent, or "" to send. Records sent alerts."""
+    now = time.time()
+    state = load_state(key)
+    if event == "Stop":
+        if now - float(state.get("alert_ts", 0)) < DEDUPE_SECONDS:
+            return "duplicate"
+        if now - float(state.get("answered_ts", 0)) < ANSWERED_SECONDS:
+            return "calvin-just-answered"
+    state.update({"alert_event": event, "alert_ts": now})
+    save_state(key, state)
+    return ""
 
 
 def main():
@@ -112,6 +129,14 @@ def main():
         payload = {}
 
     event = payload.get("hook_event_name", "")
+    key = os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID") or payload.get("session_id") or "unknown"
+
+    if event == "PostToolUse" and payload.get("tool_name") == "AskUserQuestion":
+        state = load_state(key)
+        state["answered_ts"] = time.time()
+        save_state(key, state)
+        log("event=PostToolUse recorded=answered")
+        return 0
     if event not in STATUS:
         return 0
     if event == "PreToolUse" and payload.get("tool_name") != "AskUserQuestion":
@@ -119,11 +144,11 @@ def main():
     if event == "Stop" and payload.get("stop_hook_active"):
         return 0  # another Stop hook kept the agent going; it has not really stopped
 
-    key = os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID") or payload.get("session_id") or "unknown"
     log(f"event={event} keys={sorted(payload.keys())}")
 
-    if is_duplicate(event, key):
-        log(f"event={event} skipped=duplicate")
+    reason = skip_reason(event, key)
+    if reason:
+        log(f"event={event} skipped={reason}")
         return 0
 
     webhook = os.environ.get("SLACK_WEBHOOK_URL", "")

@@ -56,6 +56,18 @@
           }
         ]
       }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "AskUserQuestion",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 \"$CLAUDE_PROJECT_DIR\"/.claude/hooks/notify-calvin.py",
+            "timeout": 15
+          }
+        ]
+      }
     ]
   }
 }
