@@ -353,9 +353,14 @@ describe("CF-ANALYZER-V1-SETTLE-01 — #392's fresh-run acceptance proof, throug
       // still reaches Evidence via `states.suppressing` (assemble.ts).
       // CF-AR7-REPORT-CONTENT-01 — the local marker is the plain leverage
       // line now ("see Evidence" placeholders are forbidden on reading tabs).
-      expect(financialsText).toContain(
-        "Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available"
-      );
+      // CF-AR8-FOLLOWUPS-01 (#507) — reviewed evaluator change: the pinned
+      // sentence blamed "balance-sheet inputs", which is not why this run's
+      // ratio is missing. The invariant: the row names what enterprise value
+      // is actually waiting for (here the unmade §4.4 judgment), never the
+      // old cause.
+      expect(financialsText).toContain("Not computed for this company yet — its enterprise value needs");
+      expect(financialsText).toContain("a decision on which of its investments are non-operating");
+      expect(financialsText).not.toContain("the balance-sheet inputs needed to measure its debt load are not all available");
       assertNoRawStateTextOnCorrectedSurfaces(financials.container);
     });
 

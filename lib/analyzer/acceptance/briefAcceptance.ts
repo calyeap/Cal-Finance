@@ -289,7 +289,7 @@ export function checkBriefAcceptance({ ticker, policy, report, overviewText }: B
       items.push(
         explainedItem(
           "Leverage",
-          leverageUnavailableLine(leverage),
+          leverageUnavailableLine(leverage, diagnostics.enterpriseValue),
           overviewText,
           `${leverage.result}, net debt ratio ${leverage.netDebtRatio === null ? "not computed" : leverage.netDebtRatio.toString()}`
         )

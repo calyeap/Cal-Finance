@@ -148,9 +148,18 @@ export function notComputedLine(state: SuppressingState, cause: string, leverage
   return `Not computed for this company yet — ${plainReason(state, cause, leverage)}.`;
 }
 
-/** The leverage metric's own line when it is not PASS with a ratio. */
-export function leverageUnavailableLine(leverage: LeverageResult): string {
-  return notComputedLine("LEVERAGE UNSUPPORTED IN v1", "", leverage);
+/**
+ * The leverage metric's own line when it is not PASS with a ratio. Given the
+ * run's enterprise value, a ratio missing only because that value is waiting
+ * on named inputs (the §4.4 non-operating decision) says so — the same reason
+ * the bottom line gives (AR8 follow-ups, #458).
+ */
+export function leverageUnavailableLine(
+  leverage: LeverageResult,
+  enterpriseValue?: { suppressed: boolean; cause?: string }
+): string {
+  const cause = enterpriseValue?.suppressed && enterpriseValue.cause ? `enterprise value: ${enterpriseValue.cause}` : "";
+  return notComputedLine("LEVERAGE UNSUPPORTED IN v1", cause, leverage);
 }
 
 type SuppressedRange = Extract<FairValueRange, { kind: "suppressed" }>;
