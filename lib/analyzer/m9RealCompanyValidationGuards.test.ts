@@ -119,7 +119,9 @@ describe("the unified Analyzer report route never sends the analyst to a human s
   });
 
   it("reaches verification-complete by running the automatic pass, not by relaxing the gate", () => {
-    expect(readRepoFile(route)).toContain("advanceRunAutomatically(runId)");
+    // CF-AR7-REPORT-CONTENT-01 — the call now also passes the run's pinned
+    // market data, so its gate state can be reused (speed fix from #421).
+    expect(readRepoFile(route)).toContain("advanceRunAutomatically(runId, ");
     // The chokepoint itself still checks before it computes, in that order.
     const gate = readRepoFile("lib/analyzer/gate.ts");
     expect(gate).toContain("if (!state.spotCheckComplete) {");

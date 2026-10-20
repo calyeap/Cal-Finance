@@ -164,13 +164,12 @@ describe("CF-ANALYZER-AUTORUN-01 — the Analyzer routes on a real automatic run
         // ahead of the sheet's adoption state.
         expect(hero.textContent).toMatch(/^No valuation verdict for this company yet — /);
       }
-      // Quick Read plus all eight Overview tab slots (5-11 plus the new
-      // slot 12, REQUIRED OVERVIEW CONTENT item 9), in the fixed order —
-      // the route still renders the whole Overview tab body, not a reduced
-      // one (CF-AR1-QUICK-READ-OVERVIEW-01 adds Quick Read first).
-      const slots = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
-      expect(slots).toHaveLength(9);
-      expect(slots[0]).toBe("slot-quickread");
+      // CF-AR7-REPORT-CONTENT-01 — reviewed evaluator change: the Overview
+      // body is now the Quick Read Calvin accepted in the AR7 prototype
+      // (#455), replacing the M9 slots 5-12. The route still renders the
+      // whole Overview body — all seven items, in the fixed order.
+      const items = Array.from(container.querySelectorAll(".rc-qr > .rc-item")).map((el) => el.id);
+      expect(items).toEqual(["qr-price-assumes", "qr-base-return", "qr-why", "qr-quality", "qr-against", "qr-risks", "qr-change"]);
     });
 
     it("the Evidence tab renders Sections B and J from the run alone, with no redirect", async () => {

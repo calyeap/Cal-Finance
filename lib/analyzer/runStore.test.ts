@@ -249,12 +249,17 @@ describe("runStore", () => {
   // this is asserted against the module's own exports. Both narrow exceptions
   // (getLatestRunForHeldTicker, getLatestRunForCandidateTicker) return at
   // most one run for one already-known ticker, so neither trips this check.
-  it("exposes no way to list or search runs", async () => {
+  //
+  // CF-AR7-REPORT-CONTENT-01 — product-decisions item 31 (D6; frozen spec
+  // §14.9 AR0-7) amends R7 by exactly one surface: Analyzer Home's compact
+  // recent-analyses list (listRecentRuns). Search and any other listing stay
+  // excluded, so that one name is the whole of the exception.
+  it("exposes no way to list or search runs beyond D6's recent-analyses list", async () => {
     const store = await import("./runStore");
     const listingLike = Object.keys(store).filter((k) =>
       /list|all|search|find|recent|history|index/i.test(k)
     );
-    expect(listingLike).toEqual([]);
+    expect(listingLike).toEqual(["listRecentRuns"]);
   });
 
   // CF-SCREEN-FIRST-OUTCOME-01 (issue #379) — the not-held equivalent of

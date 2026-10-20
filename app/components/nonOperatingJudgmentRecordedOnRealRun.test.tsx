@@ -6,7 +6,7 @@ import { createRun, recordFactDecision, recordJudgment, recordProfileDecision } 
 import { computeAnalysisForRun, loadGateState } from "@/lib/analyzer/gate";
 import { analysisForReport } from "@/lib/analyzer/reportAnalysis";
 import { deriveVerdict } from "@/lib/analyzer/verdict";
-import { AnalyzerOverview } from "./AnalyzerOverview";
+import { QuickReadGrid } from "./ReportContent";
 import { AnalyzerReportFrame } from "./AnalyzerReportFrame";
 import { incompleteVerdictExplanation, verdictExplanation } from "@/lib/analyzer/trustCopy";
 
@@ -24,19 +24,16 @@ import { incompleteVerdictExplanation, verdictExplanation } from "@/lib/analyzer
 
 const MSFT_TAG = "us-gaap:LongTermInvestments";
 
-// CF-DESIGN-AUTHORITY-CUTOVER-01 — AnalyzerOverview now renders only the
-// Overview tab's own body (slots 5-11); slots 1-4 and 12 moved to
-// AnalyzerReportFrame.
+// CF-AR7-REPORT-CONTENT-01 — reviewed evaluator change: the Overview tab
+// body is the AR7 Quick Read (#455), replacing M9 slots 5-12.
 const OVERVIEW_TAB_SLOT_ORDER = [
-  "slot-quickread",
-  "slot-5",
-  "slot-6",
-  "slot-7",
-  "slot-8",
-  "slot-9",
-  "slot-10",
-  "slot-11",
-  "slot-12",
+  "qr-price-assumes",
+  "qr-base-return",
+  "qr-why",
+  "qr-quality",
+  "qr-against",
+  "qr-risks",
+  "qr-change",
 ];
 
 async function completeSpotCheck(runId: string): Promise<void> {
@@ -62,7 +59,7 @@ async function openMsftRunWithRuling() {
   // "not configured" path, regardless of what credentials the environment
   // running this suite happens to carry.
   const report = await analysisForReport(runId, null);
-  return { result, aiLayer: report.aiLayer };
+  return { runId, result, aiLayer: report.aiLayer };
 }
 
 describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => {
@@ -78,11 +75,13 @@ describe("CF-S44-RECORD-01 — MSFT's ruled run on the Overview surface", () => 
     await getPool().end();
   });
 
-  it("all seven Overview tab slots are still present, in the fixed §2.1 order, none absent", async () => {
-    const { result, aiLayer } = await openMsftRunWithRuling();
+  it("all seven Quick Read items are still present, in the fixed order, none absent", async () => {
+    const { runId, result, aiLayer } = await openMsftRunWithRuling();
 
-    const { container } = render(<AnalyzerOverview result={result} aiLayer={aiLayer} />);
-    const ids = Array.from(container.querySelectorAll(".ovtab > .ovslot")).map((el) => el.id);
+    const { container } = render(
+      <QuickReadGrid runId={runId} result={result} verdict={deriveVerdict(result)} sheet={null} aiLayer={aiLayer} />
+    );
+    const ids = Array.from(container.querySelectorAll(".rc-qr > .rc-item")).map((el) => el.id);
     expect(ids).toEqual(OVERVIEW_TAB_SLOT_ORDER);
   });
 
