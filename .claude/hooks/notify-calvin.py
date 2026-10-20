@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
-"""Phone alert for Calvin when a cloud build stops or needs him.
+"""Phone alert for Calvin when a cloud build needs him.
 
-Wired in .claude/settings.json to four Claude Code hook events:
-  Stop                        -> STOPPED          (main agent finished responding)
-  PreToolUse[AskUserQuestion] -> NEEDS INPUT      (native question raised)
+Wired in .claude/settings.json to three Claude Code hook events:
+  PreToolUse[AskUserQuestion] -> NEEDS INPUT      (the build asks Calvin a question)
   PermissionRequest           -> APPROVAL NEEDED  (human permission required)
   StopFailure                 -> FAILED           (turn ended on an API error)
 
@@ -12,76 +11,35 @@ the cloud environment) with the repo, the status and a clickable session link.
 
 Rules:
 - Cloud sessions only (CLAUDE_CODE_REMOTE=true); anywhere else it does nothing.
+- Independent reviewer sessions never alert: they report to the builder
+  session, and the builder owns every question to Calvin. A reviewer session is
+  one whose first prompt starts with the ship REVIEW BRIEF header line
+  ("NATIVE CLOUD V1 ... independent reviewer").
+- No alert on a plain Stop. Every real stop asks Calvin a native question
+  (standing rule), which alerts as NEEDS INPUT. Plain-Stop alerts were 0 useful
+  out of 10 on 20 Oct 2026.
+- A PermissionRequest for AskUserQuestion is skipped: the question itself
+  already alerted.
 - Never blocks the build and never changes a permission decision: it prints
   nothing to stdout. A failure exits 1, which Claude Code shows as a
   non-blocking hook error, so problems stay visible.
-- Never prints the webhook URL.
-- One alert per stop: a Stop that lands within DEDUPE_SECONDS of another alert
-  in the same session is skipped (e.g. question raised, then the turn ends).
-- A Stop whose last message only says it is waiting on its own work (background
-  jobs, CI, a reviewer, a check-in) is skipped; one that says it needs Calvin
-  still alerts.
-- PostToolUse[AskUserQuestion] sends nothing; it records when Calvin answered.
-  A Stop within ANSWERED_SECONDS of his answer is skipped: he is at the screen.
+- Never prints the webhook URL. Diagnostics go to /tmp/notify-calvin.log.
 - Python 3 standard library only.
 """
 
 import json
 import os
-import re
 import sys
 import time
 import urllib.error
 import urllib.request
 
-DEDUPE_SECONDS = 30
-ANSWERED_SECONDS = 120
 TIMEOUT_SECONDS = 5
 LOG_PATH = "/tmp/notify-calvin.log"
-
-# A Stop whose last message says the session is only waiting on its own work
-# (background jobs, CI, a reviewer, a scheduled check-in) is not a real stop:
-# nothing needs Calvin, so it stays silent. A message that says it needs Calvin
-# always alerts, even if it also mentions waiting.
-NEEDS_CALVIN = re.compile(
-    r"CALVIN REQUIRED|\bcalvin\b|\byou(r|rs)?\b|\bblocked\b|\bapprov|\bconfirm|\bdecision\b"
-    r"|\bneed(s|ed)?\b|\bcredentials?\b|\bgo-ahead\b|\?",
-    re.IGNORECASE,
-)
-# Courtesy promises to update Calvin later are still waiting, not a request.
-COURTESY = re.compile(
-    r"\b(let|keep) you (know|posted|updated)\b|\b(ping|update|notify|tell|message) you (when|once|after|if)\b",
-    re.IGNORECASE,
-)
-WAITING_ON_SELF = re.compile(
-    r"\bwaiting\b|\bwait (for|on|until)\b|still running|in the background|background (job|task|run|check)"
-    r"|\bi'?ll (continue|resume|check|report|be back|pick (it|this) up|follow up)"
-    r"|\bi will (continue|resume|check|report)"
-    r"|\bwill (continue|resume|report back) (when|once|after)"
-    r"|\bonce (ci|the (ci|checks?|run|reviewer|review|build|jobs?|tests?))"
-    r"|\b(ci|checks?|tests?|reviewer|review|build) (is|are) (still )?(running|pending|in progress)"
-    r"|check(ing)? back|check-in|scheduled (a )?(wake|check)|\bpolling\b|\bmonitoring\b",
-    re.IGNORECASE,
-)
-
-
-DONE_START = re.compile(
-    r"^\W*(all done|done|complete[d]?|finished|merged|shipped)\b", re.IGNORECASE
-)
-
-
-def only_waiting_on_self(message):
-    """True only if the final paragraph says it is waiting and nothing asks Calvin."""
-    text = message if isinstance(message, str) else ""
-    if DONE_START.search(text):
-        return False  # a finished build reporting back is a real stop
-    paragraphs = [p for p in re.split(r"\n\s*\n", text.strip()) if p.strip()]
-    if not paragraphs or not WAITING_ON_SELF.search(paragraphs[-1]):
-        return False
-    return not NEEDS_CALVIN.search(COURTESY.sub(" ", text))
+REVIEWER_HEADER = "native cloud v1"  # the REVIEW BRIEF's first line starts with this...
+REVIEWER_MARKER = "independent reviewer"  # ...and names the role
 
 STATUS = {
-    "Stop": "STOPPED",
     "PreToolUse": "NEEDS INPUT",
     "PermissionRequest": "APPROVAL NEEDED",
     "StopFailure": "FAILED",
@@ -89,9 +47,8 @@ STATUS = {
 
 
 def log(line):
-    """Append a diagnostics line (never secrets) to the session's log file."""
+    """Append a diagnostics line (never secrets)."""
     try:
-        os.makedirs(os.path.dirname(LOG_PATH), exist_ok=True)
         with open(LOG_PATH, "a", encoding="utf-8") as fh:
             fh.write(time.strftime("%Y-%m-%dT%H:%M:%S%z ") + line + "\n")
     except OSError:
@@ -115,6 +72,63 @@ def first_line(text, limit=160):
     return text if len(text) <= limit else text[: limit - 1] + "…"
 
 
+def text_of(content):
+    """Plain text from a transcript message's content (string or block list)."""
+    if isinstance(content, str):
+        return content
+    if isinstance(content, list):
+        return " ".join(
+            block.get("text", "") for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        )
+    return ""
+
+
+def first_prompt(transcript_path):
+    """The session's first user prompt, read from the transcript JSONL."""
+    try:
+        with open(transcript_path, encoding="utf-8") as fh:
+            for raw in fh:
+                try:
+                    entry = json.loads(raw)
+                except ValueError:
+                    continue
+                if not isinstance(entry, dict) or entry.get("isMeta"):
+                    continue
+                message = entry.get("message")
+                if not isinstance(message, dict) or message.get("role") != "user":
+                    continue
+                text = text_of(message.get("content"))
+                if text.strip():
+                    return text
+    except (OSError, TypeError):
+        pass
+    return ""
+
+
+def is_reviewer_session(payload, key):
+    """True for an independent reviewer session. Cached per session in /tmp."""
+    cache = f"/tmp/notify-calvin-role-{key}"
+    try:
+        with open(cache, encoding="utf-8") as fh:
+            return fh.read().strip() == "reviewer"
+    except OSError:
+        pass
+    prompt = first_prompt(payload.get("transcript_path") or "")
+    if not prompt:
+        return False  # unknown yet; don't cache, don't silence
+    # Only the brief's own header line counts. A builder's /ship skill text also
+    # contains the brief, but never as the session's first prompt line.
+    header = prompt.strip().splitlines()[0].lower()
+    role = "reviewer" if header.startswith(REVIEWER_HEADER) and REVIEWER_MARKER in header else "builder"
+    try:
+        with open(cache, "w", encoding="utf-8") as fh:
+            fh.write(role)
+    except OSError:
+        pass
+    return role == "reviewer"
+
+
 def detail(event, payload):
     if event == "PreToolUse":
         questions = (payload.get("tool_input") or {}).get("questions") or []
@@ -125,42 +139,6 @@ def detail(event, payload):
     if event == "StopFailure":
         err = payload.get("error") or payload.get("error_type") or payload.get("reason")
         return first_line(err if isinstance(err, str) else json.dumps(err)) if err else ""
-    if event == "Stop":
-        return first_line(payload.get("last_assistant_message"))
-    return ""
-
-
-def state_path(key):
-    return f"/tmp/notify-calvin-{key}.json"
-
-
-def load_state(key):
-    try:
-        with open(state_path(key), encoding="utf-8") as fh:
-            return json.load(fh)
-    except (OSError, ValueError):
-        return {}
-
-
-def save_state(key, state):
-    try:
-        with open(state_path(key), "w", encoding="utf-8") as fh:
-            json.dump(state, fh)
-    except OSError:
-        pass
-
-
-def skip_reason(event, key):
-    """Why this alert should not be sent, or "" to send. Records sent alerts."""
-    now = time.time()
-    state = load_state(key)
-    if event == "Stop":
-        if now - float(state.get("alert_ts", 0)) < DEDUPE_SECONDS:
-            return "duplicate"
-        if now - float(state.get("answered_ts", 0)) < ANSWERED_SECONDS:
-            return "calvin-just-answered"
-    state.update({"alert_event": event, "alert_ts": now})
-    save_state(key, state)
     return ""
 
 
@@ -174,31 +152,16 @@ def main():
         payload = {}
 
     event = payload.get("hook_event_name", "")
-    key = os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID") or payload.get("session_id") or "unknown"
-
-    if event == "PostToolUse" and payload.get("tool_name") == "AskUserQuestion":
-        state = load_state(key)
-        state["answered_ts"] = time.time()
-        save_state(key, state)
-        log("event=PostToolUse recorded=answered")
-        return 0
     if event not in STATUS:
         return 0
     if event == "PreToolUse" and payload.get("tool_name") != "AskUserQuestion":
         return 0
     if event == "PermissionRequest" and payload.get("tool_name") == "AskUserQuestion":
         return 0  # the question itself already alerted as NEEDS INPUT
-    if event == "Stop" and payload.get("stop_hook_active"):
-        return 0  # another Stop hook kept the agent going; it has not really stopped
-    if event == "Stop" and only_waiting_on_self(payload.get("last_assistant_message")):
-        log("event=Stop skipped=waiting-on-self")
-        return 0
 
-    log(f"event={event} keys={sorted(payload.keys())}")
-
-    reason = skip_reason(event, key)
-    if reason:
-        log(f"event={event} skipped={reason}")
+    key = os.environ.get("CLAUDE_CODE_REMOTE_SESSION_ID") or payload.get("session_id") or "unknown"
+    if is_reviewer_session(payload, key):
+        log(f"event={event} skipped=reviewer-session")
         return 0
 
     webhook = os.environ.get("SLACK_WEBHOOK_URL", "")
@@ -226,8 +189,7 @@ def main():
     except urllib.error.HTTPError as exc:
         code = exc.code
     except (urllib.error.URLError, OSError) as exc:
-        reason = getattr(exc, "reason", exc)
-        log(f"event={event} error=send failed ({type(exc).__name__}: {reason})")
+        log(f"event={event} error=send failed ({type(exc).__name__})")
         print(f"notify-calvin: Slack send failed ({type(exc).__name__})", file=sys.stderr)
         return 1
 
