@@ -1,8 +1,9 @@
 import { config as loadEnv } from "dotenv";
 loadEnv({ path: ".env.local" });
 
-import { mkdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import path from "node:path";
+import Anthropic from "@anthropic-ai/sdk";
 import { getPool } from "../../lib/db";
 import { createRun } from "../../lib/analyzer/runStore";
 import { advanceRunAutomatically } from "../../lib/analyzer/autoRun";
@@ -49,14 +50,104 @@ import {
 // Exit 0 = this ticker meets the contract. Exit 1 = it does not, or the run
 // could not complete.
 //
+// CF-AR8-REAL-APP-ACCEPTANCE-01 (#457) — AR8 runs this probe for all eight
+// golden companies (product-decisions item 31), not only the three proof
+// tickers. The other five get the COMPLETE_OR_EXPLAINED policy; the bank and
+// the pre-revenue company are expected to refuse / not conclude, and the run
+// records what the product actually did. Opt-in spend cap for paid cloud
+// runs: CAL_CAP_USD=<total> meters every model call (a free count_tokens
+// preflight before each; a call whose worst case would cross the cap is
+// refused, never sent) into <PROOF_OUTPUT_DIR>/spend.json, shared by every
+// ticker run against that directory. CAL_PREFLIGHT=1 counts and sends
+// nothing. Unset, nothing changes (the live-proof workflow's path).
+//
 // Run:  npx tsx scripts/analyzer/acceptance-run.ts MSFT
 // ---------------------------------------------------------------------------
 
-const COMPANY_NAMES: Record<(typeof PROOF_TICKERS)[number], string> = {
+const GOLDEN_TICKERS = [...PROOF_TICKERS, "NUE", "KO", "LLY", "OKLO", "JPM"] as const;
+type GoldenTicker = (typeof GOLDEN_TICKERS)[number];
+
+const COMPANY_NAMES: Record<GoldenTicker, string> = {
   MSFT: "Microsoft Corporation",
   NVDA: "NVIDIA Corporation",
   COST: "Costco Wholesale Corporation",
+  NUE: "Nucor Corporation",
+  KO: "The Coca-Cola Company",
+  LLY: "Eli Lilly and Company",
+  OKLO: "Oklo Inc.",
+  JPM: "JPMorgan Chase & Co.",
 };
+
+function isGoldenTicker(value: string): value is GoldenTicker {
+  return (GOLDEN_TICKERS as readonly string[]).includes(value);
+}
+
+// claude-opus-5 list price, USD per token (thinking bills as output) — the
+// same constants calibration-v3-freeze.ts metered #495 with.
+const INPUT_USD = 5 / 1e6;
+const OUTPUT_USD = 25 / 1e6;
+
+interface SpendLedger {
+  capUsd: number;
+  calls: number;
+  inputTokens: number;
+  outputTokens: number;
+  costUsd: number;
+  rows: { ticker: string; preflight: boolean; inputTokens: number; outputTokens: number; costUsd: number }[];
+}
+
+/**
+ * Meters every Messages.create in this process (the production call sites
+ * construct their own clients) against one ledger file. The request itself is
+ * never altered: a call is sent whole or refused before it is sent. Calls run
+ * concurrently (interpretation and challenger), so the ledger lives in memory
+ * for the process and each in-flight call reserves its worst case first.
+ */
+function meterModelCalls(ticker: string, ledgerFile: string, capUsd: number, preflight: boolean): void {
+  const ledger: SpendLedger = existsSync(ledgerFile)
+    ? JSON.parse(readFileSync(ledgerFile, "utf8"))
+    : { capUsd, calls: 0, inputTokens: 0, outputTokens: 0, costUsd: 0, rows: [] };
+  let reservedUsd = 0;
+  const save = () => writeFileSync(ledgerFile, `${JSON.stringify(ledger, null, 2)}\n`);
+  const proto = Anthropic.Messages.prototype as unknown as { create: (...a: unknown[]) => Promise<Anthropic.Message> };
+  const create = proto.create;
+  proto.create = async function (this: Anthropic.Messages, ...args: unknown[]) {
+    const params = args[0] as Record<string, unknown>;
+    const counted = await this.countTokens({
+      model: params.model,
+      system: params.system,
+      messages: params.messages,
+      thinking: params.thinking,
+      output_config: params.output_config,
+    } as Anthropic.MessageCountTokensParams);
+    if (preflight) {
+      ledger.rows.push({ ticker, preflight: true, inputTokens: counted.input_tokens, outputTokens: 0, costUsd: 0 });
+      save();
+      throw new Error(`preflight: counted ${counted.input_tokens} input tokens, not sent`);
+    }
+    const worstCase = counted.input_tokens * INPUT_USD + Number(params.max_tokens) * OUTPUT_USD;
+    if (ledger.costUsd + reservedUsd + worstCase > capUsd) {
+      throw new Error(
+        `spend cap $${capUsd} — $${ledger.costUsd.toFixed(4)} spent, $${reservedUsd.toFixed(4)} in flight; this call's worst case $${worstCase.toFixed(4)} would cross it, so it was not sent`
+      );
+    }
+    reservedUsd += worstCase;
+    try {
+      const response = await create.apply(this, args);
+      const cost = response.usage.input_tokens * INPUT_USD + response.usage.output_tokens * OUTPUT_USD;
+      ledger.calls += 1;
+      ledger.inputTokens += response.usage.input_tokens;
+      ledger.outputTokens += response.usage.output_tokens;
+      ledger.costUsd += cost;
+      ledger.rows.push({ ticker, preflight: false, inputTokens: response.usage.input_tokens, outputTokens: response.usage.output_tokens, costUsd: cost });
+      save();
+      console.log(`  [spend] ${ticker} in ${response.usage.input_tokens}, out ${response.usage.output_tokens}, $${cost.toFixed(4)}; total $${ledger.costUsd.toFixed(4)} of $${capUsd}`);
+      return response;
+    } finally {
+      reservedUsd -= worstCase;
+    }
+  };
+}
 
 function describeError(err: unknown): string {
   if (err instanceof Error) return `${err.name}: ${err.message}`;
@@ -145,14 +236,18 @@ function formatTimingMarkdown(timings: StageTiming[], attempts: AiAttempt[], ana
 
 async function main(): Promise<void> {
   const ticker = (process.argv[2] ?? "").trim().toUpperCase();
-  if (!isProofTicker(ticker)) {
-    console.error(`Usage: acceptance-run.ts <${PROOF_TICKERS.join("|")}>`);
+  if (!isGoldenTicker(ticker)) {
+    console.error(`Usage: acceptance-run.ts <${GOLDEN_TICKERS.join("|")}>`);
     process.exitCode = 1;
     return;
   }
 
   const outDir = process.env.PROOF_OUTPUT_DIR ?? "proof";
   mkdirSync(outDir, { recursive: true });
+  const capUsd = Number(process.env.CAL_CAP_USD ?? "");
+  if (Number.isFinite(capUsd) && capUsd > 0) {
+    meterModelCalls(ticker, path.join(outDir, "spend.json"), capUsd, process.env.CAL_PREFLIGHT === "1");
+  }
   const file = (suffix: string) => path.join(outDir, `${ticker.toLowerCase()}-${suffix}`);
 
   let stage = "resolve this company's assumption sheet (in force, or a fresh price-blind draft)";
@@ -198,7 +293,12 @@ async function main(): Promise<void> {
     timings.push({ stage: "render the normal Overview", ms: Date.now() - overviewStarted });
 
     stage = "check the acceptance contract";
-    const acceptance = checkBriefAcceptance({ ticker, policy: ACCEPTANCE_POLICY[ticker], report, overviewText });
+    const acceptance = checkBriefAcceptance({
+      ticker,
+      policy: isProofTicker(ticker) ? ACCEPTANCE_POLICY[ticker] : "COMPLETE_OR_EXPLAINED",
+      report,
+      overviewText,
+    });
 
     const timingSection = formatTimingMarkdown(timings, attempts, analyzerLogLines);
     const summary = `${formatBriefAcceptanceMarkdown(acceptance, { runId })}\n${timingSection}`;

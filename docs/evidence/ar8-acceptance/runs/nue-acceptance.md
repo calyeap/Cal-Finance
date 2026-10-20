@@ -1,0 +1,34 @@
+### NUE — PASS (complete, or explained in plain English)
+Run `6110ef98-bfa3-414c-99fb-6dc53a1ccefc`
+
+| # | Section | Status | What the reader sees / why |
+|---|---|---|---|
+| 1 | Company, current price and as-of date | CONTENT | NUCOR CORP · $260.73 as of 2026-10-19 |
+| 2 | 30-second view / bottom line | EXPLAINED | What matters most: This run did not produce a valuation for Nucor: the debt-and-cash bridge the balance sheet requires is outside what this version of the model supports, so ente… / Bottom line: No valuation verdict for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: no price-vs-range position for this run] |
+| 3 | What the company does | CONTENT | Nucor Corporation engages in the manufacture and sale of steel and steel products. The company operates in three segments: Steel Mills, Steel Products, and Raw… [source: YAHOO company summary; 10-K Item 1 not used because: The Item 1 extraction rule (item1-2026-10-1) could not locate the section in the filing: found 2 standalone "Item 1. Business" heading lines — expected exactly one.] |
+| 4 | Key financial metrics | EXPLAINED | Market cap: Not computed for this company yet — it needs a decision on which of its investments are non-operating, which is not available for this company. [engine: INCOMPLETE: missing REQUIRED input(s): nonOperatingEquityInvestmentsAtBook] / P/E (trailing) 20.4334 / FCF yield -0.00317818 / 52-week range 136.61–274.74 / Leverage: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1, net debt ratio not computed] |
+| 5 | Bear / Base / Bull and price context | EXPLAINED | Fair-value range: No fair-value range for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: inputs missing — the ratio could not be computed, so the precondition fails closed] |
+| 6 | Why own it | CONTENT | The record is deep, with 19 filed years and a margin history window of 9 years; the analyst's central case uses the median margin of that window, 9.5%, rather … |
+| 7 | Why be cautious / biggest risks | CONTENT | Cash free cash flow is negative at -$188.0M, a free-cash-flow yield on market capitalisation of -0.3%, because capital spending of $3.4B exceeded operating cas… / Biggest risk: Whether the capacity bought by the recent spending earns more than the discount rate of 11.0% — the return on new capital is not computed for this run, and the… |
+| 8 | What today's price assumes | EXPLAINED | Steady-state EV: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: leverage precondition failed (§6.5)] / PVGO share of EV: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: leverage precondition failed (§6.5)] / Implied growth, yrs 1-5 at r = 11.0%: Not computed for this company yet — it needs the company's enterprise value, which is not available for this company. [engine: INCOMPLETE: missing REQUIRED input(s): targetEnterpriseValue] |
+| 9 | Latest material development | CONTENT | 10-Q filed 2026-08-12 |
+| 10 | What would change the view | CONTENT | largest driver ronic, full-range impact 11.0% |
+
+## Stage timings
+- acquisition + automatic decisions (advanceRunAutomatically): 2404ms
+- deterministic computation: 459ms
+- AI layer (interpretation + challenger): 105851ms
+- render the normal Overview: 18ms
+- **total measured:** 108732ms
+
+### AI model calls (one row per physical call)
+- challenger attempt 1: 36287ms
+- challenger attempt 2: 44253ms
+- interpretation attempt 1: 105831ms
+
+### `[analyzer]` log lines (each attempt's validation/regenerate outcome)
+
+```
+challenger refused, regenerating — challenger finding 4 what would have to be true: SPELLED-OUT QUANTITY ("two points") in: …which case the stated net debt is a blend of two points in time rather than a position as at the int…
+challenger regeneration recovered — the second attempt passed every check
+```

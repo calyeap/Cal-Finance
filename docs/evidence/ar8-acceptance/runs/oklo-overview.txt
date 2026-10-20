@@ -1,0 +1,67 @@
+Oklo Inc.
+OKLO
+No valuation verdict for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Uncertainty — not set
+$27.24
+2026-10-19
+No price history is in this analysis' fact set.
+Bear
+—
+Base
+—
+Bull
+—
+Current price
+$27.24
+No fair-value range for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Overview
+Business
+Financials
+Valuation
+Risks & Thesis
+Market Context
+Evidence
+Save this version
+Look at this company again
+What today's price assumes
+Not computed for this company yet — it needs base-year revenue and the company's enterprise value, which are not available for this company.
+Steady-state EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+PVGO share of EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+How the price is read — Valuation
+If our Base case happens
+No break-even return is computed for this analysis.
+Scenario outputs — Valuation
+Why this verdict
+No valuation verdict for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+The sheet behind the Base value — Valuation
+Business quality
+No moat class is recorded on this analysis's assumption sheet.
+FY2025 is missing invested capital
+Returns by year — Financials
+Strongest argument against
+The independent challenger's output was refused for this analysis, so no argument is shown.
+Challenger findings — Risks & Thesis
+Top risks
+The draft's own Bear case (AI draft, every driver cited):
+this company's filings report no revenue (pre-revenue, or none tagged), so there is no operating history to anchor growth, margin or returns to — the valuation cannot be concluded from filed history
+All three cases — Risks & Thesis
+What would change it
+No computed change trigger available yet.
+Sensitivity — Valuation
+Key Stats (TTM)
+Market cap
+Not computed for this company yet — it needs a decision on which of its investments are non-operating, which is not available for this company.
+P/E (trailing)
+-29.6
+Spot-check not required
+FCF yield
+-2.3%
+Spot-check not required
+52-week range
+Not computed for this company yet — it needs yearly operating margins, which is not available for this company.
+Leverage
+Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Market Context
+SIC 4911 · Electric Services
+Upcoming Events
+No upcoming events are tracked for this company yet.

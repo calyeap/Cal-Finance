@@ -1,0 +1,86 @@
+{
+  "source": "Yahoo Finance quoteSummary financialData (analyst consensus; humility check only, never an input)",
+  "retrievedAt": "2026-10-20T10:15:15.155Z",
+  "rows": [
+    {
+      "ticker": "MSFT",
+      "price": 533.52,
+      "targetMean": 599.27527,
+      "targetLow": 440,
+      "targetHigh": 870,
+      "analysts": 53,
+      "recommendation": "strong_buy",
+      "priceTime": "2026-10-19T20:00:00.000Z"
+    },
+    {
+      "ticker": "COST",
+      "price": 995.53,
+      "targetMean": 1066.0555,
+      "targetLow": 770,
+      "targetHigh": 1315,
+      "analysts": 36,
+      "recommendation": "buy",
+      "priceTime": "2026-10-19T20:00:01.000Z"
+    },
+    {
+      "ticker": "NVDA",
+      "price": 217.09,
+      "targetMean": 328.71695,
+      "targetLow": 180,
+      "targetHigh": 515,
+      "analysts": 59,
+      "recommendation": "strong_buy",
+      "priceTime": "2026-10-19T20:00:01.000Z"
+    },
+    {
+      "ticker": "NUE",
+      "price": 260.73,
+      "targetMean": 285,
+      "targetLow": 226,
+      "targetHigh": 310,
+      "analysts": 16,
+      "recommendation": "buy",
+      "priceTime": "2026-10-19T20:00:02.000Z"
+    },
+    {
+      "ticker": "KO",
+      "price": 93.42,
+      "targetMean": 94.73913,
+      "targetLow": 75,
+      "targetHigh": 104,
+      "analysts": 23,
+      "recommendation": "buy",
+      "priceTime": "2026-10-19T20:00:02.000Z"
+    },
+    {
+      "ticker": "LLY",
+      "price": 1240.34,
+      "targetMean": 1328.0547,
+      "targetLow": 930,
+      "targetHigh": 1600,
+      "analysts": 30,
+      "recommendation": "buy",
+      "priceTime": "2026-10-19T20:00:02.000Z"
+    },
+    {
+      "ticker": "OKLO",
+      "price": 27.24,
+      "targetMean": 75.075,
+      "targetLow": 14,
+      "targetHigh": 130,
+      "analysts": 20,
+      "recommendation": "buy",
+      "priceTime": "2026-10-19T20:00:02.000Z"
+    },
+    {
+      "ticker": "JPM",
+      "price": 333.53,
+      "targetMean": 372.56522,
+      "targetLow": 312,
+      "targetHigh": 425,
+      "analysts": 23,
+      "recommendation": "buy",
+      "priceTime": "2026-10-19T20:00:02.000Z"
+    }
+  ]
+}

@@ -1,0 +1,34 @@
+### KO — PASS (complete, or explained in plain English)
+Run `bdd58bc4-819d-4b66-803e-5df3cd4747cc`
+
+| # | Section | Status | What the reader sees / why |
+|---|---|---|---|
+| 1 | Company, current price and as-of date | CONTENT | COCA COLA CO · $93.42 as of 2026-10-19 |
+| 2 | 30-second view / bottom line | EXPLAINED | What matters most: The valuation engine produced no value for this company on this run: enterprise value, the per-share scenario values and every output that depends on the disco… / Bottom line: No valuation verdict for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: no price-vs-range position for this run] |
+| 3 | What the company does | CONTENT | The Coca-Cola Company, a beverage company, manufactures and sells various nonalcoholic beverages in the United States and internationally. The company provides… [source: YAHOO company summary; 10-K Item 1 not used because: The Item 1 extraction rule (item1-2026-10-1) could not locate the section in the filing: found 2 standalone "Item 1. Business" heading lines — expected exactly one.] |
+| 4 | Key financial metrics | EXPLAINED | Market cap: Not computed for this company yet — it needs finance-lease liabilities and a decision on which of its investments are non-operating, which are not available for this company. [engine: INCOMPLETE: missing REQUIRED input(s): financeLeaseLiabilities, nonOperatingEquityInvestmentsAtBook] / P/E (trailing) 28.0541 / FCF yield 0.0131762 / 52-week range 67.54–93.9 / Leverage: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1, net debt ratio not computed] |
+| 5 | Bear / Base / Bull and price context | EXPLAINED | Fair-value range: No fair-value range for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: inputs missing — the ratio could not be computed, so the precondition fails closed] |
+| 6 | Why own it | CONTENT | The operating record is steady and long: 19 filed years, a current operating margin of 28.7% sitting above the window median of 26.0%, a worst single-year marg… |
+| 7 | Why be cautious / biggest risks | CONTENT | The price buys little current cash — the free-cash-flow yield is 1.3% and the trailing earnings multiple is 28.1x — and neither that multiple's place in the co… / Biggest risk: The operating margin path matters most: the current margin sits at the top of a window whose range is 8.0%, the scenarios swing from below the median to above … |
+| 8 | What today's price assumes | EXPLAINED | Steady-state EV: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: leverage precondition failed (§6.5)] / PVGO share of EV: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: leverage precondition failed (§6.5)] / Implied growth, yrs 1-5 at r = 9.0%: Not computed for this company yet — it needs the company's enterprise value, which is not available for this company. [engine: INCOMPLETE: missing REQUIRED input(s): targetEnterpriseValue] |
+| 9 | Latest material development | CONTENT | 10-Q filed 2026-07-29 |
+| 10 | What would change the view | CONTENT | largest driver ronic, full-range impact 14.7% |
+
+## Stage timings
+- acquisition + automatic decisions (advanceRunAutomatically): 2613ms
+- deterministic computation: 621ms
+- AI layer (interpretation + challenger): 181738ms
+- render the normal Overview: 16ms
+- **total measured:** 184988ms
+
+### AI model calls (one row per physical call)
+- challenger attempt 1: 55565ms
+- interpretation attempt 1: 93574ms
+- interpretation attempt 2: 88133ms
+
+### `[analyzer]` log lines (each attempt's validation/regenerate outcome)
+
+```
+interpretation refused, regenerating — interpretation statement 1: SPELLED-OUT QUANTITY ("two point") in: …istory in detail and revenue history only as two point values.
+interpretation regeneration recovered — the second attempt passed every check
+```

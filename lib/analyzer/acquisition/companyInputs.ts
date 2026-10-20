@@ -16,7 +16,7 @@ import type { AcquisitionResult } from "./acquire";
 import type { CompanyFactsDocument } from "./secClient";
 import type { CompanyFixture, ValuationBase } from "../assemble";
 import type { FactRecord, ProvenanceTokens, SourcedValue } from "../types";
-import { v3FiledInputs } from "./v3Inputs";
+import { latestAnnualDilutedSharesEnd, v3FiledInputs } from "./v3Inputs";
 
 // ---------------------------------------------------------------------------
 // Acquisition -> the assembly seam.
@@ -356,7 +356,13 @@ export function buildCompanyInputs(
   // coherence check's trailing actual, the ROIC anchor and D8's fallback.
   // The filed tax rate replaces the sheet's own on every sheet unless Calvin
   // set one at adoption; it is the single rate every NOPAT below uses.
-  const treasuryDilutionTagged = get("treasury-method-dilution") !== null;
+  // D8 (AR8, #457): an incremental-shares tag whose latest filed value
+  // predates the latest 10-K's share period is absent for this bridge, not
+  // today's dilution — LLY last tagged it for FY2011.
+  const taggedDilutionAsOf = byId.get("treasury-method-dilution")?.asOfDate ?? null;
+  const dilutionSharePeriodEnd = latestAnnualDilutedSharesEnd(companyFacts);
+  const dilutionTagStale = taggedDilutionAsOf !== null && dilutionSharePeriodEnd !== null && taggedDilutionAsOf < dilutionSharePeriodEnd;
+  const treasuryDilutionTagged = get("treasury-method-dilution") !== null && !dilutionTagStale;
   const v3Inputs = v3FiledInputs(companyFacts, {
     basePeriodEnd: valuationBase?.base.periodEnd ?? null,
     baseKind: valuationBase?.base.kind ?? null,
@@ -498,7 +504,7 @@ export function buildCompanyInputs(
       // valuation basis.
       treasuryMethodDilution: track(
         "treasuryMethodDilution",
-        get("treasury-method-dilution") ??
+        (dilutionTagStale ? null : get("treasury-method-dilution")) ??
           (v3Inputs.dilutionFallback?.applied === true && v3Inputs.dilutionFallback.value !== null
             ? { value: v3Inputs.dilutionFallback.value, provenance: sharesOutstandingSourced?.provenance ?? CLEAN_PROVENANCE }
             : null)

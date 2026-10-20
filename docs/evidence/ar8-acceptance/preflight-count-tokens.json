@@ -1,0 +1,128 @@
+{
+  "capUsd": 5,
+  "calls": 0,
+  "inputTokens": 0,
+  "outputTokens": 0,
+  "costUsd": 0,
+  "rows": [
+    {
+      "ticker": "MSFT",
+      "preflight": true,
+      "inputTokens": 5949,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "MSFT",
+      "preflight": true,
+      "inputTokens": 7784,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "JPM",
+      "preflight": true,
+      "inputTokens": 13724,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "JPM",
+      "preflight": true,
+      "inputTokens": 13724,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "JPM",
+      "preflight": true,
+      "inputTokens": 13724,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "COST",
+      "preflight": true,
+      "inputTokens": 8035,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "COST",
+      "preflight": true,
+      "inputTokens": 6603,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "NVDA",
+      "preflight": true,
+      "inputTokens": 8078,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "NVDA",
+      "preflight": true,
+      "inputTokens": 5853,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "NUE",
+      "preflight": true,
+      "inputTokens": 6274,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "NUE",
+      "preflight": true,
+      "inputTokens": 7914,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "KO",
+      "preflight": true,
+      "inputTokens": 5892,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "KO",
+      "preflight": true,
+      "inputTokens": 8330,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "LLY",
+      "preflight": true,
+      "inputTokens": 5652,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "LLY",
+      "preflight": true,
+      "inputTokens": 7973,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "OKLO",
+      "preflight": true,
+      "inputTokens": 7860,
+      "outputTokens": 0,
+      "costUsd": 0
+    },
+    {
+      "ticker": "OKLO",
+      "preflight": true,
+      "inputTokens": 6064,
+      "outputTokens": 0,
+      "costUsd": 0
+    }
+  ]
+}

@@ -1,0 +1,68 @@
+ELI LILLY & Co
+LLY
+No valuation verdict for this company yet — the company's industry classification could not be confirmed.
+Uncertainty — not set
+$1240.34
+2026-10-19
+No price history is in this analysis' fact set.
+Bear
+—
+Base
+—
+Bull
+—
+Current price
+$1240.34
+No fair-value range for this company yet — the company's industry classification could not be confirmed.
+Overview
+Business
+Financials
+Valuation
+Risks & Thesis
+Market Context
+Evidence
+Save this version
+Look at this company again
+What today's price assumes
+Not computed for this company yet — it needs the company's enterprise value, which is not available for this company.
+Steady-state EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+PVGO share of EV Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+ELI LILLY & Co grew revenue 12.6%/yr over 10 years (FY2015–FY2025).
+How the price is read — Valuation
+If our Base case happens
+No break-even return is computed for this analysis.
+Scenario outputs — Valuation
+Why this verdict
+No valuation verdict for this company yet — the company's industry classification could not be confirmed.
+The sheet behind the Base value — Valuation
+Business quality
+Narrow moat
+5-year average return on invested capital 24.2%, above the 9.0% rate.
+Returns by year — Financials
+Strongest argument against
+Operating cash flow for the annual period, $16.8B, is materially below reported operating income for the same period, $26.3B. The accrual profitability shown in the annual filing is therefore not corroborated by cash arriving in the same window, and the record contains no reconciliation item that accounts for the gap beyond depreciation and amortisation of $2.0B and share-based compensation of $626.0M, both of which push the other way.
+Challenger findings — Risks & Thesis
+Top risks
+The draft's own Bear case (AI draft, every driver cited):
+Incretin demand normalises faster than the current ramp implies: competing entrants and payer pressure cap price, the FY2025 revenue step from 45,043m to 65,179m (H:revenue) proves to be a one-off peak year, and growth settles near the low single digits seen in FY2017-FY2019 (H:revenue). The very large capacity and acquisition build already embedded in invested capital — 18,556m in FY2020 to 61,770m in FY2025 (H:returns) — keeps absorbing cash, so margins sit near the weakest cash conversion the company has recently filed (operating cash flow 8,818m on 45,043m of revenue in FY2024, H:cashflow, H:revenue) and each new dollar invested earns about the discount rate or less. Stock compensation of 626m a year (H:cashflow) keeps diluting holders.
+All three cases — Risks & Thesis
+What would change it
+The single largest driver of this valuation is RONIC, which can move the result by 75.5% across its tested range.
+Sensitivity — Valuation
+Key Stats (TTM)
+Market cap
+Not computed for this company yet — it needs a decision on which of its investments are non-operating, which is not available for this company.
+P/E (trailing)
+41.6
+Spot-check not required
+FCF yield
+0.8%
+Spot-check not required
+52-week range
+$799.57 – $1,280.34
+Leverage
+Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure.
+Market Context
+No SEC industry classification was found for this company.
+Upcoming Events
+No upcoming events are tracked for this company yet.

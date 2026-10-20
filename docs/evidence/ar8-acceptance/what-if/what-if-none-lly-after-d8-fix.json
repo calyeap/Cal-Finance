@@ -1,0 +1,38 @@
+{
+  "selection": "None of these are non-operating",
+  "note": "WHAT-IF, not Calvin's answer; no model call",
+  "out": {
+    "LLY": {
+      "runId": "20d2c8ec-ccfa-44ce-a0ee-3a775092dcdf",
+      "candidates": [
+        {
+          "tag": "us-gaap:EquitySecuritiesWithoutReadilyDeterminableFairValueAmount",
+          "value": "405000000.00"
+        },
+        {
+          "tag": "us-gaap:LongTermInvestments",
+          "value": "3856000000.00"
+        }
+      ],
+      "price": "1240.34",
+      "rate": "0.09",
+      "evState": "COMPUTED",
+      "bearBaseBull": {
+        "base": "372.87",
+        "bear": "138.07",
+        "bull": "636.96"
+      },
+      "baseAtCheckRates": {
+        "rate": "372.87",
+        "lower": "418.41",
+        "upper": "332.74"
+      },
+      "verdict": {
+        "status": "PENDING",
+        "state": "PENDING ADOPTION",
+        "draftZone": "SELL",
+        "rampDependent": null
+      }
+    }
+  }
+}

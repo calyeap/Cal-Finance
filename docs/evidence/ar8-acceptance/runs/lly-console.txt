@@ -1,0 +1,33 @@
+  [spend] LLY in 5746, out 4120, $0.1317; total $2.1510 of $4.56
+  [spend] LLY in 8072, out 5829, $0.1861; total $2.3371 of $4.56
+### LLY — FAIL (complete, or explained in plain English)
+Run `a08eacaa-b354-479f-a167-f5749c782006`
+
+| # | Section | Status | What the reader sees / why |
+|---|---|---|---|
+| 1 | Company, current price and as-of date | CONTENT | ELI LILLY & Co · $1240.34 as of 2026-10-19 |
+| 2 | 30-second view / bottom line | EXPLAINED | What matters most: This run did not produce a valuation: the company's profile could not be classified and the handling of its debt load falls outside what this version of the mo… / Bottom line: No valuation verdict for this company yet — the company's industry classification could not be confirmed. [engine: no price-vs-range position for this run] |
+| 3 | What the company does | CONTENT | Eli Lilly and Company discovers, develops, manufactures, and markets human pharmaceutical products in the United States, Europe, China, Japan, and internationa… [source: YAHOO company summary; 10-K Item 1 not used because: The SEC submissions lookup that names the company's filings did not complete, so no 10-K could be located.] |
+| 4 | Key financial metrics | EXPLAINED | Market cap: Not computed for this company yet — it needs a decision on which of its investments are non-operating, which is not available for this company. [engine: INCOMPLETE: missing REQUIRED input(s): nonOperatingEquityInvestmentsAtBook] / P/E (trailing) 41.6361 / FCF yield 0.00768412 / 52-week range 799.57–1280.34 / Leverage: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1, net debt ratio not computed] |
+| 5 | Bear / Base / Bull and price context | EXPLAINED | Fair-value range: No fair-value range for this company yet — the company's industry classification could not be confirmed. [engine: UNSUPPORTED PROFILE — CLASSIFICATION UNAVAILABLE: missing REQUIRED input(s): sector classification, industry classification] |
+| 6 | Why own it | CONTENT | The business is generating cash at scale — operating cash flow of $16.8B and cash free cash flow of $9.0B on revenue of $65.2B — the operating margin of 40.4% … |
+| 7 | Why be cautious / biggest risks | CONTENT | That peak margin is the concern as much as the comfort: it sits at the very top of its own history, the spread between best and worst years in that window is 3… / Biggest risk: Whether the current operating margin of 40.4% is a durable new level or a cycle peak — it is the highest reading in the whole supplied history, every analyst s… |
+| 8 | What today's price assumes | EXPLAINED | Steady-state EV: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: leverage precondition failed (§6.5)] / PVGO share of EV: Not computed for this company yet — the balance-sheet inputs needed to measure its debt load are not all available, and the valuation depends on that measure. [engine: LEVERAGE UNSUPPORTED IN v1: leverage precondition failed (§6.5)] / Implied growth, yrs 1-5 at r = 9.0%: Not computed for this company yet — it needs the company's enterprise value, which is not available for this company. [engine: INCOMPLETE: missing REQUIRED input(s): targetEnterpriseValue] |
+| 9 | Latest material development | MISSING | no material SEC filing was acquired for this run |
+| 10 | What would change the view | CONTENT | largest driver ronic, full-range impact 75.5% |
+
+**Failures (with causes):**
+- #9 Latest material development: no material SEC filing was acquired for this run
+
+## Stage timings
+- acquisition + automatic decisions (advanceRunAutomatically): 32129ms
+- deterministic computation: 446ms
+- AI layer (interpretation + challenger): 78392ms
+- render the normal Overview: 24ms
+- **total measured:** 110991ms
+
+### AI model calls (one row per physical call)
+- challenger attempt 1: 58469ms
+- interpretation attempt 1: 78368ms
+
+ACCEPTANCE FAIL — LLY

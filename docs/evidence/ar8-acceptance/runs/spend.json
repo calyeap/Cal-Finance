@@ -1,0 +1,177 @@
+{
+  "capUsd": 5,
+  "calls": 24,
+  "inputTokens": 187525,
+  "outputTokens": 121037,
+  "costUsd": 3.9635500000000006,
+  "rows": [
+    {
+      "ticker": "MSFT",
+      "preflight": false,
+      "inputTokens": 5949,
+      "outputTokens": 2970,
+      "costUsd": 0.10399500000000002
+    },
+    {
+      "ticker": "MSFT",
+      "preflight": false,
+      "inputTokens": 7784,
+      "outputTokens": 7249,
+      "costUsd": 0.220145
+    },
+    {
+      "ticker": "COST",
+      "preflight": false,
+      "inputTokens": 6603,
+      "outputTokens": 4005,
+      "costUsd": 0.13314
+    },
+    {
+      "ticker": "COST",
+      "preflight": false,
+      "inputTokens": 8035,
+      "outputTokens": 5618,
+      "costUsd": 0.18062500000000004
+    },
+    {
+      "ticker": "NVDA",
+      "preflight": false,
+      "inputTokens": 8078,
+      "outputTokens": 3215,
+      "costUsd": 0.12076500000000001
+    },
+    {
+      "ticker": "NVDA",
+      "preflight": false,
+      "inputTokens": 5853,
+      "outputTokens": 3648,
+      "costUsd": 0.120465
+    },
+    {
+      "ticker": "NUE",
+      "preflight": false,
+      "inputTokens": 6274,
+      "outputTokens": 2654,
+      "costUsd": 0.09772
+    },
+    {
+      "ticker": "NUE",
+      "preflight": false,
+      "inputTokens": 6460,
+      "outputTokens": 3062,
+      "costUsd": 0.10885
+    },
+    {
+      "ticker": "NUE",
+      "preflight": false,
+      "inputTokens": 7914,
+      "outputTokens": 8515,
+      "costUsd": 0.25244500000000003
+    },
+    {
+      "ticker": "KO",
+      "preflight": false,
+      "inputTokens": 5892,
+      "outputTokens": 4036,
+      "costUsd": 0.13036
+    },
+    {
+      "ticker": "KO",
+      "preflight": false,
+      "inputTokens": 8330,
+      "outputTokens": 7231,
+      "costUsd": 0.22242500000000004
+    },
+    {
+      "ticker": "KO",
+      "preflight": false,
+      "inputTokens": 8499,
+      "outputTokens": 6672,
+      "costUsd": 0.209295
+    },
+    {
+      "ticker": "LLY",
+      "preflight": false,
+      "inputTokens": 5652,
+      "outputTokens": 3630,
+      "costUsd": 0.11901000000000002
+    },
+    {
+      "ticker": "LLY",
+      "preflight": false,
+      "inputTokens": 5746,
+      "outputTokens": 4120,
+      "costUsd": 0.13173
+    },
+    {
+      "ticker": "LLY",
+      "preflight": false,
+      "inputTokens": 8072,
+      "outputTokens": 5829,
+      "costUsd": 0.186085
+    },
+    {
+      "ticker": "OKLO",
+      "preflight": false,
+      "inputTokens": 6064,
+      "outputTokens": 3735,
+      "costUsd": 0.123695
+    },
+    {
+      "ticker": "OKLO",
+      "preflight": false,
+      "inputTokens": 7860,
+      "outputTokens": 4403,
+      "costUsd": 0.149375
+    },
+    {
+      "ticker": "OKLO",
+      "preflight": false,
+      "inputTokens": 8157,
+      "outputTokens": 6630,
+      "costUsd": 0.20653500000000002
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 13724,
+      "outputTokens": 6150,
+      "costUsd": 0.22237
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 13724,
+      "outputTokens": 6363,
+      "costUsd": 0.22769499999999998
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 13724,
+      "outputTokens": 6582,
+      "costUsd": 0.23317
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 5439,
+      "outputTokens": 4109,
+      "costUsd": 0.12992
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 8068,
+      "outputTokens": 6649,
+      "costUsd": 0.206565
+    },
+    {
+      "ticker": "JPM",
+      "preflight": false,
+      "inputTokens": 5624,
+      "outputTokens": 3962,
+      "costUsd": 0.12717
+    }
+  ]
+}
