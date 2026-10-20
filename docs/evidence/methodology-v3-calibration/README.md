@@ -1,8 +1,8 @@
 # Methodology v3 calibration — TEST only (issue #495)
 
 Evidence for a possible Methodology v3 D2. **Decides nothing and changes no
-live behaviour or default:** the two scripts below are evidence tooling; the
-app imports neither, and the engine's constants are read, never edited.
+live behaviour or default:** the scripts below are evidence tooling; the
+app imports none of them, and the engine's constants are read, never edited.
 
 | File | What it is |
 |---|---|
