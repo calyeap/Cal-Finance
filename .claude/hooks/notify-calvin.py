@@ -29,6 +29,7 @@ Rules:
 
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -38,6 +39,7 @@ TIMEOUT_SECONDS = 5
 LOG_PATH = "/tmp/notify-calvin.log"
 REVIEWER_HEADER = "native cloud v1"  # the REVIEW BRIEF's first line starts with this...
 REVIEWER_MARKER = "independent reviewer"  # ...and names the role
+REMINDER = re.compile(r"<system-reminder>.*?</system-reminder>", re.DOTALL)
 
 STATUS = {
     "PreToolUse": "NEEDS INPUT",
@@ -77,7 +79,7 @@ def text_of(content):
     if isinstance(content, str):
         return content
     if isinstance(content, list):
-        return " ".join(
+        return "\n".join(
             block.get("text", "") for block in content
             if isinstance(block, dict) and block.get("type") == "text"
         )
@@ -98,10 +100,10 @@ def first_prompt(transcript_path):
                 message = entry.get("message")
                 if not isinstance(message, dict) or message.get("role") != "user":
                     continue
-                text = text_of(message.get("content"))
+                text = REMINDER.sub("", text_of(message.get("content")))
                 if text.strip():
                     return text
-    except (OSError, TypeError):
+    except (OSError, TypeError, ValueError):  # unreadable or bad UTF-8: fail open
         pass
     return ""
 
