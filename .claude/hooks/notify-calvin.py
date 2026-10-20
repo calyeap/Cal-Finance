@@ -18,6 +18,9 @@ Rules:
 - Never prints the webhook URL.
 - One alert per stop: a Stop that lands within DEDUPE_SECONDS of another alert
   in the same session is skipped (e.g. question raised, then the turn ends).
+- A Stop whose last message only says it is waiting on its own work (background
+  jobs, CI, a reviewer, a check-in) is skipped; one that says it needs Calvin
+  still alerts.
 - PostToolUse[AskUserQuestion] sends nothing; it records when Calvin answered.
   A Stop within ANSWERED_SECONDS of his answer is skipped: he is at the screen.
 - Python 3 standard library only.
@@ -25,6 +28,7 @@ Rules:
 
 import json
 import os
+import re
 import sys
 import time
 import urllib.error
@@ -34,6 +38,31 @@ DEDUPE_SECONDS = 30
 ANSWERED_SECONDS = 120
 TIMEOUT_SECONDS = 5
 LOG_PATH = "/tmp/notify-calvin.log"
+
+# A Stop whose last message says the session is only waiting on its own work
+# (background jobs, CI, a reviewer, a scheduled check-in) is not a real stop:
+# nothing needs Calvin, so it stays silent. A message that says it needs Calvin
+# always alerts, even if it also mentions waiting.
+NEEDS_CALVIN = re.compile(
+    r"NEED(S)? YOU|CALVIN REQUIRED|BLOCKED:|need(s)? your (input|decision|approval|call|go)"
+    r"|your call|approve|\?\s*$",
+    re.IGNORECASE,
+)
+WAITING_ON_SELF = re.compile(
+    r"\bwaiting\b|\bwait (for|on|until)\b|still running|in the background|background (job|task|run|check)"
+    r"|\bi'?ll (continue|resume|check|report|be back|pick (it|this) up|follow up)"
+    r"|\bi will (continue|resume|check|report)"
+    r"|\bwill (continue|resume|report back) (when|once|after)"
+    r"|\bonce (ci|the (ci|checks?|run|reviewer|review|build|jobs?|tests?))"
+    r"|\b(ci|checks?|tests?|reviewer|review|build) (is|are) (still )?(running|pending|in progress)"
+    r"|check(ing)? back|check-in|scheduled (a )?(wake|check)|\bpolling\b|\bmonitoring\b",
+    re.IGNORECASE,
+)
+
+
+def only_waiting_on_self(message):
+    text = str(message or "")
+    return bool(WAITING_ON_SELF.search(text)) and not NEEDS_CALVIN.search(text)
 
 STATUS = {
     "Stop": "STOPPED",
@@ -145,6 +174,9 @@ def main():
         return 0  # the question itself already alerted as NEEDS INPUT
     if event == "Stop" and payload.get("stop_hook_active"):
         return 0  # another Stop hook kept the agent going; it has not really stopped
+    if event == "Stop" and only_waiting_on_self(payload.get("last_assistant_message")):
+        log("event=Stop skipped=waiting-on-self")
+        return 0
 
     log(f"event={event} keys={sorted(payload.keys())}")
 
