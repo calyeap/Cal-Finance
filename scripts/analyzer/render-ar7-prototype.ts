@@ -202,6 +202,16 @@ function render(run: Json, runFile: string): string {
     .map((t) => `<li>${esc(t)}</li>`)
     .join("");
 
+  // The narrative is either the 10-K Item 1 text or a labelled fallback summary;
+  // say which, and why the primary source was unavailable.
+  const narrative = r.business?.narrative;
+  const businessBody =
+    typeof narrative === "string"
+      ? `<p>${esc(narrative)}</p>`
+      : narrative?.text
+        ? `<p class="muted small">${esc(narrative.source === "MARKET-DATA PROVIDER SUMMARY" ? `Market-data provider summary (${narrative.provider ?? "provider"}), not the 10-K Item 1` : narrative.source ?? "")}</p><p>${esc(narrative.text)}</p>${narrative.primaryUnavailableReason ? `<p class="muted small">Why not Item 1: ${esc(narrative.primaryUnavailableReason)}</p>` : ""}`
+        : `<p class="muted">${esc(r.business?.unavailableReason ?? "")}</p>`;
+
   const ev = r.diagnostics?.enterpriseValue;
   const evToEbit = r.diagnostics?.multiples?.evToEbit;
   const tabs = ["Overview", "Business", "Financials", "Valuation", "Risks & Thesis", "Market Context", "Evidence"];
@@ -309,7 +319,7 @@ ${["Portfolio", "Analyzer", "Watchlist"].map((n, i) => `<div class="item ${i ===
     <div class="tabrail">${tabLabels}</div>
     <div class="panels">
       <div class="panel p0">${quickRead}</div>
-      <div class="panel p1"><h3>Business</h3>${r.business?.narrative ? `<p>${esc(typeof r.business.narrative === "string" ? r.business.narrative : JSON.stringify(r.business.narrative))}</p>` : `<p class="muted">${esc(r.business?.unavailableReason ?? "")}</p>`}${filingSources}</div>
+      <div class="panel p1"><h3>Business</h3>${businessBody}${filingSources}</div>
       <div class="panel p2"><h3>Financials</h3>${historySources}<h4>Return on invested capital (goodwill included)</h4><table><tbody>${roicRows}</tbody></table></div>
       <div class="panel p3">${valuation}</div>
       <div class="panel p4"><h3>Risks &amp; Thesis</h3>${SCENARIOS.map((s) => `<div class="card"><h4>${s[0].toUpperCase() + s.slice(1)} case</h4><p>${esc(sheet.scenarios?.[s]?.writtenAnchor ?? "")}</p></div>`).join("")}<h4>Report states</h4><ul class="small">${states}</ul></div>
@@ -324,7 +334,7 @@ ${["Portfolio", "Analyzer", "Watchlist"].map((n, i) => `<div class="item ${i ===
   <div class="kv"><span>EV / EBIT</span><span class="num">${figure(evToEbit, (x) => times(x, 1))}</span></div>
   <div class="kv"><span>Revenue CAGR (10 yr)</span><span class="num">${pct(cagr?.cagr)}</span></div>
   <h4>Market context</h4><div class="kv"><span>Industry</span><span>${esc(r.marketContext?.sicDescription ?? "—")}</span></div>
-  <h4>Upcoming events</h4><div class="kv"><span>Latest filing</span><span>${esc(r.latestFiling?.form ?? "—")} ${esc(r.latestFiling?.filed ?? r.latestFiling?.filingDate ?? "")}</span></div>
+  <h4>Upcoming events</h4><div class="kv muted"><span>None in this run</span></div><div class="kv"><span>Latest filing</span><span>${esc(r.latestFiling?.form ?? "—")} ${esc(r.latestFiling?.filed ?? r.latestFiling?.filingDate ?? "")}</span></div>
 </aside>
 </div></body></html>
 `;
