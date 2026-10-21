@@ -23,3 +23,12 @@ calboard-dashboard-mock-v7.html
 # uploaded as the live-proof workflow's artifact, never committed
 /proof/
 __pycache__/
+
+# Personal brokerage data: never commit. Keep broker statements OUTSIDE this
+# repo; these rules are only a backstop. scripts/guard/private-data-scan.mjs
+# (pre-commit hook + CI) blocks anything that slips past them.
+/private/
+U[0-9][0-9][0-9][0-9][0-9][0-9][0-9]*_[0-9]*.*
+DU[0-9][0-9][0-9][0-9][0-9][0-9][0-9]*_[0-9]*.*
+*ibkr*.csv
+*IBKR*.csv

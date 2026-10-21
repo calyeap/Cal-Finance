@@ -6,6 +6,7 @@
     "dev": "next dev -H 127.0.0.1",
     "build": "next build",
     "start": "next start -H 127.0.0.1",
+    "prepare": "git config core.hooksPath .githooks || true",
     "test": "vitest run",
     "migrate": "tsx scripts/migrate.ts",
     "record-split": "tsx scripts/record-corporate-action.ts",
@@ -13,7 +14,8 @@
     "evidence": "tsx scripts/evidence/run.ts",
     "acquire": "tsx scripts/analyzer/acquire-run.ts",
     "ai-run": "tsx scripts/analyzer/ai-run.ts",
-    "acquire:capture": "tsx scripts/analyzer/capture-companyfacts.ts"
+    "acquire:capture": "tsx scripts/analyzer/capture-companyfacts.ts",
+    "guard:private-data": "node scripts/guard/private-data-scan.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.124.0",
