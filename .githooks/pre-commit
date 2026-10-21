@@ -1,0 +1,5 @@
+#!/bin/sh
+# Blocks commits that contain personal brokerage data (IBKR statements,
+# account numbers). Enabled by `npm install` / `npm ci` via the `prepare`
+# script (git config core.hooksPath .githooks). Plain Node, no node_modules needed.
+exec node scripts/guard/private-data-scan.mjs --staged
